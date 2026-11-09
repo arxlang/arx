@@ -275,7 +275,7 @@ def test_custom_exception_inherits_constructor(
         "  print(error.code)",
         "class ConfigError(Exception):\n"
         "  ```\n  title: Configuration failure\n  ```\n"
-        "  @[public, constant]\n  code: i32 = 7\n",
+        "  code: public const :: i32 = 7\n",
         optimization,
     )
     assert result.returncode == 0, result.stderr
@@ -287,11 +287,11 @@ def test_custom_exception_inherits_constructor(
 @pytest.mark.parametrize(
     ("operation", "type_name"),
     [
-        ("var value: i8 = 127\nvalue + 1", "OverflowError"),
-        ("var divisor: i32 = 0\n7 / divisor", "ZeroDivisionError"),
-        ("var value: i32 = 300\ncast(value, i8)", "OverflowError"),
-        ("var zero: f64 = 0.0\ncast(zero / zero, i32)", "ValueError"),
-        ("var zero: f64 = 0.0\ncast(1.0 / zero, i32)", "OverflowError"),
+        ("value: i8 = 127\nvalue + 1", "OverflowError"),
+        ("divisor: i32 = 0\n7 / divisor", "ZeroDivisionError"),
+        ("value: i32 = 300\ncast(value, i8)", "OverflowError"),
+        ("zero: f64 = 0.0\ncast(zero / zero, i32)", "ValueError"),
+        ("zero: f64 = 0.0\ncast(1.0 / zero, i32)", "OverflowError"),
         ('assert false, "bad assertion"', "AssertionError"),
         ('open("absent-file")', "OSError"),
     ],
@@ -346,7 +346,7 @@ def test_exception_unwinds_owned_class_before_caller_handler(
         "    ```\n    title: Release tracked owner\n    ```\n"
         '    print("released")\n    return none\n'
         "fn fail() -> none:\n"
-        "  var resource: Resource = Resource()\n"
+        "  resource: Resource = Resource()\n"
         '  raise ValueError("failure")\n',
         optimization,
     )
@@ -503,7 +503,7 @@ def test_caught_exception_alias_outlives_binding(
     """
     result = run_exception(
         tmp_path,
-        'var saved: Exception = Exception("initial")\n'
+        'saved: Exception = Exception("initial")\n'
         'try:\n  raise ValueError("retained")\n'
         "except ValueError as caught:\n  saved = caught\n"
         "try:\n  raise saved\nexcept ValueError as again:\n"
@@ -534,7 +534,7 @@ def test_finally_replaces_moved_return(
         tmp_path,
         'try:\n  make()\nexcept ValueError:\n  print("caught")',
         f"fn make() -> {kind}:\n"
-        f"  var value: {kind} = {initializer}\n"
+        f"  value: {kind} = {initializer}\n"
         "  try:\n    return value\n"
         '  finally:\n    raise ValueError("replacement")\n',
         optimization,
@@ -562,7 +562,7 @@ def test_cleanup_failure_preserves_primary_exception(
         "  value: i32 = 1\n"
         "  fn __del__(self) -> none:\n"
         '    print("release")\n    raise TypeError("secondary")\n'
-        "fn fail() -> none:\n  var owner: Resource = Resource()\n"
+        "fn fail() -> none:\n  owner: Resource = Resource()\n"
         '  raise ValueError("primary")\n',
         optimization,
     )
@@ -592,7 +592,7 @@ def test_native_list_and_csv_recovery(
     """
     result = run_exception(
         tmp_path,
-        "var values: list[i32] = range(0, 2)\n"
+        "values: list[i32] = range(0, 2)\n"
         "try:\n  print(values[5])\nexcept IndexError:\n"
         '  print("bounds")\n'
         'try:\n  read_csv("missing.csv")\nexcept OSError:\n'
@@ -649,7 +649,7 @@ def test_finalizer_local_catch_preserves_pending_return(
     """
     definitions = (
         "class Resource:\n  ```\n  title: Returned owner\n  ```\n"
-        "  @[public]\n  marker: i32 = 7\n"
+        "  marker: public :: i32 = 7\n"
         '  fn __del__(self) -> none:\n    print("released")\n'
         if kind == "Resource"
         else ""
@@ -657,7 +657,7 @@ def test_finalizer_local_catch_preserves_pending_return(
     initializer = "Resource()" if kind == "Resource" else '"retained"'
     definitions += (
         f"fn make() -> {kind}:\n"
-        f"  var value: {kind} = {initializer}\n"
+        f"  value: {kind} = {initializer}\n"
         "  try:\n    return value\n"
         '  finally:\n    try:\n      raise ValueError("handled")\n'
         '    except ValueError:\n      print("recovered")\n'
@@ -665,7 +665,7 @@ def test_finalizer_local_catch_preserves_pending_return(
     field = ".marker" if kind == "Resource" else ""
     result = run_exception(
         tmp_path,
-        f"var value: {kind} = make()\nprint(value{field})",
+        f"value: {kind} = make()\nprint(value{field})",
         definitions,
         optimization,
     )
@@ -695,7 +695,7 @@ def test_try_local_owner_survives_else(
     """
     definitions = (
         "class Resource:\n  ```\n  title: Else owner\n  ```\n"
-        "  @[public]\n  marker: i32 = 7\n"
+        "  marker: public :: i32 = 7\n"
         '  fn __del__(self) -> none:\n    print("released")\n'
         if kind == "Resource"
         else ""
@@ -707,7 +707,7 @@ def test_try_local_owner_survives_else(
     }[kind]
     result = run_exception(
         tmp_path,
-        f"try:\n  var value: {kind} = {initializer}\n"
+        f"try:\n  value: {kind} = {initializer}\n"
         'except Exception:\n  print("wrong")\n'
         f"else:\n  print(value{field})",
         definitions,
@@ -734,14 +734,14 @@ def test_return_cleanup_failure_preserves_outer_handler_owners(
         tmp_path,
         "print(run())",
         "class Outer:\n  ```\n  title: Handler owner\n  ```\n"
-        "  @[public]\n  marker: i32 = 7\n"
+        "  marker: public :: i32 = 7\n"
         '  fn __del__(self) -> none:\n    print("outer")\n'
         "class Inner:\n  ```\n  title: Failing cleanup\n  ```\n"
         "  marker: i32 = 0\n"
         '  fn __del__(self) -> none:\n    print("inner")\n'
         '    raise TypeError("cleanup")\n'
-        "fn run() -> i32:\n  var outer: Outer = Outer()\n"
-        "  try:\n    var inner: Inner = Inner()\n    return 1\n"
+        "fn run() -> i32:\n  outer: Outer = Outer()\n"
+        "  try:\n    inner: Inner = Inner()\n    return 1\n"
         "  except TypeError:\n    print(outer.marker)\n"
         "  return 2\n",
         optimization,
@@ -769,7 +769,7 @@ def test_cleanup_after_try_cannot_reenter_completed_handler(
         "  marker: i32 = 0\n"
         '  fn __del__(self) -> none:\n    print("release")\n'
         '    raise TypeError("cleanup")\n'
-        "fn run() -> none:\n  var owner: Resource = Resource()\n"
+        "fn run() -> none:\n  owner: Resource = Resource()\n"
         "  try:\n    return none\n"
         '  except TypeError:\n    print("wrong")\n'
         '  finally:\n    print("finally")\n',

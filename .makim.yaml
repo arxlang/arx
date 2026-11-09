@@ -1,22 +1,30 @@
 groups:
-  default:
+  clean:
     tasks:
-      clean:
-        help: remove build artifacts, compiled files, and cache
+      tmp:
+        help: remove repository-local temporary files, build outputs, and caches
+        backend: bash
         run: |
-          rm -fr build/
-          rm -fr dist/
-          rm -fr packages/*/dist/
-          rm -fr .eggs/
-          find . -name '*.egg-info' -exec rm -fr {} +
-          find . -name '*.egg' -exec rm -f {} +
-          find . -name '*.pyc' -exec rm -f {} +
-          find . -name '__pycache__' -exec rm -fr {} +
-          find . -name '*.pyo' -exec rm -f {} +
-          find . -name '*~' -exec rm -f {} +
-          rm -f .coverage
-          rm -fr htmlcov/
-          rm -fr .pytest_cache
+          # Skip Git, conventional environments, and installed dependencies.
+          # Prune artifact directories before batching their removal.
+          # ./tmp is disposable; nested directories named tmp are not.
+          find . \
+            -type d \( -name .git -o -name .venv -o -name venv \
+              -o -name env -o -name ENV -o -name .tox -o -name .nox \
+              -o -name node_modules \) -prune -o \
+            -type d \( -path ./tmp -o -path './pytest-*' \
+              -o -name .tmp -o -name build -o -name dist \
+              -o -name .eggs -o -name '*.egg-info' -o -name '*.egg' \
+              -o -name __pycache__ -o -name .cache \
+              -o -name .pytest_cache -o -name .mypy_cache \
+              -o -name .ruff_cache -o -name .hypothesis \
+              -o -name .ipynb_checkpoints -o -name htmlcov \
+              -o -path ./.quarto \) -prune -exec rm -rf -- {} + -o \
+            -type f \( -name '*.egg' -o -name '*.py[co]' -o -name '*~' \
+              -o -name .coverage -o -name '.coverage.*' \
+              -o -name coverage.xml -o -name nosetests.xml \
+              -o -name '*.x.o' -o -name 'tmp*.makim' \) \
+              -exec rm -f -- {} +
 
   all:
     tasks:

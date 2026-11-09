@@ -316,7 +316,7 @@ def test_file_builtin_through_check_and_build(tmp_path: Path) -> None:
     source = (
         MODULE_DOCSTRING
         + """fn main() -> i32:
-  var f: file = open("arxpy-file.txt", mode="w")
+  f: file = open("arxpy-file.txt", mode="w")
   assert f.write("ok") == 2
   return 0
 """
@@ -357,8 +357,8 @@ def test_lifecycle_through_facade(tmp_path: Path) -> None:
 fn make() -> Counter:
   return Counter(value=7)
 fn main() -> i32:
-  var counter: Counter = make()
-  var alias: Counter = counter
+  counter: Counter = make()
+  alias: Counter = counter
   return alias.value - 7
 """
     )

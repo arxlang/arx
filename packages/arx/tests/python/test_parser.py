@@ -139,8 +139,8 @@ def test_invalid_prefix_operand(source: str, message: str) -> None:
         "object.method()[0].value{operator}",
         "café{operator}",
         "call(\nx\n){operator}",
-        "for var i: i32 = 0; i < 3; i{operator}:\n  print(i)\n",
-        "fn main() -> i32:\n  var x: i32 = 3\n  x{operator}\n  return x\n",
+        "for i: i32 = 0; i < 3; i{operator}:\n  print(i)\n",
+        "fn main() -> i32:\n  x: i32 = 3\n  x{operator}\n  return x\n",
     ],
 )
 def test_postfix_mutation_reports_operator(source: str, operator: str) -> None:
@@ -237,8 +237,8 @@ def test_compound_count_update_and_statement_separators() -> None:
     """
     tree = _parse_module(
         "fn main() -> i32:\n"
-        "  var total: i32 = 0\n"
-        "  for var i: i32 = 0; i < 3; i += 1:\n"
+        "  total: i32 = 0\n"
+        "  for i: i32 = 0; i < 3; i += 1:\n"
         "    total += i; total *= 2\n"
         "  total %= 5\n"
         "  return total\n"
@@ -266,7 +266,7 @@ def test_compound_count_update_and_statement_separators() -> None:
         "[x += 1]",
         "return x += 1",
         "if x += 1:\n  0",
-        "var y: i32 = x += 1",
+        "y: i32 = x += 1",
         "x = y += 1",
         "x += y += 1",
         "x += y = 1",
@@ -277,7 +277,7 @@ def test_compound_count_update_and_statement_separators() -> None:
         "x +=; y",
         "x += return 1",
         "+= 1",
-        "for var i: i32 = 0; i += 1; i + 1:\n  0",
+        "for i: i32 = 0; i += 1; i + 1:\n  0",
     ],
 )
 def test_compound_assignment_rejects_invalid_surface_contexts(
@@ -522,7 +522,7 @@ def test_elif_branch_bindings_do_not_leak() -> None:
     """
     tree = _parse_module(
         "if first:\n"
-        "  var values: list[i32] = [1]\n"
+        "  values: list[i32] = [1]\n"
         "  values.append(2)\n"
         "elif second:\n"
         "  values.append(3)\n"
@@ -583,7 +583,7 @@ def test_elif_branch_bindings_do_not_leak() -> None:
             5,
             1,
         ),
-        ("var elif: i32 = 1\n", "Expected identifier", 1, 5),
+        ("var elif: i32 = 1\n", "Leading variable declaration keywords", 1, 1),
     ],
 )
 def test_invalid_elif_chain(
@@ -1112,7 +1112,7 @@ def test_parse_while_stmt() -> None:
     """
     ArxIO.string_to_buffer(
         "fn main() -> i32:\n"
-        "  var a: i32 = 0\n"
+        "  a: i32 = 0\n"
         "  while a < 10:\n"
         "    a = a + 1\n"
         "  return a\n"
@@ -1132,7 +1132,7 @@ def test_parse_for_count_stmt() -> None:
     """
     ArxIO.string_to_buffer(
         "fn main() -> i32:\n"
-        "  for var i: i32 = 0; i < 5; i = i + 1:\n"
+        "  for i: i32 = 0; i < 5; i = i + 1:\n"
         "    return i\n"
     )
     lexer = Lexer()
@@ -1174,7 +1174,7 @@ def test_parse_for_in_list_variable() -> None:
     """
     ArxIO.string_to_buffer(
         "fn main() -> i32:\n"
-        "  var xs: list[i32] = range(0, 3)\n"
+        "  xs: list[i32] = range(0, 3)\n"
         "  for value in xs:\n"
         "    return value\n"
         "  return 0\n"
@@ -1203,10 +1203,7 @@ def test_parse_builtin_cast_and_print() -> None:
     title: Test builtin cast and print node generation.
     """
     ArxIO.string_to_buffer(
-        "fn main() -> i32:\n"
-        "  var a: i32 = 1\n"
-        "  print(cast(a, str))\n"
-        "  return a\n"
+        "fn main() -> i32:\n  a: i32 = 1\n  print(cast(a, str))\n  return a\n"
     )
     lexer = Lexer()
     parser = Parser()
@@ -1247,9 +1244,9 @@ def test_parse_type_alias_with_cast_isinstance_and_typeof() -> None:
     tree = _parse_module(
         "type Int = i32\n"
         "fn main() -> i32:\n"
-        "  var x: Int = cast(0.0, Int)\n"
-        "  var ok: bool = isinstance(x, Int)\n"
-        "  var name: str = type(x)\n"
+        "  x: Int = cast(0.0, Int)\n"
+        "  ok: bool = isinstance(x, Int)\n"
+        "  name: str = type(x)\n"
         "  return x\n"
     )
 
@@ -1282,7 +1279,7 @@ def test_parse_cast_rejects_union_target() -> None:
         _parse_module(
             "type Number = i32 | i64\n"
             "fn main() -> i32:\n"
-            "  var x: Number = cast(0.0, Number)\n"
+            "  x: Number = cast(0.0, Number)\n"
             "  return 0\n"
         )
 
@@ -1314,7 +1311,7 @@ def test_parse_block_with_comment_and_blank_lines(suffix: str) -> None:
         "fn main() -> i32:\n"
         "  # section A\n"
         "\n"
-        "  var a: i32 = 1\n"
+        "  a: i32 = 1\n"
         "  if true:\n"
         "    a = 2\n"
         "# dedented comment\n"
@@ -1348,3 +1345,421 @@ def test_parse_block_with_comment_and_blank_lines(suffix: str) -> None:
     assert alternative.else_ is not None
     assert len(alternative.else_.nodes) == 1
     assert isinstance(fn.body.nodes[2], astx.FunctionReturn)
+
+
+@pytest.mark.parametrize("modifier", ["", "var :: ", "const :: "])
+def test_name_first_binding_modifiers(modifier: str) -> None:
+    """
+    title: Explicit and implicit binding policies map to reusable ASTx nodes.
+    parameters:
+      modifier:
+        type: str
+    """
+    module = _parse_module(f"value: {modifier}i32 = 1\n")
+    declaration = module.nodes[0]
+    assert isinstance(declaration, astx.VariableDeclaration)
+    expected = (
+        astx.MutabilityKind.constant
+        if modifier.startswith("const")
+        else astx.MutabilityKind.mutable
+    )
+    assert declaration.mutability is expected
+    function = _parse_module(
+        f"fn apply(value: {modifier}i32) -> i32:\n  return value\n"
+    ).nodes[0]
+    assert isinstance(function, astx.FunctionDef)
+    assert function.prototype.args.nodes[0].mutability is expected
+    external = _parse_module(
+        f"extern apply(value: {modifier}i32) -> i32\n"
+    ).nodes[0]
+    assert isinstance(external, astx.FunctionPrototype)
+    assert external.args.nodes[0].mutability is expected
+    class_ = _parse_module(
+        "class Operations:\n"
+        f"  fn apply(value: {modifier}i32) -> public static :: i32:\n"
+        "    return value\n"
+        f"  fn abstract_apply(self, value: {modifier}i32) -> abstract :: i32\n"
+        f"  fn external_apply(self, value: {modifier}i32) -> extern :: i32\n"
+    ).nodes[0]
+    assert isinstance(class_, astx.ClassDefStmt)
+    for method in class_.methods:
+        assert method.prototype.args.nodes[0].mutability is expected
+    assert getattr(class_.methods[0].prototype, "is_static", False) is True
+    assert getattr(class_.methods[1].prototype, "is_abstract", False) is True
+    assert getattr(class_.methods[2].prototype, "is_extern", False) is True
+
+
+@pytest.mark.parametrize(
+    "source, message",
+    [
+        ("value: const :: i32\n", "requires an explicit initializer"),
+        ("value: var const :: i32 = 1\n", "conflicting mutability"),
+        ("value: var var :: i32 = 1\n", "duplicate modifier"),
+        ("value: typo :: i32 = 1\n", "unknown modifier"),
+        ("value: readonly :: i32 = 1\n", "unknown modifier"),
+        ("value: const i32 = 1\n", "Expected '::'"),
+        ("value: :: i32 = 1\n", "Empty modifier group"),
+        ("value: static :: i32 = 1\n", "variable cannot use 'static'"),
+        (
+            "apply: var :: fn() -> i32:\n  return 0\n",
+            "Function declarations use",
+        ),
+        (
+            "extern apply() -> i32:\n  return 0\n",
+            "cannot define a body",
+        ),
+        (
+            "fn outer() -> i32:\n  fn inner() -> i32:\n    return 0\n",
+            "Nested functions",
+        ),
+        ("var value: i32 = 1\n", "Leading variable declaration keywords"),
+        ("apply: fn() -> i32:\n  return 0\n", "Function declarations use"),
+        (
+            "apply: const :: fn() -> i32:\n  return 0\n",
+            "Function declarations use",
+        ),
+        ("apply: extern :: fn() -> i32\n", "Function declarations use"),
+        (
+            "class C:\n  apply: fn(self) -> i32:\n    return 0\n",
+            "Method declarations use",
+        ),
+        (
+            "fn apply(value: static :: i32) -> i32:\n  return value\n",
+            "parameter cannot use 'static'",
+        ),
+        ("class C:\n  @[constant]\n  value: i32 = 1\n", "unknown modifier"),
+        (
+            "class C:\n  @[public]\n  value: i32 = 1\n",
+            "Field modifier annotations were replaced",
+        ),
+    ],
+)
+def test_name_first_declaration_errors(source: str, message: str) -> None:
+    """
+    title: Malformed and obsolete declaration forms fail closed.
+    parameters:
+      source:
+        type: str
+      message:
+        type: str
+    """
+    with pytest.raises(ParserException, match=message):
+        _parse_module(source)
+
+
+@pytest.mark.parametrize(
+    "source", ["x: auto", "x: const :: auto", "class C:\n  x: auto"]
+)
+def test_inferred_declaration_requires_initializer(source: str) -> None:
+    """
+    title: An inference request cannot be default-initialized.
+    parameters:
+      source:
+        type: str
+    """
+    with pytest.raises(
+        ParserException, match="requires an explicit initializer"
+    ):
+        _parse_module(source)
+
+
+@pytest.mark.parametrize(
+    "source",
+    [
+        "fn apply(x: auto) -> i32:\n  return 0",
+        "fn apply() -> auto:\n  return 0",
+        "x: list[auto] = []",
+        "type Unknown = auto",
+    ],
+)
+def test_auto_is_not_a_general_type(source: str) -> None:
+    """
+    title: Inference markers cannot appear in general type expressions.
+    parameters:
+      source:
+        type: str
+    """
+    with pytest.raises(ParserException, match="only allowed on initialized"):
+        _parse_module(source)
+
+
+def test_contextual_modifier_names_remain_usable_as_types() -> None:
+    """
+    title: Only a double-colon group interprets contextual names as modifiers.
+    """
+    module = _parse_module(
+        "type static = i32\n"
+        "type public = i32\n"
+        "fn apply(value: public) -> static:\n"
+        "  result: static = value\n"
+        "  return result\n"
+    )
+    function = module.nodes[0]
+    assert isinstance(function, astx.FunctionDef)
+    assert isinstance(function.prototype.args.nodes[0].type_, astx.Int32)
+    assert isinstance(function.prototype.return_type, astx.Int32)
+    declaration = function.body.nodes[0]
+    assert isinstance(declaration, astx.VariableDeclaration)
+    assert isinstance(declaration.type_, astx.Int32)
+
+
+@pytest.mark.parametrize("spacing", ["", " "])
+def test_function_head_preserves_name_and_optional_spacing(
+    spacing: str,
+) -> None:
+    """
+    title: >-
+      Function syntax stays keyword-first while arguments accept modifiers.
+    parameters:
+      spacing:
+        type: str
+    """
+    function = _parse_module(
+        f"fn distance{spacing}(record: const :: str) -> i64:\n"
+        "  return len(record)\n"
+    ).nodes[0]
+    assert isinstance(function, astx.FunctionDef)
+    assert function.prototype.name == "distance"
+    assert function.prototype.args.nodes[0].name == "record"
+    assert (
+        function.prototype.args.nodes[0].mutability
+        is astx.MutabilityKind.constant
+    )
+
+
+@pytest.mark.parametrize(
+    "source, target, line, column",
+    [
+        ("class auto:\n  value: i32 = 0\n", "class", 1, 7),
+        ("type auto = i32\n", "type alias", 1, 6),
+        (
+            "@<auto: i32>\nfn identity(value: i32) -> i32:\n  return value\n",
+            "template parameter",
+            1,
+            3,
+        ),
+        (
+            "@<Té: i32, auto: i32>\n"
+            "fn identity(value: Té) -> Té:\n  return value\n",
+            "template parameter",
+            1,
+            12,
+        ),
+    ],
+)
+def test_inference_marker_cannot_name_a_type(
+    source: str, target: str, line: int, column: int
+) -> None:
+    """
+    title: Type declarations cannot shadow inference, even when never used.
+    parameters:
+      source:
+        type: str
+      target:
+        type: str
+      line:
+        type: int
+      column:
+        type: int
+    """
+    with pytest.raises(
+        ParserException, match=f"cannot name a {target}"
+    ) as err:
+        _parse_module(source)
+    assert err.value.code == "ARX-PARSE-TYPE-NAME-001"
+    assert err.value.location is not None
+    assert (err.value.location.line, err.value.location.col) == (line, column)
+
+
+def test_auto_remains_a_value_identifier_and_inference_marker() -> None:
+    """
+    title: Restrict type names without reserving auto in value positions.
+    """
+    module = _parse_module(
+        "class Auto:\n  auto: auto = 1\n"
+        "type auto_type = i32\n"
+        "@<auto_T: auto_type>\n"
+        "fn identity(auto: auto_T) -> auto_T:\n  return auto\n"
+        "fn auto(value: auto_type) -> auto_type:\n  return value\n"
+        "fn apply() -> i32:\n  auto: auto = auto(1)\n  return auto\n"
+    )
+    class_ = module.nodes[0]
+    assert isinstance(class_, astx.ClassDefStmt)
+    assert class_.name == "Auto"
+    assert class_.attributes[0].name == "auto"
+    assert isinstance(class_.attributes[0].type_, astx.InferredType)
+    identity = module.nodes[1]
+    assert isinstance(identity, astx.FunctionDef)
+    assert identity.prototype.args.nodes[0].name == "auto"
+    assert isinstance(
+        identity.prototype.args.nodes[0].type_, astx.TemplateTypeVar
+    )
+    function = module.nodes[2]
+    assert isinstance(function, astx.FunctionDef)
+    assert function.prototype.name == "auto"
+    apply = module.nodes[3]
+    assert isinstance(apply, astx.FunctionDef)
+    declaration = apply.body.nodes[0]
+    assert isinstance(declaration, astx.VariableDeclaration)
+    assert declaration.name == "auto"
+    assert isinstance(declaration.type_, astx.InferredType)
+
+
+@pytest.mark.parametrize("modifier", ["", "public :: ", "private :: "])
+def test_callable_declaration_modifiers(modifier: str) -> None:
+    """
+    title: Callable visibility is independent of arguments and return types.
+    parameters:
+      modifier:
+        type: str
+    """
+    module = _parse_module(
+        f"fn calculate(value: const :: i32) -> {modifier}i32:\n"
+        "  return value\n"
+        f"extern external(value: i32) -> {modifier}i32\n"
+    )
+    expected = (
+        astx.VisibilityKind.private
+        if modifier.startswith("private")
+        else astx.VisibilityKind.public
+    )
+    definition, external = module.nodes
+    assert isinstance(definition, astx.FunctionDef)
+    assert isinstance(external, astx.FunctionPrototype)
+    for prototype in (definition.prototype, external):
+        assert prototype.visibility is expected
+        assert isinstance(prototype.return_type, astx.Int32)
+    assert (
+        definition.prototype.args.nodes[0].mutability
+        is astx.MutabilityKind.constant
+    )
+
+
+def test_multiline_callable_headers_keep_body_and_sibling_boundaries() -> None:
+    """
+    title: >-
+      Wrapped headers do not redefine body indentation or swallow siblings.
+    """
+    module = _parse_module(
+        "@[abstract]\nclass Calculator:\n"
+        "  @<T: i32 | i64>\n"
+        "  fn calculate(\n"
+        "    value: const ::\n      T,\n"
+        "    other: var :: T =\n      value,\n"
+        "  )\n  ->\n"
+        "    public\n    static\n    ::\n    T\n  :\n"
+        "    ```\n    title: Calculate\n    ```\n"
+        "    return other\n"
+        "  fn abstract_read(\n    self,\n  ) ->\n    abstract :: i32\n"
+        "  fn native(\n    self\n  ) -> extern :: i32\n"
+        "  fn read(self) -> i32:\n    return 1\n"
+        "extern external(\n  value: i32,\n) ->\n  private ::\n  i32\n"
+        "fn main(\n) ->\n  public ::\n  i32\n:\n"
+        "  return 0\n"
+    )
+    class_, external, main = module.nodes
+    assert isinstance(class_, astx.ClassDefStmt)
+    assert [method.prototype.name for method in class_.methods] == [
+        "calculate",
+        "abstract_read",
+        "native",
+        "read",
+    ]
+    calculate = class_.methods[0]
+    assert getattr(calculate.prototype, "is_static", False)
+    assert len(calculate.prototype.args.nodes) == 2
+    assert len(calculate.body.nodes) == 1
+    assert astx.is_template_node(calculate)
+    assert isinstance(external, astx.FunctionPrototype)
+    assert external.visibility is astx.VisibilityKind.private
+    assert isinstance(main, astx.FunctionDef)
+    assert len(main.body.nodes) == 1
+
+
+@pytest.mark.parametrize(
+    "source, message",
+    [
+        (
+            "fn f() -> static :: i32:\n  return 0",
+            "function cannot use 'static'",
+        ),
+        (
+            "fn f() -> protected :: i32:\n  return 0",
+            "function cannot use 'protected'",
+        ),
+        ("fn f() -> const :: i32:\n  return 0", "function cannot use 'const'"),
+        ("fn f() -> extern :: i32", "function cannot use 'extern'"),
+        ("fn f() -> public public :: i32:\n  return 0", "duplicate modifier"),
+        (
+            "fn f() -> public private :: i32:\n  return 0",
+            "conflicting visibility",
+        ),
+        ("fn f() -> unknown :: i32:\n  return 0", "unknown modifier"),
+        ("fn f() -> :: i32:\n  return 0", "Empty modifier group"),
+        ("fn f() -> private ::\n:\n  return 0", "Expected a type name"),
+        (
+            "fn f() -> private :: auto:\n  return 0",
+            "only allowed on initialized",
+        ),
+        (
+            "fn f(\n  value: i32\n -> i32:\n  return value",
+            "Expected operator '\\)'",
+        ),
+        (
+            "fn f() ->\n  private ::\n  i32\nfn next() -> i32:\n  return 0",
+            "Expected operator ':'",
+        ),
+        (
+            "class C:\n  fn f(self) -> static :: i32:\n    return 0",
+            "static method cannot declare implicit receiver",
+        ),
+        (
+            "class C:\n  fn f(self) -> extern :: i32:\n    return 0",
+            "extern method cannot define a body",
+        ),
+        (
+            "class C:\n  fn f(self) -> var :: i32:\n    return 0",
+            "method cannot use 'var'",
+        ),
+        (
+            "class C:\n  @[private]\n  fn f(self) -> i32:\n    return 0",
+            "Method modifier annotations were replaced",
+        ),
+        (
+            "class C:\n  @<T: i32>\n  fn f(self) -> abstract :: T",
+            "template methods must define a body",
+        ),
+        (
+            "extern f() ->\n  private :: i32\n:\n  return 0",
+            "extern function cannot define a body",
+        ),
+    ],
+)
+def test_callable_modifiers_and_layout_fail_closed(
+    source: str, message: str
+) -> None:
+    """
+    title: >-
+      Invalid header policies and incomplete continuations fail in parsing.
+    parameters:
+      source:
+        type: str
+      message:
+        type: str
+    """
+    with pytest.raises(ParserException, match=message):
+        _parse_module(source)
+
+
+def test_callable_modifier_location_after_unicode_and_continuation() -> None:
+    """
+    title: A continued modifier group retains its actual Unicode source column.
+    """
+    with pytest.raises(
+        ParserException, match="function cannot use 'static'"
+    ) as err:
+        _parse_module(
+            "fn café(\n  value: i32\n) ->\n  static :: i32:\n  return value"
+        )
+    assert err.value.location is not None
+    assert (err.value.location.line, err.value.location.col) == (4, 3)

@@ -182,6 +182,7 @@ _SEMANTIC_CONTRACT = SemanticContract(
         "resolved_operator",
         "resolved_assignment",
         "module_storage",
+        "normalized_collection",
         "resolved_iteration",
         "resolved_context_manager",
         "resolved_field_access",

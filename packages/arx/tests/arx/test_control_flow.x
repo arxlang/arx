@@ -45,7 +45,7 @@ fn skipped_count_loop() -> i32:
   title: skipped_count_loop
   summary: Uses one count loop whose body is skipped entirely.
   ```
-  for var i: i32 = 3; i < 3; i + 1:
+  for i: i32 = 3; i < 3; i + 1:
     return 1
   return 0
 
@@ -59,8 +59,8 @@ fn test_if_elif_else_paths() -> none:
   assert classify(2) == 1
 
   for stop in [1, 2, 3, 4]:
-    var checks: i32 = 0
-    var branch: i32 = 0
+    checks: i32 = 0
+    branch: i32 = 0
     if ++checks == stop:
       branch = 1
     elif ++checks == stop:
@@ -95,18 +95,18 @@ fn test_for_in_list_asserts() -> none:
   title: test_for_in_list_asserts
   summary: Executes for-in loops over one list variable and one list literal.
   ```
-  var values: list[i32] = range(0, 4)
-  var total_from_var: i32 = 0
+  values: list[i32] = range(0, 4)
+  total_from_var: i32 = 0
   for value in values:
     total_from_var = total_from_var + value
   assert total_from_var == 6, "for-in over a list variable should sum to 6"
 
-  var total_from_literal: i32 = 0
+  total_from_literal: i32 = 0
   for value in [1, 2, 3]:
     total_from_literal = total_from_literal + value
   assert total_from_literal == 6, "for-in over a list literal should sum to 6"
 
-  var total_from_call: i32 = 0
+  total_from_call: i32 = 0
   for value in make_values():
     total_from_call = total_from_call + value
   assert total_from_call == 6, "for-in over a function call should sum to 6"
@@ -116,15 +116,15 @@ fn test_for_count_loop_asserts() -> none:
   title: test_for_count_loop_asserts
   summary: Executes one count loop and one skipped count loop.
   ```
-  for var i: i32 = 0; i < 3; i + 1:
+  for i: i32 = 0; i < 3; i + 1:
     assert i < 3, "count loop values should stay below the exit condition"
   assert skipped_count_loop() == 0
 
-  var i: i32 = 42
-  var total: i32 = 0
-  for var i: i32 = 0; i < 4; i += 1:
+  i: i32 = 42
+  total: i32 = 0
+  for i: i32 = 0; i < 4; i += 1:
     total += i * 2
-    for var i: i32 = 100; i < 101; i += 1:
+    for i: i32 = 100; i < 101; i += 1:
       assert i == 100
   assert total == 12
   assert i == 42
@@ -134,15 +134,15 @@ fn test_prefix_mutation_values() -> none:
   title: test_prefix_mutation_values
   summary: Prefix mutation stores and returns the updated value, including loop updates.
   ```
-  var value: i32 = 3
-  var increased: i32 = ++value
+  value: i32 = 3
+  increased: i32 = ++value
   assert value == 4
   assert increased == 4
-  var decreased: i32 = --value
+  decreased: i32 = --value
   assert value == 3
   assert decreased == 3
 
-  var total: i32 = 0
-  for var i: i32 = 0; i < 3; ++i:
+  total: i32 = 0
+  for i: i32 = 0; i < 3; ++i:
     total = total + i
   assert total == 3

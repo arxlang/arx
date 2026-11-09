@@ -1139,6 +1139,8 @@ class SemanticFunction:
         type: ModuleKey
       qualified_name:
         type: str
+      visibility:
+        type: astx.VisibilityKind
       template_params:
         type: tuple[astx.TemplateParam, Ellipsis]
       template_bindings:
@@ -1160,6 +1162,7 @@ class SemanticFunction:
     definition: astx.FunctionDef | None = None
     module_key: ModuleKey = field(default_factory=lambda: "<unknown>")
     qualified_name: str = ""
+    visibility: astx.VisibilityKind = astx.VisibilityKind.public
     template_params: tuple[astx.TemplateParam, ...] = ()
     template_bindings: tuple[TemplateArgumentBinding, ...] = ()
     template_definition: "SemanticFunction" | None = None
@@ -2292,6 +2295,8 @@ class SemanticInfo:
         type: ResolvedMaterialization | None
       sequence_access:
         type: ResolvedSequenceAccess | None
+      normalized_collection:
+        type: astx.Expr | None
       tensor_index:
         type: astx.TensorIndex | None
       numeric_storage:
@@ -2405,6 +2410,7 @@ class SemanticInfo:
 
     materialization: ResolvedMaterialization | None = None
     sequence_access: ResolvedSequenceAccess | None = None
+    normalized_collection: astx.Expr | None = None
     tensor_index: astx.TensorIndex | None = None
     numeric_storage: astx.DataType | None = None
     module_storage: ResolvedModuleStorage | None = None

@@ -17,9 +17,9 @@ fn main() -> i32:
   title: main
   summary: Calls type-aware builtins with a union alias.
   ```
-  var value: i64 = identity(5)
-  var ok: bool = isinstance(value, Number)
-  var name: str = type(value)
+  value: i64 = identity(5)
+  ok: bool = isinstance(value, Number)
+  name: str = type(value)
   if ok:
     return cast(value, i32)
   else:

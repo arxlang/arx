@@ -31,9 +31,9 @@ Use `++value` or `--value` to update a mutable numeric variable by one. Both
 expressions yield the **updated** value:
 
 ```arx
-var value: i32 = 3
-var increased: i32 = ++value  # value and increased are now 4
-var decreased: i32 = --value  # value and decreased are now 3
+value: i32 = 3
+increased: i32 = ++value  # value and increased are now 4
+decreased: i32 = --value  # value and decreased are now 3
 ```
 
 Postfix `value++` and `value--` are not supported. Use prefix mutation or an
@@ -46,8 +46,8 @@ below.
 `+=`, `-=`, `*=`, `/=`, and `%=` update a declared mutable numeric variable:
 
 ```arx
-var start: i32 = 207
-var amount: i32 = 5
+start: i32 = 207
+amount: i32 = 5
 start -= amount
 start %= 100  # start is now 2
 ```

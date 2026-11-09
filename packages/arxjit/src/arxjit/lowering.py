@@ -1070,6 +1070,7 @@ class Lowerer:
                 astx.Argument(
                     name=parameter.arg,
                     type_=astx_type(sig_type),
+                    mutability=astx.MutabilityKind.mutable,
                     loc=location(self.extracted, parameter),
                 )
                 for parameter, sig_type in zip(

@@ -1,14 +1,25 @@
 # Data Types
 
-Arx uses explicit type annotations for variables, function parameters, and
-function return types.
+Arx is statically typed. Function parameters and return types use explicit
+annotations. Variables may select a type explicitly or request initializer-based
+inference with `auto`.
 
 ## Type Annotations
 
 - Function parameters must always be typed.
 - Function return type is declared with `-> type` and is always required,
   including `-> none`.
-- Variable declarations must include an explicit type with `var name: type`.
+- An explicit annotation selects a type: `count: i32 = 1`.
+- `count: auto = 1` infers a concrete, fixed type from its required initializer.
+  `auto` is an inference marker, not a dynamic type, and is not allowed in
+  function signatures. See [declarations](syntax.md#declarations-and-modifiers)
+  for supported inference contexts.
+- Binding mutability is independent of the selected or inferred type:
+  `count: var :: i32 = 1` permits rebinding; `limit: const :: auto = 10` does
+  not. Omitting the modifier means `var`; `const` does not freeze referenced
+  objects.
+- `auto` remains contextual for value identifiers, but cannot name a class, type
+  alias, or template parameter.
 
 ````arx
 ```

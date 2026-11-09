@@ -35,13 +35,13 @@ fn main() -> i32:
   ```
   title: main
   ```
-  var output: File = File("message.txt", mode="w", encoding="utf-8")
-  var alias: file = output
+  output: File = File("message.txt", mode="w", encoding="utf-8")
+  alias: file = output
   assert alias.write("hello\n") == 6
   output.close()
   alias.close()
-  var source: file = open(file="message.txt")
-  var text: str = source.read()
+  source: file = open(file="message.txt")
+  text: str = source.read()
   source.close()
   print(text)
   return 0

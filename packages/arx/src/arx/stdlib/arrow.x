@@ -81,8 +81,7 @@ class Schema:
   title: Schema
   summary: Scoped owner of a native Arrow schema.
   ```
-  @[private]
-  handle: ArrowSchemaHandle
+  handle: private :: ArrowSchemaHandle
 
   fn __init__(self) -> none:
     ```
@@ -171,8 +170,7 @@ class RecordBatch:
   title: RecordBatch
   summary: Scoped owner of a native Arrow batch.
   ```
-  @[private]
-  handle: ArrowBatchHandle
+  handle: private :: ArrowBatchHandle
 
   fn __init__(self) -> none:
     ```
@@ -224,7 +222,7 @@ class RecordBatch:
     title: schema
     summary: Returns an independently owned schema snapshot.
     ```
-    var result: Schema = Schema()
+    result: Schema = Schema()
     irx_rb_api_batch_schema(self.handle, result.native_handle())
     return result
 
@@ -364,8 +362,7 @@ class BatchBuilder:
   title: BatchBuilder
   summary: Scoped owner of a native Arrow builder.
   ```
-  @[private]
-  handle: ArrowBuilderHandle
+  handle: private :: ArrowBuilderHandle
 
   fn __init__(self, schema: Schema) -> none:
     ```
@@ -527,7 +524,7 @@ class BatchBuilder:
     title: finish
     summary: Finishes equal-length columns and resets the builder for reuse.
     ```
-    var result: RecordBatch = RecordBatch()
+    result: RecordBatch = RecordBatch()
     irx_rb_api_builder_finish(self.handle, result.native_handle())
     return result
 
@@ -541,8 +538,7 @@ class IPCReader:
   title: IPCReader
   summary: Scoped owner of a native Arrow reader.
   ```
-  @[private]
-  handle: ArrowReaderHandle
+  handle: private :: ArrowReaderHandle
 
   fn __init__(self) -> none:
     ```
@@ -611,7 +607,7 @@ class IPCReader:
     title: batch
     summary: Returns an independently owned snapshot.
     ```
-    var result: RecordBatch = RecordBatch()
+    result: RecordBatch = RecordBatch()
     irx_rb_api_reader_batch(self.handle, result.native_handle())
     return result
 
@@ -620,7 +616,7 @@ class IPCReader:
     title: schema
     summary: Returns an independently owned snapshot.
     ```
-    var result: Schema = Schema()
+    result: Schema = Schema()
     irx_rb_api_reader_schema(self.handle, result.native_handle())
     return result
 
@@ -638,8 +634,7 @@ class IPCWriter:
   title: IPCWriter
   summary: Scoped owner of a native Arrow writer.
   ```
-  @[private]
-  handle: ArrowWriterHandle
+  handle: private :: ArrowWriterHandle
 
   fn __init__(self, schema: Schema) -> none:
     ```

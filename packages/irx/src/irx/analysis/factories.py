@@ -128,6 +128,9 @@ class SemanticEntityFactory:
     ) -> SemanticSymbol:
         """
         title: Create one function-parameter semantic symbol.
+        summary: >-
+          Rebinding follows Argument.mutability independently of parameter
+          passing and resource-ownership policy.
         parameters:
           module_key:
             type: ModuleKey
@@ -140,7 +143,7 @@ class SemanticEntityFactory:
             module_key,
             argument.name,
             argument.type_,
-            is_mutable=True,
+            is_mutable=argument.mutability != astx.MutabilityKind.constant,
             declaration=argument,
             kind="argument",
         )
@@ -402,7 +405,11 @@ class SemanticEntityFactory:
         if semantic_args is None:
             semantic_args = tuple(
                 self.make_parameter_symbol(module_key, argument)
-                for argument in prototype.args.nodes
+                for argument in (
+                    definition.prototype.args.nodes
+                    if definition is not None
+                    else prototype.args.nodes
+                )
             )
         return SemanticFunction(
             symbol_id=self.context.next_symbol_id("fn"),
@@ -414,6 +421,7 @@ class SemanticEntityFactory:
             definition=definition,
             module_key=module_key,
             qualified_name=qualified_function_name(module_key, prototype.name),
+            visibility=prototype.visibility,
             template_params=tuple(
                 astx.TemplateParam(
                     param.name,

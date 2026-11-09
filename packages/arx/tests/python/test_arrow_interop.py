@@ -54,7 +54,7 @@ fn check_text(batch: RecordBatch, row: i64) -> none:
       return none
 
 fn check_rows(batch: RecordBatch) -> none:
-  var row: i64 = 0
+  row: i64 = 0
   while row < batch.nrows():
     check_id(batch, row)
     check_text(batch, row)
@@ -62,13 +62,13 @@ fn check_rows(batch: RecordBatch) -> none:
   return none
 
 fn main() -> i32:
-  var reader: IPCReader = IPCReader()
+  reader: IPCReader = IPCReader()
   reader.open_FORMAT("input.arrow")
-  var schema: Schema = reader.schema()
-  var writer: IPCWriter = IPCWriter(schema)
+  schema: Schema = reader.schema()
+  writer: IPCWriter = IPCWriter(schema)
   writer.open_FORMAT("output.arrow")
   while reader.next():
-    var batch: RecordBatch = reader.batch()
+    batch: RecordBatch = reader.batch()
     assert batch.schema().equals(schema)
     print(batch.nrows())
     check_rows(batch)

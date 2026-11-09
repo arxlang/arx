@@ -47,9 +47,9 @@ fn main() -> i32:
   ```
   title: Exercise the same consumers with inferred and explicit type arguments.
   ```
-  var values: list[i64] = [9007199254740993, 9223372036854775807]
-  var tensor_values: tensor[i64, 2] = [9007199254740993, 9223372036854775807]
-  var frame: dataframe[id:i64, missing:i64 | none] = dataframe({
+  values: list[i64] = [9007199254740993, 9223372036854775807]
+  tensor_values: tensor[i64, 2] = [9007199254740993, 9223372036854775807]
+  frame: dataframe[id:i64, missing:i64 | none] = dataframe({
     id: [9007199254740993, 9223372036854775807],
     missing: [none, 9223372036854775807],
   })
@@ -64,7 +64,7 @@ fn main() -> i32:
   assert runtime_item(tensor_values, 1) == 9223372036854775807
   assert is_null(nullable_first(frame.missing))
   assert is_null(nullable_first<i64>(frame.missing))
-  var copied: list[i64] = list(tensor_values, max_items=2)
+  copied: list[i64] = list(tensor_values, max_items=2)
   assert len(copied) == 2
   assert copied[1] == 9223372036854775807
   return 0

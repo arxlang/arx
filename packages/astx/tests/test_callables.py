@@ -59,6 +59,17 @@ def test_functiondef_creation_with_no_modifiers() -> None:
     visualize_image(fn.get_struct())
 
 
+def test_argument_binding_policy_is_language_independent() -> None:
+    """
+    title: Argument defaults stay constant while frontends may choose a policy.
+    """
+    default = Argument("value", Int32())
+    assert default.mutability is astx.MutabilityKind.constant
+    for policy in astx.MutabilityKind:
+        argument = Argument("value", Int32(), mutability=policy)
+        assert argument.mutability is policy
+
+
 def test_functiondef_creation_with_modifiers() -> None:
     """
     title: Test function creation with modifiers.

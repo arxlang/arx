@@ -84,7 +84,15 @@ _BUILTIN_TYPE_NAMES = (
     frozenset(_BUILTIN_TYPE_MAP)
     | frozenset(COLUMN_TYPE_NAMES)
     | frozenset(
-        {"dataframe", "list", "sequence", "series", "tensor", "nullable"}
+        {
+            "dataframe",
+            "list",
+            "sequence",
+            "series",
+            "tensor",
+            "nullable",
+            "auto",
+        }
     )
 )
 
@@ -93,6 +101,25 @@ class TypeParserMixin(ParserMixinBase):
     """
     title: Type parser mixin.
     """
+
+    def validate_type_declaration_name(self, target: str) -> None:
+        """
+        title: Reject inference markers as names of declared types.
+        summary: >-
+          Auto remains a contextual value identifier, but cannot name a class,
+          type alias, or template parameter because type positions interpret it
+          as an inference request.
+        parameters:
+          target:
+            type: str
+        """
+        if self.tokens.cur_tok.value == "auto":
+            raise ParserException(
+                f"'auto' is reserved for type inference and cannot name "
+                f"a {target}; choose another name.",
+                self.tokens.cur_tok.location,
+                code="ARX-PARSE-TYPE-NAME-001",
+            )
 
     def is_type_alias_decl_start(self) -> bool:
         """
@@ -153,6 +180,7 @@ class TypeParserMixin(ParserMixinBase):
         if self.tokens.cur_tok.kind != TokenKind.identifier:
             raise ParserException("Parser: Expected type alias name.")
 
+        self.validate_type_declaration_name("type alias")
         alias_name = cast(str, self.tokens.cur_tok.value)
         self._validate_type_alias_name(alias_name)
         self.tokens.get_next_token()  # eat alias name
@@ -295,6 +323,19 @@ class TypeParserMixin(ParserMixinBase):
                 raise ParserException("Parser: Expected a type name")
 
             type_name = cast(str, self.tokens.cur_tok.value)
+            if type_name == "auto":
+                if type_context not in {
+                    TypeUseContext.VARIABLE,
+                    TypeUseContext.INLINE_VARIABLE,
+                    TypeUseContext.FIELD,
+                }:
+                    raise ParserException(
+                        "'auto' is only allowed on initialized "
+                        "variable or field declarations.",
+                        self.tokens.cur_tok.location,
+                    )
+                self.tokens.get_next_token()
+                return astx.InferredType()
             template_bound = None
             if allow_template_vars:
                 template_bound = self._lookup_template_bound(type_name)

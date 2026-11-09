@@ -96,7 +96,7 @@ def test_constructor_forms(tmp_path: Path, arguments: str) -> None:
         type: str
     """
     result = run_class(
-        tmp_path, COUNTER, f"var value: Counter = Counter({arguments})"
+        tmp_path, COUNTER, f"value: Counter = Counter({arguments})"
     )
     assert result.returncode == 0, result.stderr
     assert result.stdout == ("3\n" if not arguments else "7\n")
@@ -145,15 +145,15 @@ def test_alias_replacement_and_borrowed_return(tmp_path: Path) -> None:
         + """fn identity(value: Counter) -> Counter:
   return value
 fn produce() -> Counter:
-  var local: Counter = Counter(value=4)
+  local: Counter = Counter(value=4)
   return identity(local)
 """
     )
     result = run_class(
         tmp_path,
         declarations,
-        """var first: Counter = produce()
-var alias: Counter = first
+        """first: Counter = produce()
+alias: Counter = first
 first = first
 first = Counter(value=8)
 assert alias.value == 4
@@ -182,8 +182,7 @@ fn value(number: i32) -> i32:
     result = run_class(
         tmp_path,
         declarations,
-        "var p: Pair = Pair(second=value(2), first=value(1))\n"
-        "assert p.sum == 3",
+        "p: Pair = Pair(second=value(2), first=value(1))\nassert p.sum == 3",
     )
     assert result.returncode == 0, result.stderr
     assert result.stdout == "2\n1\n"
@@ -218,7 +217,7 @@ class Child(Left, Right):
 fn produce() -> Root:
   return Child()
 """
-    result = run_class(tmp_path, declarations, "var value: Root = produce()")
+    result = run_class(tmp_path, declarations, "value: Root = produce()")
     assert result.returncode == 0, result.stderr
     assert (
         result.stdout
@@ -253,7 +252,7 @@ fn replace_child(holder: Holder) -> i32:
     result = run_class(
         tmp_path,
         declarations,
-        "var holder: Holder = Holder()\n"
+        "holder: Holder = Holder()\n"
         "assert holder.child.read(replace_child(holder)) == 1",
     )
     assert result.returncode == 0, result.stderr
@@ -273,10 +272,10 @@ RESOURCE = """class Log:
     self.handle.close()
     return none
 fn create(path: str) -> Log:
-  var local: Log = Log(mode="w", path=path)
+  local: Log = Log(mode="w", path=path)
   return local
 fn write_file() -> none:
-  var log: Log = create("data" + ".txt")
+  log: Log = create("data" + ".txt")
   assert log.write("saved") == 5
   return none
 """
@@ -293,9 +292,9 @@ def test_owned_file_and_string_fields(tmp_path: Path) -> None:
         tmp_path,
         RESOURCE,
         """write_file()
-var input: file = open("data.txt")
+input: file = open("data.txt")
 assert input.read() == "saved"
-var log: Log = create("explicit.txt")
+log: Log = create("explicit.txt")
 log.close()""",
     )
     assert result.returncode == 0, result.stderr
@@ -346,7 +345,7 @@ def test_hooks_cannot_be_called_explicitly(body: str) -> None:
         type: str
     """
     with pytest.raises(SemanticError, match="explicitly"):
-        analyze(parsed(COUNTER, "var value: Counter = Counter()\n" + body))
+        analyze(parsed(COUNTER, "value: Counter = Counter()\n" + body))
 
 
 @pytest.mark.parametrize("name", ["__inti__", "__str__", "__new__"])
@@ -389,7 +388,7 @@ def test_non_protocol_method_names_remain_ordinary(
     result = run_class(
         tmp_path,
         declarations,
-        "var value: Value = Value()\nassert value.value == 0\n"
+        "value: Value = Value()\nassert value.value == 0\n"
         f"assert value.{name}(7) == 7",
     )
     assert result.returncode == 0, result.stderr
@@ -427,7 +426,7 @@ def test_null_class_reference_is_checked(tmp_path: Path) -> None:
     result = run_class(
         tmp_path,
         declarations,
-        "var value: Holder = Holder()\nprint(value.child.value)",
+        "value: Holder = Holder()\nprint(value.child.value)",
     )
     assert result.returncode == 1
     assert "ARX-RUNTIME-CLASS-001" in result.stderr
@@ -437,7 +436,7 @@ def test_ordinary_keyword_calls_parse() -> None:
     """
     title: Ordinary method keywords preserve their value expressions.
     """
-    module = parsed(COUNTER, "var c: Counter = Counter()\nc.read(offset=1)")
+    module = parsed(COUNTER, "c: Counter = Counter()\nc.read(offset=1)")
     main = module.nodes[-1]
     assert isinstance(main, astx.FunctionDef)
     call = main.body.nodes[1]
@@ -470,8 +469,7 @@ fn produce() -> Right:
     result = run_class(
         tmp_path,
         declarations,
-        "var base: Right = produce()\n"
-        "assert base.right == 23\nbase.right = 29",
+        "base: Right = produce()\nassert base.right == 23\nbase.right = 29",
     )
     assert result.returncode == 0, result.stderr
     assert result.stdout == "29\n"
@@ -491,7 +489,7 @@ def test_owned_field_initializers(tmp_path: Path) -> None:
   handle: file = open(self.path, mode="w")
   child: Counter = Counter(value=17)
 fn write() -> none:
-  var log: Log = Log()
+  log: Log = Log()
   assert log.handle.write("saved") == 5
   log.path = "changed"
   log.path = log.path
@@ -502,7 +500,7 @@ fn write() -> none:
         tmp_path,
         declarations,
         "write()\n"
-        'var input: file = open("owned.txt")\nassert input.read() == "saved"',
+        'input: file = open("owned.txt")\nassert input.read() == "saved"',
     )
     assert result.returncode == 0, result.stderr
     assert result.stdout == "17\n"
@@ -540,7 +538,7 @@ class Child(Base):
 @pytest.mark.parametrize(
     "body",
     [
-        "var alias: Counter = self\n    return none",
+        "alias: Counter = self\n    return none",
         "self.read()\n    return none",
     ],
 )
@@ -592,7 +590,7 @@ def test_parameter_rebinding_keeps_caller_reference(tmp_path: Path) -> None:
     result = run_class(
         tmp_path,
         declarations,
-        "var original: Counter = Counter(value=4)\nrebind(original)\n"
+        "original: Counter = Counter(value=4)\nrebind(original)\n"
         "assert original.value == 4\nprint(1)",
     )
     assert result.returncode == 0, result.stderr
@@ -609,11 +607,11 @@ def test_lexical_loop_and_early_return_cleanup(tmp_path: Path) -> None:
     declarations = (
         COUNTER
         + """fn loop() -> none:
-  for var number: i32 = 0; number < 3; number + 1:
-    var value: Counter = Counter(value=number)
+  for number: i32 = 0; number < 3; number + 1:
+    value: Counter = Counter(value=number)
   return none
 fn early(flag: bool) -> none:
-  var value: Counter = Counter(value=9)
+  value: Counter = Counter(value=9)
   if flag:
     return none
   else:
@@ -642,8 +640,7 @@ def test_public_file_fields_can_share_one_object(tmp_path: Path) -> None:
     result = run_class(
         tmp_path,
         declarations,
-        'var log: Log = Log()\nlog.first.write("saved")\n'
-        'log.second.write("!")',
+        'log: Log = Log()\nlog.first.write("saved")\nlog.second.write("!")',
     )
     assert result.returncode == 0, result.stderr
     assert (tmp_path / "log.txt").read_text() == "saved!"
@@ -696,7 +693,7 @@ class Child(Base):
     result = run_class(
         tmp_path,
         declarations,
-        "var value: Child = Child()\nassert value.value == 7",
+        "value: Child = Child()\nassert value.value == 7",
     )
     assert result.returncode == 0, result.stderr
 
@@ -704,8 +701,7 @@ class Child(Base):
 @pytest.mark.parametrize(
     "declaration",
     [
-        "class Item:\n  @[static]\n"
-        "  fn __init__() -> none:\n    return none\n",
+        "class Item:\n  fn __init__() -> static :: none:\n    return none\n",
         "class Item:\n"
         "  fn __del__(self, value: i32) -> none:\n    return none\n",
         "class Item:\n  fn __init__(self) -> i32:\n    return 1\n",
@@ -870,7 +866,7 @@ class Leaf:
     result = run_class(
         tmp_path,
         declarations,
-        "var holder: Holder = Holder()\nassert holder.child.read() == 7",
+        "holder: Holder = Holder()\nassert holder.child.read() == 7",
     )
     assert result.returncode == 0, result.stderr
 
@@ -885,10 +881,9 @@ def test_scalar_union_field_is_preserved(tmp_path: Path) -> None:
     declarations = """type Number = i32 | i64
 class Value:
   number: Number = 7
-  @[private]
-  init: i32 = 1
+  init: private :: i32 = 1
 """
-    result = run_class(tmp_path, declarations, "var value: Value = Value()")
+    result = run_class(tmp_path, declarations, "value: Value = Value()")
     assert result.returncode == 0, result.stderr
 
 
@@ -911,9 +906,9 @@ fn read(text: str, ignored: i32) -> none:
     result = run_class(
         tmp_path,
         declarations,
-        """var log: Log = Log()
+        """log: Log = Log()
 read(log.path, replace(log))
-var snapshot: str = log.path
+snapshot: str = log.path
 log.path = "third"
 assert snapshot == "replacement with different storage"
 assert log.path == "third"

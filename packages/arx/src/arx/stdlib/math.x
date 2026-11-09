@@ -18,7 +18,7 @@ fn abs(value: T) -> T:
     because its positive magnitude is not representable, unlike Python's
     arbitrary-precision integer result.
   ```
-  var zero: T = cast(0, T)
+  zero: T = cast(0, T)
   if value < zero:
     return zero - value
   else:

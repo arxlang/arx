@@ -33,8 +33,8 @@ def test_arx_test_runner_parses_ambient_range_in_test_modules(
         dedent(
             """
             fn test_range_values() -> none:
-              var values: list[i32] = range(0, 4)
-              var value: i32 = values[2]
+              values: list[i32] = range(0, 4)
+              value: i32 = values[2]
               assert value == 2, "range(0, 4)[2] should be 2"
             """
         ).lstrip(),
@@ -242,14 +242,14 @@ def test_arx_test_runner_accepts_none_test_signatures(
         dedent(
             """
             fn test_no_return() -> none:
-              var x: i32 = 1
+              x: i32 = 1
 
             fn test_bare_return() -> none:
-              var x: i32 = 1
+              x: i32 = 1
               return
 
             fn test_return_none() -> none:
-              var x: i32 = 1
+              x: i32 = 1
               return none
             """
         ).lstrip(),
@@ -345,7 +345,7 @@ def test_arx_test_runner_rejects_module_scope_variable_declarations(
     entry.write_text(
         dedent(
             """
-            var seed: i32 = 1
+            seed: i32 = 1
 
             fn test_uses_seed() -> none:
               return none

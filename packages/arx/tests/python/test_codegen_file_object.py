@@ -150,7 +150,7 @@ def test_trailing_blank_line_builds_and_runs(tmp_path: Path) -> None:
     code = (
         "```\ntitle: Trailing blank line\n```\n"
         "fn main() -> i32:\n"
-        "  var x: i64 = 3\n"
+        "  x: i64 = 3\n"
         "  print(x)\n"
         "  return 0\n\n  "
     )
@@ -187,7 +187,7 @@ def test_integer_division_by_zero_reports_runtime_diagnostic(
         type: Path
     """
     module_ast = _parse_min_module(
-        "fn main() -> i32:\n  var zero: i32 = 0\n  return 1 / zero\n"
+        "fn main() -> i32:\n  zero: i32 = 0\n  return 1 / zero\n"
     )
     binary = tmp_path / "division_by_zero"
     ArxBuilder().build(module_ast, str(binary))
@@ -290,15 +290,12 @@ def test_class_program_builds_and_runs(tmp_path: Path) -> None:
         dedent(
             """
             class BaseCounter:
-              @[public, mutable]
-              value: int32 = 4
+              value: public var :: int32 = 4
 
             class Counter(BaseCounter):
-              @[public, static, constant]
-              version: int32 = 3
+              version: public static const :: int32 = 3
 
-              @[private, mutable]
-              internal: int32 = 5
+              internal: private var :: int32 = 5
 
               fn get(self) -> int32:
                 return self.value
@@ -307,18 +304,16 @@ def test_class_program_builds_and_runs(tmp_path: Path) -> None:
                 return self.internal
 
             class CounterFactory:
-              @[public, static]
-              fn make() -> Counter:
+              fn make() -> public static :: Counter:
                 return Counter()
 
-              @[public, static]
-              fn version_value() -> int32:
+              fn version_value() -> public static :: int32:
                 return Counter.version
 
             fn main() -> int32:
-              var built: Counter = CounterFactory.make()
-              var version: int32 = CounterFactory.version_value()
-              var extra: int32 = built.read_internal() + version
+              built: Counter = CounterFactory.make()
+              version: int32 = CounterFactory.version_value()
+              extra: int32 = built.read_internal() + version
               return (built.get() + built.value) + extra
             """
         ).lstrip()
@@ -354,8 +349,8 @@ def test_tensor_program_builds_and_runs(tmp_path: Path) -> None:
               return grid[1, 0] + grid[0, 1]
 
             fn main() -> i32:
-              var grid: tensor[i32, 2, 2] = [[1, 2], [3, 4]]
-              var ids: tensor[i32, 4] = [5, 6, 7, 8]
+              grid: tensor[i32, 2, 2] = [[1, 2], [3, 4]]
+              ids: tensor[i32, 4] = [5, 6, 7, 8]
               return pick(grid) + ids[2]
             """
         ).lstrip()
@@ -391,11 +386,11 @@ def test_bundled_stdlib_math_program_builds_and_runs(tmp_path: Path) -> None:
             import math from stdlib
 
             fn main() -> i32:
-              var a: i32 = math.abs(0 - 3)
-              var b: i32 = math.min(10, 5)
-              var c: i32 = math.max(2, 7)
-              var d: i32 = math.clamp(12, 0, 9)
-              var e: i32 = math.square(4)
+              a: i32 = math.abs(0 - 3)
+              b: i32 = math.min(10, 5)
+              c: i32 = math.max(2, 7)
+              d: i32 = math.clamp(12, 0, 9)
+              e: i32 = math.square(4)
               return a + b + c + d + e
             """
         ).lstrip(),
@@ -448,15 +443,14 @@ def test_template_program_builds_and_runs(tmp_path: Path) -> None:
               return lhs + rhs
 
             class Math:
-              @[public, static]
               @<T: i32 | f64>
-              fn identity(value: T) -> T:
+              fn identity(value: T) -> public static :: T:
                 return value
 
             fn main() -> int32:
-              var inferred: int32 = add(1, 2)
-              var explicit: int32 = add<int32>(3, 4)
-              var static_value: int32 = Math.identity<int32>(5)
+              inferred: int32 = add(1, 2)
+              explicit: int32 = add<int32>(3, 4)
+              static_value: int32 = Math.identity<int32>(5)
               return inferred + explicit + static_value
             """
         ).lstrip()
@@ -504,9 +498,9 @@ def test_type_alias_union_and_type_builtins_build_and_run(
               return value
 
             fn main() -> int32:
-              var value: i64 = to_explicit(to_b(identity(5)))
-              var ok: bool = isinstance(value, Number)
-              var name: str = type(value)
+              value: i64 = to_explicit(to_b(identity(5)))
+              ok: bool = isinstance(value, Number)
+              name: str = type(value)
               if ok:
                 return cast(value, int32)
               else:
@@ -544,7 +538,7 @@ def test_isinstance_uses_membership_not_numeric_widening(
         dedent(
             """
             fn main() -> int32:
-              var value: i32 = 1
+              value: i32 = 1
               if isinstance(value, i64):
                 return 1
               else:

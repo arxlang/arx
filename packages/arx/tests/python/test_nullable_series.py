@@ -55,39 +55,39 @@ fn consume(value: nullable[i32]) -> i32:
   return fill_null(value, 0)
 
 fn values() -> series[i32 | none]:
-  var frame: dataframe[x:i32 | none] = dataframe({x:[1, none, 3]})
+  frame: dataframe[x:i32 | none] = dataframe({x:[1, none, 3]})
   return frame.x
 
 fn main() -> i32:
-  var object: Sample = Sample()
+  object: Sample = Sample()
   assert is_null(object.get())
   object.set(6)
   assert fill_null(object.get(), 0) == 6
-  var lifted: nullable[i32] = 4
+  lifted: nullable[i32] = 4
   assert consume(3) == 3
   assert consume(lift(5)) == 5
   assert fill_null(lifted, 0) == 4
-  var column: series[i32 | none] = values()
-  var sum: series[i32 | none] = column + column
-  var value: nullable[i32] = keep(sum[0])
+  column: series[i32 | none] = values()
+  sum: series[i32 | none] = column + column
+  value: nullable[i32] = keep(sum[0])
   assert fill_null(value, 0) == 2
   assert is_null(sum[1])
   assert fill_null(sum[2] + value, 0) == 8
-  var empty: nullable[i32] = cast(none, nullable[i32])
+  empty: nullable[i32] = cast(none, nullable[i32])
   assert is_null(empty)
   assert is_null(empty / cast(0, nullable[i32]))
-  var filled: series[i32] = fill_null(sum, 7)
+  filled: series[i32] = fill_null(sum, 7)
   assert filled[1] == 7
-  var mask: series[bool] = is_null(sum)
+  mask: series[bool] = is_null(sum)
   assert mask[1]
   assert !mask[0]
-  var equal: series[bool | none] = sum == column
+  equal: series[bool | none] = sum == column
   assert is_null(equal[1])
   assert !fill_null(equal[0], true)
-  var logical: series[bool | none] = equal || false
+  logical: series[bool | none] = equal || false
   assert is_null(logical[1])
   assert !fill_null(logical[0], true)
-  var offset: series[i32 | none] = column + 10
+  offset: series[i32 | none] = column + 10
   assert fill_null(offset[2], 0) == 13
   return 0
 """
@@ -121,14 +121,14 @@ import (RecordBatch, IPCReader, IPCWriter) from stdlib.arrow
 fn identity(frame: {frame}) -> {frame}:
   return frame
 fn main() -> i32:
-  var reader: IPCReader = IPCReader()
+  reader: IPCReader = IPCReader()
   reader.open_file("input.arrow")
   assert reader.next()
-  var batch: RecordBatch = reader.batch()
-  var frame: {frame} = cast(batch, {frame})
+  batch: RecordBatch = reader.batch()
+  frame: {frame} = cast(batch, {frame})
   batch.close()
-  var output: RecordBatch = cast(identity(frame), RecordBatch)
-  var writer: IPCWriter = IPCWriter(output.schema())
+  output: RecordBatch = cast(identity(frame), RecordBatch)
+  writer: IPCWriter = IPCWriter(output.schema())
   writer.open_file("output.arrow")
   writer.write(output)
   writer.close()
@@ -199,8 +199,8 @@ def test_compiled_kernel_failures(
     """
     source = f"""
 fn main() -> i32:
-  var left: dataframe[x:i32 | none] = dataframe({{x:[1, none]}})
-  var right: dataframe[x:i32 | none] = dataframe({{x:[1]}})
+  left: dataframe[x:i32 | none] = dataframe({{x:[1, none]}})
+  right: dataframe[x:i32 | none] = dataframe({{x:[1]}})
   return {expression}
 """
     binary = tmp_path / "failure"

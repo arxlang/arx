@@ -15,6 +15,7 @@ from irx.analysis.handlers.base import (
     SemanticAnalyzerCore,
     SemanticVisitorMixinBase,
 )
+from irx.diagnostics import DiagnosticCodes
 from irx.typecheck import typechecked
 
 
@@ -117,6 +118,15 @@ class ImportVisitorMixin(SemanticVisitorMixinBase):
             local_name = alias.asname or alias.name
 
             if target_binding is not None:
+                if not self.bindings.allows_function_access(
+                    target_binding, self._current_module_key()
+                ):
+                    self.context.diagnostics.add(
+                        f"Function '{alias.name}' is private to its module",
+                        node=alias,
+                        code=DiagnosticCodes.SEMANTIC_INVALID_FIELD_ACCESS,
+                    )
+                    continue
                 binding = self.bindings.bind(
                     local_name,
                     target_binding,

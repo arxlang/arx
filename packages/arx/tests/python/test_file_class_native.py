@@ -105,8 +105,8 @@ title: Counted File lifetime
 fn share(stream: file) -> File:
   return stream
 fn main() -> i32:
-  var stream: File = {factory}("{path}", "w")
-  var alias: File = share(stream)
+  stream: File = {factory}("{path}", "w")
+  alias: File = share(stream)
   alias.write("saved")
   stream.close()
   alias.close()

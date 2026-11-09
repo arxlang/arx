@@ -17,10 +17,10 @@ provided by IRx's native Arrow C++ runtime.
 
 ```arx
 fn sum_values() -> i32:
-  var values: list[i32] = [0, 1, 2 + 1]
+  values: list[i32] = [0, 1, 2 + 1]
   values.append(4)
   assert len(values) == 4
-  var total: i32 = 0
+  total: i32 = 0
   for value in values:
     total = total + value
   return total
@@ -47,7 +47,7 @@ Bracket expressions evaluate once, left to right, and produce owned lists; only
 an explicit fixed-shape tensor target selects tensor storage. An explicit list
 target types fresh literal elements first. Otherwise all elements must have a
 common lossless domain, independent of order. Empty lists need a target, for
-example `var values: list[i64] = []`. Nested owned lists remain unsupported.
+example `values: list[i64] = []`. Nested owned lists remain unsupported.
 
 `len(values)` returns `i64`; narrowing it requires a checked `cast`. String
 insertion copies the bytes, and indexing or iterating a string list produces
@@ -87,7 +87,7 @@ by a generator, reassigned, or used to mutate the source. Materialize an owned
 result instead:
 
 ```arx
-var owned: list[i64] = list(values, max_items=1000)
+owned: list[i64] = list(values, max_items=1000)
 ```
 
 `list(input, max_items=N)` copies nonnullable numeric values once. Sized inputs
@@ -112,7 +112,7 @@ fn pick(grid: tensor[i32, 2, 2]) -> i32:
   return grid[1, 0]
 
 fn main() -> i32:
-  var grid: tensor[i32, 2, 2] = [[1, 2], [3, 4]]
+  grid: tensor[i32, 2, 2] = [[1, 2], [3, 4]]
   return pick(grid)
 ```
 
@@ -141,12 +141,12 @@ is overflow-checked. Rank-one tensors also support `len` and ordered iteration.
 
 ```arx
 fn main() -> i32:
-  var rows: dataframe[id: i32, score: f64] = dataframe({
+  rows: dataframe[id: i32, score: f64] = dataframe({
     id: [1, 2, 3],
     score: [0.5, 0.8, 1.0],
   })
-  var scores: series[f64] = rows.score
-  var ids: series[i32] = rows["id"]
+  scores: series[f64] = rows.score
+  ids: series[i32] = rows["id"]
   print(rows.ncols())
   return cast(rows.nrows(), i32)
 ```
@@ -220,14 +220,14 @@ zero-based; negative or out-of-range indices fail at runtime.
 title: Nullable column expressions
 ```
 fn main() -> i32:
-  var frame: dataframe[x:i32 | none] = dataframe({x:[1, none, 3]})
-  var doubled: series[i32 | none] = frame.x + frame.x
-  var missing: nullable[i32] = doubled[1]
+  frame: dataframe[x:i32 | none] = dataframe({x:[1, none, 3]})
+  doubled: series[i32 | none] = frame.x + frame.x
+  missing: nullable[i32] = doubled[1]
   assert is_null(missing)
   assert fill_null(doubled[2], 0) == 6
-  var filled: series[i32] = fill_null(doubled, 7)
+  filled: series[i32] = fill_null(doubled, 7)
   assert filled[1] == 7
-  var empty: nullable[i32] = none
+  empty: nullable[i32] = none
   assert is_null(empty)
   return 0
 ````

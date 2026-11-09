@@ -9,9 +9,9 @@ fn main() -> i32:
   ```
   title: Read every row without explicit sessions or RecordBatches
   ```
-  var frame: dataframe[...] = read_csv("examples/arrow/input.csv")
+  frame: dataframe[...] = read_csv("examples/arrow/input.csv")
   write_parquet(frame, "output.parquet", compression="zstd", atomic=true)
-  var restored: dataframe[...] = read_parquet("output.parquet")
+  restored: dataframe[...] = read_parquet("output.parquet")
   assert restored.nrows() == frame.nrows()
   write_csv(restored, "output.csv")
   return 0

@@ -24,7 +24,7 @@ fn consume_stream(address: i64) -> i32:
   title: consume_stream
   summary: Takes ownership of the supplied stream and validates one batch.
   ```
-  var reader: IPCReader = IPCReader()
+  reader: IPCReader = IPCReader()
   reader.import_stream(address)
   assert reader.next()
   verify(reader.batch())
@@ -36,7 +36,7 @@ fn consume_array(array: i64, schema: i64) -> i32:
   title: consume_array
   summary: Moves the C Data pair and checks its contents without IPC.
   ```
-  var batch: RecordBatch = RecordBatch()
+  batch: RecordBatch = RecordBatch()
   batch.import_c(array, schema)
   verify(batch)
   return 0
@@ -46,7 +46,7 @@ fn receive_tcp(host: str, port: i32) -> i32:
   title: receive_tcp
   summary: Native embedding boundary for a streaming TCP consumer.
   ```
-  var reader: IPCReader = IPCReader()
+  reader: IPCReader = IPCReader()
   reader.connect(host, port, timeout_ms=1000)
   while reader.next():
     verify(reader.batch())

@@ -30,6 +30,7 @@ from irx.analysis.class_lifecycle import (
     field_resource,
     reject_hook_call,
 )
+from irx.analysis.collection_access import resolve_collection_access
 from irx.analysis.file_io import (
     resolve_file_method,
     validate_file_method_arguments,
@@ -224,6 +225,7 @@ class ExpressionClassAccessVisitorMixin(ExpressionClassSupportVisitorMixin):
             type: astx.MethodCall
         """
         info = self._semantic(node)
+        info.normalized_collection = None
         if info.resolved_file_operation is not None:
             info.resource_ownership = None
         info.resolved_file_operation = None
@@ -234,6 +236,8 @@ class ExpressionClassAccessVisitorMixin(ExpressionClassSupportVisitorMixin):
         module = self._module_namespace(node.receiver)
         if module is not None:
             self._resolve_module_namespace_call(node, module, [])
+            return
+        if resolve_collection_access(cast(SemanticAnalyzerCore, self), node):
             return
         receiver_type = self._expr_type(node.receiver)
         if is_string_type(receiver_type):
@@ -746,6 +750,7 @@ class ExpressionClassAccessVisitorMixin(ExpressionClassSupportVisitorMixin):
           node:
             type: astx.FieldAccess
         """
+        self._semantic(node).normalized_collection = None
         self._semantic(node).resource_ownership = None
         self.visit(node.value)
         if not self._require_value_expression(
@@ -772,6 +777,8 @@ class ExpressionClassAccessVisitorMixin(ExpressionClassSupportVisitorMixin):
                 member_name=node.field_name,
                 binding=binding,
             )
+            return
+        if resolve_collection_access(cast(SemanticAnalyzerCore, self), node):
             return
         base_type = self._expr_type(node.value)
         struct = self._resolve_struct_from_type(

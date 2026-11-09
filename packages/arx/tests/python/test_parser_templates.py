@@ -44,8 +44,8 @@ def test_parse_template_function_metadata_and_calls() -> None:
               return lhs + rhs
 
             fn main() -> i32:
-              var whole: i32 = add(1, 2)
-              var decimal: f64 = add<f64>(1.5, 2.5)
+              whole: i32 = add(1, 2)
+              decimal: f64 = add<f64>(1.5, 2.5)
               print(decimal)
               return whole
             """
@@ -134,7 +134,7 @@ def test_parse_composed_alias_bounds() -> None:
         assert [type(member) for member in params[0].bound.members] == members
 
 
-def test_parse_template_method_with_mixed_prefix_order() -> None:
+def test_parse_template_method_with_inline_modifiers() -> None:
     """
     title: Parse one template method with modifiers and explicit call args.
     """
@@ -143,12 +143,11 @@ def test_parse_template_method_with_mixed_prefix_order() -> None:
             """
             class Math:
               @<T: i32 | f64>
-              @[public, static]
-              fn identity(value: T) -> T:
+              fn identity(value: T) -> public static :: T:
                 return value
 
             fn main() -> i32:
-              var decimal: f64 = Math.identity<f64>(1.5)
+              decimal: f64 = Math.identity<f64>(1.5)
               print(decimal)
               return 0
             """
@@ -214,8 +213,7 @@ def test_parse_template_method_with_mixed_prefix_order() -> None:
         ),
         (
             "@<T: i32 | f64>\nextern add(value: i32) -> i32\n",
-            "template parameter blocks are only allowed "
-            "before functions or methods",
+            "extern functions cannot declare templates",
         ),
         (
             "fn main() -> i32:\n  foo<i32>\n",
@@ -259,7 +257,7 @@ def test_parse_class_construction_rejects_template_arguments() -> None:
                   value: int32 = 1
 
                 fn main() -> int32:
-                  var counter: Counter = Counter<i32>()
+                  counter: Counter = Counter<i32>()
                   return 0
                 """
             ).lstrip()
@@ -282,8 +280,8 @@ def test_parse_comparisons_do_not_trigger_template_call_handling() -> None:
         dedent(
             """
             fn main() -> i32:
-              var a32: i32 = 32
-              var ok: bool = (a32 > 0) && (a32 < 100)
+              a32: i32 = 32
+              ok: bool = (a32 > 0) && (a32 < 100)
               return 0
             """
         ).lstrip()

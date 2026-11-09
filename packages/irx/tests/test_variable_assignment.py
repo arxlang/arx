@@ -106,6 +106,7 @@ def test_variable_declaration_no_initializer(
     decl = astx.VariableDeclaration(
         name="x",
         type_=var_type(),
+        mutability=astx.MutabilityKind.mutable,
     )
 
     proto = astx.FunctionPrototype(

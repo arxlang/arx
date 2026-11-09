@@ -32,11 +32,11 @@ FUZZ_SEEDS = (
     "",
     "fn main() -> i32:\n  return 0\n",
     "fn add(a: i32, b: i32) -> i32:\n  return a + b\n",
-    "if true:\n  var x: i32 = 1\nelse:\n  var x: i32 = 2\n",
+    "if true:\n  x: i32 = 1\nelse:\n  x: i32 = 2\n",
     "class Point:\n  x: i32\n  y: i32\n",
     "import std.math\n",
-    "var values: list[i32] = [1, 2, 3]\n",
-    "@[T: i32]\nfn identity(value: T) -> T:\n  return value\n",
+    "values: list[i32] = [1, 2, 3]\n",
+    "@<T: i32>\nfn identity(value: T) -> T:\n  return value\n",
 )
 
 
@@ -70,6 +70,18 @@ def generate_fuzz_cases() -> Iterator[str]:
             + generator.choice(FUZZ_ALPHABET)
             + seed[position + 1 :]
         )
+
+
+@pytest.mark.parametrize("source", FUZZ_SEEDS)
+def test_frontend_fuzz_seed_is_valid(source: str) -> None:
+    """
+    title: Baseline seeds parse before any deterministic mutation is applied.
+    parameters:
+      source:
+        type: str
+    """
+    ArxIO.string_to_buffer(source)
+    Parser().parse(Lexer().lex(), "fuzz_seed")
 
 
 @pytest.mark.parametrize("source", tuple(generate_fuzz_cases()))

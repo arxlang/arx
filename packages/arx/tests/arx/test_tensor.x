@@ -29,7 +29,7 @@ fn test_tensor_grid_indexing() -> none:
   title: test_tensor_grid_indexing
   summary: Verifies two-dimensional tensor literals and indexing.
   ```
-  var grid: tensor[i32, 2, 2] = [[1, 2], [3, 4]]
+  grid: tensor[i32, 2, 2] = [[1, 2], [3, 4]]
   assert pick(grid) == 5
 
 fn test_tensor_vector_indexing() -> none:
@@ -37,5 +37,5 @@ fn test_tensor_vector_indexing() -> none:
   title: test_tensor_vector_indexing
   summary: Verifies one-dimensional tensor literals and indexing.
   ```
-  var ids: tensor[i32, 4] = [5, 6, 7, 8]
+  ids: tensor[i32, 4] = [5, 6, 7, 8]
   assert edge_sum(ids) == 13

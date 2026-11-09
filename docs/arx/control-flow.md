@@ -38,7 +38,7 @@ fn count_to_ten() -> i32:
   title: count_to_ten
   summary: Increments value until it reaches ten.
   ```
-  var a: i32 = 0
+  a: i32 = 0
   while a < 10:
     a = a + 1
   return a
@@ -61,7 +61,7 @@ fn range_loop(n: i32) -> i32:
   title: range_loop
   summary: Sums values produced by a range loop.
   ```
-  var total: i32 = 0
+  total: i32 = 0
   for i in range(0, n):
     total = total + i
   return total
@@ -79,8 +79,8 @@ fn list_loop() -> i32:
   title: list_loop
   summary: Sums values from two list-valued loop inputs.
   ```
-  var values: list[i32] = range(0, 3)
-  var total: i32 = 0
+  values: list[i32] = range(0, 3)
+  total: i32 = 0
   for value in values:
     total = total + value
   for value in [3, 4]:
@@ -95,7 +95,7 @@ other list-valued expression instead.
 
 Count-style loops follow:
 
-`for var i: type = init; condition; update:`
+`for i: type = init; condition; update:`
 
 ````arx
 ```
@@ -107,8 +107,8 @@ fn count_loop() -> i32:
   title: count_loop
   summary: Sums numbers from 0 to 4.
   ```
-  var total: i32 = 0
-  for var i: i32 = 0; i < 5; i += 1:
+  total: i32 = 0
+  for i: i32 = 0; i < 5; i += 1:
     total += i
   return total
 ````

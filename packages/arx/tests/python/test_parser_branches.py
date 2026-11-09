@@ -37,10 +37,10 @@ def test_parse_literal_kinds_and_list_literal() -> None:
     """
     tree = _parse(
         "fn main() -> list[i32]:\n"
-        '  var s: str = "abc"\n'
-        "  var c: char = 'A'\n"
-        "  var b: bool = true\n"
-        "  var n: none = none\n"
+        '  s: str = "abc"\n'
+        "  c: char = 'A'\n"
+        "  b: bool = true\n"
+        "  n: none = none\n"
         "  return [1, 2, 3]\n"
     )
 
@@ -182,37 +182,20 @@ def test_parse_inline_var_declaration_error_paths() -> None:
     ArxIO.string_to_buffer("x")
     parser = Parser(Lexer().lex())
     parser.tokens.get_next_token()
-    with pytest.raises(ParserException, match="Expected 'var'"):
+    with pytest.raises(ParserException, match="Expected 'name:"):
         parser.parse_inline_var_declaration()
 
-    ArxIO.string_to_buffer("var 1")
+    ArxIO.string_to_buffer("1: i32 = 1")
     parser = Parser(Lexer().lex())
     parser.tokens.get_next_token()
-    with pytest.raises(ParserException, match="identifier after var"):
+    with pytest.raises(ParserException, match="Expected 'name:"):
         parser.parse_inline_var_declaration()
 
-    ArxIO.string_to_buffer("var i = 0")
+    ArxIO.string_to_buffer("i = 0")
     parser = Parser(Lexer().lex())
     parser.tokens.get_next_token()
-    with pytest.raises(ParserException, match="type annotation"):
+    with pytest.raises(ParserException, match="Expected 'name:"):
         parser.parse_inline_var_declaration()
-
-
-def test_parse_var_expr_error_paths() -> None:
-    """
-    title: Parse var expression errors.
-    """
-    ArxIO.string_to_buffer("var 1")
-    parser = Parser(Lexer().lex())
-    parser.tokens.get_next_token()
-    with pytest.raises(ParserException, match="identifier after var"):
-        parser.parse_var_expr()
-
-    ArxIO.string_to_buffer("var a = 1")
-    parser = Parser(Lexer().lex())
-    parser.tokens.get_next_token()
-    with pytest.raises(ParserException, match="type annotation"):
-        parser.parse_var_expr()
 
 
 def test_parse_type_error_paths() -> None:
@@ -364,7 +347,7 @@ def test_parse_runtime_shaped_tensor_restricted_contexts() -> None:
     with pytest.raises(ParserException, match="function parameter"):
         _parse(
             "fn main() -> i32:\n"
-            "  var values: tensor[i32, ...] = [1, 2, 3]\n"
+            "  values: tensor[i32, ...] = [1, 2, 3]\n"
             "  return 0\n"
         )
 
@@ -394,8 +377,8 @@ def test_parse_tensor_type_literal_and_indexing() -> None:
         "fn pick(grid: tensor[i32, 2, 2]) -> i32:\n"
         "  return grid[1, 0]\n"
         "fn main() -> i32:\n"
-        "  var grid: tensor[i32, 2, 2] = [[1, 2], [3, 4]]\n"
-        "  var ids: tensor[i32, 4] = [1, 2, 3, 4]\n"
+        "  grid: tensor[i32, 2, 2] = [[1, 2], [3, 4]]\n"
+        "  ids: tensor[i32, 4] = [1, 2, 3, 4]\n"
         "  return pick(grid) + ids[2]\n"
     )
 
@@ -434,8 +417,8 @@ def test_parse_list_default_init_and_append() -> None:
     """
     tree = _parse(
         "fn build(stop: i32) -> list[i32]:\n"
-        "  var values: list[i32]\n"
-        "  for var current: i32 = 0; current < stop; current + 1:\n"
+        "  values: list[i32]\n"
+        "  for current: i32 = 0; current < stop; current + 1:\n"
         "    values.append(current)\n"
         "  return values\n"
     )
@@ -464,7 +447,7 @@ def test_parse_count_loop_tensor_initializer_scope() -> None:
     """
     tree = _parse(
         "fn main() -> i32:\n"
-        "  for var values: tensor[i32, 2] = [1, 2]; "
+        "  for values: tensor[i32, 2] = [1, 2]; "
         "values[0] < 3; values:\n"
         "    return values[1]\n"
         "  return 0\n"
@@ -531,10 +514,10 @@ def test_parse_range_keeps_source_arguments() -> None:
     """
     tree = _parse(
         "fn first() -> none:\n"
-        "  var values: list[i32] = range(0, 4)\n"
+        "  values: list[i32] = range(0, 4)\n"
         "  return none\n"
         "fn second() -> none:\n"
-        "  var values: list[i32] = range(2, 8, 2)\n"
+        "  values: list[i32] = range(2, 8, 2)\n"
         "  return none\n"
     )
 
@@ -562,7 +545,7 @@ def test_parse_range_keeps_variable_stop_without_synthetic_step() -> None:
     """
     tree = _parse(
         "fn build(n: i32) -> none:\n"
-        "  var xs: list[i32] = range(0, n)\n"
+        "  xs: list[i32] = range(0, n)\n"
         "  return none\n"
     )
 
@@ -610,7 +593,7 @@ def test_parse_for_in_list_variable_uses_for_in_node() -> None:
     """
     tree = _parse(
         "fn main() -> i32:\n"
-        "  var xs: list[i32] = range(0, 3)\n"
+        "  xs: list[i32] = range(0, 3)\n"
         "  for value in xs:\n"
         "    return value\n"
         "  return 0\n"
@@ -659,7 +642,7 @@ def test_parse_for_in_target_is_visible_in_body() -> None:
     """
     tree = _parse(
         "fn main() -> i32:\n"
-        "  var xs: list[i32] = range(0, 3)\n"
+        "  xs: list[i32] = range(0, 3)\n"
         "  for value in xs:\n"
         "    return value\n"
         "  return 0\n"
@@ -704,9 +687,7 @@ def test_parse_range_leaves_arity_validation_to_builtins() -> None:
     title: Range calls parse like ordinary calls before semantic analysis.
     """
     tree = _parse(
-        "fn main() -> none:\n"
-        "  var values: list[i32] = range(4)\n"
-        "  return none\n"
+        "fn main() -> none:\n  values: list[i32] = range(4)\n  return none\n"
     )
     fn = tree.nodes[0]
     assert isinstance(fn, astx.FunctionDef)
@@ -722,13 +703,13 @@ def test_parse_range_leaves_arity_validation_to_builtins() -> None:
     [
         (
             "fn main() -> i32:\n"
-            "  var grid: tensor[i32, 2, 2] = [[1, 2], [3, 4]]\n"
+            "  grid: tensor[i32, 2, 2] = [[1, 2], [3, 4]]\n"
             "  return grid[0]\n",
             "index count must match",
         ),
         (
             "fn main() -> i32:\n"
-            "  var grid: tensor[i32, 2, 2] = [[1, 2], [3, 4]]\n"
+            "  grid: tensor[i32, 2, 2] = [[1, 2], [3, 4]]\n"
             "  return grid[2, 0]\n",
             "out of bounds",
         ),
@@ -753,7 +734,7 @@ def test_tensor_index_validation_is_semantic(code: str, expected: str) -> None:
     [
         (
             "fn main() -> i32:\n"
-            "  var grid: tensor[i32, size] = [1, 2]\n"
+            "  grid: tensor[i32, size] = [1, 2]\n"
             "  return 0\n",
             "integer literals",
         ),
@@ -771,7 +752,7 @@ def test_tensor_index_validation_is_semantic(code: str, expected: str) -> None:
         ),
         (
             "fn main() -> i32:\n"
-            "  for var values: tensor[i32, ...] = [1, 2]; "
+            "  for values: tensor[i32, ...] = [1, 2]; "
             "values[0] < 3; values:\n"
             "    return 0\n"
             "  return 0\n",
@@ -808,31 +789,31 @@ def test_parse_unary_and_prototype_error_paths() -> None:
     parser = Parser(Lexer().lex())
     parser.tokens.get_next_token()
     with pytest.raises(ParserException, match="Expected function name"):
-        parser.parse_prototype(expect_colon=False)
+        parser.parse_function()
 
-    ArxIO.string_to_buffer("f(1)")
+    ArxIO.string_to_buffer("fn f(1)")
     parser = Parser(Lexer().lex())
     parser.tokens.get_next_token()
     with pytest.raises(ParserException, match="Expected argument name"):
-        parser.parse_prototype(expect_colon=False)
+        parser.parse_function()
 
-    ArxIO.string_to_buffer("f(x)")
+    ArxIO.string_to_buffer("fn f(x)")
     parser = Parser(Lexer().lex())
     parser.tokens.get_next_token()
     with pytest.raises(ParserException, match="Expected type annotation"):
-        parser.parse_prototype(expect_colon=False)
+        parser.parse_function()
 
-    ArxIO.string_to_buffer("f(x: i32)")
+    ArxIO.string_to_buffer("fn f(x: i32)")
     parser = Parser(Lexer().lex())
     parser.tokens.get_next_token()
     with pytest.raises(ParserException, match="Expected return type"):
-        parser.parse_prototype(expect_colon=False)
+        parser.parse_function()
 
-    ArxIO.string_to_buffer("f(x: i32) ->")
+    ArxIO.string_to_buffer("fn f(x: i32) ->")
     parser = Parser(Lexer().lex())
     parser.tokens.get_next_token()
     with pytest.raises(ParserException, match="Expected a type name"):
-        parser.parse_prototype(expect_colon=False)
+        parser.parse_function()
 
 
 def test_parse_block_error_paths() -> None:
@@ -887,11 +868,17 @@ def test_parse_prototype_requires_explicit_return_type() -> None:
         _parse("fn do_nothing():\n  return\n")
 
 
-def test_parse_bare_return_produces_none_literal() -> None:
+@pytest.mark.parametrize(
+    "following", ["", "\nfn following() -> none:\n  return none\n"]
+)
+def test_parse_bare_return_produces_none_literal(following: str) -> None:
     """
-    title: A bare `return` inside a none function emits LiteralNone.
+    title: Bare returns stop before a following name-first declaration.
+    parameters:
+      following:
+        type: str
     """
-    tree = _parse("fn do_nothing() -> none:\n  return\n")
+    tree = _parse("fn do_nothing() -> none:\n  return\n" + following)
 
     fn = tree.nodes[0]
     assert isinstance(fn, astx.FunctionDef)
@@ -904,7 +891,7 @@ def test_parse_function_without_return_statement() -> None:
     """
     title: A none-returning function may omit the `return` statement.
     """
-    tree = _parse("fn do_nothing() -> none:\n  var x: i32 = 1\n")
+    tree = _parse("fn do_nothing() -> none:\n  x: i32 = 1\n")
 
     fn = tree.nodes[0]
     assert isinstance(fn, astx.FunctionDef)
@@ -937,3 +924,24 @@ def test_parse_none_type_is_recognized() -> None:
     fn = tree.nodes[0]
     assert isinstance(fn, astx.FunctionDef)
     assert isinstance(fn.prototype.return_type, astx.NoneType)
+
+
+@pytest.mark.parametrize("suffix", ["[::2]", "[ : : 2]", "[1::2]", "[1: :2]"])
+def test_slice_double_colon_remains_contextual(suffix: str) -> None:
+    """
+    title: The declaration separator preserves existing slice-bound semantics.
+    parameters:
+      suffix:
+        type: str
+    """
+    module = _parse(f'fn value() -> str:\n  return "abc"{suffix}\n')
+    function = module.nodes[0]
+    assert isinstance(function, astx.FunctionDef)
+    returned = function.body.nodes[0]
+    assert isinstance(returned, astx.FunctionReturn)
+    expression = returned.value
+    assert isinstance(expression, astx.SubscriptExpr)
+    assert expression.is_slice
+    assert isinstance(expression.upper, astx.LiteralNone)
+    assert isinstance(expression.step, astx.LiteralInteger)
+    assert expression.step.value == 2

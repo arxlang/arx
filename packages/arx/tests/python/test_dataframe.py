@@ -35,12 +35,12 @@ def test_parse_dataframe_type_constructor_and_column_access() -> None:
     tree = _parse_module(
         """
         fn main() -> i32:
-          var rows: dataframe[id: i32, score: f64] = dataframe({
+          rows: dataframe[id: i32, score: f64] = dataframe({
             id: [1, 2, 3],
             score: [0.5, 0.8, 1.0],
           })
-          var score: series[f64] = rows.score
-          var ids: series[i32] = rows["id"]
+          score: series[f64] = rows.score
+          ids: series[i32] = rows["id"]
           return cast(rows.nrows(), i32)
         """
     )
@@ -130,7 +130,7 @@ def test_reject_untyped_dataframe_literal() -> None:
         _parse_module(
             """
             fn bad() -> none:
-              var rows: dataframe[...] = dataframe({id: [1]})
+              rows: dataframe[...] = dataframe({id: [1]})
               return none
             """
         )
@@ -144,7 +144,7 @@ def test_dataframe_constructor_requires_declared_columns() -> None:
         _parse_module(
             """
             fn bad() -> none:
-              var rows: dataframe[id: i32, score: f64] = dataframe({
+              rows: dataframe[id: i32, score: f64] = dataframe({
                 id: [1, 2, 3],
               })
               return none
@@ -159,9 +159,9 @@ def test_dataframe_name_tracking_respects_inner_scope_shadowing() -> None:
     tree = _parse_module(
         """
         fn main() -> i32:
-          var rows: dataframe[id: i32] = dataframe({id: [1]})
+          rows: dataframe[id: i32] = dataframe({id: [1]})
           if true:
-            var rows: i32 = 1
+            rows: i32 = 1
             return rows.nrows()
           return 0
         """
@@ -184,7 +184,7 @@ def test_dataframe_string_and_nullable_columns() -> None:
     tree = _parse_module(
         """
         fn good() -> none:
-          var rows: dataframe[name:str | none] = dataframe({name: [none]})
+          rows: dataframe[name:str | none] = dataframe({name: [none]})
           return none
         """
     )

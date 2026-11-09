@@ -20,7 +20,7 @@ fn test_catch_and_finalize() -> none:
   ```
   title: Catch a custom subtype and finalize after recovery
   ```
-  var state: i32 = 0
+  state: i32 = 0
   try:
     require_positive(0)
   except (OSError, ValueError) as error:
@@ -51,8 +51,8 @@ fn test_runtime_recovery() -> none:
   ```
   title: Dynamic arithmetic failures are catchable
   ```
-  var divisor: i32 = 0
-  var caught: bool = false
+  divisor: i32 = 0
+  caught: bool = false
   try:
     print(4 / divisor)
   except ZeroDivisionError:

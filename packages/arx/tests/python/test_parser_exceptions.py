@@ -219,10 +219,10 @@ def test_handler_forms(header: str) -> None:
         "raise error from\nreturn 0",
         "raise error extra",
         "raise error from cause from other",
-        "var value: i32 = raise error",
+        "value: i32 = raise error",
         "return raise error",
         "print(raise error)",
-        "var value: i32 = try:\n  return 1\nfinally:\n  return 2",
+        "value: i32 = try:\n  return 1\nfinally:\n  return 2",
     ],
 )
 def test_malformed_exception_statements_are_located(body: str) -> None:
@@ -297,7 +297,7 @@ def test_ambient_exception_annotations_resolve_nominally() -> None:
     title: Annotated saved exceptions use ordinary nominal class resolution.
     """
     module = parse_exception_source(
-        'var saved: Exception = ValueError("saved")\n'
+        'saved: Exception = ValueError("saved")\n'
         "try:\n  raise saved\nexcept Exception:\n  return 1"
     )
     analyze_modules(

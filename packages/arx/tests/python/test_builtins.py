@@ -124,7 +124,7 @@ def test_file_import_resolver_injects_ambient_range_for_user_modules(
         dedent(
             """
             fn value() -> i32:
-              var values: list[i32] = range(0, 4)
+              values: list[i32] = range(0, 4)
               return 2
             """
         ).lstrip(),
@@ -254,7 +254,7 @@ def test_arxmain_compiles_imported_module_using_ambient_range(
         dedent(
             """
             fn value() -> i32:
-              var values: list[i32] = range(0, 4)
+              values: list[i32] = range(0, 4)
               return 2
             """
         ).lstrip(),
@@ -301,7 +301,7 @@ def test_arxmain_compiles_range_list_creation_with_variable_stop(
         dedent(
             """
             fn build(n: i32) -> none:
-              var xs: list[i32] = range(0, n)
+              xs: list[i32] = range(0, n)
               return none
 
             fn main() -> i32:
@@ -340,8 +340,8 @@ def test_arxmain_compiles_for_in_over_list_variable(
         dedent(
             """
             fn main() -> i32:
-              var xs: list[i32] = range(0, 4)
-              var total: i32 = 0
+              xs: list[i32] = range(0, 4)
+              total: i32 = 0
               for value in xs:
                 total = total + value
               return total
@@ -378,7 +378,7 @@ def test_arxmain_compiles_for_in_over_list_literal(
         dedent(
             """
             fn main() -> i32:
-              var total: i32 = 0
+              total: i32 = 0
               for value in [1, 2, 3]:
                 total = total + value
               return total
@@ -609,7 +609,7 @@ def test_range_builtin_rejects_zero_step_at_runtime(
         dedent(
             """
             fn test_zero_step() -> none:
-              var values: list[i32] = range(0, 4, 0)
+              values: list[i32] = range(0, 4, 0)
               return none
             """
         ).lstrip(),

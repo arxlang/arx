@@ -7,11 +7,9 @@ class BaseCounter:
   title: BaseCounter
   summary: Stores one inherited seed value for derived counters.
   ```
-  @[public, mutable]
-  value: int32 = 41
+  value: public var :: int32 = 41
 
-  @[protected]
-  fn read_seed(self) -> int32:
+  fn read_seed(self) -> protected :: int32:
     ```
     title: read_seed
     summary: Reads the inherited seed value.
@@ -23,14 +21,11 @@ class Counter(BaseCounter):
   title: Counter
   summary: Extends BaseCounter with private state and helper methods.
   ```
-  @[public, static, constant]
-  version: int32 = 3
+  version: public static const :: int32 = 3
 
-  @[private, mutable]
-  internal: int32 = 5
+  internal: private var :: int32 = 5
 
-  @[protected]
-  fn internal_total(self) -> int32:
+  fn internal_total(self) -> protected :: int32:
     ```
     title: internal_total
     summary: Combines private and inherited state.
@@ -56,16 +51,14 @@ class CounterFactory:
   title: CounterFactory
   summary: Builds Counter instances and exposes static class metadata.
   ```
-  @[public, static]
-  fn make() -> Counter:
+  fn make() -> public static :: Counter:
     ```
     title: make
     summary: Builds a default counter instance.
     ```
     return Counter()
 
-  @[public, static]
-  fn version_value() -> int32:
+  fn version_value() -> public static :: int32:
     ```
     title: version_value
     summary: Reads the static class version.
@@ -84,7 +77,7 @@ fn main() -> int32:
   title: main
   summary: Exercises class construction, static access, and instance calls.
   ```
-  var direct: Counter = Counter()
-  var built: Counter = CounterFactory.make()
-  var total: int32 = take_counter(direct) + built.get()
+  direct: Counter = Counter()
+  built: Counter = CounterFactory.make()
+  total: int32 = take_counter(direct) + built.get()
   return total + CounterFactory.version_value() + Counter.version

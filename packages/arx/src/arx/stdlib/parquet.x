@@ -39,8 +39,7 @@ class ParquetFilter:
   ```
   title: Independently owned typed AND predicate group.
   ```
-  @[private]
-  handle: ArrowOptionsHandle
+  handle: private :: ArrowOptionsHandle
 
   fn __init__(self) -> none:
     ```
@@ -90,7 +89,7 @@ class ParquetFilter:
     ```
     title: Return a new group with a checked i64 predicate.
     ```
-    var result: ParquetFilter = ParquetFilter()
+    result: ParquetFilter = ParquetFilter()
     irx_rb_api_filter_i64(result.handle, self.handle, column, operation, value)
     return result
 
@@ -98,7 +97,7 @@ class ParquetFilter:
     ```
     title: Return a new group with a checked f64 predicate.
     ```
-    var result: ParquetFilter = ParquetFilter()
+    result: ParquetFilter = ParquetFilter()
     irx_rb_api_filter_f64(result.handle, self.handle, column, operation, value)
     return result
 
@@ -106,7 +105,7 @@ class ParquetFilter:
     ```
     title: Return a new group with a checked bool predicate.
     ```
-    var result: ParquetFilter = ParquetFilter()
+    result: ParquetFilter = ParquetFilter()
     irx_rb_api_filter_bool(result.handle, self.handle, column, operation, cast(value, i32))
     return result
 
@@ -114,7 +113,7 @@ class ParquetFilter:
     ```
     title: Return a new group with a checked text predicate.
     ```
-    var result: ParquetFilter = ParquetFilter()
+    result: ParquetFilter = ParquetFilter()
     irx_rb_api_filter_text(result.handle, self.handle, column, operation, value)
     return result
 
@@ -122,7 +121,7 @@ class ParquetFilter:
     ```
     title: Return a new group with a checked null predicate.
     ```
-    var result: ParquetFilter = ParquetFilter()
+    result: ParquetFilter = ParquetFilter()
     irx_rb_api_filter_null(result.handle, self.handle, column, operation)
     return result
 
@@ -131,8 +130,7 @@ class ParquetOptions:
   title: ParquetOptions
   summary: Checked configuration copied at open; aliases share this builder.
   ```
-  @[private]
-  handle: ArrowOptionsHandle
+  handle: private :: ArrowOptionsHandle
 
   fn __init__(self, batch_size: i64 = 65536, row_group_size: i64 = 1048576, data_page_size: i64 = 1048576, compression: str = "snappy", use_threads: bool = false, pre_buffer: bool = false, dataset: bool = false, hive: bool = false, unify: bool = false, normalize: bool = false, atomic: bool = false, durable: bool = false, reconstruct: bool = false, append: bool = false) -> none:
     ```
@@ -203,8 +201,7 @@ class ParquetStream:
   title: ParquetStream
   summary: Scoped owner for incremental reading or writing in one active mode.
   ```
-  @[private]
-  handle: ArrowParquetHandle
+  handle: private :: ArrowParquetHandle
 
   fn __init__(self) -> none:
     ```
@@ -266,7 +263,7 @@ class ParquetStream:
     title: batch
     summary: Returns an independently owned current batch in read mode.
     ```
-    var result: RecordBatch = RecordBatch()
+    result: RecordBatch = RecordBatch()
     irx_rb_api_parquet_batch(self.handle, result.native_handle())
     return result
 
@@ -275,7 +272,7 @@ class ParquetStream:
     title: schema
     summary: Returns an independent schema in either open mode.
     ```
-    var result: Schema = Schema()
+    result: Schema = Schema()
     irx_rb_api_parquet_schema(self.handle, result.native_handle())
     return result
 

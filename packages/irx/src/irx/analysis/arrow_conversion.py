@@ -150,7 +150,7 @@ def arrow_local(
     analyzer._set_resource_ownership(
         node,
         arrow_ownership(
-            node.type_, OwnershipKind.OWNED, symbol.symbol_id, operation
+            symbol.type_, OwnershipKind.OWNED, symbol.symbol_id, operation
         ),
     )
 

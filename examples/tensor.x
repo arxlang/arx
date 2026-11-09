@@ -22,6 +22,6 @@ fn main() -> i32:
   title: main
   summary: Builds fixed-shape tensor values and indexes them.
   ```
-  var grid: tensor[i32, 2, 2] = [[1, 2], [3, 4]]
-  var ids: tensor[i32, 4] = [5, 6, 7, 8]
+  grid: tensor[i32, 2, 2] = [[1, 2], [3, 4]]
+  ids: tensor[i32, 4] = [5, 6, 7, 8]
   return pick(grid) + ids[2]

@@ -751,20 +751,10 @@ class ControlFlowVisitorMixin(SemanticVisitorMixinBase):
             type: astx.ForCountLoopStmt
         """
         with self.context.scope("for-count"):
-            if node.initializer.value is not None:
-                contextualize_literal(
-                    node.initializer.value, node.initializer.type_
-                )
-                self.visit(node.initializer.value)
-            symbol = self.registry.declare_local(
-                node.initializer.name,
-                node.initializer.type_,
-                is_mutable=(
-                    node.initializer.mutability != astx.MutabilityKind.constant
-                ),
-                declaration=node.initializer,
-            )
-            self._set_symbol(node.initializer, symbol)
+            self.visit(node.initializer)
+            symbol = self._semantic(node.initializer).resolved_symbol
+            if symbol is None:
+                return
             self.visit(node.condition)
             self._validate_boolean_condition(
                 node.condition,

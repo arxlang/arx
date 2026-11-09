@@ -314,7 +314,9 @@ def test_declared_storage_rejections(
         type: str
     """
     module = make_main_module(
-        astx.VariableDeclaration("bad", type_),
+        astx.VariableDeclaration(
+            "bad", type_, mutability=astx.MutabilityKind.mutable
+        ),
         astx.FunctionReturn(astx.LiteralInt32(0)),
     )
     with pytest.raises(SemanticError, match=message):

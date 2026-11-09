@@ -41,8 +41,8 @@ fn write_log() -> none:
   title: write_log
   summary: Both aliases share one object and one final destructor call.
   ```
-  var log: TextLog = TextLog(path="class-lifecycle.txt")
-  var alias: TextLog = log
+  log: TextLog = TextLog(path="class-lifecycle.txt")
+  alias: TextLog = log
   alias.write("hello\n")
   return none
 
@@ -52,6 +52,6 @@ fn main() -> i32:
   summary: Reads text after the final class reference has closed the writer.
   ```
   write_log()
-  var input: file = open("class-lifecycle.txt")
+  input: file = open("class-lifecycle.txt")
   assert input.read() == "hello\n"
   return 0

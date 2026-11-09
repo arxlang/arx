@@ -26,7 +26,7 @@ def test_extended_column_operations(tmp_path: Path) -> None:
         type: Path
     """
     source = """
-var global_value: nullable[i32] = none
+global_value: nullable[i32] = none
 
 fn missing() -> nullable[i32]:
   return none
@@ -41,38 +41,38 @@ fn main() -> i32:
   assert is_null(global_value)
   global_value = 7
   assert fill_null(global_value, 0) == 7
-  var absent: nullable[i32] = none
+  absent: nullable[i32] = none
   assert is_null(absent)
   absent = 3
   absent = none
   assert is_null(absent)
   assert is_null(missing())
-  var frame: dataframe[x:i32 | none] = dataframe({x:[1, none, 3, 4]})
-  var column: series[i32 | none] = frame.x
-  var negative: series[i32 | none] = -column
+  frame: dataframe[x:i32 | none] = dataframe({x:[1, none, 3, 4]})
+  column: series[i32 | none] = frame.x
+  negative: series[i32 | none] = -column
   assert fill_null(negative[2], 0) == -3
   assert is_null(negative[1])
-  var positive: series[i32 | none] = +column
+  positive: series[i32 | none] = +column
   assert fill_null(positive[0], 0) == 1
-  var reverse: series[i32 | none] = column[::-1]
+  reverse: series[i32 | none] = column[::-1]
   assert fill_null(reverse[0], 0) == 4
   assert is_null(reverse[2])
-  var selected: series[i32 | none] = column[1:4:2]
+  selected: series[i32 | none] = column[1:4:2]
   assert is_null(selected[0])
   assert fill_null(selected[1], 0) == 4
-  var empty: series[i32 | none] = column[2:1]
+  empty: series[i32 | none] = column[2:1]
   assert series_count(empty) == 0
   assert is_null(series_sum(empty))
   assert series_count(column) == 3
   assert fill_null(series_sum(column), cast(0, i64)) == 8
   assert fill_null(series_min(column), 0) == 1
   assert fill_null(series_max(column), 0) == 4
-  var wider: series[i64 | none] = column + cast(2, i64)
+  wider: series[i64 | none] = column + cast(2, i64)
   assert fill_null(wider[0], cast(0, i64)) == 3
-  var mask: series[bool] = !is_null(column)
+  mask: series[bool] = !is_null(column)
   assert fill_null(series_any(mask), false)
   assert !fill_null(series_all(mask), true)
-  var alias: series[i32 | none] = column
+  alias: series[i32 | none] = column
   column[1] = 9
   assert fill_null(alias[1], 0) == 9
   assert is_null(frame.x[1])
@@ -106,16 +106,16 @@ def test_rich_dataframe_literals(tmp_path: Path) -> None:
     source = """
 import (RecordBatch, IPCWriter) from stdlib.arrow
 fn main() -> i32:
-  var data: ANNOTATION = dataframe({
+  data: ANNOTATION = dataframe({
     amount:["1.25", "-2.00"], items:[[1,none],[]],
     record:[[1,"hi"],[2,none]], bytes:["ab","cd"], time:[1,2],
     labels:["x","x"], pairs:[[["a",1],["b",none]],[]]
   })
-  var labels: series[dictionary[i8,str]] = data.labels[::-1]
+  labels: series[dictionary[i8,str]] = data.labels[::-1]
   assert series_count(labels) == 2
   assert !fill_null(series_any(is_null(labels)), true)
-  var batch: RecordBatch = cast(data, RecordBatch)
-  var writer: IPCWriter = IPCWriter(batch.schema())
+  batch: RecordBatch = cast(data, RecordBatch)
+  writer: IPCWriter = IPCWriter(batch.schema())
   writer.open_file("literal.arrow")
   writer.write(batch)
   writer.close()

@@ -27,7 +27,7 @@ from arx.docstrings import validate_docstring
 from arx.exceptions import ParserException
 from arx.lexer import Token, TokenKind
 from arx.parser.base import ParserMixinBase
-from arx.parser.state import TypeUseContext
+from arx.parser.state import ParsedAnnotation, TypeUseContext
 from arx.tensor import (
     TensorBinding,
     binding_from_type,
@@ -248,7 +248,7 @@ class ControlFlowParserMixin(ParserMixinBase):
 
     def parse_while_stmt(self) -> astx.WhileStmt:
         """
-        title: Parse the `while` expression.
+        title: Parse a while statement.
         returns:
           type: astx.WhileStmt
         """
@@ -263,14 +263,14 @@ class ControlFlowParserMixin(ParserMixinBase):
 
     def parse_for_stmt(self) -> astx.AST:
         """
-        title: Parse for-loop expressions.
+        title: Parse a for statement.
         returns:
           type: astx.AST
         """
         for_loc = self.tokens.cur_tok.location
         self.tokens.get_next_token()  # eat for
 
-        if self.tokens.cur_tok.kind == TokenKind.kw_var:
+        if self.is_declaration_start():
             return self.parse_for_count_stmt(for_loc)
 
         if self.tokens.cur_tok.kind != TokenKind.identifier:
@@ -394,26 +394,12 @@ class ControlFlowParserMixin(ParserMixinBase):
         returns:
           type: astx.InlineVariableDeclaration
         """
-        if self.tokens.cur_tok.kind != TokenKind.kw_var:
-            raise ParserException("Parser: Expected 'var' in for initializer")
-
-        var_loc = self.tokens.cur_tok.location
-        self.tokens.get_next_token()  # eat var
-
-        cur_kind: TokenKind = self.tokens.cur_tok.kind
-        if cur_kind != TokenKind.identifier:
-            raise ParserException("Parser: Expected identifier after var")
-
-        name = cast(str, self.tokens.cur_tok.value)
-        self.tokens.get_next_token()  # eat identifier
-
-        if not self._is_operator(":"):
-            raise ParserException(
-                "Parser: Expected type annotation for inline variable "
-                f"'{name}'."
-            )
-
-        self._consume_operator(":")
+        name_token, modifiers = self.parse_declaration_head()
+        self._validate_modifier_target(
+            modifiers, frozenset({"var", "const"}), "loop variable"
+        )
+        var_loc = name_token.location
+        name = cast(str, name_token.value)
         var_type = self.parse_type(type_context=TypeUseContext.INLINE_VARIABLE)
 
         self._consume_operator("=")
@@ -431,31 +417,25 @@ class ControlFlowParserMixin(ParserMixinBase):
             name=name,
             type_=var_type,
             value=value,
-            mutability=astx.MutabilityKind.mutable,
+            mutability=self.resolve_binding_mutability(modifiers),
             loc=var_loc,
         )
 
-    def parse_var_expr(self) -> astx.VariableDeclaration:
+    def parse_var_expr(
+        self, name_token: Token, modifiers: ParsedAnnotation | None
+    ) -> astx.VariableDeclaration:
         """
-        title: Parse typed variable declarations.
+        title: Parse name-first variables with explicit or inferred types.
+        parameters:
+          name_token:
+            type: Token
+          modifiers:
+            type: ParsedAnnotation | None
         returns:
           type: astx.VariableDeclaration
         """
-        var_loc = self.tokens.cur_tok.location
-        self.tokens.get_next_token()  # eat var
-
-        if self.tokens.cur_tok.kind != TokenKind.identifier:
-            raise ParserException("Parser: Expected identifier after var")
-
-        name = cast(str, self.tokens.cur_tok.value)
-        self.tokens.get_next_token()  # eat identifier
-
-        if not self._is_operator(":"):
-            raise ParserException(
-                f"Parser: Expected type annotation for variable '{name}'."
-            )
-
-        self._consume_operator(":")
+        var_loc = name_token.location
+        name = cast(str, name_token.value)
         var_type = self.parse_type(type_context=TypeUseContext.VARIABLE)
 
         value: astx.Expr | None = None
@@ -478,13 +458,24 @@ class ControlFlowParserMixin(ParserMixinBase):
             )
 
         if value is None:
+            if isinstance(var_type, astx.InferredType):
+                raise ParserException(
+                    f"Inferred variable '{name}' requires "
+                    "an explicit initializer.",
+                    var_loc,
+                )
+            if self._has_modifier(modifiers, "const"):
+                raise ParserException(
+                    f"Constant '{name}' requires an explicit initializer.",
+                    var_loc,
+                )
             value = self._default_value_for_type(var_type)
 
         declaration = astx.VariableDeclaration(
             name=name,
             type_=var_type,
             value=value,
-            mutability=astx.MutabilityKind.mutable,
+            mutability=self.resolve_binding_mutability(modifiers),
             loc=var_loc,
         )
         self._declare_value_name(name)
@@ -538,7 +529,7 @@ class ControlFlowParserMixin(ParserMixinBase):
 
     def parse_return_function(self) -> astx.FunctionReturn:
         """
-        title: Parse the return expression.
+        title: Parse a return statement.
         returns:
           type: astx.FunctionReturn
         """
@@ -555,6 +546,7 @@ class ControlFlowParserMixin(ParserMixinBase):
         }
         if (
             self.tokens.cur_tok.kind in bare_return_terminators
+            or self.tokens.cur_tok.location.line > return_loc.line
             or self._is_operator(";")
         ):
             return astx.FunctionReturn(astx.LiteralNone(), loc=return_loc)

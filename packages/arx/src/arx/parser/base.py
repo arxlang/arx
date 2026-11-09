@@ -68,6 +68,16 @@ class ParserMixinBase:
     value_scopes: list[set[str]]
     tokens: TokenList
 
+    def validate_type_declaration_name(self, target: str) -> None:
+        """
+        title: Reject inference markers as names of declared types.
+        parameters:
+          target:
+            type: str
+        """
+        del target
+        raise NotImplementedError
+
     def parse_statement(self) -> astx.AST:
         """
         title: Parse a statement without admitting it as an expression operand.
@@ -516,7 +526,7 @@ class ParserMixinBase:
         template_params: tuple[astx.TemplateParam, ...] = (),
     ) -> astx.FunctionDef:
         """
-        title: Parse one function definition.
+        title: Parse a function definition.
         parameters:
           template_params:
             type: tuple[astx.TemplateParam, Ellipsis]
@@ -524,14 +534,6 @@ class ParserMixinBase:
           type: astx.FunctionDef
         """
         del template_params
-        raise NotImplementedError
-
-    def parse_extern(self) -> astx.FunctionPrototype:
-        """
-        title: Parse one extern declaration.
-        returns:
-          type: astx.FunctionPrototype
-        """
         raise NotImplementedError
 
     def parse_import_stmt(
@@ -587,7 +589,7 @@ class ParserMixinBase:
 
     def parse_if_stmt(self) -> astx.IfStmt:
         """
-        title: Parse one if expression.
+        title: Parse an if statement.
         returns:
           type: astx.IfStmt
         """
@@ -595,7 +597,7 @@ class ParserMixinBase:
 
     def parse_while_stmt(self) -> astx.WhileStmt:
         """
-        title: Parse one while expression.
+        title: Parse a while statement.
         returns:
           type: astx.WhileStmt
         """
@@ -603,18 +605,26 @@ class ParserMixinBase:
 
     def parse_for_stmt(self) -> astx.AST:
         """
-        title: Parse one for-loop expression.
+        title: Parse a for statement.
         returns:
           type: astx.AST
         """
         raise NotImplementedError
 
-    def parse_var_expr(self) -> astx.VariableDeclaration:
+    def parse_var_expr(
+        self, name_token: Token, modifiers: ParsedAnnotation | None
+    ) -> astx.VariableDeclaration:
         """
-        title: Parse one typed variable declaration.
+        title: Parse typed variable declarations.
+        parameters:
+          name_token:
+            type: Token
+          modifiers:
+            type: ParsedAnnotation | None
         returns:
           type: astx.VariableDeclaration
         """
+        del name_token, modifiers
         raise NotImplementedError
 
     def parse_assert_stmt(self) -> astx.AssertStmt:
@@ -627,18 +637,15 @@ class ParserMixinBase:
 
     def parse_return_function(self) -> astx.FunctionReturn:
         """
-        title: Parse one return expression.
+        title: Parse a return statement.
         returns:
           type: astx.FunctionReturn
         """
         raise NotImplementedError
 
-    def parse_prototype(
-        self,
-        expect_colon: bool,
-    ) -> astx.FunctionPrototype:
+    def parse_prototype(self, expect_colon: bool) -> astx.FunctionPrototype:
         """
-        title: Parse one function or extern prototype.
+        title: Parse function/extern prototypes.
         parameters:
           expect_colon:
             type: bool
@@ -661,4 +668,106 @@ class ParserMixinBase:
           type: astx.Expr
         """
         del data_type
+        raise NotImplementedError
+
+    def is_declaration_start(self) -> bool:
+        """
+        title: Recognize a same-line name-first declaration.
+        returns:
+          type: bool
+        """
+        raise NotImplementedError
+
+    def parse_inline_modifiers(
+        self, *, allow_layout: bool = False
+    ) -> ParsedAnnotation | None:
+        """
+        title: Parse optional whitespace-separated declaration modifiers.
+        summary: >-
+          Keep declaration policy outside the type. Reject unknown, repeated,
+          conflicting, and unterminated groups without accepting ignored flags.
+        parameters:
+          allow_layout:
+            type: bool
+        returns:
+          type: ParsedAnnotation | None
+        """
+        del allow_layout
+        raise NotImplementedError
+
+    def parse_declaration_head(self) -> tuple[Token, ParsedAnnotation | None]:
+        """
+        title: Consume a declaration name, colon, and optional modifier group.
+        returns:
+          type: tuple[Token, ParsedAnnotation | None]
+        """
+        raise NotImplementedError
+
+    def parse_named_declaration(self) -> astx.VariableDeclaration:
+        """
+        title: Parse a name-first variable declaration without function syntax.
+        returns:
+          type: astx.VariableDeclaration
+        """
+        raise NotImplementedError
+
+    def _validate_modifier_target(
+        self,
+        modifiers: ParsedAnnotation | None,
+        allowed: frozenset[str],
+        target: str,
+    ) -> None:
+        """
+        title: Validate one modifier list against a declaration target.
+        parameters:
+          modifiers:
+            type: ParsedAnnotation | None
+          allowed:
+            type: frozenset[str]
+          target:
+            type: str
+        """
+        del modifiers, allowed, target
+        raise NotImplementedError
+
+    def _has_modifier(
+        self,
+        modifiers: ParsedAnnotation | None,
+        expected: str,
+    ) -> bool:
+        """
+        title: Return whether one modifier is present.
+        parameters:
+          modifiers:
+            type: ParsedAnnotation | None
+          expected:
+            type: str
+        returns:
+          type: bool
+        """
+        del modifiers, expected
+        raise NotImplementedError
+
+    def resolve_binding_mutability(
+        self,
+        modifiers: ParsedAnnotation | None,
+    ) -> astx.MutabilityKind:
+        """
+        title: >-
+          Resolve Arx binding mutability for variables, fields, and parameters.
+        parameters:
+          modifiers:
+            type: ParsedAnnotation | None
+        returns:
+          type: astx.MutabilityKind
+        """
+        del modifiers
+        raise NotImplementedError
+
+    def parse_extern(self) -> astx.FunctionPrototype:
+        """
+        title: Parse an extern declaration.
+        returns:
+          type: astx.FunctionPrototype
+        """
         raise NotImplementedError

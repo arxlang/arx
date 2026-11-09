@@ -90,10 +90,14 @@ class ExpressionMutationVisitorMixin(ClassMemberFormattingVisitorMixin):
         node: astx.AST,
         action: str,
         invalid_message: str,
+        require_reassignment: bool = True,
     ) -> tuple[SemanticSymbol, str, astx.DataType | None] | None:
         """
-        title: >-
-          Resolve one direct mutable target for assignment-like operations.
+        title: Resolve a binding-write or owned-object mutation target.
+        summary: >-
+          Rebinding requires symbol or member mutability. In-place object
+          operations may opt out but must still validate ownership and domain
+          restrictions before authorizing a store.
         parameters:
           target:
             type: astx.AST
@@ -103,6 +107,8 @@ class ExpressionMutationVisitorMixin(ClassMemberFormattingVisitorMixin):
             type: str
           invalid_message:
             type: str
+          require_reassignment:
+            type: bool
         returns:
           type: tuple[SemanticSymbol, str, astx.DataType | None] | None
         """
@@ -126,7 +132,7 @@ class ExpressionMutationVisitorMixin(ClassMemberFormattingVisitorMixin):
                 )
                 return None
             target_name = symbol.name
-            if not symbol.is_mutable:
+            if require_reassignment and not symbol.is_mutable:
                 self.context.diagnostics.add(
                     f"Cannot {action} '{target_name}': declared as constant",
                     node=node,
@@ -149,7 +155,7 @@ class ExpressionMutationVisitorMixin(ClassMemberFormattingVisitorMixin):
                     member,
                     target_type,
                 )
-                if not member.is_mutable:
+                if require_reassignment and not member.is_mutable:
                     message = (
                         f"Cannot {action} '{target_name}': "
                         "declared as constant"
@@ -186,7 +192,7 @@ class ExpressionMutationVisitorMixin(ClassMemberFormattingVisitorMixin):
                     code=(DiagnosticCodes.SEMANTIC_INVALID_ASSIGNMENT_TARGET),
                 )
                 return None
-            if not symbol.is_mutable:
+            if require_reassignment and not symbol.is_mutable:
                 self.context.diagnostics.add(
                     f"Cannot {action} '{symbol.name}': declared as constant",
                     node=node,
@@ -214,7 +220,7 @@ class ExpressionMutationVisitorMixin(ClassMemberFormattingVisitorMixin):
                 member,
                 target_type,
             )
-            if not member.is_mutable:
+            if require_reassignment and not member.is_mutable:
                 self.context.diagnostics.add(
                     f"Cannot {action} '{target_name}': declared as constant",
                     node=node,
@@ -242,7 +248,7 @@ class ExpressionMutationVisitorMixin(ClassMemberFormattingVisitorMixin):
                 member,
                 target_type,
             )
-            if not member.is_mutable:
+            if require_reassignment and not member.is_mutable:
                 self.context.diagnostics.add(
                     f"Cannot {action} '{target_name}': declared as constant",
                     node=node,

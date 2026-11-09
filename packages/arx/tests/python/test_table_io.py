@@ -38,30 +38,30 @@ import (read_csv, write_csv as save_csv) from stdlib.csv
 import stdlib.parquet as parquet
 import (ParquetOptions, ParquetFilter, where) from stdlib.parquet
 fn main() -> i32:
-  var frame: dataframe[...] = read_csv("input.csv", block_size=32)
-  var options: ParquetOptions = ParquetOptions(compression="gzip", atomic=true)
+  frame: dataframe[...] = read_csv("input.csv", block_size=32)
+  options: ParquetOptions = ParquetOptions(compression="gzip", atomic=true)
   parquet.write_parquet(\
     frame=frame, path="output.parquet", options=options,\
     compression="snappy", row_group_size=1\
   )
-  var base: ParquetFilter = where("id", ">", 1)
-  var selected: ParquetFilter = base.and_where("active", "==", true)
-  var result: dataframe[...] = parquet.read_parquet(\
+  base: ParquetFilter = where("id", ">", 1)
+  selected: ParquetFilter = base.and_where("active", "==", true)
+  result: dataframe[...] = parquet.read_parquet(\
     "output.parquet", columns=["name"], filters=selected, batch_size=1\
   )
   save_csv(result, "selected.csv", delimiter=";", lineterminator="\\r\\n")
-  var snapshot: dataframe[...] = parquet.read_parquet(\
+  snapshot: dataframe[...] = parquet.read_parquet(\
     "output.parquet", filters=base\
   )
   save_csv(snapshot, "base.csv")
-  var direct: dataframe[...] = parquet.read_parquet(\
+  direct: dataframe[...] = parquet.read_parquet(\
     "output.parquet", filters=parquet.where("active", "is_null")\
   )
   save_csv(direct, "nulls.csv")
-  var floats: ParquetFilter = where("id", ">", cast(1.5, f64))
-  var bounded: ParquetFilter = floats.and_where("id", "<=", 3)
-  var named: ParquetFilter = bounded.and_where("name", "==", "c")
-  var exact: dataframe[...] = parquet.read_parquet(\
+  floats: ParquetFilter = where("id", ">", cast(1.5, f64))
+  bounded: ParquetFilter = floats.and_where("id", "<=", 3)
+  named: ParquetFilter = bounded.and_where("name", "==", "c")
+  exact: dataframe[...] = parquet.read_parquet(\
     "output.parquet", filters=named\
   )
   assert exact.nrows() == 1
@@ -120,17 +120,17 @@ import CSVStream from stdlib.csv
 import (ParquetStream, read_parquet, write_parquet) from stdlib.parquet
 import Schema from stdlib.arrow
 fn main() -> i32:
-  var schema: Schema = Schema()
+  schema: Schema = Schema()
   schema.add("id", "int64", nullable=false)
-  var source: CSVStream = CSVStream()
+  source: CSVStream = CSVStream()
   source.open_read_as("input.csv", schema, block_size=16)
-  var destination: ParquetStream = ParquetStream()
+  destination: ParquetStream = ParquetStream()
   destination.open_write("output.parquet", source.schema(), row_group_size=2)
-  var csv_copy: CSVStream = CSVStream()
+  csv_copy: CSVStream = CSVStream()
   csv_copy.open_write("copy.csv", schema)
   while source.next():
-    var frame: dataframe[...] = source.frame()
-    var typed: dataframe[id:i64] = cast(frame, dataframe[id:i64])
+    frame: dataframe[...] = source.frame()
+    typed: dataframe[id:i64] = cast(frame, dataframe[id:i64])
     destination.write(typed)
     csv_copy.write(typed)
   source.close()
@@ -176,8 +176,8 @@ def checked_cast(tmp_path_factory: pytest.TempPathFactory) -> Path:
 import read_parquet from stdlib.parquet
 import write_csv from stdlib.csv
 fn main() -> i32:
-  var input: dataframe[...] = read_parquet("input.parquet", batch_size=1)
-  var checked: dataframe[id:i64] = cast(input, dataframe[id:i64])
+  input: dataframe[...] = read_parquet("input.parquet", batch_size=1)
+  checked: dataframe[id:i64] = cast(input, dataframe[id:i64])
   write_csv(checked, "output.csv")
   return 0
 """,

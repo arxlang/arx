@@ -90,8 +90,22 @@ class ExpressionParserMixin(ParserMixinBase):
             return self.parse_while_stmt()
         if self.tokens.cur_tok.kind == TokenKind.kw_for:
             return self.parse_for_stmt()
-        if self.tokens.cur_tok.kind == TokenKind.kw_var:
-            return self.parse_var_expr()
+        if self.tokens.cur_tok.kind == TokenKind.kw_function:
+            raise ParserException(
+                "Nested functions and closures are not supported.",
+                self.tokens.cur_tok.location,
+            )
+        if self.tokens.cur_tok.kind == TokenKind.kw_extern:
+            raise ParserException(
+                "Extern declarations are only allowed at module scope.",
+                self.tokens.cur_tok.location,
+            )
+        if self.tokens.cur_tok.kind in {TokenKind.kw_var, TokenKind.kw_const}:
+            raise ParserException(
+                "Leading variable declaration keywords were removed; "
+                "use 'name: [var|const ::] type'.",
+                self.tokens.cur_tok.location,
+            )
         if self.tokens.cur_tok.kind == TokenKind.kw_assert:
             return self.parse_assert_stmt()
         if self._is_operator(";"):
@@ -698,13 +712,28 @@ class ExpressionParserMixin(ParserMixinBase):
         while True:
             first = (
                 astx.LiteralNone()
-                if self._is_operator(":")
+                if (self._is_operator(":") or self._is_operator("::"))
                 else cast(astx.Expr, self.parse_expression())
             )
-            if self._is_operator(":"):
+            if self._is_operator(":") or self._is_operator("::"):
                 if indices:
                     raise ParserException(
                         "Multidimensional slices are unsupported."
+                    )
+                if self._is_operator("::"):
+                    self._consume_operator("::")
+                    stride = (
+                        astx.LiteralNone()
+                        if self._is_operator("]")
+                        else cast(astx.Expr, self.parse_expression())
+                    )
+                    self._consume_operator("]")
+                    return astx.SubscriptExpr(
+                        cast(astx.Expr, base),
+                        lower=first,
+                        upper=astx.LiteralNone(),
+                        step=stride,
+                        loc=subscript_loc,
                     )
                 self._consume_operator(":")
                 stop = (
@@ -974,6 +1003,11 @@ class ExpressionParserMixin(ParserMixinBase):
 
         op_code = cast(str, self.tokens.cur_tok.value)
         op_loc = self.tokens.cur_tok.location
+        if op_code == "::":
+            raise ParserException(
+                "'::' is only valid in a declaration modifier group or slice.",
+                op_loc,
+            )
         if op_code in COMPOUND_OPERATORS:
             raise ParserException(
                 "Compound assignment is not an expression; "

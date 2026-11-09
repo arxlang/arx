@@ -54,7 +54,7 @@ support</a>
 title: Arrow-backed rows
 ```
 fn main() -> i32:
-  var rows: dataframe[id: i32, score: f64] = dataframe({
+  rows: dataframe[id: i32, score: f64] = dataframe({
     id: [1, 2, 3],
     score: [0.5, 0.8, 1.0],
   })

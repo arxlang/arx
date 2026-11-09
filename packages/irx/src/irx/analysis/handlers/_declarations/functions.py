@@ -148,6 +148,12 @@ class DeclarationFunctionVisitorMixin(SemanticVisitorMixinBase):
         ):
             return function
 
+        body = definition or function.definition
+        binding_args = (
+            body.prototype.args.nodes
+            if body is not None
+            else prototype.args.nodes
+        )
         updated = replace(
             function,
             return_type=clone_type(signature.return_type),
@@ -156,6 +162,10 @@ class DeclarationFunctionVisitorMixin(SemanticVisitorMixinBase):
                     arg_symbol,
                     name=arg_node.name,
                     type_=clone_type(arg_node.type_),
+                    is_mutable=(
+                        binding_args[index].mutability
+                        != astx.MutabilityKind.constant
+                    ),
                     qualified_name=qualified_local_name(
                         function.module_key,
                         arg_symbol.kind,
@@ -163,9 +173,11 @@ class DeclarationFunctionVisitorMixin(SemanticVisitorMixinBase):
                         arg_symbol.symbol_id,
                     ),
                 )
-                for arg_node, arg_symbol in zip(
-                    prototype.args.nodes,
-                    function.args,
+                for index, (arg_node, arg_symbol) in enumerate(
+                    zip(
+                        prototype.args.nodes,
+                        function.args,
+                    )
                 )
             ),
             signature=signature,

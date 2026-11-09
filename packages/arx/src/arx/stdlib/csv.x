@@ -26,8 +26,7 @@ class CSVStream:
   title: CSVStream
   summary: Scoped owner for incremental reading or writing in one active mode.
   ```
-  @[private]
-  handle: ArrowCsvHandle
+  handle: private :: ArrowCsvHandle
 
   fn __init__(self) -> none:
     ```
@@ -89,7 +88,7 @@ class CSVStream:
     title: batch
     summary: Returns an independently owned current batch in read mode.
     ```
-    var result: RecordBatch = RecordBatch()
+    result: RecordBatch = RecordBatch()
     irx_rb_api_csv_batch(self.handle, result.native_handle())
     return result
 
@@ -98,7 +97,7 @@ class CSVStream:
     title: schema
     summary: Returns an independent schema in either open mode.
     ```
-    var result: Schema = Schema()
+    result: Schema = Schema()
     irx_rb_api_csv_schema(self.handle, result.native_handle())
     return result
 

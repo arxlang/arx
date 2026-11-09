@@ -19,8 +19,7 @@ class Counter:
     ```
     return offset
 
-  @[static]
-  fn add(a: i32, b: i32 = 3) -> i32:
+  fn add(a: i32, b: i32 = 3) -> static :: i32:
     ```
     title: add
     ```
@@ -32,7 +31,7 @@ fn test_keyword_arguments() -> none:
   ```
   assert combine(c=9, a=2) == 239
   assert combine(a=4) == 456
-  var counter: Counter = Counter()
+  counter: Counter = Counter()
   assert counter.read(offset=3) == 3
   assert counter.read() == 7
   assert Counter.add(b=9, a=2) == 11

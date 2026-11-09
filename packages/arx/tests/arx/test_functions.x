@@ -39,7 +39,7 @@ fn note_call() -> none:
   title: note_call
   summary: Exercises one helper with a none return type.
   ```
-  var invoked: i32 = 1
+  invoked: i32 = 1
 
 fn test_helper_function_calls() -> none:
   ```
@@ -65,3 +65,44 @@ fn test_none_returning_helpers() -> none:
   ```
   note_call()
   assert add(2, 2) == 4
+
+
+class DeclarationBox:
+  value: auto = 1
+  maximum: static const :: auto = 10
+  fn read(self) -> int32:
+    return self.value
+
+fn increment_local(
+  value: var :: int32,
+) ->
+  private ::
+  int32
+:
+  value += 1
+  return value
+
+@<T: int32 | int64>
+fn fixed_identity(value: const :: T) -> T:
+  result: const :: auto = value
+  return result
+
+fn test_name_first_binding_and_inference() -> none:
+  ```
+  title: Name-first binding and inference
+  summary: Stable object bindings allow mutation while inferred types remain fixed.
+  ```
+  DECLARATION_LIMIT: const :: auto = 10
+  box: const :: auto = DeclarationBox()
+  box.value = 3
+  values: const :: auto = [1, 2]
+  values.append(box.read())
+  assert values[2] == 3
+  assert increment_local(value=2) == 3
+  assert fixed_identity(values[2]) == 3
+  assert fixed_identity<int64>(1) == 1
+  assert DeclarationBox.maximum == DECLARATION_LIMIT
+  total: auto = 0
+  for index: auto = 0; index < 3; ++index:
+    total += index
+  assert total == 3

@@ -78,8 +78,7 @@ def test_parse_complex_class_module_with_irx_class_nodes() -> None:
               title: Shape
               summary: Declares one abstract area protocol for shape types.
               ```
-              @[public]
-              fn area(self) -> int32:
+              fn area(self) -> public :: int32:
                 ```
                 title: area
                 summary: >-
@@ -92,11 +91,9 @@ def test_parse_complex_class_module_with_irx_class_nodes() -> None:
               title: BaseCounter
               summary: Stores one inherited seed value for derived counters.
               ```
-              @[public, mutable]
-              value: int32 = 41
+              value: public var :: int32 = 41
 
-              @[protected]
-              fn read_seed(self) -> int32:
+              fn read_seed(self) -> protected :: int32:
                 ```
                 title: read_seed
                 summary: Returns the inherited seed value.
@@ -108,30 +105,25 @@ def test_parse_complex_class_module_with_irx_class_nodes() -> None:
               title: Counter
               summary: Extends BaseCounter with private state and helpers.
               ```
-              @[public, static, constant]
-              version: int32 = 3
+              version: public static const :: int32 = 3
 
-              @[private, mutable]
-              internal: int32 = 5
+              internal: private var :: int32 = 5
 
-              @[protected]
-              fn internal_total(self) -> int32:
+              fn internal_total(self) -> protected :: int32:
                 ```
                 title: internal_total
                 summary: Combines private and inherited counter state.
                 ```
                 return self.internal + self.value
 
-              @[public]
-              fn get(self) -> int32:
+              fn get(self) -> public :: int32:
                 ```
                 title: get
                 summary: Returns the inherited public counter value.
                 ```
                 return self.value
 
-              @[public]
-              fn read_internal(self) -> int32:
+              fn read_internal(self) -> public :: int32:
                 ```
                 title: read_internal
                 summary: Exposes the protected internal helper result.
@@ -143,16 +135,14 @@ def test_parse_complex_class_module_with_irx_class_nodes() -> None:
               title: CounterFactory
               summary: Builds counters and exposes static metadata.
               ```
-              @[public, static]
-              fn make() -> Counter:
+              fn make() -> public static :: Counter:
                 ```
                 title: make
                 summary: Constructs one default Counter instance.
                 ```
                 return Counter()
 
-              @[public, static]
-              fn version_value() -> int32:
+              fn version_value() -> public static :: int32:
                 ```
                 title: version_value
                 summary: Returns the static Counter version constant.
@@ -171,9 +161,9 @@ def test_parse_complex_class_module_with_irx_class_nodes() -> None:
               title: main
               summary: Exercises class construction and static member access.
               ```
-              var direct: Counter = Counter()
-              var built: Counter = CounterFactory.make()
-              var total: int32 = take_counter(direct) + built.get()
+              direct: Counter = Counter()
+              built: Counter = CounterFactory.make()
+              total: int32 = take_counter(direct) + built.get()
               return total + CounterFactory.version_value() + Counter.version
             """
         ).lstrip()
@@ -401,8 +391,7 @@ def test_parse_visible_local_names_shadow_class_expressions() -> None:
               title: Counter
               summary: Defines one simple counter type for expression tests.
               ```
-              @[public, static, constant]
-              version: int32 = 3
+              version: public static const :: int32 = 3
 
               value: int32 = 0
 
@@ -411,8 +400,8 @@ def test_parse_visible_local_names_shadow_class_expressions() -> None:
               title: main
               summary: Checks that visible locals shadow class expressions.
               ```
-              var Counter: int32 = 1
-              var next: int32 = Counter()
+              Counter: int32 = 1
+              next: int32 = Counter()
               return Counter.version
             """
         ).lstrip()
@@ -460,8 +449,7 @@ def test_parse_visible_local_names_shadow_class_expressions() -> None:
                   title: Bad
                   summary: Holds one duplicate-visibility field declaration.
                   ```
-                  @[public, public]
-                  value: int32 = 0
+                  value: public public :: int32 = 0
                 """
             ).lstrip(),
             "duplicate modifier 'public'",
@@ -474,8 +462,7 @@ def test_parse_visible_local_names_shadow_class_expressions() -> None:
                   title: Bad
                   summary: Holds one conflicting-visibility field declaration.
                   ```
-                  @[public, private]
-                  value: int32 = 0
+                  value: public private :: int32 = 0
                 """
             ).lstrip(),
             "conflicting visibility modifiers",
@@ -488,8 +475,7 @@ def test_parse_visible_local_names_shadow_class_expressions() -> None:
                   title: Bad
                   summary: Holds one conflicting-mutability field declaration.
                   ```
-                  @[constant, mutable]
-                  value: int32 = 0
+                  value: const var :: int32 = 0
                 """
             ).lstrip(),
             "conflicting mutability modifiers",
@@ -502,8 +488,7 @@ def test_parse_visible_local_names_shadow_class_expressions() -> None:
                   title: Bad
                   summary: Holds one invalid abstract field declaration.
                   ```
-                  @[abstract]
-                  value: int32 = 0
+                  value: abstract :: int32 = 0
                 """
             ).lstrip(),
             "field cannot use 'abstract'",
@@ -517,8 +502,7 @@ def test_parse_visible_local_names_shadow_class_expressions() -> None:
                   summary: >-
                     Holds one field declaration with an unknown modifier.
                   ```
-                  @[override]
-                  value: int32 = 0
+                  value: override :: int32 = 0
                 """
             ).lstrip(),
             "unknown modifier 'override'",
@@ -572,8 +556,7 @@ def test_parse_visible_local_names_shadow_class_expressions() -> None:
                   summary: >-
                     Holds one abstract method with an invalid statement body.
                   ```
-                  @[abstract]
-                  fn area(self) -> float64:
+                  fn area(self) -> abstract :: float64:
                     ```
                     title: area
                     summary: >-
@@ -592,8 +575,7 @@ def test_parse_visible_local_names_shadow_class_expressions() -> None:
                   title: Bad
                   summary: Holds one invalid static helper method declaration.
                   ```
-                  @[static]
-                  fn helper(self) -> int32:
+                  fn helper(self) -> static :: int32:
                     ```
                     title: helper
                     summary: Returns one constant while violating static rules.
@@ -618,7 +600,7 @@ def test_parse_visible_local_names_shadow_class_expressions() -> None:
                   title: main
                   summary: Triggers one invalid class-construction call.
                   ```
-                  var counter: Counter = Counter(value=1, 2)
+                  counter: Counter = Counter(value=1, 2)
                   return 0
                 """
             ).lstrip(),
@@ -632,7 +614,7 @@ def test_parse_visible_local_names_shadow_class_expressions() -> None:
                   title: main
                   summary: Triggers one missing-type parser error.
                   ```
-                  var counter: Missing = 0
+                  counter: Missing = 0
                   return 0
                 """
             ).lstrip(),

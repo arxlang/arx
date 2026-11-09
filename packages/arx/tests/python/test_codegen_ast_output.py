@@ -9,14 +9,18 @@ import sys
 from pathlib import Path
 from textwrap import dedent
 
+import astx
 import pytest
 
 from arx.codegen import ArxBuilder
+from arx.exceptions import ParserException
 from arx.io import ArxIO
 from arx.lexer import Lexer
 from arx.main import FileImportResolver, inject_ambient_builtin_imports
 from arx.parser import Parser
 from irx.analysis.module_interfaces import ParsedModule
+from irx.analysis.resolved_nodes import OwnershipTransferKind, SemanticInfo
+from irx.analysis.types import same_type
 from irx.diagnostics import DiagnosticCodes, SemanticError
 from llvmlite import binding as llvm
 from llvmlite import ir
@@ -33,11 +37,12 @@ def scalar_module_ir() -> tuple[ArxBuilder, str]:
     """
     ArxIO.string_to_buffer(
         "```\ntitle: Scalar module storage\n```\n"
-        "var zero: i32\n"
-        "var ratio: f64 = -1.25\n"
-        "var flag: bool\n"
-        "var optional: nullable[i32] = none\n"
-        "var valid_false: nullable[bool] = false\n"
+        "zero: i32\n"
+        "limit: const :: auto = 10\n"
+        "ratio: f64 = -1.25\n"
+        "flag: bool\n"
+        "optional: nullable[i32] = none\n"
+        "valid_false: nullable[bool] = false\n"
         "@<T: i32 | i64>\n"
         "fn read_counter(value: T) -> i64:\n"
         "  return counter\n"
@@ -47,12 +52,13 @@ def scalar_module_ir() -> tuple[ArxBuilder, str]:
         "  ++counter\n"
         "  return none\n"
         "fn shadow() -> i64:\n"
-        "  var counter: i64 = 100\n"
+        "  counter: i64 = 100\n"
         "  counter += 1\n"
         "  return counter\n"
-        "var counter: i64 = 5\n"
+        "counter: i64 = 5\n"
         "fn main() -> i32:\n"
         "  assert zero == 0\n"
+        "  assert limit == 10\n"
         "  assert flag == false\n"
         "  assert ratio == -1.25\n"
         "  assert is_null(optional)\n"
@@ -91,11 +97,12 @@ def test_scalar_module_global_storage(
         for value in module.global_variables
         if value.name.startswith("module_global_")
     ]
-    assert len(globals_) == 6
+    assert len(globals_) == 7
     assert all(value.linkage.name == "internal" for value in globals_)
     assert sorted(str(value.global_value_type) for value in globals_) == [
         "double",
         "i1",
+        "i32",
         "i32",
         "i64",
         "{ i1, i1 }",
@@ -128,7 +135,7 @@ def test_scalar_module_global_execution(
 
 @pytest.mark.parametrize(
     "declaration",
-    ['var value: str = "literal"', "var value: i64 = initial()"],
+    ['value: str = "literal"', "value: i64 = initial()"],
 )
 def test_unsupported_module_storage_fails_before_lowering(
     declaration: str,
@@ -168,7 +175,7 @@ def test_iterated_list_replacement_fails_at_assignment(stop: int) -> None:
     ArxIO.string_to_buffer(
         "```\ntitle: Iterated owner replacement\n```\n"
         "fn main() -> i32:\n"
-        "  var data: list[i32] = range(0, 10)\n"
+        "  data: list[i32] = range(0, 10)\n"
         "  for val in data:\n"
         "    if val == 2:\n"
         f"      data = range(100, {stop})\n"
@@ -195,8 +202,8 @@ def test_compound_count_update_stores_once() -> None:
     ArxIO.string_to_buffer(
         "```\ntitle: Compound count update\n```\n"
         "fn main() -> i32:\n"
-        "  var total: i32 = 0\n"
-        "  for var i: i32 = 0; i < 4; i += 1:\n"
+        "  total: i32 = 0\n"
+        "  for i: i32 = 0; i < 4; i += 1:\n"
         "    total += i\n"
         "  return total\n"
     )
@@ -231,16 +238,15 @@ def test_compound_count_update_stores_once() -> None:
     "body, message",
     [
         ("missing += 1", "cannot resolve name"),
-        ("var x: bool = true\n  x += true", "numeric scalars"),
-        ('var x: str = "a"\n  x += "b"', "numeric scalars"),
-        ("var x: list[i32] = [1]\n  x += [2]", "numeric scalars"),
+        ("x: bool = true\n  x += true", "numeric scalars"),
+        ('x: str = "a"\n  x += "b"', "numeric scalars"),
+        ("x: list[i32] = [1]\n  x += [2]", "numeric scalars"),
         (
-            "var x: nullable[i32] = cast(1, nullable[i32])\n  x += 1",
+            "x: nullable[i32] = cast(1, nullable[i32])\n  x += 1",
             "numeric scalars",
         ),
         (
-            "var other: i32 = 0\n"
-            "  for var i: i32 = 0; i < 3; other += 1:\n    0",
+            "other: i32 = 0\n  for i: i32 = 0; i < 3; other += 1:\n    0",
             "induction binding",
         ),
     ],
@@ -270,7 +276,7 @@ def test_scalar_remainder_and_word_not_translate() -> None:
         "```\ntitle: Scalar operators\n```\n"
         "extern getchar() -> i32\n"
         "fn main() -> i32:\n"
-        "  var value: i32 = getchar()\n"
+        "  value: i32 = getchar()\n"
         "  assert not value % 3 == 2\n"
         "  return value % 3\n"
     )
@@ -290,7 +296,7 @@ def test_scalar_remainder_and_word_not_translate() -> None:
         "    return 0\n"
         "  else:\n"
         "    return 1\n",
-        "  var result: i32 = 9\n"
+        "  result: i32 = 9\n"
         "  if value < 0:\n"
         "    return -1\n"
         "  elif value == 0:\n"
@@ -350,7 +356,7 @@ def test_unsupported_subscript_reports_its_source(expression: str) -> None:
     source = (
         "```\ntitle: Unsupported indexing\n```\n"
         "fn main() -> i32:\n"
-        "  var café: i32 = 42\n"
+        "  café: i32 = 42\n"
         f"{line}\n"
         "  return 0\n"
     )
@@ -375,10 +381,10 @@ def literal_loop_ir() -> tuple[ArxBuilder, str]:
         "```\ntitle: Bounded literal loop storage\n```\n"
         "extern getchar() -> i32\n"
         "fn main() -> i32:\n"
-        "  var count: i32 = getchar() * 200\n"
-        "  var numbers: list[i32] = range(0, count)\n"
-        "  var total: i32 = 0\n"
-        "  var j: i32 = 1\n"
+        "  count: i32 = getchar() * 200\n"
+        "  numbers: list[i32] = range(0, count)\n"
+        "  total: i32 = 0\n"
+        "  j: i32 = 1\n"
         "  for number in numbers:\n"
         "    total = total + [1, 2, 3][j]\n"
         "    assert ![true, false, true][j]\n"
@@ -556,9 +562,9 @@ def test_literal_loop_runs_with_bounded_stack(
               return value
 
             fn main() -> i32:
-              var value: i64 = identity(5)
-              var ok: bool = isinstance(value, Number)
-              var name: str = type(value)
+              value: i64 = identity(5)
+              ok: bool = isinstance(value, Number)
+              name: str = type(value)
               print(name)
               if ok:
                 return cast(value, i32)
@@ -569,22 +575,17 @@ def test_literal_loop_runs_with_bounded_stack(
         dedent(
             """
             class BaseCounter:
-              @[public, mutable]
-              value: int32 = 41
+              value: public var :: int32 = 41
 
-              @[protected]
-              fn read_seed(self) -> int32:
+              fn read_seed(self) -> protected :: int32:
                 return self.value
 
             class Counter(BaseCounter):
-              @[public, static, constant]
-              version: int32 = 3
+              version: public static const :: int32 = 3
 
-              @[private, mutable]
-              internal: int32 = 5
+              internal: private var :: int32 = 5
 
-              @[protected]
-              fn internal_total(self) -> int32:
+              fn internal_total(self) -> protected :: int32:
                 return self.internal + self.value
 
               fn get(self) -> int32:
@@ -594,20 +595,18 @@ def test_literal_loop_runs_with_bounded_stack(
                 return self.internal_total()
 
             class CounterFactory:
-              @[public, static]
-              fn make() -> Counter:
+              fn make() -> public static :: Counter:
                 return Counter()
 
-              @[public, static]
-              fn version_value() -> int32:
+              fn version_value() -> public static :: int32:
                 return Counter.version
 
             fn take_counter(counter: Counter) -> int32:
               return counter.get() + counter.value + counter.read_internal()
 
             fn main() -> i32:
-              var direct: Counter = Counter()
-              var built: Counter = CounterFactory.make()
+              direct: Counter = Counter()
+              built: Counter = CounterFactory.make()
               print(take_counter(direct) + built.get())
               return CounterFactory.version_value() + Counter.version
             """
@@ -618,7 +617,7 @@ def test_literal_loop_runs_with_bounded_stack(
               return grid[1, 0] + grid[0, 1]
 
             fn main() -> i32:
-              var grid: tensor[i32, 2, 2] = [[1, 2], [3, 4]]
+              grid: tensor[i32, 2, 2] = [[1, 2], [3, 4]]
               return pick(grid)
             """
         ).lstrip(),
@@ -628,7 +627,7 @@ def test_literal_loop_runs_with_bounded_stack(
               return 0
 
             fn main() -> i32:
-              var values: tensor[i32, 2] = [1, 2]
+              values: tensor[i32, 2] = [1, 2]
               return accept(values)
             """
         ).lstrip(),
@@ -664,7 +663,7 @@ def test_file_operations_translate_with_checked_cleanup(factory: str) -> None:
     ArxIO.string_to_buffer(
         "```\ntitle: File translate regression\n```\n"
         "fn main() -> i32:\n"
-        f'  var output: File = {factory}("output.txt", mode="w")\n'
+        f'  output: File = {factory}("output.txt", mode="w")\n'
         '  output.write("ok")\n'
         "  output.close()\n"
         "  return 0\n"
@@ -685,7 +684,7 @@ def test_numeric_operand_plans_translate_mixed_widths() -> None:
     ArxIO.string_to_buffer(
         "```\ntitle: Numeric operand plan translation\n```\n"
         "fn combine(small: i8, large: i16) -> i16:\n"
-        "  var ordered: bool = small < large\n"
+        "  ordered: bool = small < large\n"
         "  return small + large\n"
         "fn main() -> i32:\n"
         "  return combine(cast(1, i8), cast(2, i16))\n"
@@ -712,7 +711,7 @@ def test_numeric_union_comparison_has_a_resolved_storage_plan() -> None:
         "fn compare(a: Number, b: i32) -> bool:\n"
         "  return a < b\n"
         "fn main() -> i32:\n"
-        "  var result: bool = compare(1, 2)\n"
+        "  result: bool = compare(1, 2)\n"
         "  return 0\n"
     )
     text = ArxBuilder().translate(Parser().parse(Lexer().lex()))
@@ -730,7 +729,7 @@ def test_integer_helpers_translate_with_wide_range_arithmetic() -> None:
         "```\ntitle: Integer helper translation\n```\n"
         "import math from stdlib\n"
         "fn main() -> i32:\n"
-        "  var values: list[i32] = range(2147483646, 2147483647, 2)\n"
+        "  values: list[i32] = range(2147483646, 2147483647, 2)\n"
         "  return math.clamp(math.abs(values[0]), 0, math.square(46340))\n"
     )
     module = Parser().parse(Lexer().lex(), "integer_helpers")
@@ -759,9 +758,9 @@ def test_math_templates_translate_concrete_widths(width: int) -> None:
         "import math as arithmetic from stdlib\n"
         "import square as squared from stdlib.math\n"
         "fn main() -> i32:\n"
-        f"  var value: i{width} = cast(0 - 3, i{width})\n"
-        f"  var zero: i{width} = cast(0, i{width})\n"
-        f"  var magnitude: i{width} = arithmetic.abs(value)\n"
+        f"  value: i{width} = cast(0 - 3, i{width})\n"
+        f"  zero: i{width} = cast(0, i{width})\n"
+        f"  magnitude: i{width} = arithmetic.abs(value)\n"
         "  arithmetic.min(magnitude, value)\n"
         "  arithmetic.max(magnitude, value)\n"
         "  arithmetic.clamp(magnitude, zero, magnitude)\n"
@@ -796,8 +795,8 @@ class Counter:
     print(self.value)
     return none
 fn main() -> i32:
-  var first: Counter = Counter(value=7)
-  var alias: Counter = first
+  first: Counter = Counter(value=7)
+  alias: Counter = first
   first = Counter()
   return alias.value - 7
 """)
@@ -866,9 +865,9 @@ def test_arrow_stdlib_translate_uses_resolved_native_capabilities() -> None:
     ArxIO.string_to_buffer(
         "import (Schema, BatchBuilder) from stdlib.arrow\n"
         "fn main() -> i32:\n"
-        "  var schema: Schema = Schema()\n"
+        "  schema: Schema = Schema()\n"
         '  schema.add("id", "int64")\n'
-        "  var builder: BatchBuilder = BatchBuilder(schema)\n"
+        "  builder: BatchBuilder = BatchBuilder(schema)\n"
         "  builder.append_i64(0, 42)\n"
         "  return cast(builder.finish().nrows(), i32)\n"
     )
@@ -897,7 +896,7 @@ def test_nullable_dataframe_translate_uses_checked_record_batch_abi() -> None:
     ArxIO.string_to_buffer(
         "type Frame = dataframe[id:i64 | none, label:str | none]\n"
         "fn main() -> i32:\n"
-        '  var frame: Frame = dataframe({id: [1, none], label: ["a", none]})\n'
+        '  frame: Frame = dataframe({id: [1, none], label: ["a", none]})\n'
         "  return cast(frame.nrows(), i32)\n"
     )
     module = Parser().parse(Lexer().lex(), "nullable_translate")
@@ -920,7 +919,7 @@ def test_temporal_dataframe_translate_uses_semantic_epoch_values() -> None:
     """
     ArxIO.string_to_buffer(
         "fn main() -> i32:\n"
-        "  var frame: dataframe[day:date, clock:time] = "
+        "  frame: dataframe[day:date, clock:time] = "
         'dataframe({day: [date("1969-12-31")], clock: [time("01:02:03")]})\n'
         "  return cast(frame.nrows(), i32)\n"
     )
@@ -954,8 +953,8 @@ def test_nullable_series_translate_verifies() -> None:
     """
     ArxIO.string_to_buffer(
         "fn main() -> i32:\n"
-        "  var frame: dataframe[x:i32 | none] = dataframe({x:[1, none]})\n"
-        "  var value: nullable[i32] = frame.x[0] + frame.x[1]\n"
+        "  frame: dataframe[x:i32 | none] = dataframe({x:[1, none]})\n"
+        "  value: nullable[i32] = frame.x[0] + frame.x[1]\n"
         "  assert is_null(value)\n"
         "  return fill_null(value, 0)\n"
     )
@@ -970,24 +969,24 @@ def test_nullable_series_translate_verifies() -> None:
     "body,message",
     [
         (
-            "var bad: nullable[str] = cast(none, nullable[str])",
+            "bad: nullable[str] = cast(none, nullable[str])",
             "nullable scalars",
         ),
-        ("var bad: i32 = frame.x[0]", "cannot assign"),
+        ("bad: i32 = frame.x[0]", "cannot assign"),
         (
-            "var bad: nullable[i32] = frame.x[0] + true",
+            "bad: nullable[i32] = frame.x[0] + true",
             "compatible scalar types",
         ),
-        ("var bad: nullable[i32] = frame.x[-1.0]", "integer representable"),
+        ("bad: nullable[i32] = frame.x[-1.0]", "integer representable"),
         (
-            "var bad: nullable[i32] = ++frame.x[0]",
+            "bad: nullable[i32] = ++frame.x[0]",
             "unsupported nullable/Series unary",
         ),
-        ("var bad: bool = is_null(1)", "is_null requires"),
-        ("var bad: i32 = fill_null(frame.x[0], 1.5)", "matching non-null"),
+        ("bad: bool = is_null(1)", "is_null requires"),
+        ("bad: i32 = fill_null(frame.x[0], 1.5)", "matching non-null"),
         ("if frame.x[0]:\n    return 1", "condition must be Boolean"),
-        ("var bad: series[i32] = frame.x", "cannot assign"),
-        ("var bad: series[bool] = frame.x && frame.x", "require bool"),
+        ("bad: series[i32] = frame.x", "cannot assign"),
+        ("bad: series[bool] = frame.x && frame.x", "require bool"),
     ],
 )
 def test_nullable_semantic_errors(body: str, message: str) -> None:
@@ -1001,7 +1000,7 @@ def test_nullable_semantic_errors(body: str, message: str) -> None:
     """
     ArxIO.string_to_buffer(
         "fn main() -> i32:\n"
-        "  var frame: dataframe[x:i32 | none] = dataframe({x:[1, none]})\n"
+        "  frame: dataframe[x:i32 | none] = dataframe({x:[1, none]})\n"
         f"  {body}\n  return 0\n"
     )
     with pytest.raises(SemanticError, match=message):
@@ -1024,8 +1023,8 @@ def test_table_io_translate_uses_resolved_calls(namespace: bool) -> None:
     prefix = "csv." if namespace else ""
     ArxIO.string_to_buffer(
         imports + "fn main() -> i32:\n"
-        f'  var source: dataframe[...] = {prefix}read_csv("in.csv")\n'
-        "  var frame: dataframe[id:i64] = cast(source, dataframe[id:i64])\n"
+        f'  source: dataframe[...] = {prefix}read_csv("in.csv")\n'
+        "  frame: dataframe[id:i64] = cast(source, dataframe[id:i64])\n"
         f'  {prefix}write_csv(frame=frame, path="out.csv")\n'
         "  return 0\n"
     )
@@ -1067,7 +1066,7 @@ def test_format_stream_imports_translate(
     ArxIO.string_to_buffer(
         f"import {imported} from stdlib.{module_name}\n"
         "fn main() -> i32:\n"
-        f"  var stream: {local_name} = {local_name}()\n"
+        f"  stream: {local_name} = {local_name}()\n"
         "  stream.close()\n"
         "  return 0\n"
     )
@@ -1183,17 +1182,20 @@ def test_owned_lists_build_and_run(
 @pytest.mark.parametrize(
     ("source", "message"),
     [
-        ("fn main() -> i32:\n  return cast(len([]), i32)\n", "annotate empty"),
+        (
+            "fn main() -> i32:\n  return cast(len([]), i32)\n",
+            "annotate empty",
+        ),
         (
             "fn main() -> i32:\n  return cast(len([[1], [2]]), i32)\n",
             "nested owned",
         ),
         (
-            "fn main() -> i32:\n  var x: i8 = [128][0]\n  return 0\n",
+            "fn main() -> i32:\n  x: i8 = [128][0]\n  return 0\n",
             "representable",
         ),
         (
-            "fn main() -> i32:\n  var x: i8 = [cast(1, i32)][0]\n  return 0\n",
+            "fn main() -> i32:\n  x: i8 = [cast(1, i32)][0]\n  return 0\n",
             "type Int8",
         ),
         ("fn main() -> i32:\n  return len([1])\n", "expects Int32"),
@@ -1206,12 +1208,12 @@ def test_owned_lists_build_and_run(
             "one positional",
         ),
         (
-            "fn main() -> i32:\n  var len: i32 = 1\n  return len([1])\n",
+            "fn main() -> i32:\n  len: i32 = 1\n  return len([1])\n",
             "does not resolve to a function",
         ),
         (
             "fn use(x: list[i64]) -> none:\n  return none\n"
-            "fn main() -> i32:\n  var x: list[i32] = [1]\n"
+            "fn main() -> i32:\n  x: list[i32] = [1]\n"
             "  use(x)\n  return 0\n",
             "ListType",
         ),
@@ -1222,11 +1224,11 @@ def test_owned_lists_build_and_run(
         ),
         (
             "fn main() -> i32:\n"
-            "  var t: tensor[i32, 2, 2] = [[1, 2], [3]]\n  return 0\n",
+            "  t: tensor[i32, 2, 2] = [[1, 2], [3]]\n  return 0\n",
             "rectangular",
         ),
         (
-            "fn main() -> i32:\n  var t: tensor[i32, 2] = [1]\n  return 0\n",
+            "fn main() -> i32:\n  t: tensor[i32, 2] = [1]\n  return 0\n",
             "shape",
         ),
     ],
@@ -1272,8 +1274,7 @@ def test_local_text_builtin_shadow_is_not_callable(name: str) -> None:
         type: str
     """
     ArxIO.string_to_buffer(
-        f"fn main() -> i32:\n  var {name}: i32 = 0\n"
-        f'  {name}("1")\n  return 0\n'
+        f'fn main() -> i32:\n  {name}: i32 = 0\n  {name}("1")\n  return 0\n'
     )
     with pytest.raises(SemanticError, match="does not resolve to a function"):
         ArxBuilder().translate(Parser().parse(Lexer().lex()))
@@ -1292,7 +1293,7 @@ def text_operations_ir() -> tuple[ArxBuilder, str]:
         "  test_text_parsing()\n"
         "  test_text_argument_order()\n"
         "  test_text_failures()\n"
-        '  var words: list[str] = words_from_file("input.txt")\n'
+        '  words: list[str] = words_from_file("input.txt")\n'
         '  assert words[0] == "L68"\n'
         '  assert words[1] == "R-12"\n'
         "  return 0\n"
@@ -1421,9 +1422,9 @@ fn borrowed_read(values: sequence[i64], index: i32) -> i64:
 fn runtime_borrow(values: tensor[i64, ...]) -> i64:
   return borrowed_read(values, 0)
 fn main() -> i32:
-  var mode: i32 = getchar()
-  var index: i32 = getchar() - 1
-  var values: tensor[i64, 2] = [7, 9]
+  mode: i32 = getchar()
+  index: i32 = getchar() - 1
+  values: tensor[i64, 2] = [7, 9]
   try:
     if mode == 0:
       return cast(values[index], i32)
@@ -1432,12 +1433,12 @@ fn main() -> i32:
     if mode == 2:
       return cast(borrowed_read([7, 9], index), i32)
     if mode == 3:
-      var empty: list[i64] = []
+      empty: list[i64] = []
       return cast(borrowed_read(empty, 0), i32)
     if mode == 4:
-      var matrix: tensor[i64, 1, 2] = [[7, 9]]
+      matrix: tensor[i64, 1, 2] = [[7, 9]]
       return cast(runtime_borrow(matrix), i32)
-    var copied: list[i64] = list(values, max_items=index)
+    copied: list[i64] = list(values, max_items=index)
     return cast(len(copied), i32)
   except IndexError:
     return 10
@@ -1517,7 +1518,7 @@ def test_nested_template_literal_context(arguments: str) -> None:
         f"@<T: i32 | i64>\nfn pick({parameters}) -> T:\n"
         "  return values[0]\n"
         "fn main() -> i32:\n"
-        "  var typed: i64 = 7\n"
+        "  typed: i64 = 7\n"
         f"  assert pick({arguments}) == 1\n"
         f"  assert pick<i64>({arguments}) == 1\n"
         "  return 0\n"
@@ -1579,3 +1580,345 @@ def test_binary_file_roundtrip(
         range(256)
     ) * 2
     assert (tmp_path / "binary-empty.dat").read_bytes() == b""
+
+
+@pytest.mark.parametrize("binding", ["", "var :: ", "const :: "])
+def test_inferred_declarations_translate(binding: str) -> None:
+    """
+    title: Inference crosses functions, nullable values, templates, and layout.
+    parameters:
+      binding:
+        type: str
+    """
+    ArxIO.string_to_buffer(
+        "limit: const :: auto = 10\n"
+        "class Box:\n"
+        "  value: auto = 3\n"
+        "  count: static const :: auto = 1\n"
+        "  fn read(self) -> i32:\n"
+        "    return self.value\n"
+        "@<T: i32 | i64>\n"
+        "fn identity(value: const :: T) -> T:\n"
+        "  result: const :: auto = value\n"
+        "  return result\n"
+        "fn optional() -> nullable[i32]:\n"
+        "  return none\n"
+        "fn frame() -> dataframe[x:i32]:\n"
+        "  return dataframe({x:[1, 2]})\n"
+        "fn tensor_value() -> tensor[i32, 2]:\n"
+        "  return [1, 2]\n"
+        "fn main() -> i32:\n"
+        f"  value: {binding}auto = identity(1)\n"
+        f"  box: {binding}auto = Box()\n"
+        "  box.value = 4\n"
+        f"  values: {binding}auto = [1, 2]\n"
+        "  values.append(3)\n"
+        f"  missing: {binding}auto = optional()\n"
+        f"  table: {binding}auto = frame()\n"
+        f"  tensor: {binding}auto = tensor_value()\n"
+        "  assert table.nrows() == 2\n"
+        "  assert table.ncols() == 1\n"
+        "  column: const :: auto = table.x\n"
+        "  assert series_count(column) == table.nrows()\n"
+        "  assert fill_null(series_sum(table.x), 0) == 3\n"
+        '  assert fill_null(series_sum(table["x"]), 0) == 3\n'
+        "  assert tensor[1] == 2\n"
+        "  assert is_null(missing)\n"
+        "  assert box.read() == 4\n"
+        "  assert Box.count == 1\n"
+        "  assert value == 1\n"
+        "  assert identity<i64>(1) == 1\n"
+        "  assert limit == 10\n"
+        "  total: i32 = 0\n"
+        "  for i: auto = 0; i < 2; ++i:\n"
+        "    total += i\n"
+        "  return values[2] + total - 4\n"
+    )
+    module = Parser().parse(Lexer().lex())
+    text = ArxBuilder().translate(module)
+    llvm.parse_assembly(text).verify()
+    main = module.nodes[-1]
+    assert isinstance(main, astx.FunctionDef)
+    declaration = next(
+        node
+        for node in main.body.nodes
+        if isinstance(node, astx.VariableDeclaration) and node.name == "column"
+    )
+    initializer = declaration.value
+    info = initializer.semantic
+    assert isinstance(info, SemanticInfo)
+    assert info.resource_ownership is not None
+    assert info.resource_ownership.transfer_kind is OwnershipTransferKind.MOVE
+    assert info.normalized_collection is not None
+    normalized_info = info.normalized_collection.semantic
+    assert isinstance(normalized_info, SemanticInfo)
+    assert normalized_info.resource_ownership is info.resource_ownership
+
+
+@pytest.mark.parametrize(
+    "declaration,write",
+    [
+        ("value: const :: i32 = 1", "value = 2"),
+        ("value: const :: auto = 1", "value += 1"),
+        ("value: const :: i32 = 1", "++value"),
+    ],
+)
+def test_constant_binding_writes_fail_before_lowering(
+    declaration: str, write: str
+) -> None:
+    """
+    title: Surface constant declarations authorize no scalar binding writes.
+    parameters:
+      declaration:
+        type: str
+      write:
+        type: str
+    """
+    ArxIO.string_to_buffer(
+        f"fn main() -> i32:\n  {declaration}\n  {write}\n  return value\n"
+    )
+    with pytest.raises(SemanticError, match="declared as constant"):
+        ArxBuilder().translate(Parser().parse(Lexer().lex()))
+
+
+@pytest.mark.parametrize(
+    "declaration, call",
+    [
+        (
+            "fn fixed(value: const :: i32) -> i32:\n"
+            "  value += 1\n  return value\n",
+            "fixed(1)",
+        ),
+        (
+            "class Box:\n"
+            "  fn fixed(value: const :: i32) -> static :: i32:\n"
+            "    value += 1\n    return value\n",
+            "Box.fixed(1)",
+        ),
+        (
+            "@<T: i32 | i64>\n"
+            "fn fixed(value: const :: T) -> T:\n"
+            "  value += 1\n  return value\n",
+            "fixed<i32>(1)",
+        ),
+    ],
+)
+def test_constant_parameter_writes_fail_before_lowering(
+    declaration: str, call: str
+) -> None:
+    """
+    title: >-
+      Unchanged function heads enforce argument modifiers through analysis.
+    parameters:
+      declaration:
+        type: str
+      call:
+        type: str
+    """
+    ArxIO.string_to_buffer(
+        declaration + f"fn main() -> i32:\n  return {call}\n"
+    )
+    with pytest.raises(SemanticError, match="declared as constant"):
+        ArxBuilder().translate(Parser().parse(Lexer().lex()))
+
+
+@pytest.mark.parametrize(
+    "source, message",
+    [
+        (
+            "fn main() -> i32:\n  x: auto = none\n  return 0",
+            "Cannot infer a concrete type",
+        ),
+        ("fn main() -> i32:\n  x: auto = []\n  return 0", "element type"),
+        (
+            "fn initial() -> i32:\n  return 1\nx: const :: auto = initial()",
+            "runtime initialization is unsupported",
+        ),
+        (
+            "class Recursive:\n  child: auto = Recursive()",
+            "Field inference requires a literal initializer",
+        ),
+    ],
+)
+def test_inference_rejects_ambiguous_or_unsupported_storage(
+    source: str, message: str
+) -> None:
+    """
+    title: >-
+      Inference neither invents a type nor enables unsupported initialization.
+    parameters:
+      source:
+        type: str
+      message:
+        type: str
+    """
+    ArxIO.string_to_buffer(source)
+    with pytest.raises(SemanticError, match=message):
+        ArxBuilder().translate(Parser().parse(Lexer().lex()))
+
+
+def test_collection_access_paths_have_equivalent_semantics() -> None:
+    """
+    title: Typed frontend operations and inferred normalization resolve alike.
+    """
+    ArxIO.string_to_buffer(
+        "fn frame() -> dataframe[x:i32]:\n  return dataframe({x:[1, 2]})\n"
+        "fn main() -> i32:\n"
+        "  typed_list: list[i32] = [1]\n"
+        "  inferred_list: auto = [1]\n"
+        "  typed_list.append(2)\n"
+        "  inferred_list.append(2)\n"
+        "  typed_frame: dataframe[x:i32] = frame()\n"
+        "  inferred_frame: auto = frame()\n"
+        "  typed_frame.x\n"
+        "  inferred_frame.x\n"
+        '  typed_frame["x"]\n'
+        '  inferred_frame["x"]\n'
+        "  typed_frame.nrows()\n"
+        "  inferred_frame.nrows()\n"
+        "  typed_frame.ncols()\n"
+        "  inferred_frame.ncols()\n"
+        "  return 0\n"
+    )
+    module = Parser().parse(Lexer().lex())
+    main = module.nodes[-1]
+    assert isinstance(main, astx.FunctionDef)
+    operations = [
+        node
+        for node in main.body.nodes
+        if not isinstance(
+            node, (astx.VariableDeclaration, astx.FunctionReturn)
+        )
+    ]
+    assert len(operations) == 10
+    text = ArxBuilder().translate(module)
+    llvm.parse_assembly(text).verify()
+    for typed, inferred in zip(operations[::2], operations[1::2]):
+        typed_info = typed.semantic
+        inferred_info = inferred.semantic
+        assert isinstance(typed_info, SemanticInfo)
+        assert isinstance(inferred_info, SemanticInfo)
+        assert typed_info.normalized_collection is None
+        normalized = inferred_info.normalized_collection
+        assert normalized is not None
+        assert type(normalized) is type(typed)
+        assert same_type(typed_info.resolved_type, inferred_info.resolved_type)
+
+
+@pytest.mark.parametrize("annotation", ["dataframe[x:i32]", "auto"])
+def test_collection_metadata_arguments_fail_before_lowering(
+    annotation: str,
+) -> None:
+    """
+    title: Both collection paths reject unsupported arguments before LLVM.
+    parameters:
+      annotation:
+        type: str
+    """
+    ArxIO.string_to_buffer(
+        "fn frame() -> dataframe[x:i32]:\n  return dataframe({x:[1]})\n"
+        "fn main() -> i32:\n"
+        f"  table: {annotation} = frame()\n"
+        "  table.nrows(1)\n  return 0\n"
+    )
+    with pytest.raises(
+        (ParserException, SemanticError), match="expects no arguments"
+    ):
+        ArxBuilder().translate(Parser().parse(Lexer().lex()))
+
+
+def test_callable_modifiers_and_multiline_headers_translate() -> None:
+    """
+    title: Callable policies and wrapped signatures survive analysis and LLVM.
+    """
+    ArxIO.string_to_buffer(
+        "class Calculator:\n"
+        "  fn hidden(\n    self, value: const :: i32,\n  ) ->\n"
+        "    private ::\n    i32\n  :\n    return value\n"
+        "  fn read(self) -> public :: i32:\n    return self.hidden(1)\n"
+        "  @<T: i32 | i64>\n"
+        "  fn calculate(\n    value: const :: T,\n  ) ->\n"
+        "    public static ::\n    T\n  :\n    return value\n"
+        "fn helper(\n  value: i32 = 0,\n) ->\n  private ::\n  i32\n:\n"
+        "  return value\n"
+        "fn main() -> public :: i32:\n"
+        "  calculator: Calculator = Calculator()\n"
+        "  return Calculator.calculate(calculator.read()) - helper(1)\n"
+    )
+    text = ArxBuilder().translate(Parser().parse(Lexer().lex()))
+    llvm.parse_assembly(text).verify()
+
+
+@pytest.mark.parametrize("import_style", ["from", "namespace"])
+def test_private_function_imports_fail_during_analysis(
+    tmp_path: Path, import_style: str
+) -> None:
+    """
+    title: Frontend visibility cannot be bypassed by either import spelling.
+    parameters:
+      tmp_path:
+        type: Path
+      import_style:
+        type: str
+    """
+    (tmp_path / "library.x").write_text(
+        "```\ntitle: Private library\n```\n"
+        "fn hidden() -> private :: i32:\n  return 7\n",
+        encoding="utf-8",
+    )
+    source = (
+        (
+            "import hidden as alias from library\n"
+            "fn main() -> i32:\n  return alias()\n"
+        )
+        if import_style == "from"
+        else (
+            "import library as alias\n"
+            "fn main() -> i32:\n  return alias.hidden()\n"
+        )
+    )
+    ArxIO.string_to_buffer(source)
+    entry = tmp_path / "main.x"
+    entry.write_text(source, encoding="utf-8")
+    root = ParsedModule("main", Parser().parse(Lexer().lex()), str(entry))
+    with pytest.raises(SemanticError, match="private to its module") as error:
+        ArxBuilder().translate_modules(root, FileImportResolver((str(entry),)))
+    diagnostic = next(
+        item
+        for item in error.value.diagnostics.diagnostics
+        if "private to its module" in item.message
+    )
+    location = diagnostic.resolved_source()
+    assert location is not None
+    assert location.line == (1 if import_style == "from" else 3)
+
+
+def test_imported_template_can_call_its_private_module_helper(
+    tmp_path: Path,
+) -> None:
+    """
+    title: Template privacy uses the defining module rather than the caller.
+    parameters:
+      tmp_path:
+        type: Path
+    """
+    (tmp_path / "library.x").write_text(
+        "```\ntitle: Private template helpers\n```\n"
+        "@<T: i32 | i64>\n"
+        "fn hidden(value: const :: T) -> private :: T:\n  return value\n"
+        "@<T: i32 | i64>\n"
+        "fn visible(value: const :: T) -> public :: T:\n"
+        "  return hidden(value)\n",
+        encoding="utf-8",
+    )
+    source = (
+        "import visible from library\nfn main() -> i32:\n  return visible(0)\n"
+    )
+    entry = tmp_path / "main.x"
+    entry.write_text(source, encoding="utf-8")
+    ArxIO.string_to_buffer(source)
+    root = ParsedModule("main", Parser().parse(Lexer().lex()), str(entry))
+    text = ArxBuilder().translate_modules(
+        root, FileImportResolver((str(entry),))
+    )
+    llvm.parse_assembly(text).verify()

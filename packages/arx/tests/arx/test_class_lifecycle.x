@@ -8,8 +8,7 @@ class Counter:
   title: Counter
   ```
   value: i32 = 0
-  @[public, static, mutable]
-  destroyed: i32 = 0
+  destroyed: public static var :: i32 = 0
 
   fn __init__(self, value: i32 = 1) -> none:
     ```
@@ -35,8 +34,8 @@ fn use_aliases() -> none:
   ```
   title: use_aliases
   ```
-  var counter: Counter = make_counter()
-  var alias: Counter = counter
+  counter: Counter = make_counter()
+  alias: Counter = counter
   counter = counter
   counter = Counter()
   assert alias.value == 7

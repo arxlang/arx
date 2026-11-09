@@ -30,7 +30,7 @@ embedded NUL safely.
 
 ```arx
 fn distance(record: str) -> i64:
-  var clean: str = record.strip()
+  clean: str = record.strip()
   return int(clean[1:])
 ```
 

@@ -213,7 +213,7 @@ def test_math_templates_reject_unsupported_types(
         "```\ntitle: Unsupported math specialization\n```\n"
         "import math from stdlib\n"
         "fn main() -> i32:\n"
-        f"  var value: {type_} = {value}\n"
+        f"  value: {type_} = {value}\n"
         f"  math.{helper}{specialization}({arguments})\n"
         "  return 0\n"
     )
@@ -240,8 +240,8 @@ def test_math_templates_require_consistent_inference(call: str) -> None:
         "```\ntitle: Mixed-width math inference\n```\n"
         "import math from stdlib\n"
         "fn main() -> i32:\n"
-        "  var small: i8 = cast(1, i8)\n"
-        "  var wide: i64 = cast(2, i64)\n"
+        "  small: i8 = cast(1, i8)\n"
+        "  wide: i64 = cast(2, i64)\n"
         f"  math.{call}\n"
         "  return 0\n"
     )

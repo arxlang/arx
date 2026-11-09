@@ -47,29 +47,29 @@ c: CSVStream, b: RecordBatch) -> none:
           return none
 
 fn output_schema() -> Schema:
-  var schema: Schema = Schema()
+  schema: Schema = Schema()
   schema.add("id", "int64", false)
   return schema
 
 fn main() -> i32:
-  var source: ParquetStream = ParquetStream()
+  source: ParquetStream = ParquetStream()
   source.open_read("input.parquet", batch_size=7)
-  var input_schema: Schema = source.schema()
-  var schema: Schema = Schema()
+  input_schema: Schema = source.schema()
+  schema: Schema = Schema()
   schema.add("id", "int64", false)
-  var output: ParquetStream = ParquetStream()
+  output: ParquetStream = ParquetStream()
   output.open_write("output.parquet", schema, row_group_size=11)
-  var csv: CSVStream = CSVStream()
+  csv: CSVStream = CSVStream()
   csv.open_write("output.csv", schema)
   schema.close()
-  var rows: i64 = 0
+  rows: i64 = 0
   while source.next():
-    var batch: RecordBatch = source.batch()
-    var frame: dataframe[id:i64] = cast(batch, dataframe[id:i64])
+    batch: RecordBatch = source.batch()
+    frame: dataframe[id:i64] = cast(batch, dataframe[id:i64])
     batch.close()
-    var alias: dataframe[id:i64] = keep(frame)
+    alias: dataframe[id:i64] = keep(frame)
     frame = alias
-    var result: RecordBatch = cast(frame, RecordBatch)
+    result: RecordBatch = cast(frame, RecordBatch)
     check_mode(result.get_i64(0, 0), source, output, csv, result)
     output.write(result)
     csv.write(result)
@@ -78,12 +78,12 @@ fn main() -> i32:
   output.close()
   output.close()
   csv.close()
-  var actual: Schema = output_schema()
+  actual: Schema = output_schema()
   output.open_read_as("output.parquet", actual, batch_size=3)
   csv.open_read_as("output.csv", actual, block_size=32)
-  var csv_rows: i64 = 0
+  csv_rows: i64 = 0
   while csv.next():
-    var copied: RecordBatch = csv.batch()
+    copied: RecordBatch = csv.batch()
     csv_rows = csv_rows + copied.nrows()
   assert csv_rows == rows
   assert output.schema().equals(actual)

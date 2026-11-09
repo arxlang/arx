@@ -145,8 +145,7 @@ class Derived(Base):
   fn read(self, renamed: i32 = 8, other: i32 = 9) -> i32:
     return renamed * 10 + other
 class Math:
-  @[static]
-  fn combine(a: i32, b: i32 = 3) -> i32:
+  fn combine(a: i32, b: i32 = 3) -> static :: i32:
     return a * 10 + b
   fn choose(self, whole: i32) -> i32:
     return whole
@@ -159,12 +158,12 @@ class Math:
 fn first(a: T, b: i32, c: T = a) -> T:
   return c
 fn main() -> i32:
-  var base: Base = Derived()
+  base: Base = Derived()
   assert base.read(b=7) == 47
-  var normal: Base = Base()
+  normal: Base = Base()
   assert normal.read(b=9) == 49
   assert Math.combine(b=5, a=2) == 25
-  var math: Math = Math()
+  math: Math = Math()
   assert math.choose(whole=7) == 7
   assert math.choose(decimal=cast(1.0, f64)) == 9
   assert math.echo(value=3) == 3
@@ -215,8 +214,9 @@ fn main() -> i32:
         "f(*args)",
         "f(**args)",
         "print(message=1)",
-        "var values: list[i32]\nvalues.append(1, ignored=2)",
-        "var rows = dataframe({value: [1]})\nrows.nrows(ignored=1)",
+        "values: list[i32]\nvalues.append(1, ignored=2)",
+        "rows: dataframe[value:i32] = dataframe({value: [1]})\n"
+        "rows.nrows(ignored=1)",
     ],
 )
 def test_invalid_keyword_syntax_and_intrinsics(body: str) -> None:
@@ -264,7 +264,7 @@ fn seed() -> i32:
 fn main() -> i32:
   assert f(c=8, a=2) == 248
   assert helpers.combine(c=9, a=3) == 349
-  var values: list[i32] = range(stop=3, start=0)
+  values: list[i32] = range(stop=3, start=0)
   assert values[2] == 2
   return 0
 """
@@ -304,7 +304,7 @@ fn write(stream: File, text: str) -> none:
   stream.write(text=text)
   return none
 fn main() -> i32:
-  var owner: Owner = Owner()
+  owner: Owner = Owner()
   owner.stream.write(text=owner.replace())
   write(text=owner.text, stream=prepare(owner=owner))
   assert owner.text == "after"
@@ -347,7 +347,7 @@ def test_keyword_function_lookup_keeps_visible_namespace(
         """fn f(value: i32) -> i32:
   return value
 fn main() -> i32:
-  var f: i32 = 1
+  f: i32 = 1
   assert f(value=2) == 2
   assert f == 1
   return 0
@@ -401,7 +401,7 @@ def test_default_class_argument_survives_later_default_effects(
     s.write(text="default")
     return none
 fn main() -> i32:
-  var owner: Owner = Owner()
+  owner: Owner = Owner()
   owner.write()
   assert File("first").read() == "default"
   return 0
@@ -420,7 +420,7 @@ def test_file_method_keywords_use_declared_binding_errors() -> None:
             compiler.parse_string(
                 DOC
                 + """fn main() -> i32:
-  var stream: File = File("unused")
+  stream: File = File("unused")
   stream.write("first", text="duplicate")
   return 0
 """

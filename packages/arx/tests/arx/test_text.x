@@ -7,9 +7,9 @@ fn moves(text: str) -> i64:
   ```
   title: Parse signed direction records with whitespace defaults
   ```
-  var total: i64 = 0
+  total: i64 = 0
   for record in text.split():
-    var amount: i64 = int(record[1:])
+    amount: i64 = int(record[1:])
     if record[0] == "L":
       total = total - amount
     else:
@@ -21,8 +21,8 @@ fn words_from_file(path: str) -> list[str]:
   ```
   title: Return independent words after releasing a text file and its contents
   ```
-  var source: file = open(path)
-  var text: str = source.read()
+  source: file = open(path)
+  text: str = source.read()
   source.close()
   return text.split()
 
@@ -36,10 +36,8 @@ class TextTrace:
   ```
   title: Mutate a receiver during argument evaluation
   ```
-  @[public, mutable]
-  text: str = "left,right,tail"
-  @[public, mutable]
-  order: i32 = 0
+  text: public var :: str = "left,right,tail"
+  order: public var :: i32 = 0
 
 fn separator(trace: TextTrace) -> str:
   ```
@@ -76,13 +74,13 @@ fn test_text_parsing() -> none:
   assert "word"[99:] == ""
   assert "word"[cast(255, u8):] == ""
   assert "xytextyx".strip(chars="xy") == "text"
-  var fields: list[str] = "a,,b,".split(sep=",")
+  fields: list[str] = "a,,b,".split(sep=",")
   assert len(fields) == 4
   assert fields[1] == ""
   assert fields[3] == ""
   assert " a  b  ".split(maxsplit=0)[0] == "a  b  "
   assert " a  b  ".split(none, maxsplit=1)[1] == "b  "
-  var saved: str = fields[0]
+  saved: str = fields[0]
   fields = []
   assert saved == "a"
 
@@ -90,8 +88,8 @@ fn test_text_argument_order() -> none:
   ```
   title: Preserve receiver storage and evaluate named arguments in source order
   ```
-  var trace: TextTrace = TextTrace()
-  var fields: list[str] = trace.text.split(maxsplit=limit(trace), sep=separator(trace))
+  trace: TextTrace = TextTrace()
+  fields: list[str] = trace.text.split(maxsplit=limit(trace), sep=separator(trace))
   assert trace.order == 21
   assert trace.text == "changed!"
   assert fields[0] == "left"
@@ -101,10 +99,10 @@ fn test_text_failures() -> none:
   ```
   title: Checked failures preserve owners and remain recoverable
   ```
-  var saved: str = "unchanged".strip()
-  var fields: list[str] = ["saved"]
-  var caught: i32 = 0
-  var negative: i64 = -1
+  saved: str = "unchanged".strip()
+  fields: list[str] = ["saved"]
+  caught: i32 = 0
+  negative: i64 = -1
   try:
     saved = "abc"[negative]
   except IndexError:

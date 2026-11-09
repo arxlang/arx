@@ -17,11 +17,11 @@ fn range(start: i32, stop: i32, step: i32 = 1) -> list[i32]:
     are i32; storage grows with the number of results rather than staying lazy.
   ```
   assert step != 0, "range() step must not be 0"
-  var values: list[i32]
+  values: list[i32]
   # The final step may cross an i32 endpoint; keep it wide until the next test.
-  var current: i64 = cast(start, i64)
-  var limit: i64 = cast(stop, i64)
-  var stride: i64 = cast(step, i64)
+  current: i64 = cast(start, i64)
+  limit: i64 = cast(stop, i64)
+  stride: i64 = cast(step, i64)
   if step > 0:
     while current < limit:
       values.append(cast(current, i32))

@@ -22,9 +22,8 @@ class Math:
   title: Math
   summary: Hosts one static generic identity helper.
   ```
-  @[public, static]
   @<T: Real>
-  fn identity(value: T) -> T:
+  fn identity(value: T) -> public static :: T:
     ```
     title: identity
     summary: Returns one value unchanged through a static method.
@@ -45,8 +44,8 @@ fn test_template_float_specialization() -> none:
   title: test_template_float_specialization
   summary: Verifies explicit floating-point specialization and casting.
   ```
-  var decimal: f64 = add<f64>(1.5, 2.5)
-  var rounded: i32 = cast(decimal, i32)
+  decimal: f64 = add<f64>(1.5, 2.5)
+  rounded: i32 = cast(decimal, i32)
   assert rounded == 4
 
 fn test_composed_numeric_bounds() -> none:

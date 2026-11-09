@@ -31,8 +31,8 @@ DOC = "```\ntitle: Native dependency consumer\n```\n"
 BODY = """import Resource from native_fixture.owned
 import native_fixture.bridge as bridge
 fn exercise() -> i32:
-  var resource: Resource = Resource(size=2)
-  var alias: Resource = resource
+  resource: Resource = Resource(size=2)
+  alias: Resource = resource
   assert alias.note(label="Unicode π", value=cast(2, f64)) == 0
   assert resource.write(path="result.jpg") == 0
   assert resource.write(kind=1, path="result.bin") == 0
@@ -44,10 +44,10 @@ fn main() -> i32:
   assert exercise() == 0
   assert bridge.fixture_alive() == 0
   assert bridge.fixture_releases() == 1
-  var token: i64 = bridge.fixture_create(size=1)
+  token: i64 = bridge.fixture_create(size=1)
   assert bridge.fixture_release(token=token) == 0
   assert bridge.fixture_release(token=token) == 1
-  var replacement: i64 = bridge.fixture_create(size=1)
+  replacement: i64 = bridge.fixture_create(size=1)
   assert replacement != token
   assert bridge.fixture_write(kind=0, path="stale.jpg", token=token) == 1
   assert bridge.fixture_release(token=replacement) == 0

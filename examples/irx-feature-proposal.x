@@ -35,27 +35,27 @@ fn irx_feature_proposal(arg1: i32, arg2: str) -> i32:
   # ---------------------------------------------------------------------------
   # A) TYPE ANNOTATIONS + VARIABLE DECLARATION (new proposal)
   # ---------------------------------------------------------------------------
-  var a8: i8 = 8
-  var a16: i16 = 16
-  var a32: i32 = 32
-  var a64: i64 = 64
-  var f16v: f16 = 1.5
-  var f32v: f32 = 3.25
-  var ok: bool = true
-  var nothing: none = none
+  a8: i8 = 8
+  a16: i16 = 16
+  a32: i32 = 32
+  a64: i64 = 64
+  f16v: f16 = 1.5
+  f32v: f32 = 3.25
+  ok: bool = true
+  nothing: none = none
 
   # strings/chars
-  var ch: char = 'A'
-  var ascii_text: str = "hello"
-  var utf8_text: str = "arx"
+  ch: char = 'A'
+  ascii_text: str = "hello"
+  utf8_text: str = "arx"
 
   # datetime/timestamp literal constructors (proposal)
-  var dt: datetime = datetime("2026-03-05T12:30:59")
-  var ts: timestamp = timestamp("2026-03-05T12:30:59.123456789")
+  dt: datetime = datetime("2026-03-05T12:30:59")
+  ts: timestamp = timestamp("2026-03-05T12:30:59.123456789")
 
   # list literal (IRx currently supports empty or homogeneous integer constants)
-  var ids: list[i32] = range(1, 5)
-  var empty_ids: list[i32] = range(0, 0)
+  ids: list[i32] = range(1, 5)
+  empty_ids: list[i32] = range(0, 0)
 
   # ---------------------------------------------------------------------------
   # B) ASSIGNMENT (new explicit statement semantics)
@@ -65,20 +65,20 @@ fn irx_feature_proposal(arg1: i32, arg2: str) -> i32:
   # ---------------------------------------------------------------------------
   # C) BINARY OPERATORS (new in parser, already handled by IRx)
   # ---------------------------------------------------------------------------
-  var d1: i32 = a32 / 2
-  var le: bool = a32 <= 100
-  var ge: bool = a32 >= 10
-  var eq: bool = a32 == 33
-  var ne: bool = a32 != 0
-  var l_and: bool = (a32 > 0) && (a32 < 100)
-  var l_or: bool = (a32 < 0) || (a32 > 0)
-  var k_and: bool = (a32 > 0) and (a32 < 100)
-  var k_or: bool = (a32 < 0) or (a32 > 0)
+  d1: i32 = a32 / 2
+  le: bool = a32 <= 100
+  ge: bool = a32 >= 10
+  eq: bool = a32 == 33
+  ne: bool = a32 != 0
+  l_and: bool = (a32 > 0) && (a32 < 100)
+  l_or: bool = (a32 < 0) || (a32 > 0)
+  k_and: bool = (a32 > 0) and (a32 < 100)
+  k_or: bool = (a32 < 0) or (a32 > 0)
 
   # string operations
-  var full: str = ascii_text + utf8_text
-  var same: bool = full == "helloarx"
-  var diff: bool = full != "nope"
+  full: str = ascii_text + utf8_text
+  same: bool = full == "helloarx"
+  diff: bool = full != "nope"
 
   # ---------------------------------------------------------------------------
   # D) UNARY OPERATORS (new proposal)
@@ -96,7 +96,7 @@ fn irx_feature_proposal(arg1: i32, arg2: str) -> i32:
   # ---------------------------------------------------------------------------
   # F) FOR LOOP COUNT STYLE (new proposal -> astx.ForCountLoopStmt)
   # ---------------------------------------------------------------------------
-  for var i: i32 = 0; i < 5; i = i + 1:
+  for i: i32 = 0; i < 5; i = i + 1:
     a32 = a32 + i
 
   # ---------------------------------------------------------------------------
@@ -109,12 +109,12 @@ fn irx_feature_proposal(arg1: i32, arg2: str) -> i32:
   # H) CAST EXPRESSIONS (new proposal -> system.Cast)
   # ---------------------------------------------------------------------------
   # Proposed canonical form: cast(value, type)
-  var to_i8: i8 = cast(a32, i8)
-  var to_i16: i16 = cast(a32, i16)
-  var to_i64: i64 = cast(a32, i64)
-  var to_f16: f16 = cast(a32, f16)
-  var to_f32: f32 = cast(a32, f32)
-  var to_str: str = cast(a32, str)
+  to_i8: i8 = cast(a32, i8)
+  to_i16: i16 = cast(a32, i16)
+  to_i64: i64 = cast(a32, i64)
+  to_f16: f16 = cast(a32, f16)
+  to_f32: f32 = cast(a32, f32)
+  to_str: str = cast(a32, str)
 
   # ---------------------------------------------------------------------------
   # I) PRINT EXPRESSION (new proposal -> system.PrintExpr)

@@ -9,8 +9,7 @@ class Resource:
   title: Resource
   summary: Releases its native token on the final ordinary class-reference exit.
   ```
-  @[private]
-  token: i64 = 0
+  token: private :: i64 = 0
 
   fn __init__(self, size: i32 = 1) -> none:
     ```

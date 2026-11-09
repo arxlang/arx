@@ -1,25 +1,25 @@
 # Classes
 
-Arx class declarations use annotation lines for modifiers. Declaration lines
-stay minimal: a field starts with its name, and a method starts with `fn`.
+Fields start with their names and accept inline declaration modifiers. Methods
+keep `fn name(...)`, with an optional group after `->`:
+`fn calculate(value: i32) -> public static :: i32:`. The group modifies the
+method declaration, not the return type. Parameter `var`/`const` modifiers
+remain independent.
 
 ## Class Syntax
 
 ```arx
 class Counter(BaseCounter, Audited):
-  @[public, static, constant]
-  version: int32 = 1
+  version: public static const :: int32 = 1
 
   value: int32 = 0
 
-  @[private]
-  internal: int32 = 1
+  internal: private :: int32 = 1
 
   fn get(self) -> int32:
     return self.value
 
-  @[protected]
-  fn process(self, x: int32) -> int32:
+  fn process(self, x: int32) -> protected :: int32:
     return x + 1
 ```
 
@@ -28,47 +28,45 @@ Optional class-level annotations use the same surface form:
 ```arx
 @[public, abstract]
 class Shape:
-  @[public, abstract]
-  fn area(self) -> float64
+  fn area(self) -> public abstract :: float64
 ```
 
-Template methods use the same `@<...>` prefix form as module functions. Method
-modifiers and template parameters may appear in either order as long as each
-prefix stays on its own line above the method declaration:
+Template methods retain `@<...>` prefixes on their own lines before `fn`. Method
+modifiers move into the return tail:
 
 ```arx
 class Math:
   @<T: i32 | f64>
-  @[public, static]
-  fn identity(value: T) -> T:
+  fn identity(value: T) -> public static :: T:
     return value
 ```
 
-## Annotation Rules
+## Modifier Rules
 
-- Modifiers must be written as `@[...]` on the line immediately above the target
-  declaration.
-- Modifiers never appear before the declaration name or before `fn`.
-- Annotation lists are comma-separated and must not be empty.
-- An annotation must be followed by exactly one declaration. Floating
-  annotations are rejected.
+Field modifiers are whitespace-separated in `name: modifiers :: type`; method
+modifiers use `fn name(...) -> modifiers :: type`. Only classes retain
+comma-separated `@[...]` annotation lists. Method modifier annotations were
+removed rather than retained as a second spelling. Empty, duplicate,
+conflicting, floating, and invalid-target modifiers are rejected.
 
-Supported modifiers:
+Visibility is `public`, `private`, or `protected`. Fields support `static` and
+`var`/`const`; methods retain `static`, `abstract`, and `extern`. Neither `var`
+nor `const` modifies a method name. Parameters use `name: [var|const ::] type`
+inside the existing method signature. The implicit `self` receiver is unchanged.
+Class `const` fields require declaration-site initialization, not deferred
+assignment in `__init__`.
 
-- Visibility: `public`, `private`, `protected`
-- Storage and mutability: `static`, `constant`, `mutable`
-- Declaration metadata: `abstract`, `extern`
-
-Not supported yet:
-
-- `override`, `virtual`, `final`, `sealed`, `readonly`, `inline`
+`override`, `virtual`, `final`, `sealed`, `readonly`, and `inline` remain
+unsupported. See the
+[declaration contract](syntax.md#declarations-and-modifiers) for binding
+stability, inference, and removed annotation spellings.
 
 ## Defaults
 
 Defaults are applied during parsing and normalization, not written back as
-implicit annotation lines.
+implicit modifier groups.
 
-- Fields default to `public` visibility and `mutable` mutability.
+- Fields default to `public` visibility and `var` binding policy.
 - Methods default to `public` visibility.
 - Only explicitly written modifiers are preserved as explicit metadata on the
   emitted IRx/ASTx nodes.
@@ -83,11 +81,9 @@ fn get(self) -> int32:
 ```
 
 ```arx
-@[public, mutable]
-value: int32 = 0
+value: public var :: int32 = 0
 
-@[public]
-fn get(self) -> int32:
+fn get(self) -> public :: int32:
   return self.value
 ```
 
@@ -100,22 +96,20 @@ literal defaults; an optional `__del__` hook runs at final release.
 
 ```arx
 class Counter:
-  @[public, static, constant]
-  version: int32 = 3
+  version: public static const :: int32 = 3
 
   fn get(self) -> int32:
     return 1
 
 class CounterFactory:
-  @[public, static]
-  fn make() -> Counter:
+  fn make() -> public static :: Counter:
     return Counter()
 
 fn take_counter(counter: Counter) -> int32:
   return counter.get()
 
 fn main() -> int32:
-  var counter: Counter = CounterFactory.make()
+  counter: Counter = CounterFactory.make()
   return take_counter(counter) + Counter.version
 ```
 
@@ -141,8 +135,8 @@ class Counter:
     return none
 
 fn main() -> i32:
-  var counter: Counter = Counter(value=7)
-  var alias: Counter = counter
+  counter: Counter = Counter(value=7)
+  alias: Counter = counter
   counter = Counter(3)
   assert alias.value == 7
   return 0

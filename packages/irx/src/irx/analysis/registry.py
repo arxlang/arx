@@ -669,7 +669,19 @@ class SemanticRegistry:
         )
         module_key = self._current_module_key()
         existing = self.context.get_function(module_key, prototype.name)
+        if prototype.visibility is astx.VisibilityKind.protected:
+            self.context.diagnostics.add(
+                "Top-level functions cannot use protected visibility",
+                node=prototype,
+                code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
+            )
         if existing is not None:
+            if existing.visibility is not prototype.visibility:
+                self.context.diagnostics.add(
+                    f"Conflicting visibility for function '{prototype.name}'",
+                    node=prototype,
+                    code=DiagnosticCodes.SEMANTIC_DUPLICATE_DECLARATION,
+                )
             if not self.signatures_match(existing.signature, signature):
                 mismatch = self._signature_mismatch_detail(
                     existing.signature,

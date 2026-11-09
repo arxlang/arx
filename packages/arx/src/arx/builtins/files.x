@@ -8,8 +8,7 @@ class File:
   title: File
   summary: Owns one native text or binary stream shared by its object references.
   ```
-  @[private]
-  handle: NativeFileHandle
+  handle: private :: NativeFileHandle
 
   fn read(self) -> str:
     ```

@@ -44,8 +44,8 @@ fn write(output: file) -> none:
   output.write("hello")
   return none
 fn main() -> i32:
-  var output: File = make("{path}")
-  var alias: file = output
+  output: File = make("{path}")
+  alias: file = output
   assert output == alias
   write(alias)
   output = File("{tmp_path / "other.txt"}", "w")
@@ -74,7 +74,7 @@ def test_factories_resolve_to_class_initialization(factory: str) -> None:
     compiler = Compiler()
     parsed = compiler.parse_string(
         MODULE_DOC + "fn main() -> i32:\n"
-        f'  var stream: file = {factory}("x", mode="w")\n  return 0\n'
+        f'  stream: file = {factory}("x", mode="w")\n  return 0\n'
     )
     compiler.check(parsed)
     main = next(
@@ -120,7 +120,7 @@ def test_file_constructor_argument_forms(factory: str, arguments: str) -> None:
     artifact = compiler.compile(
         compiler.parse_string(
             MODULE_DOC + "fn main() -> i32:\n"
-            f"  var stream: File = {factory}({arguments})\n  return 0\n"
+            f"  stream: File = {factory}({arguments})\n  return 0\n"
         ),
         kind=ArtifactKind.LLVM_IR,
     )
@@ -219,8 +219,8 @@ def test_builtin_file_casts_fail_before_lowering(
     compiler = Compiler()
     program = compiler.parse_string(
         MODULE_DOC + imports + "fn main() -> i32:\n"
-        '  var stream: file = open("x")\n'
-        f"  var alias: {target} = cast(stream, {target})\n"
+        '  stream: file = open("x")\n'
+        f"  alias: {target} = cast(stream, {target})\n"
         "  return 0\n"
     )
     with pytest.raises(CompileError) as failure:
@@ -234,9 +234,9 @@ def test_builtin_file_casts_fail_before_lowering(
 @pytest.mark.parametrize(
     "body",
     [
-        'var File: i32 = 1\nFile("x")',
-        'var stream: File = File("x")\nstream.handle',
-        "var stream: NativeFileHandle",
+        'File: i32 = 1\nFile("x")',
+        'stream: File = File("x")\nstream.handle',
+        "stream: NativeFileHandle",
     ],
 )
 def test_file_privilege_and_shadow_boundaries(body: str) -> None:
@@ -268,11 +268,11 @@ def test_user_file_class_does_not_replace_lowercase_alias() -> None:
             + """class File:
   value: i32 = 7
 fn main() -> i32:
-  var custom: File = File()
+  custom: File = File()
   assert custom.value == 7
-  var alias: File = cast(custom, File)
+  alias: File = cast(custom, File)
   assert alias == custom
-  var stream: file = open("x", "w")
+  stream: file = open("x", "w")
   stream.close()
   return 0
 """
@@ -317,7 +317,7 @@ def test_file_dependency_injection_is_idempotent(declaration: str) -> None:
     """
     ArxIO.string_to_buffer(
         MODULE_DOC + declaration + "fn main() -> i32:\n"
-        '  var stream: file = open("x")\n  return 0\n'
+        '  stream: file = open("x")\n  return 0\n'
     )
     module = Parser().parse(Lexer().lex())
     inject_ambient_builtin_imports(module)
@@ -336,7 +336,7 @@ def test_file_type_and_constructor_parse_without_reserving_the_name() -> None:
     """
     ArxIO.string_to_buffer(
         MODULE_DOC + "fn main() -> i32:\n"
-        '  var stream: File = File(mode="w", file="x")\n  return 0\n'
+        '  stream: File = File(mode="w", file="x")\n  return 0\n'
     )
     module = Parser().parse(Lexer().lex())
     main = module.nodes[0]
@@ -371,7 +371,7 @@ def test_file_method_pins_receiver_across_argument_effects(
     self.stream = open("second", "w")
     return "saved"
 fn main() -> i32:
-  var owner: Owner = Owner()
+  owner: Owner = Owner()
   assert owner.stream.write(owner.replace()) == 5
   owner.stream.write("replacement")
   return 0
@@ -409,8 +409,8 @@ def test_file_constructor_snapshots_path_before_mode_effects(
     self.path = "second"
     return "w"
 fn main() -> i32:
-  var options: Options = Options()
-  var stream: File = {factory}(file=options.path, mode=options.mode())
+  options: Options = Options()
+  stream: File = {factory}(file=options.path, mode=options.mode())
   stream.write("snapshot")
   return 0
 """
@@ -438,8 +438,8 @@ def test_public_aliases_share_cursor_and_closed_state(tmp_path: Path) -> None:
     source = (
         MODULE_DOC
         + """fn main() -> i32:
-  var stream: File = File("source")
-  var alias: file = stream
+  stream: File = File("source")
+  alias: file = stream
   assert stream.read() == "shared"
   assert alias.read() == ""
   alias.close()

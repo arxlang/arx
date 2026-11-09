@@ -22,6 +22,7 @@ from irx.builder.diagnostics import (
     require_semantic_metadata,
 )
 from irx.builder.lowering.classes import ClassVisitorMixin
+from irx.builder.lowering.collection_access import lower_collection_access
 from irx.builder.lowering.nullable import NullableVisitorMixin
 from irx.builder.lowering.sequences import lower_sequence_query
 from irx.builder.lowering.text import lower_text_operation
@@ -632,6 +633,8 @@ class LiteralVisitorMixin(ClassVisitorMixin):
           node:
             type: astx.SubscriptExpr
         """
+        if lower_collection_access(self, node):
+            return
         info = getattr(node, "semantic", None)
         if isinstance(info, SemanticInfo) and info.tensor_index is not None:
             self.visit_child(info.tensor_index)

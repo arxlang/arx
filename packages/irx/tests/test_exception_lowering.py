@@ -710,7 +710,9 @@ def test_empty_exception_reference_is_checked(
         type: str
     """
     declaration = astx.VariableDeclaration(
-        "missing", astx.ClassType("ValueError")
+        "missing",
+        astx.ClassType("ValueError"),
+        mutability=astx.MutabilityKind.mutable,
     )
     operand = (
         astx.Identifier("missing")

@@ -9,16 +9,16 @@ fn main() -> i32:
   ```
   title: Convert every CSV batch without discarding rows
   ```
-  var schema: Schema = Schema()
+  schema: Schema = Schema()
   schema.add("id", "int64", false)
-  var reader: CSVStream = CSVStream()
+  reader: CSVStream = CSVStream()
   reader.open_read_as("examples/arrow/input.csv", schema)
-  var writer: CSVStream = CSVStream()
+  writer: CSVStream = CSVStream()
   writer.open_write("output.csv", schema)
   while reader.next():
-    var batch: RecordBatch = reader.batch()
-    var frame: dataframe[id: i64] = cast(batch, dataframe[id: i64])
-    var output: RecordBatch = cast(frame, RecordBatch)
+    batch: RecordBatch = reader.batch()
+    frame: dataframe[id: i64] = cast(batch, dataframe[id: i64])
+    output: RecordBatch = cast(frame, RecordBatch)
     writer.write(output)
   writer.close()
   reader.close()

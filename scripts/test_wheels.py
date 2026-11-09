@@ -121,8 +121,7 @@ class Counter:
   title: Counter
   ```
   value: i32 = 0
-  @[public, static, mutable]
-  destroyed: i32 = 0
+  destroyed: public static var :: i32 = 0
 
   fn __init__(self, value: i32 = 1) -> none:
     ```
@@ -148,8 +147,8 @@ fn use() -> none:
   ```
   title: use
   ```
-  var counter: Counter = make()
-  var alias: Counter = counter
+  counter: Counter = make()
+  alias: Counter = counter
   counter = Counter()
   assert alias.value == 7
   return none
@@ -169,7 +168,7 @@ fn main() -> i32:
   ```
   title: main
   ```
-  var values: list[i32] = range(0, 1)
+  values: list[i32] = range(0, 1)
   return values[0]
 """
 
@@ -180,7 +179,7 @@ fn main() -> i32:
   ```
   title: main
   ```
-  var values: tensor[i32, 2] = [4, 5]
+  values: tensor[i32, 2] = [4, 5]
   return values[1] - 5
 """
 
@@ -191,11 +190,11 @@ fn main() -> i32:
   ```
   title: main
   ```
-  var output: File = File("file-smoke.txt", mode="w")
-  var alias: file = output
+  output: File = File("file-smoke.txt", mode="w")
+  alias: file = output
   assert alias.write(text="hello") == 5
   output.close()
-  var input: file = open(file="file-smoke.txt")
+  input: file = open(file="file-smoke.txt")
   assert input.read() == "hello"
   return 0
 """
@@ -208,7 +207,7 @@ fn write_payload() -> none:
   ```
   title: write_payload
   ```
-  var resource: Resource = Resource(size=1)
+  resource: Resource = Resource(size=1)
   assert resource.note(label="wheel π", value=cast(2, f64)) == 0
   assert resource.write(path="native-smoke.jpg") == 0
   return none
@@ -231,16 +230,16 @@ fn main() -> i32:
   ```
   title: Convert every CSV batch without discarding rows
   ```
-  var schema: Schema = Schema()
+  schema: Schema = Schema()
   schema.add("id", "int64", false)
-  var reader: CSVStream = CSVStream()
+  reader: CSVStream = CSVStream()
   reader.open_read_as("input.csv", schema)
-  var writer: CSVStream = CSVStream()
+  writer: CSVStream = CSVStream()
   writer.open_write("compiled.csv", schema)
   while reader.next():
-    var batch: RecordBatch = reader.batch()
-    var frame: dataframe[id: i64] = cast(batch, dataframe[id: i64])
-    var output: RecordBatch = cast(frame, RecordBatch)
+    batch: RecordBatch = reader.batch()
+    frame: dataframe[id: i64] = cast(batch, dataframe[id: i64])
+    output: RecordBatch = cast(frame, RecordBatch)
     writer.write(output)
   writer.close()
   reader.close()
@@ -257,16 +256,16 @@ fn main() -> i32:
   ```
   title: Convert all Python-produced Parquet batches in compiled Arx
   ```
-  var reader: ParquetStream = ParquetStream()
+  reader: ParquetStream = ParquetStream()
   reader.open_read("python.parquet", batch_size=1)
-  var schema: Schema = Schema()
+  schema: Schema = Schema()
   schema.add("id", "int64", false)
-  var writer: ParquetStream = ParquetStream()
+  writer: ParquetStream = ParquetStream()
   writer.open_write("compiled.parquet", schema, row_group_size=2)
   while reader.next():
-    var batch: RecordBatch = reader.batch()
-    var frame: dataframe[id: i64] = cast(batch, dataframe[id: i64])
-    var copy: RecordBatch = cast(frame, RecordBatch)
+    batch: RecordBatch = reader.batch()
+    frame: dataframe[id: i64] = cast(batch, dataframe[id: i64])
+    copy: RecordBatch = cast(frame, RecordBatch)
     writer.write(copy)
   writer.close()
   reader.close()
@@ -277,18 +276,18 @@ NULLABLE_MODULE = """```
 title: Installed wheel nullable Series smoke
 ```
 fn main() -> i32:
-  var frame: dataframe[x:i32 | none] = dataframe({x:[1, none]})
-  var values: series[i32 | none] = frame.x + frame.x
+  frame: dataframe[x:i32 | none] = dataframe({x:[1, none]})
+  values: series[i32 | none] = frame.x + frame.x
   assert is_null(values[1])
   assert fill_null(values[0], 0) == 2
-  var reversed: series[i32 | none] = values[::-1]
+  reversed: series[i32 | none] = values[::-1]
   assert is_null(reversed[0])
   assert fill_null(series_sum(values), cast(0, i64)) == 2
   values[1] = 4
   assert fill_null(values[1], 0) == 4
-  var absent: nullable[i32] = none
+  absent: nullable[i32] = none
   assert is_null(absent)
-  var rich: dataframe[amount:decimal128[8,2]] = dataframe({amount:["1.25"]})
+  rich: dataframe[amount:decimal128[8,2]] = dataframe({amount:["1.25"]})
   assert rich.nrows() == 1
   return 0
 """
@@ -304,20 +303,20 @@ fn main() -> i32:
   ```
   title: Read chunked data and filter through canonical imports
   ```
-  var frame: dataframe[...] = read_csv("input.csv")
+  frame: dataframe[...] = read_csv("input.csv")
   write_parquet(\
     frame, "tables.parquet",\
     options=ParquetOptions(atomic=true), row_group_size=1\
   )
-  var result: dataframe[...] = read_parquet(\
+  result: dataframe[...] = read_parquet(\
     "tables.parquet", filters=where("id", ">", 1)\
   )
-  var typed: dataframe[id:i64] = cast(result, dataframe[id:i64])
+  typed: dataframe[id:i64] = cast(result, dataframe[id:i64])
   assert typed.nrows() == 2
   write_csv(typed, "tables.csv")
-  var schema: Schema = Schema()
+  schema: Schema = Schema()
   schema.add("id", "int64")
-  var sink: CSVStream = CSVStream()
+  sink: CSVStream = CSVStream()
   sink.open_write("tables-stream.csv", schema)
   sink.write(typed)
   sink.close()

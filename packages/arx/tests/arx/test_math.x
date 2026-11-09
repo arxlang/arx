@@ -41,8 +41,8 @@ fn test_clamp_integer_limits_and_equal_bounds() -> none:
   title: test_clamp_integer_limits_and_equal_bounds
   summary: Allows the full i32 interval and single-value inclusive intervals.
   ```
-  var minimum: i32 = (0 - 2147483647) - 1
-  var maximum: i32 = 2147483647
+  minimum: i32 = (0 - 2147483647) - 1
+  maximum: i32 = 2147483647
   assert math.clamp(minimum, minimum, maximum) == minimum
   assert math.clamp(maximum, minimum, maximum) == maximum
   assert math.clamp(0, minimum, maximum) == 0
@@ -78,7 +78,7 @@ fn test_template_calls() -> none:
   title: test_template_calls
   summary: Preserve inferred narrow types or explicitly select a wider type.
   ```
-  var narrow: i8 = cast(0 - 12, i8)
+  narrow: i8 = cast(0 - 12, i8)
   assert isinstance(math.abs(narrow), i8)
   assert math.abs(narrow) == 12
   assert wrapping_mul(narrow, narrow) == 0 - 112

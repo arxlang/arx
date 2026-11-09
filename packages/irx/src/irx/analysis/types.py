@@ -15,7 +15,7 @@ from typing import cast
 import astx
 
 from plum import dispatch
-from public import public
+from public import private, public
 
 from irx.analysis.numeric_policy import (
     is_lossless_numeric_conversion,
@@ -1491,4 +1491,44 @@ def contains_sequence(type_: astx.DataType | None) -> bool:
         return contains_sequence(
             cast(astx.DataType, type_.key_type)
         ) or contains_sequence(cast(astx.DataType, type_.value_type))
+    return False
+
+
+@private
+@typechecked
+def contains_inferred_type(type_: astx.DataType | None) -> bool:
+    """
+    title: Detect inference requests embedded in unsupported type contexts.
+    parameters:
+      type_:
+        type: astx.DataType | None
+    returns:
+      type: bool
+    """
+    if isinstance(type_, astx.InferredType):
+        return True
+    if isinstance(type_, astx.DataFrameType) and type_.columns is not None:
+        if any(
+            contains_inferred_type(column.type_) for column in type_.columns
+        ):
+            return True
+    for attribute in (
+        "element_types",
+        "members",
+        "element_type",
+        "key_type",
+        "value_type",
+        "yield_type",
+        "pointee_type",
+        "bound",
+        "arguments",
+    ):
+        value: object = getattr(type_, attribute, None)
+        if isinstance(value, astx.DataType) and contains_inferred_type(value):
+            return True
+        if isinstance(value, (list, tuple)) and any(
+            isinstance(item, astx.DataType) and contains_inferred_type(item)
+            for item in value
+        ):
+            return True
     return False

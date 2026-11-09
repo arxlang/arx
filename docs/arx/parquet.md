@@ -16,7 +16,7 @@ fn main() -> i32:
   ```
   title: Filter exact rows and finalize the destination
   ```
-  var frame: dataframe[...] = read_parquet("events.parquet", columns=["name"], filters=where("id", ">", 10))
+  frame: dataframe[...] = read_parquet("events.parquet", columns=["name"], filters=where("id", ">", 10))
   write_parquet(frame, "selected.parquet", compression="zstd", atomic=true)
   return 0
 ````
@@ -51,9 +51,9 @@ existing dataset/Hive policy instead of enabling discovery automatically.
 import (ParquetFilter, ParquetOptions, where) from stdlib.parquet
 
 # Inside a function; minimum_id may be a runtime signed integer:
-var predicate: ParquetFilter = where("id", ">=", minimum_id)
-var both: ParquetFilter = predicate.and_where("active", "==", true)
-var options: ParquetOptions = ParquetOptions(atomic=true, durable=true)
+predicate: ParquetFilter = where("id", ">=", minimum_id)
+both: ParquetFilter = predicate.and_where("active", "==", true)
+options: ParquetOptions = ParquetOptions(atomic=true, durable=true)
 ```
 
 Comparisons are `==`, `!=`, `<`, `<=`, `>`, `>=`, with string, signed integer,
@@ -98,10 +98,10 @@ at open; later mutations do not change an active session:
 import (ParquetStream, ParquetOptions, where) from stdlib.parquet
 
 # Inside a function:
-var options: ParquetOptions = ParquetOptions(batch_size=1024)
+options: ParquetOptions = ParquetOptions(batch_size=1024)
 options.set_text("column", "name")
 options.set_filters(where("id", ">", 10))
-var source: ParquetStream = ParquetStream()
+source: ParquetStream = ParquetStream()
 source.open_read_options("input.parquet", options)
 ```
 
