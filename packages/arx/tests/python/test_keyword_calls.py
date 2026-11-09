@@ -215,8 +215,6 @@ fn main() -> i32:
         "f(**args)",
         "print(message=1)",
         "values: list[i32]\nvalues.append(1, ignored=2)",
-        "rows: dataframe[value:i32] = dataframe({value: [1]})\n"
-        "rows.nrows(ignored=1)",
     ],
 )
 def test_invalid_keyword_syntax_and_intrinsics(body: str) -> None:
@@ -430,3 +428,51 @@ def test_file_method_keywords_use_declared_binding_errors() -> None:
         "duplicate argument 'text'" in item.message
         for item in error.value.diagnostics
     )
+
+
+@pytest.mark.parametrize("annotation", ["dataframe[value:i32]", "auto"])
+def test_dataframe_metadata_keywords_fail_in_check(annotation: str) -> None:
+    """
+    title: ArxPy exposes metadata signature errors only at semantic checking.
+    parameters:
+      annotation:
+        type: str
+    """
+    source = (
+        DOC + "fn frame() -> dataframe[value:i32]:\n"
+        "  return dataframe({value:[1]})\n"
+        "fn main() -> i32:\n"
+        f"  rows: {annotation} = frame()\n"
+        "  rows.nrows(ignored=1)\n  return 0\n"
+    )
+    compiler = Compiler()
+    program = compiler.parse_string(source)
+    with pytest.raises(CompileError) as error:
+        compiler.check(program)
+    assert len(error.value.diagnostics) == 1
+    diagnostic = error.value.diagnostics[0]
+    assert diagnostic.code == "S010"
+    assert (
+        diagnostic.message
+        == "DataFrame nrows expects no arguments or templates"
+    )
+    lines = source.splitlines()
+    call_line = next(i for i, line in enumerate(lines) if "rows.nrows" in line)
+    assert diagnostic.line == call_line + 1
+    assert diagnostic.column == lines[call_line].index("nrows") + 1
+
+
+def test_metadata_names_keep_user_class_method_semantics() -> None:
+    """
+    title: Method spelling alone cannot trigger DataFrame signature validation.
+    """
+    compiler = Compiler()
+    program = compiler.parse_string(
+        DOC + "class Counter:\n"
+        "  fn nrows(self, ignored: i32) -> i32:\n    return ignored\n"
+        "  fn ncols(value: i32) -> public static :: i32:\n    return value\n"
+        "fn main() -> i32:\n"
+        "  counter: Counter = Counter()\n"
+        "  return counter.nrows(ignored=1) + Counter.ncols(2)\n"
+    )
+    compiler.check(program)

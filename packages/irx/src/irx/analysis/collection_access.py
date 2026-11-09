@@ -74,6 +74,11 @@ def resolve_collection_access(
 ) -> bool:
     """
     title: Resolve list append and dataframe metadata from the receiver type.
+    summary: >-
+      DataFrame nrows/ncols take no arguments, keywords, or template arguments
+      and normalize to the canonical i64 count operations. Invalid signatures
+      report a type mismatch at the call's source location; non-DataFrame
+      receivers retain their ordinary method rules.
     parameters:
       analyzer:
         type: SemanticAnalyzerCore
