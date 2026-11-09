@@ -71,3 +71,41 @@ fn test_range_empty_intervals() -> none:
   for value in range(0, 3, 0 - 1):
     count = count + 1
   assert count == 0
+
+fn test_range_at_i32_boundary() -> none:
+  ```
+  title: test_range_at_i32_boundary
+  summary: Ranges up to both i32 endpoints without wrapping.
+  ```
+  upper: list[i32] = range(2147483645, 2147483647)
+  lower: list[i32] = range(-2147483646, -2147483648, 0 - 1)
+  assert upper[0] == 2147483645
+  assert upper[1] == 2147483646
+  assert lower[0] == -2147483646
+  assert lower[1] == -2147483647
+
+fn test_range_supports_i64_values() -> none:
+  ```
+  title: test_range_supports_i64_values
+  summary: Ranges over values larger than the i32 limits.
+  ```
+  start: i64 = 5000000000
+  stop: i64 = 5000000004
+  step: i64 = 2
+  values: list[i64] = range(start, stop, step)
+  assert values[0] == 5000000000
+  assert values[1] == 5000000002
+
+fn test_range_at_i64_boundaries() -> none:
+  ```
+  title: test_range_at_i64_boundaries
+  summary: Ranges up to both i64 endpoints without overflow.
+  ```
+  max: i64 = 9223372036854775807
+  min: i64 = -9223372036854775808
+  upper: list[i64] = range(max - 2, max)
+  lower: list[i64] = range(min + 2, min, 0 - cast(1, i64))
+  assert upper[0] == max - 2
+  assert upper[1] == max - 1
+  assert lower[0] == min + 2
+  assert lower[1] == min + 1
