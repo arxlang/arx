@@ -1,6 +1,18 @@
 # Release Notes
 ---
 
+# [1.28.0](https://github.com/arxlang/arx/compare/1.27.1...1.28.0) (2026-11-09)
+
+
+### Bug Fixes
+
+* **irx:** support scalar module variables end to end ([#182](https://github.com/arxlang/arx/issues/182)) ([8ec6a3a](https://github.com/arxlang/arx/commit/8ec6a3a2c1b0a5fb34b0d08378dade9e2a6afb41))
+
+
+### Features
+
+* **arx:** adopt name-first declarations with const and auto ([#183](https://github.com/arxlang/arx/issues/183)) ([ef36a8b](https://github.com/arxlang/arx/commit/ef36a8babb1f28f27ab14bf9c3067db3c0340ff5))
+
 ## Unreleased
 
 - Reject `auto` as a class, type-alias, or template-parameter name to prevent
