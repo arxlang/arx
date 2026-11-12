@@ -720,6 +720,11 @@ Comparison operators (`<`, `>`, `<=`, `>=`, `==`, `!=`) promote their operands
 with the same table and always return `Boolean` semantically and `i1` in LLVM
 IR.
 
+Prefix `-` and `+` require a numeric operand and keep its type. Integer negation
+is checked like binary `-`. Float negation lowers to `fneg` and never takes
+fast-math flags, so `-0.0` stays distinct from `0.0` even with fast math on.
+Prefix operators other than `!`, `++`, `--`, `-`, and `+` are semantic errors.
+
 ## Boolean And Comparison Contract
 
 Boolean behavior is part of the stable semantic boundary:
