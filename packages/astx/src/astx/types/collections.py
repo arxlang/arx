@@ -46,14 +46,14 @@ class RangeType(CollectionType):
     """
     title: Immutable, independently iterable integer progression value.
     summary: >-
-      Elements and endpoints are signed i32; length and cursor arithmetic use
-      i64. This value owns no allocation and is not contiguous list storage.
-      Construction, access, and iteration validity belong to semantic hosts.
+      Represent a compact arithmetic progression, not contiguous list storage
+      or a stateful generator. Supported numeric domains, representation,
+      construction, access, and iteration validity belong to semantic hosts.
     """
 
     def __str__(self) -> str:
         """
-        title: Render the fixed integer range domain.
+        title: Render the range type name.
         returns:
           type: str
         """

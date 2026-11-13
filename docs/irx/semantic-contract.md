@@ -699,13 +699,21 @@ The current LLVM lowering supports straight-line named generator bodies with
 top-level `YieldStmt` nodes. Yield suspension inside nested control flow is
 diagnosed before lowering until frame and cleanup suspension are extended.
 
-`RangeType` is an allocation-free immutable value with i32 endpoints/elements
-and i64 length/position arithmetic. Each `IterationKind.RANGE` acquisition has
-an independent cursor. The unshadowed `range` intrinsic uses normal argument
-validation and a source-ordered bound-call plan; `range_construction` and
-`range_access` sidecars authorize lowering. Range values do not implicitly
-become contiguous sequence views; `list(range_value, max_items=N)` requests
-owned materialization explicitly. A sized excess is rejected before allocation.
+The shared cursor lowering currently serves range/generator loops and numeric
+list/bytes materialization, including indexed inputs. List/sequence loops retain
+their existing lowering paths, preserving borrowed-owner protection and
+string-element lifetimes. Loop-path consolidation is deferred; any future
+unification must preserve these ownership contracts.
+
+IRx currently represents `RangeType` as an allocation-free immutable value with
+i32 endpoints/elements and i64 length/position arithmetic. These are IRx support
+restrictions, not universal properties of the ASTx type. Each
+`IterationKind.RANGE` acquisition has an independent cursor. The unshadowed
+`range` intrinsic uses normal argument validation and a source-ordered
+bound-call plan; `range_construction` and `range_access` sidecars authorize
+lowering. Range values do not implicitly become contiguous sequence views;
+`list(range_value, max_items=N)` requests owned materialization explicitly. A
+sized excess is rejected before allocation.
 
 ## `main` Contract
 

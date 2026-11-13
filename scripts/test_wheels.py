@@ -162,14 +162,23 @@ fn main() -> i32:
 """
 
 LIST_MODULE = """```
-title: Installed wheel list smoke
+title: Installed wheel lazy range and list smoke
 ```
 fn main() -> i32:
   ```
   title: main
   ```
-  values: list[i32] = range(0, 1)
-  return values[0]
+  progression: range = range(1, 4)
+  assert len(progression) == 3
+  assert progression[2] == 3
+  total: var :: i32 = 0
+  for value in progression:
+    total = total + value
+  assert total == 6
+  values: list[i32] = list(range(1, 4))
+  assert len(values) == 3
+  assert values[0] == 1
+  return values[2] - 3
 """
 
 TENSOR_MODULE = """```
@@ -324,6 +333,8 @@ fn main() -> i32:
 """
 
 SMOKE_DRIVER = r"""
+import sys
+
 from pathlib import Path
 from importlib import metadata
 
@@ -335,7 +346,7 @@ import irx
 import pyarrow as pa
 import pyarrow.parquet as pq
 
-from arxpy import Compiler
+from arxpy import ArxError, Compiler
 from irx.table_io import (
     read_csv, write_csv, read_parquet, write_parquet, where,
 )
@@ -370,11 +381,27 @@ for source_name in (
     "table_io_smoke.x",
 ):
     print(f"Compiling {source_name}", flush=True)
-    artifact = compiler.compile_file(
-        root / source_name,
-        output=root / source_name.removesuffix(".x"),
-    )
-    result = compiler.run(artifact, timeout=30)
+    try:
+        artifact = compiler.compile_file(
+            root / source_name,
+            output=root / source_name.removesuffix(".x"),
+        )
+        result = compiler.run(artifact, timeout=30)
+    except ArxError as error:
+        for diagnostic in error.diagnostics:
+            location = diagnostic.filename
+            if diagnostic.line is not None:
+                location += f":{diagnostic.line}"
+                if diagnostic.column is not None:
+                    location += f":{diagnostic.column}"
+            code = f" [{diagnostic.code}]" if diagnostic.code else ""
+            print(
+                f"{location}: {diagnostic.severity.value}{code}: "
+                f"{diagnostic.message}",
+                file=sys.stderr,
+                flush=True,
+            )
+        raise
     if result.exit_code != 0:
         raise RuntimeError(
             f"{source_name} returned {result.exit_code}: {result.stderr}"
