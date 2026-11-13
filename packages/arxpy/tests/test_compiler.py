@@ -108,6 +108,24 @@ def test_check_returns_checked_program() -> None:
     assert checked.parsed is parsed
 
 
+def test_lazy_range_is_available_without_an_origin() -> None:
+    """
+    title: In-memory hosts share lazy range values without a source module.
+    """
+    compiler = Compiler()
+    parsed = compiler.parse_string(
+        MODULE_DOCSTRING
+        + "fn make(stop: i32) -> range:\n  return range(stop)\n"
+        "fn main() -> i32:\n  return make(4)[3]\n"
+    )
+    artifact = compiler.compile(
+        compiler.check(parsed), kind=ArtifactKind.LLVM_IR
+    )
+    assert artifact.llvm_ir is not None
+    assert "{i64, i64, i64}" in artifact.llvm_ir
+    assert "builtins__generators__range" not in artifact.llvm_ir
+
+
 def test_check_translates_semantic_diagnostics() -> None:
     """
     title: Semantic failures become CompileError diagnostics.

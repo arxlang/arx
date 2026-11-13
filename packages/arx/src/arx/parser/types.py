@@ -57,6 +57,7 @@ _BUILTIN_TYPE_MAP: dict[str, astx.DataType] = {
     "none": astx.NoneType(),
     "file": astx.ClassType("File", module_key=builtins.BUILTIN_FILE_MODULE),
     "bytes": astx.Bytes(),
+    "range": astx.RangeType(),
     "str": astx.String(),
     "string": astx.String(),
     "char": astx.Int8(),

@@ -33,7 +33,7 @@ def test_arx_test_runner_parses_ambient_range_in_test_modules(
         dedent(
             """
             fn test_range_values() -> none:
-              values: list[i32] = range(0, 4)
+              values: list[i32] = list(range(0, 4))
               value: i32 = values[2]
               assert value == 2, "range(0, 4)[2] should be 2"
             """
@@ -45,8 +45,8 @@ def test_arx_test_runner_parses_ambient_range_in_test_modules(
     module = runner._parse_module(entry)
 
     assert isinstance(module.nodes[0], astx.ImportFromStmt)
-    assert module.nodes[0].module == "builtins.generators"
-    assert [alias.name for alias in module.nodes[0].names] == ["range"]
+    assert module.nodes[0].module == "builtins.exceptions"
+    assert all(alias.name != "range" for alias in module.nodes[0].names)
 
 
 def test_arx_test_runner_lists_matching_tests_across_files(
@@ -514,8 +514,8 @@ def test_arx_test_runner_builds_one_wrapper_per_selected_test(
     assert summary.exit_code == 0
     assert summary.passed == 2
     expected = [
-        ["ImportFromStmt", "ImportFromStmt", "helper", "test_first", "main"],
-        ["ImportFromStmt", "ImportFromStmt", "helper", "test_second", "main"],
+        ["ImportFromStmt", "helper", "test_first", "main"],
+        ["ImportFromStmt", "helper", "test_second", "main"],
     ]
     assert captured_wrappers == expected
 
@@ -642,14 +642,12 @@ def test_arx_test_runner_preserves_supported_shared_declarations(
     expected = [
         [
             "ImportFromStmt",
-            "ImportFromStmt",
             "putchard",
             "helper",
             "test_first",
             "main",
         ],
         [
-            "ImportFromStmt",
             "ImportFromStmt",
             "putchard",
             "helper",

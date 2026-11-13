@@ -38,7 +38,7 @@ fn make_values() -> list[i32]:
   title: make_values
   summary: Builds one list for function-call iterable coverage.
   ```
-  return range(0, 4)
+  return list(range(0, 4))
 
 fn skipped_count_loop() -> i32:
   ```
@@ -95,7 +95,7 @@ fn test_for_in_list_asserts() -> none:
   title: test_for_in_list_asserts
   summary: Executes for-in loops over one list variable and one list literal.
   ```
-  values: list[i32] = range(0, 4)
+  values: list[i32] = list(range(0, 4))
   total_from_var: i32 = 0
   for value in values:
     total_from_var = total_from_var + value

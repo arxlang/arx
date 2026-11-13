@@ -191,17 +191,17 @@ fn main() -> i32:
 
 ## Bundled `builtins`
 
-Compiler-provided builtins live in bundled `.x` package resources, separately
-from the importable `stdlib`. They are not copied into user projects, and local
-sources cannot replace the reserved namespace. Ambient names are injected only
-when not shadowed by a declaration or import. Explicit `builtins.files` imports
-resolve the canonical [File class](file-io.md), not a second implementation.
+Some compiler-provided builtins live in bundled `.x` package resources,
+separately from the importable `stdlib`. They are not copied into user projects,
+and local sources cannot replace the reserved namespace. Ambient names are
+injected only when not shadowed by a declaration or import. Explicit
+`builtins.files` imports resolve the canonical [File class](file-io.md), not a
+second implementation.
 
-Builtin `range` currently allocates a scalar list; its declaration lives in
-`packages/arx/src/arx/builtins/generators.x`. See
-[for-in workflows](control-flow.md#for-loop-for-in-style) and
-[list ownership](collections.md#lists). The module name does not imply Arx
-supports general generators or `yield`.
+Core intrinsics such as `range` and `len` are resolved by IRx rather than loaded
+as source modules. Range values are lazy and allocation-free; see
+[for-in workflows](control-flow.md#for-loop-for-in-style). General source
+generators and `yield` remain unsupported.
 
 ### Namespace Imports
 

@@ -1,14 +1,14 @@
 # Collections and Apache Arrow
 
-Arx exposes four built-in collection families with deliberately different
-semantics:
+Arx collection families have deliberately different semantics:
 
-| Surface type     | Purpose                                            | Runtime representation                 |
-| ---------------- | -------------------------------------------------- | -------------------------------------- |
-| `list[T]`        | General ordered values and builtin `range` results | IRx dynamic-list runtime               |
-| `tensor[T, ...]` | Homogeneous N-dimensional numeric data             | Apache Arrow C++ `arrow::Tensor`       |
-| `dataframe[...]` | Heterogeneous named columns                        | Apache Arrow C++ `arrow::Table`        |
-| `series[T]`      | One typed DataFrame column                         | Apache Arrow C++ `arrow::ChunkedArray` |
+| Surface type     | Purpose                                | Runtime representation                 |
+| ---------------- | -------------------------------------- | -------------------------------------- |
+| `range`          | Immutable lazy integer progressions    | Inline fixed-size value                |
+| `list[T]`        | General owned ordered values           | IRx dynamic-list runtime               |
+| `tensor[T, ...]` | Homogeneous N-dimensional numeric data | Apache Arrow C++ `arrow::Tensor`       |
+| `dataframe[...]` | Heterogeneous named columns            | Apache Arrow C++ `arrow::Table`        |
+| `series[T]`      | One typed DataFrame column             | Apache Arrow C++ `arrow::ChunkedArray` |
 
 `list` is not an Arrow container. Tensor, DataFrame, and Series storage is
 provided by IRx's native Arrow C++ runtime.
@@ -54,8 +54,9 @@ insertion copies the bytes, and indexing or iterating a string list produces
 independent strings that survive list replacement. Failed construction drops
 initialized elements without replacing an existing destination. See the
 [enforced list contract](../irx/runtime-ownership.md#enforced-scalar-dynamic-list-contract).
-`range` still materializes a list, not a lazy iterator. Rank-one numeric tensors
-and typed Series also support `len`.
+Ranges are allocation-free values; see
+[range workflows](control-flow.md#for-loop-for-in-style). Rank-one numeric
+tensors and typed Series also support `len`.
 
 ## Read-only numeric consumers
 
@@ -71,13 +72,15 @@ fn first(values: sequence[T]) -> T:
   return values[0]
 ```
 
-Pass a matching `list[T]` (including `range`), rank-one static/runtime tensor,
-or typed numeric Series directly. No flattening or conversion to `f64` occurs;
-large integers remain exact. Nullable Series require `sequence[nullable[T]]`:
-explicitly fill or filter nulls for a nonnullable consumer. NaN and infinity
-remain floating values; algorithms needing finite input must check them. See the
-executable `examples/numeric-sequences.x` for inferred/explicit calls, nested
-template types, and nullable input.
+Pass a matching `list[T]`, rank-one static/runtime tensor, or typed numeric
+Series directly. No flattening or conversion to `f64` occurs; large integers
+remain exact. Nullable Series require `sequence[nullable[T]]`: explicitly fill
+or filter nulls for a nonnullable consumer. NaN and infinity remain floating
+values; algorithms needing finite input must check them. See the executable
+`examples/numeric-sequences.x` for inferred/explicit calls, nested template
+types, and nullable input. Ranges are not contiguous borrowed storage;
+materialize them explicitly with `list(range(...), max_items=N)` for these
+calls.
 
 Adapters live through the call or iteration, including exceptional exits. Lists
 borrow their owner; tensors pin their owner and preserve strides; Series retain
@@ -90,18 +93,21 @@ result instead:
 owned: list[i64] = list(values, max_items=1000)
 ```
 
-`list(input, max_items=N)` copies nonnullable numeric values once. Sized inputs
-may omit the bound; exceeding a supplied nonnegative bound raises `ValueError`
-without publishing a truncated list. Allocation sizes remain overflow-checked.
-Nullable storage is deliberately not supported in owned lists; fill/filter
-first.
+`list(input, max_items=N)` copies nonnullable numeric values once, including
+lazy ranges. Sized inputs may omit the bound; exceeding a supplied nonnegative
+bound raises `ValueError` without publishing a truncated list. Allocation sizes
+remain overflow-checked. Nullable storage is deliberately not supported in owned
+lists; fill/filter first.
 
 IRx single-pass generators are **not** sequences and require `max_items`.
 Materialization probes at most `N + 1` items to detect excess, releasing partial
 output and owned temporary frames on failure. Consumption is not rolled back.
-Named iterators are borrowed from their lexical owner and remain advanced after
-failure. Arx source-level generator declarations are still unsupported; this
-iterator workflow is available to ASTx/IRx hosts, not new Arx `yield` syntax.
+Named frames remain owned by their lexical owner, but the acquired cursor is
+closed on success, early transfer, or failure. A second acquisition, including
+nested consumption, raises `RuntimeError`; an acquisition failure caught inside
+an active loop does not close that loop's cursor. Arx source-level generator
+declarations are still unsupported; this iterator workflow is available to
+ASTx/IRx hosts, not new Arx `yield` syntax.
 
 ## Tensors
 

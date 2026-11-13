@@ -17,6 +17,8 @@ from arx.main import FileImportResolver, inject_ambient_builtin_imports
 from arx.parser import Parser
 from irx.analysis.module_interfaces import ParsedModule
 from irx.builder.runtime.exceptions import parse_exception_output
+from irx.builder.runtime.features import NativeArtifact
+from irx.builder.runtime.linking import link_executable
 from llvmlite import binding as llvm
 from public import private
 
@@ -122,7 +124,7 @@ def run_helpers(tmp_path: Path, body: str) -> subprocess.CompletedProcess[str]:
 
 def test_range_matches_python(tmp_path: Path) -> None:
     """
-    title: Compare all eager range boundaries in one bounded native program.
+    title: Compare lazy range endpoints and stride boundaries against Python.
     parameters:
       tmp_path:
         type: Path
@@ -159,7 +161,7 @@ def test_range_matches_python(tmp_path: Path) -> None:
         body.extend(
             [
                 f'print("{label}")',
-                f"values{index}: list[i32] = range({arguments})",
+                f"values{index}: range = range({arguments})",
                 f"for value in values{index}:\n  print(value)",
             ]
         )
@@ -172,6 +174,102 @@ def test_range_matches_python(tmp_path: Path) -> None:
     assert result.returncode == 0, result.stderr
     assert result.stderr == ""
     assert result.stdout.splitlines() == expected
+
+
+@pytest.fixture(scope="module")
+def lazy_range_ir() -> tuple[ArxBuilder, str]:
+    """
+    title: Translate common and advanced range workflows once.
+    returns:
+      type: tuple[ArxBuilder, str]
+    """
+    source = Path(__file__).parents[1] / "arx" / "test_generators.x"
+    ArxIO.string_to_buffer(
+        source.read_text()
+        + "\nextern arx_test_allocations() -> i64\n"
+        + "fn main() -> i32:\n"
+        "  baseline: i64 = arx_test_allocations()\n"
+        "  minimum: i32 = 0 - 2147483647 - 1\n"
+        "  values: range = range(minimum, 2147483647)\n"
+        "  assert len(values) == 4294967295\n"
+        "  assert values[4294967294] == 2147483646\n"
+        "  assert values[0] == minimum\n"
+        "  for item in values:\n"
+        "    if item == minimum:\n      continue\n    break\n"
+        "  for outer in range(1000000):\n"
+        "    for inner in range(1000000):\n      break\n    break\n"
+        "  assert arx_test_allocations() == baseline\n"
+        "  test_lazy_range_workflows()\n"
+        "  return 0\n"
+    )
+    builder = ArxBuilder()
+    text = builder.translate(Parser().parse(Lexer().lex()))
+    llvm.parse_assembly(text).verify()
+    return builder, text
+
+
+@pytest.mark.skipif(sys.platform != "linux", reason="GNU wrapping required")
+@pytest.mark.parametrize("optimization", [0, 3])
+def test_lazy_range_execution_and_constant_storage(
+    lazy_range_ir: tuple[ArxBuilder, str],
+    tmp_path: Path,
+    optimization: int,
+) -> None:
+    """
+    title: Large range values and independent cursors allocate no heap storage.
+    parameters:
+      lazy_range_ir:
+        type: tuple[ArxBuilder, str]
+      tmp_path:
+        type: Path
+      optimization:
+        type: int
+    """
+    builder, text = lazy_range_ir
+    module = llvm.parse_assembly(text)
+    tuning = llvm.create_pipeline_tuning_options(speed_level=optimization)
+    with llvm.create_pass_builder(
+        builder.translator.target_machine, tuning
+    ) as passes:
+        with passes.getModulePassManager() as manager:
+            manager.run(module, passes)
+    module.verify()
+    primary = tmp_path / "module.o"
+    primary.write_bytes(builder.translator.target_machine.emit_object(module))
+    audit = tmp_path / "allocations.c"
+    audit.write_text("""#include <stddef.h>
+#include <stdint.h>
+static int64_t allocations;
+void* __real_malloc(size_t);
+void* __real_calloc(size_t, size_t);
+void* __real_realloc(void*, size_t);
+void* __wrap_malloc(size_t n) { ++allocations; return __real_malloc(n); }
+void* __wrap_calloc(size_t n, size_t s) {
+  ++allocations; return __real_calloc(n, s);
+}
+void* __wrap_realloc(void* p, size_t n) {
+  ++allocations; return __real_realloc(p, n);
+}
+int64_t arx_test_allocations(void) { return allocations; }
+""")
+    executable = tmp_path / "ranges"
+    link_executable(
+        primary_object=primary,
+        output_file=executable,
+        artifacts=(
+            *builder.translator.runtime_features.native_artifacts(),
+            NativeArtifact("c_source", audit),
+        ),
+        linker_flags=tuple(
+            f"-Wl,--wrap={name}" for name in ("malloc", "calloc", "realloc")
+        ),
+    )
+    result = subprocess.run(
+        [str(executable)], capture_output=True, check=False, timeout=5
+    )
+    assert result.returncode == 0, result.stderr
+    assert result.stdout == b""
+    assert result.stderr == b""
 
 
 @pytest.mark.parametrize("width", [8, 16, 32, 64])
@@ -275,15 +373,15 @@ def test_templated_math_checks_each_width(
     "statement,message",
     [
         (
-            "values: list[i32] = range(0, 4, 0)",
+            "values: range = range(0, 4, 0)",
             "range() step must not be 0",
         ),
         (
-            "values: list[i32] = range(4, 4, 0)",
+            "values: range = range(4, 4, 0)",
             "range() step must not be 0",
         ),
         (
-            "values: list[i32] = range(4, 0, 0)",
+            "values: range = range(4, 0, 0)",
             "range() step must not be 0",
         ),
         (

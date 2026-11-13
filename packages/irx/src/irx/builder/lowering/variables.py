@@ -529,7 +529,10 @@ class VariableVisitorMixin(ClassVisitorMixin):
                         node.name, "stringascii"
                     )
                 )
-            elif isinstance(self._resolved_ast_type(node), astx.StructType):
+            elif isinstance(
+                self._resolved_ast_type(node),
+                (astx.StructType, astx.RangeType),
+            ):
                 init_val = ir.Constant(llvm_type, None)
                 alloca = (
                     existing_storage

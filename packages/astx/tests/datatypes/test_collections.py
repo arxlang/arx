@@ -22,6 +22,20 @@ from astx.types.collections import DictType, ListType, SetType, TupleType
 from astx.types.operators import BinaryOp, UnaryOp
 
 
+def test_range_type_exports_and_storage_independence() -> None:
+    """
+    title: Range models an integer progression, not an owning list or view.
+    """
+    from astx.types import RangeType
+    from astx.types.collections import CollectionType
+
+    value = RangeType()
+    assert isinstance(value, CollectionType)
+    assert isinstance(value, astx.RangeType)
+    assert not isinstance(value, (astx.ListType, astx.SequenceType))
+    assert str(value) == "RangeType"
+
+
 def test_literal_list_creation() -> None:
     """
     title: Test creation of LiteralList.
