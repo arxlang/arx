@@ -41,6 +41,7 @@ from irx.analysis.ownership import (
     symbol_resource_ownership,
     transfer_resource_ownership,
 )
+from irx.analysis.ranges import resolve_range_call
 from irx.analysis.resolved_nodes import (
     OwnershipEscapeKind,
     OwnershipKind,
@@ -669,6 +670,7 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
             type: astx.FunctionCall
         """
         info = self._semantic(node)
+        info.range_construction = None
         if info.resolved_file_open is not None:
             info.resource_ownership = None
         info.resolved_file_open = None
@@ -696,6 +698,21 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
         if info.resolved_text_operation is not None:
             info.resource_ownership = None
         info.resolved_text_operation = None
+        if node.fn == "range" and self.bindings.resolve(node.fn) is None:
+            info.resource_ownership = None
+            info.resolved_call = None
+            info.resolved_callable = None
+            info.resolved_function = None
+            self._set_type(node, None)
+            if self.context.scopes.resolve(node.fn) is not None:
+                self.context.diagnostics.add(
+                    "name 'range' does not resolve to a function",
+                    node=node,
+                    code=DiagnosticCodes.SEMANTIC_UNRESOLVED_NAME,
+                )
+                return
+            resolve_range_call(cast(SemanticAnalyzerCore, self), node)
+            return
         if (
             node.fn in {"int", "ord"}
             and self.bindings.resolve(node.fn) is None

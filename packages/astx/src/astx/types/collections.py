@@ -42,6 +42,26 @@ class CollectionType(AnyType):
 
 @public
 @typechecked
+class RangeType(CollectionType):
+    """
+    title: Immutable, independently iterable integer progression value.
+    summary: >-
+      Represent a compact arithmetic progression, not contiguous list storage
+      or a stateful generator. Supported numeric domains, representation,
+      construction, access, and iteration validity belong to semantic hosts.
+    """
+
+    def __str__(self) -> str:
+        """
+        title: Render the range type name.
+        returns:
+          type: str
+        """
+        return "RangeType"
+
+
+@public
+@typechecked
 class SequenceType(CollectionType):
     """
     title: Read-only ordered, sized, indexable sequence parameter contract.

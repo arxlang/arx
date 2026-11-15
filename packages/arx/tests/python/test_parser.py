@@ -1345,7 +1345,7 @@ def test_parse_for_in_list_variable() -> None:
     """
     ArxIO.string_to_buffer(
         "fn main() -> i32:\n"
-        "  xs: list[i32] = range(0, 3)\n"
+        "  xs: auto = range(0, 3)\n"
         "  for value in xs:\n"
         "    return value\n"
         "  return 0\n"

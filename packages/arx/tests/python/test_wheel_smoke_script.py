@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import importlib.util
 import io
+import runpy
 import sys
 import tarfile
 
@@ -15,6 +16,15 @@ from unittest.mock import Mock
 from zipfile import ZipFile
 
 import pytest
+
+from arxpy import (
+    ArtifactKind,
+    CompileError,
+    Compiler,
+    Diagnostic,
+    DiagnosticSeverity,
+)
+from llvmlite import binding as llvm
 
 SCRIPT_PATH = (
     Path(__file__).resolve().parents[4] / "scripts" / "test_wheels.py"
@@ -30,6 +40,81 @@ sys.modules[SCRIPT_SPEC.name] = wheel_smoke
 SCRIPT_SPEC.loader.exec_module(wheel_smoke)
 if not isinstance(wheel_smoke, ModuleType):  # pragma: no cover
     raise RuntimeError("wheel smoke script did not load as a module")
+
+
+def test_list_smoke_compiles_lazy_range_and_materialization() -> None:
+    """
+    title: Compile the actual wheel fixture against the current range contract.
+    """
+    compiler = Compiler()
+    artifact = compiler.compile(
+        compiler.parse_string(wheel_smoke.LIST_MODULE),
+        kind=ArtifactKind.LLVM_IR,
+    )
+    assert artifact.llvm_ir is not None
+    llvm.parse_assembly(artifact.llvm_ir).verify()
+
+
+def test_smoke_driver_reports_structured_diagnostics(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """
+    title: Print every diagnostic without inventing absent source locations.
+    parameters:
+      monkeypatch:
+        type: pytest.MonkeyPatch
+      tmp_path:
+        type: Path
+      capsys:
+        type: pytest.CaptureFixture[str]
+    """
+    error = CompileError(
+        "compilation failed",
+        diagnostics=[
+            Diagnostic(
+                DiagnosticSeverity.ERROR,
+                "cannot assign RangeType to list",
+                "list_smoke.x",
+                8,
+                3,
+                "S010",
+            ),
+            Diagnostic(
+                DiagnosticSeverity.ERROR,
+                "unsupported operation",
+                "support.x",
+                4,
+                None,
+            ),
+            Diagnostic(
+                DiagnosticSeverity.ERROR,
+                "native compiler unavailable",
+                "<unknown>",
+                None,
+                None,
+                "N001",
+            ),
+        ],
+    )
+    compiler = Mock()
+    compiler.compile_file.side_effect = error
+    monkeypatch.setattr("arxpy.Compiler", Mock(return_value=compiler))
+    monkeypatch.chdir(tmp_path)
+    driver = tmp_path / "smoke.py"
+    driver.write_text(wheel_smoke.SMOKE_DRIVER, encoding="utf-8")
+
+    with pytest.raises(CompileError) as captured:
+        runpy.run_path(str(driver), run_name="__main__")
+
+    assert captured.value is error
+    compiler.run.assert_not_called()
+    assert capsys.readouterr().err.splitlines() == [
+        "list_smoke.x:8:3: error [S010]: cannot assign RangeType to list",
+        "support.x:4: error: unsupported operation",
+        "<unknown>: error [N001]: native compiler unavailable",
+    ]
 
 
 @pytest.fixture

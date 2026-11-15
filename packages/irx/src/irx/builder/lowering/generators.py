@@ -21,18 +21,18 @@ from public import private
 
 from irx.analysis.resolved_nodes import (
     ResolvedGeneratorFunction,
-    ResolvedIteration,
     ResolvedYield,
     SemanticFunction,
     SemanticSymbol,
 )
-from irx.builder.core import VisitorCore, semantic_symbol_key
+from irx.builder.core import VisitorCore
 from irx.builder.diagnostics import (
     raise_lowering_error,
     raise_lowering_internal_error,
     require_lowered_value,
     require_semantic_metadata,
 )
+from irx.builder.lowering.cursors import generator_header_type
 from irx.builder.protocols import VisitorMixinBase
 from irx.builder.runtime import safe_pop
 from irx.builder.state import ExceptionTarget
@@ -278,10 +278,7 @@ class GeneratorVisitorMixin(VisitorMixinBase):
 
         frame_name = f"{self._generator_function_name(function)}.__frame"
         frame_type = self._llvm.module.context.get_identified_type(frame_name)
-        field_types: list[ir.Type] = [
-            self._llvm.INT32_TYPE,
-            self._llvm.BOOLEAN_TYPE,
-        ]
+        field_types: list[ir.Type] = list(generator_header_type().elements)
         slots: dict[str, int] = {}
         local_symbols = (
             self._collect_generator_local_symbols(function.definition.body)
@@ -711,6 +708,13 @@ class GeneratorVisitorMixin(VisitorMixinBase):
             exhausted_addr,
         )
 
+        acquired_addr = self._generator_field_address(
+            frame_ptr, 2, name="generator_acquired_addr"
+        )
+        self._llvm.ir_builder.store(
+            ir.Constant(self._llvm.BOOLEAN_TYPE, 0), acquired_addr
+        )
+
         for llvm_arg, symbol in zip(factory.args[1:-1], function.args):
             field_index = slots.get(symbol.symbol_id)
             if field_index is None:
@@ -771,154 +775,6 @@ class GeneratorVisitorMixin(VisitorMixinBase):
             self._emit_generator_resume_body(generator)
         self.result_stack.append(factory)
         return factory
-
-    def _lower_generator_for_in_loop(
-        self,
-        node: astx.ForInLoopStmt,
-        iteration: ResolvedIteration,
-    ) -> None:
-        """
-        title: Lower one for-in loop over a generator value.
-        parameters:
-          node:
-            type: astx.ForInLoopStmt
-          iteration:
-            type: ResolvedIteration
-        """
-        target_name = getattr(node.target, "name", "item")
-        target_type = (
-            iteration.target_symbol.type_
-            if iteration.target_symbol is not None
-            else iteration.element_type
-        )
-        llvm_element_type = self._llvm_type_for_ast_type(
-            iteration.element_type
-        )
-        if llvm_element_type is None or isinstance(
-            llvm_element_type,
-            ir.VoidType,
-        ):
-            raise_lowering_error(
-                "generator element type is not lowerable",
-                node=node.iterable,
-                code=DiagnosticCodes.LOWERING_TYPE_MISMATCH,
-            )
-
-        llvm_target_type = self._llvm_type_for_ast_type(target_type)
-        if llvm_target_type is None or isinstance(
-            llvm_target_type,
-            ir.VoidType,
-        ):
-            raise_lowering_error(
-                "generator loop target type is not lowerable",
-                node=node.target,
-                code=DiagnosticCodes.LOWERING_TYPE_MISMATCH,
-            )
-
-        self.visit_child(node.iterable)
-        generator_value = require_lowered_value(
-            safe_pop(self.result_stack),
-            node=node.iterable,
-            context="generator iterable",
-        )
-        frame_value = self._llvm.ir_builder.extract_value(
-            generator_value,
-            0,
-            name="generator_frame",
-        )
-        resume_raw = self._llvm.ir_builder.extract_value(
-            generator_value,
-            1,
-            name="generator_resume_raw",
-        )
-        resume_type = ir.FunctionType(
-            self._llvm.INT32_TYPE,
-            [
-                self._llvm.OPAQUE_POINTER_TYPE,
-                self._llvm.OPAQUE_POINTER_TYPE,
-                llvm_element_type.as_pointer(),
-                self._llvm.BOOLEAN_TYPE.as_pointer(),
-            ],
-        )
-        resume = self._llvm.ir_builder.bitcast(
-            resume_raw,
-            resume_type.as_pointer(),
-            name="generator_resume",
-        )
-
-        target_addr = self.create_entry_block_alloca(
-            target_name,
-            llvm_target_type,
-        )
-        yielded_addr = self.create_entry_block_alloca(
-            f"{target_name}_yielded",
-            llvm_element_type,
-        )
-
-        cond_bb, body_bb, advance_bb, exit_bb = cast(
-            Any,
-            self,
-        )._append_basic_blocks(
-            "for.generator",
-            "cond",
-            "body",
-            "advance",
-            "exit",
-        )
-        self._llvm.ir_builder.branch(cond_bb)
-
-        produced = self.create_entry_block_alloca(
-            "generator.produced", self._llvm.BOOLEAN_TYPE
-        )
-        self._llvm.ir_builder.position_at_start(cond_bb)
-        status = self._llvm.ir_builder.call(
-            resume,
-            [self.context_value(), frame_value, yielded_addr, produced],
-            name="generator.status",
-        )
-        self.propagate_status(node, status)
-        has_value = self._llvm.ir_builder.load(
-            produced, name="generator_has_value"
-        )
-        self._llvm.ir_builder.cbranch(has_value, body_bb, exit_bb)
-
-        target_key = semantic_symbol_key(node.target, target_name)
-        is_constant = not isinstance(
-            node.target,
-            astx.InlineVariableDeclaration,
-        )
-        if isinstance(node.target, astx.InlineVariableDeclaration):
-            is_constant = (
-                node.target.mutability == astx.MutabilityKind.constant
-            )
-
-        with cast(Any, self)._loop_scope(
-            break_target=exit_bb,
-            continue_target=advance_bb,
-        ):
-            self._llvm.ir_builder.position_at_start(body_bb)
-            yielded_value = self._llvm.ir_builder.load(
-                yielded_addr,
-                name=f"{target_name}_yielded_value",
-            )
-            yielded_value = self._cast_ast_value(
-                yielded_value,
-                source_type=iteration.element_type,
-                target_type=target_type,
-            )
-            self._llvm.ir_builder.store(yielded_value, target_addr)
-            with cast(Any, self)._temporary_named_value(
-                target_key,
-                target_addr,
-                is_constant=is_constant,
-            ):
-                cast(Any, self)._discard_child_results(node.body)
-            if not self._llvm.ir_builder.block.is_terminated:
-                self._llvm.ir_builder.branch(advance_bb)
-
-        self._llvm.ir_builder.position_at_start(advance_bb)
-        self._llvm.ir_builder.branch(cond_bb)
-        self._llvm.ir_builder.position_at_start(exit_bb)
 
     @VisitorCore.visit.dispatch
     def visit(self, node: astx.YieldStmt) -> None:

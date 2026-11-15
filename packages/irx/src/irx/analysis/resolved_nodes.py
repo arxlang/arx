@@ -2059,6 +2059,24 @@ class IterationOrder(str, Enum):
 
 @public
 @typechecked
+class CursorProtocol(str, Enum):
+    """
+    title: Closed acquisition, advancement, and finalization protocols.
+    summary: >-
+      Indexed and range values acquire independent positions. Generator
+      acquisition consumes a one-shot frame, rejecting reacquisition. Advance
+      distinguishes a produced item from exhaustion and checks failure before
+      reading output slots. Close is idempotent and runs on every cursor exit;
+      generator close prevents resumption without freeing its lexical owner.
+    """
+
+    INDEXED = "indexed"
+    RANGE = "range"
+    GENERATOR = "generator"
+
+
+@public
+@typechecked
 @dataclass(frozen=True)
 class ResolvedIteration:
     """
@@ -2089,6 +2107,13 @@ class ResolvedIteration:
           Named list owner protected from replacement during iteration.
       extras:
         type: dict[str, Any]
+      cursor_protocol:
+        type: CursorProtocol | None
+      element_ownership:
+        type: Literal[value, borrowed]
+        description: >-
+          Scalars are copied values. String-list elements borrow their source
+          until the existing loop adapter creates an independent local owner.
     """
 
     iterable_node: astx.AST
@@ -2101,6 +2126,8 @@ class ResolvedIteration:
     sequence_access: ResolvedSequenceAccess | None = None
     borrowed_owner_symbol_id: str | None = None
     extras: dict[str, Any] = field(default_factory=dict)
+    cursor_protocol: CursorProtocol | None = None
+    element_ownership: Literal["value", "borrowed"] = "value"
 
 
 @public
@@ -2309,6 +2336,10 @@ class SemanticInfo:
       Aggregate all semantic sidecar fields that analysis may attach to a
       single AST node.
     attributes:
+      range_construction:
+        type: CallResolution | None
+      range_access:
+        type: bool
       materialization:
         type: ResolvedMaterialization | None
       sequence_access:
@@ -2426,6 +2457,8 @@ class SemanticInfo:
         type: dict[str, Any]
     """
 
+    range_construction: CallResolution | None = None
+    range_access: bool = False
     materialization: ResolvedMaterialization | None = None
     sequence_access: ResolvedSequenceAccess | None = None
     normalized_collection: astx.Expr | None = None

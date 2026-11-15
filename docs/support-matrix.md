@@ -54,7 +54,7 @@ definitely initialized direct try locals, not conditional/nested locals whose
 ownership cannot be proved. Move-only list/bytes restrictions still apply in
 finalizers.
 
-Checked arithmetic/conversion, assertions, list/Series bounds, file, and
+Checked arithmetic/conversion, assertions, list/range/Series bounds, file, and
 Arrow/CSV/Parquet operations participate in this model. Invalid source programs
 still fail compilation; ordinary IEEE floating arithmetic is unchanged. External
 C routines cannot raise through arbitrary foreign frames. Allocation failure in

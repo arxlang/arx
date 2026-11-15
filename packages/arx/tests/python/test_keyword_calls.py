@@ -262,7 +262,7 @@ fn seed() -> i32:
 fn main() -> i32:
   assert f(c=8, a=2) == 248
   assert helpers.combine(c=9, a=3) == 349
-  values: list[i32] = range(stop=3, start=0)
+  values: list[i32] = list(range(stop=3, start=0))
   assert values[2] == 2
   return 0
 """

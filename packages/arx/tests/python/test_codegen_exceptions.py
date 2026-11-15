@@ -529,7 +529,7 @@ def test_finally_replaces_moved_return(
       kind:
         type: str
     """
-    initializer = '"temporary"' if kind == "str" else "range(0, 3)"
+    initializer = '"temporary"' if kind == "str" else "list(range(0, 3))"
     result = run_exception(
         tmp_path,
         'try:\n  make()\nexcept ValueError:\n  print("caught")',
@@ -763,7 +763,7 @@ def test_native_list_and_csv_recovery(
     """
     result = run_exception(
         tmp_path,
-        "values: list[i32] = range(0, 2)\n"
+        "values: list[i32] = list(range(0, 2))\n"
         "try:\n  print(values[5])\nexcept IndexError:\n"
         '  print("bounds")\n'
         'try:\n  read_csv("missing.csv")\nexcept OSError:\n'

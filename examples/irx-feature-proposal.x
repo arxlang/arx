@@ -54,8 +54,8 @@ fn irx_feature_proposal(arg1: i32, arg2: str) -> i32:
   ts: timestamp = timestamp("2026-03-05T12:30:59.123456789")
 
   # list literal (IRx currently supports empty or homogeneous integer constants)
-  ids: list[i32] = range(1, 5)
-  empty_ids: list[i32] = range(0, 0)
+  ids: list[i32] = list(range(1, 5))
+  empty_ids: list[i32] = list(range(0, 0))
 
   # ---------------------------------------------------------------------------
   # B) ASSIGNMENT (new explicit statement semantics)

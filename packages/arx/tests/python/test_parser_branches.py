@@ -514,10 +514,10 @@ def test_parse_range_keeps_source_arguments() -> None:
     """
     tree = _parse(
         "fn first() -> none:\n"
-        "  values: list[i32] = range(0, 4)\n"
+        "  values: auto = range(0, 4)\n"
         "  return none\n"
         "fn second() -> none:\n"
-        "  values: list[i32] = range(2, 8, 2)\n"
+        "  values: auto = range(2, 8, 2)\n"
         "  return none\n"
     )
 
@@ -544,9 +544,7 @@ def test_parse_range_keeps_variable_stop_without_synthetic_step() -> None:
     title: Range calls with variable stop do not synthesize a step argument.
     """
     tree = _parse(
-        "fn build(n: i32) -> none:\n"
-        "  xs: list[i32] = range(0, n)\n"
-        "  return none\n"
+        "fn build(n: i32) -> none:\n  xs: auto = range(0, n)\n  return none\n"
     )
 
     fn = tree.nodes[0]
@@ -593,7 +591,7 @@ def test_parse_for_in_list_variable_uses_for_in_node() -> None:
     """
     tree = _parse(
         "fn main() -> i32:\n"
-        "  xs: list[i32] = range(0, 3)\n"
+        "  xs: auto = range(0, 3)\n"
         "  for value in xs:\n"
         "    return value\n"
         "  return 0\n"
@@ -618,7 +616,7 @@ def test_parse_for_in_function_call_preserves_iterable_call() -> None:
     title: For-in over a function call keeps one iterable call expression.
     """
     tree = _parse(
-        "fn make_values() -> list[i32]:\n"
+        "fn make_values() -> range:\n"
         "  return range(0, 3)\n"
         "fn main() -> i32:\n"
         "  for value in make_values():\n"
@@ -642,7 +640,7 @@ def test_parse_for_in_target_is_visible_in_body() -> None:
     """
     tree = _parse(
         "fn main() -> i32:\n"
-        "  xs: list[i32] = range(0, 3)\n"
+        "  xs: auto = range(0, 3)\n"
         "  for value in xs:\n"
         "    return value\n"
         "  return 0\n"
@@ -687,7 +685,7 @@ def test_parse_range_leaves_arity_validation_to_builtins() -> None:
     title: Range calls parse like ordinary calls before semantic analysis.
     """
     tree = _parse(
-        "fn main() -> none:\n  values: list[i32] = range(4)\n  return none\n"
+        "fn main() -> none:\n  values: auto = range(4)\n  return none\n"
     )
     fn = tree.nodes[0]
     assert isinstance(fn, astx.FunctionDef)

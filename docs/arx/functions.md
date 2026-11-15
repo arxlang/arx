@@ -90,8 +90,9 @@ then dispatch positional values to the override.
 Fixed extern parameter names can be used; any existing C variadic tail stays
 positional and uses existing promotions. Keywords do not enable unsupported FFI
 types. Parser intrinsics and collection operations without a named-call schema
-still reject keywords. Signature-backed bundled functions such as
-`range(start=0, stop=3)` use their declared parameters, not Python overloads.
+still reject keywords. The range intrinsic accepts named `start`, `stop`, and
+`step`; a single positional operand denotes `stop` unless `stop` is supplied by
+name. See [range workflows](control-flow.md#for-loop-for-in-style).
 
 ## Default Parameter Values
 

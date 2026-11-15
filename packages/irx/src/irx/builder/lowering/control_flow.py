@@ -38,6 +38,7 @@ from irx.builder.diagnostics import (
     require_semantic_metadata,
     resolved_ast_type_name,
 )
+from irx.builder.lowering.cursors import lower_cursor_loop
 from irx.builder.lowering.sequences import adapt_sequence, read_sequence
 from irx.builder.numeric import resolved_integer_operation
 from irx.builder.protocols import DispatchRegistrar, VisitorMixinBase
@@ -1259,8 +1260,8 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
         if iteration.kind in {IterationKind.LIST, IterationKind.SEQUENCE}:
             self._lower_list_for_in_loop(node, iteration)
             return
-        if iteration.kind is IterationKind.GENERATOR:
-            cast(Any, self)._lower_generator_for_in_loop(node, iteration)
+        if iteration.kind in {IterationKind.RANGE, IterationKind.GENERATOR}:
+            lower_cursor_loop(cast(VisitorCore, self), node, iteration)
             return
         raise_lowering_error(
             f"for-in lowering does not yet support {iteration.kind.value} "

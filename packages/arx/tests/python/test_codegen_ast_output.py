@@ -174,10 +174,10 @@ def test_iterated_list_replacement_fails_at_assignment(stop: int) -> None:
     ArxIO.string_to_buffer(
         "```\ntitle: Iterated owner replacement\n```\n"
         "fn main() -> i32:\n"
-        "  data: list[i32] = range(0, 10)\n"
+        "  data: list[i32] = list(range(0, 10))\n"
         "  for val in data:\n"
         "    if val == 2:\n"
-        f"      data = range(100, {stop})\n"
+        f"      data = list(range(100, {stop}))\n"
         "  return 0\n"
     )
     with pytest.raises(SemanticError) as error:
@@ -381,7 +381,7 @@ def literal_loop_ir() -> tuple[ArxBuilder, str]:
         "extern getchar() -> i32\n"
         "fn main() -> i32:\n"
         "  count: i32 = getchar() * 200\n"
-        "  numbers: list[i32] = range(0, count)\n"
+        "  numbers: list[i32] = list(range(0, count))\n"
         "  total: i32 = 0\n"
         "  j: i32 = 1\n"
         "  for number in numbers:\n"
@@ -409,7 +409,7 @@ def test_literal_loop_allocations_are_in_entry(
     """
     _, text = literal_loop_ir
     module = llvm.parse_assembly(text)
-    tested = {"irx.entry.main", "builtins__generators__range"}
+    tested = {"irx.entry.main"}
     found: set[str] = set()
     for function in module.functions:
         if function.name not in tested:
@@ -722,13 +722,13 @@ def test_numeric_union_comparison_has_a_resolved_storage_plan() -> None:
 def test_integer_helpers_translate_with_wide_range_arithmetic() -> None:
     """
     title: >-
-      Range widens its counter but returns i32 values with checked helpers.
+      Range uses wide count and index arithmetic alongside checked helpers.
     """
     ArxIO.string_to_buffer(
         "```\ntitle: Integer helper translation\n```\n"
         "import math from stdlib\n"
         "fn main() -> i32:\n"
-        "  values: list[i32] = range(2147483646, 2147483647, 2)\n"
+        "  values: list[i32] = list(range(2147483646, 2147483647, 2))\n"
         "  return math.clamp(math.abs(values[0]), 0, math.square(46340))\n"
     )
     module = Parser().parse(Lexer().lex(), "integer_helpers")
@@ -737,7 +737,8 @@ def test_integer_helpers_translate_with_wide_range_arithmetic() -> None:
     )
     text = ArxBuilder().translate_modules(root, FileImportResolver(()))
     llvm.parse_assembly(text).verify()
-    assert "llvm.sadd.with.overflow.i64" in text
+    assert "sext i32" in text
+    assert "udiv i64" in text
     assert "trunc i64" in text
     assert "ARX-RUNTIME-ARITHMETIC-001" in text
     assert "clamp() lower bound must not exceed upper bound" in text

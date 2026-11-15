@@ -29,21 +29,15 @@ def test_bundled_builtin_package_data_is_present() -> None:
     assert builtins.list_builtin_modules() == (
         "exceptions",
         "files",
-        "generators",
     )
-    assert builtins.resolve_builtin_resource("generators").name == (
-        "generators.x"
-    )
-    assert (
-        "fn range(start: i32, stop: i32, step: i32 = 1) -> list[i32]:"
-        in builtins.get_builtin_source("generators")
-    )
+    assert builtins.resolve_builtin_resource("files").name == "files.x"
+    assert "class File:" in builtins.get_builtin_source("files")
 
     root_asset = builtins.load_builtin_module("builtins")
-    child_asset = builtins.load_builtin_module("builtins.generators")
+    child_asset = builtins.load_builtin_module("builtins.files")
     assert root_asset.origin == "arx:builtins/__init__.x"
     assert root_asset.is_package is True
-    assert child_asset.origin == "arx:builtins/generators.x"
+    assert child_asset.origin == "arx:builtins/files.x"
     assert child_asset.is_package is False
 
     pyproject = tomllib.loads(
@@ -74,32 +68,32 @@ def test_file_import_resolver_loads_builtins_from_packaged_resources(
 
     resolver = main_module.FileImportResolver((str(source),))
     root_import = irx_astx.ImportFromStmt(
-        [irx_astx.AliasExpr("generators")],
+        [irx_astx.AliasExpr("files")],
         module="builtins",
         level=0,
     )
     child_import = irx_astx.ImportFromStmt(
-        [irx_astx.AliasExpr("range")],
-        module="builtins.generators",
+        [irx_astx.AliasExpr("File")],
+        module="builtins.files",
         level=0,
     )
 
     parent = resolver("main", root_import, "builtins")
-    child = resolver("main", child_import, "builtins.generators")
+    child = resolver("main", child_import, "builtins.files")
 
     assert parent.key == "builtins"
     assert parent.origin == "arx:builtins/__init__.x"
 
-    assert child.key == "builtins.generators"
-    assert child.origin == "arx:builtins/generators.x"
+    assert child.key == "builtins.files"
+    assert child.origin == "arx:builtins/files.x"
 
 
-def test_file_import_resolver_injects_ambient_range_for_user_modules(
+def test_file_import_resolver_keeps_intrinsic_range_for_user_modules(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """
-    title: Imported project modules receive the ambient range builtin.
+    title: Imported project modules need no source range implementation.
     parameters:
       tmp_path:
         type: Path
@@ -124,7 +118,7 @@ def test_file_import_resolver_injects_ambient_range_for_user_modules(
         dedent(
             """
             fn value() -> i32:
-              values: list[i32] = range(0, 4)
+              values: list[i32] = list(range(0, 4))
               return 2
             """
         ).lstrip(),
@@ -142,23 +136,20 @@ def test_file_import_resolver_injects_ambient_range_for_user_modules(
 
     assert parsed.key == "helper"
     assert isinstance(parsed.ast.nodes[0], irx_astx.ImportFromStmt)
-    assert parsed.ast.nodes[0].module == "builtins.generators"
-    assert [alias.name for alias in parsed.ast.nodes[0].names] == ["range"]
+    assert parsed.ast.nodes[0].module == "builtins.exceptions"
+    assert all(
+        not isinstance(node, irx_astx.ImportFromStmt)
+        or node.module != "builtins.generators"
+        for node in parsed.ast.nodes
+    )
 
 
-def test_ambient_builtin_imports_expose_range_by_default() -> None:
+def test_ambient_imports_do_not_require_a_range_module() -> None:
     """
-    title: Ambient builtin imports expose range outside its source module.
+    title: Range is intrinsic; source classes retain their ambient imports.
     """
     implicit_imports = builtins.get_ambient_builtin_imports("main")
-    assert len(implicit_imports) == 3
-    assert implicit_imports[0].module == "builtins.generators"
-    assert [alias.name for alias in implicit_imports[0].names] == ["range"]
-
-    source_module_imports = builtins.get_ambient_builtin_imports(
-        "builtins.generators"
-    )
-    assert [item.module for item in source_module_imports] == [
+    assert [item.module for item in implicit_imports] == [
         "builtins.files",
         "builtins.exceptions",
     ]
@@ -254,7 +245,7 @@ def test_arxmain_compiles_imported_module_using_ambient_range(
         dedent(
             """
             fn value() -> i32:
-              values: list[i32] = range(0, 4)
+              values: list[i32] = list(range(0, 4))
               return 2
             """
         ).lstrip(),
@@ -301,7 +292,7 @@ def test_arxmain_compiles_range_list_creation_with_variable_stop(
         dedent(
             """
             fn build(n: i32) -> none:
-              xs: list[i32] = range(0, n)
+              xs: list[i32] = list(range(0, n))
               return none
 
             fn main() -> i32:
@@ -340,7 +331,7 @@ def test_arxmain_compiles_for_in_over_list_variable(
         dedent(
             """
             fn main() -> i32:
-              xs: list[i32] = range(0, 4)
+              xs: list[i32] = list(range(0, 4))
               total: i32 = 0
               for value in xs:
                 total = total + value
@@ -609,7 +600,7 @@ def test_range_builtin_rejects_zero_step_at_runtime(
         dedent(
             """
             fn test_zero_step() -> none:
-              values: list[i32] = range(0, 4, 0)
+              values: list[i32] = list(range(0, 4, 0))
               return none
             """
         ).lstrip(),

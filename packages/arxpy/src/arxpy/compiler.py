@@ -347,7 +347,6 @@ def program_context(
     ]
     ambient_modules = {
         "builtins.files",
-        "builtins.generators",
         "builtins.exceptions",
     }
     filesystem_imports = any(
