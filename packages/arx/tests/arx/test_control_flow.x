@@ -81,6 +81,79 @@ fn test_while_zero_iteration() -> none:
   ```
   assert while_never_runs() == 0
 
+fn branch_local_value(choice: i32) -> i32:
+  ```
+  title: Sibling conditional declarations update a shared outer result.
+  ```
+  result: i32 = 0
+  if choice == 0:
+    value: i32 = 1
+    result = value
+  elif choice == 1:
+    value: i32 = 2
+    result = value
+  else:
+    value: i32 = 3
+    result = value
+  return result
+
+fn test_statement_body_scopes() -> none:
+  ```
+  title: Sibling bodies reuse names while outer scalar bindings stay intact.
+  ```
+  value: i32 = 99
+  count: i32 = 0
+  while count < 1:
+    value: i32 = 7
+    count += value
+  while count < 8:
+    value: i32 = 1
+    count += value
+  assert count == 8
+  if true:
+    value: i32 = 5
+    assert value == 5
+  assert value == 99
+  assert branch_local_value(0) == 1
+  assert branch_local_value(1) == 2
+  assert branch_local_value(2) == 3
+
+fn scoped_owner_exit(mode: i32) -> i32:
+  ```
+  title: Shadowed list owners release on every distinct loop-body exit.
+  ```
+  values: list[str] = ["outer"]
+  count: i32 = 0
+  try:
+    while count < 2:
+      values: list[str] = ["inner"]
+      assert values[0] == "inner"
+      count += 1
+      if mode == 1:
+        break
+      elif mode == 2:
+        continue
+      elif mode == 3:
+        return count
+      elif mode == 4:
+        raise ValueError("leave the inner scope")
+  except ValueError:
+    assert mode == 4
+  finally:
+    assert values[0] == "outer"
+  assert values[0] == "outer"
+  return count
+
+fn test_scoped_owner_exits() -> none:
+  ```
+  title: Audit fallthrough, break, continue, return, and exception cleanup.
+  ```
+  assert scoped_owner_exit(0) == 2
+  assert scoped_owner_exit(1) == 1
+  assert scoped_owner_exit(2) == 2
+  assert scoped_owner_exit(3) == 1
+  assert scoped_owner_exit(4) == 1
+
 fn test_for_range_loop_asserts() -> none:
   ```
   title: test_for_range_loop_asserts

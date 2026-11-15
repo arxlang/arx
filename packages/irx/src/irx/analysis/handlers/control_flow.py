@@ -4,7 +4,7 @@
 title: Control-flow semantic visitors.
 summary: >-
   Handle returns, loops, and branch-level validation while using shared
-  registry helpers for lexical declarations introduced by loops.
+  registry helpers for lexical declarations introduced by statement bodies.
 """
 
 from __future__ import annotations
@@ -634,7 +634,10 @@ class ControlFlowVisitorMixin(SemanticVisitorMixinBase):
     @SemanticAnalyzerCore.visit.dispatch
     def visit(self, node: astx.IfStmt) -> None:
         """
-        title: Visit IfStmt nodes.
+        title: Analyze each conditional arm in its own declaration scope.
+        summary: >-
+          Inner declarations may shadow outer bindings; assignments resolve to
+          the nearest visible binding. Arm-local declarations do not escape.
         parameters:
           node:
             type: astx.IfStmt
@@ -646,26 +649,39 @@ class ControlFlowVisitorMixin(SemanticVisitorMixinBase):
             if isinstance(node.condition, astx.LiteralBoolean)
             else None
         )
-        with self.context.constant_diagnostics(known is True):
+        with (
+            self.context.scope("if-then"),
+            self.context.constant_diagnostics(known is True),
+        ):
             self.visit(node.then)
         if node.else_ is not None:
-            with self.context.constant_diagnostics(known is False):
+            with (
+                self.context.scope("if-else"),
+                self.context.constant_diagnostics(known is False),
+            ):
                 self.visit(node.else_)
         self._set_type(node, None)
 
     @SemanticAnalyzerCore.visit.dispatch
     def visit(self, node: astx.WhileStmt) -> None:
         """
-        title: Visit WhileStmt nodes.
+        title: Analyze a while body without leaking its declarations.
+        summary: >-
+          The condition uses the enclosing scope. Body-local declarations
+          shadow outer bindings but remain invisible after the loop, including
+          when the body never executes.
         parameters:
           node:
             type: astx.WhileStmt
         """
         self.visit(node.condition)
         self._validate_boolean_condition(node.condition, label="while")
-        with self.context.in_loop():
-            with self.context.constant_diagnostics(False):
-                self.visit(node.body)
+        with (
+            self.context.in_loop(),
+            self.context.scope("while"),
+            self.context.constant_diagnostics(False),
+        ):
+            self.visit(node.body)
         self._set_type(node, None)
 
     @SemanticAnalyzerCore.visit.dispatch

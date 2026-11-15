@@ -296,6 +296,29 @@ def _block(*nodes: astx.AST) -> astx.Block:
     return block
 
 
+@private
+def statement_with_body(
+    kind: str, body: astx.Block
+) -> astx.IfStmt | astx.WhileStmt:
+    """
+    title: Select a statement boundary without giving raw blocks a scope.
+    parameters:
+      kind:
+        type: str
+      body:
+        type: astx.Block
+    returns:
+      type: astx.IfStmt | astx.WhileStmt
+    """
+    if kind == "if":
+        return astx.IfStmt(astx.LiteralBoolean(True), body)
+    if kind == "else":
+        return astx.IfStmt(astx.LiteralBoolean(False), _block(), body)
+    if kind == "while":
+        return astx.WhileStmt(astx.LiteralBoolean(False), body)
+    raise ValueError(f"Unknown statement kind: {kind}")
+
+
 def _with_loc(node: astx.AST, line: int, col: int) -> astx.AST:
     """
     title: Attach a simple source location to one AST node.
@@ -556,28 +579,159 @@ def test_analyze_rejects_const_write() -> None:
         analyze(module)
 
 
-def test_analyze_rejects_duplicate_local_variable_declaration() -> None:
+@pytest.mark.parametrize("kind", ["function", "if", "else", "while"])
+def test_analyze_rejects_duplicate_local_variable_declaration(
+    kind: str,
+) -> None:
     """
-    title: Test analyze rejects duplicate local variable declarations.
+    title: Same-body duplicates retain their previous-declaration location.
+    parameters:
+      kind:
+        type: str
     """
-    module = _module_with_main(
+    body = _block(
         astx.VariableDeclaration(
             name="x",
             type_=astx.Int32(),
             mutability=astx.MutabilityKind.mutable,
             value=astx.LiteralInt32(1),
+            loc=astx.SourceLocation(5, 5),
         ),
         astx.VariableDeclaration(
             name="x",
             type_=astx.Int32(),
             mutability=astx.MutabilityKind.mutable,
             value=astx.LiteralInt32(2),
+            loc=astx.SourceLocation(6, 5),
         ),
+    )
+    module = _module_with_main(
+        body if kind == "function" else statement_with_body(kind, body),
         astx.FunctionReturn(astx.LiteralInt32(0)),
     )
 
-    with pytest.raises(SemanticError, match="Identifier already declared: x"):
+    with pytest.raises(
+        SemanticError, match="Identifier already declared: x"
+    ) as error:
         analyze(module)
+    diagnostic = error.value.diagnostics.diagnostics[0]
+    assert diagnostic.code == DiagnosticCodes.SEMANTIC_DUPLICATE_DECLARATION
+    assert diagnostic.node is body.nodes[1]
+    assert len(diagnostic.related) == 1
+    assert diagnostic.related[0].node is body.nodes[0]
+    source = diagnostic.related[0].resolved_source()
+    assert source is not None
+    assert (source.line, source.col) == (5, 5)
+
+
+def test_function_parameters_share_the_top_level_body_scope() -> None:
+    """
+    title: Statement scopes must not allow a body to redeclare a parameter.
+    """
+    function = astx.FunctionDef(
+        astx.FunctionPrototype(
+            "echo",
+            astx.Arguments(astx.Argument("x", astx.Int32())),
+            astx.Int32(),
+        ),
+        _block(
+            astx.VariableDeclaration(
+                "x", astx.Int32(), value=astx.LiteralInt32(1)
+            ),
+            astx.FunctionReturn(astx.Identifier("x")),
+        ),
+    )
+    with pytest.raises(SemanticError, match="Identifier already declared: x"):
+        analyze(make_module("parameters", function))
+
+
+@pytest.mark.parametrize("kind", ["if", "else", "while"])
+def test_statement_body_bindings_shadow_without_leaking(kind: str) -> None:
+    """
+    title: Sibling declarations and writes use distinct nearest symbol IDs.
+    parameters:
+      kind:
+        type: str
+    """
+    outer = astx.VariableDeclaration(
+        "x",
+        astx.Int32(),
+        value=astx.LiteralInt32(99),
+        mutability=astx.MutabilityKind.mutable,
+    )
+    inner = astx.VariableDeclaration(
+        "x",
+        astx.Int32(),
+        value=astx.LiteralInt32(1),
+        mutability=astx.MutabilityKind.mutable,
+    )
+    sibling = astx.VariableDeclaration(
+        "x", astx.Int32(), value=astx.LiteralInt32(2)
+    )
+    outer_write = astx.VariableAssignment("x", astx.LiteralInt32(3))
+    inner_write = astx.VariableAssignment("x", astx.LiteralInt32(4))
+    inner_read = astx.Identifier("x")
+    outer_read = astx.Identifier("x")
+    module = _module_with_main(
+        outer,
+        statement_with_body(
+            kind, _block(outer_write, inner, inner_write, inner_read)
+        ),
+        statement_with_body(kind, _block(sibling)),
+        astx.FunctionReturn(outer_read),
+    )
+
+    analyze(module)
+
+    symbols = [
+        _semantic(node).resolved_symbol for node in (outer, inner, sibling)
+    ]
+    assert all(symbol is not None for symbol in symbols)
+    assert len({symbol.symbol_id for symbol in symbols if symbol}) == len(
+        symbols
+    )
+    assert _semantic(outer_write).resolved_symbol is symbols[0]
+    assert _semantic(outer_read).resolved_symbol is symbols[0]
+    assert _semantic(inner_write).resolved_symbol is symbols[1]
+    assert _semantic(inner_read).resolved_symbol is symbols[1]
+
+
+@pytest.mark.parametrize("kind", ["if", "else", "while"])
+def test_statement_body_context_restores_after_failure(
+    kind: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """
+    title: Failed body analysis restores lexical, loop, and diagnostic state.
+    parameters:
+      kind:
+        type: str
+      monkeypatch:
+        type: pytest.MonkeyPatch
+    """
+    analyzer = SemanticAnalyzer()
+    body = _block()
+    visit = analyzer.visit
+
+    def fail_in_body(node: astx.AST) -> None:
+        """
+        title: Fail after entering the statement's body context.
+        parameters:
+          node:
+            type: astx.AST
+        """
+        if node is body:
+            assert analyzer.context.scopes.current is not enclosing
+            raise RuntimeError("body analysis failed")
+        visit(node)
+
+    monkeypatch.setattr(analyzer, "visit", fail_in_body)
+    with analyzer.context.scope("enclosing"):
+        enclosing = analyzer.context.scopes.current
+        with pytest.raises(RuntimeError, match="body analysis failed"):
+            visit(statement_with_body(kind, body))
+        assert analyzer.context.scopes.current is enclosing
+        assert analyzer.context.loop_depth == 0
+        assert analyzer.context.check_constant_expressions
 
 
 def test_analyze_rejects_break_outside_loop() -> None:
@@ -991,47 +1145,30 @@ def test_preserves_module_qualified_function_struct_and_class_names() -> None:
     )
 
 
-def test_analyze_keeps_if_branch_bindings_visible_after_if() -> None:
+@pytest.mark.parametrize("kind", ["if", "else", "while"])
+def test_analyze_rejects_body_local_after_statement(kind: str) -> None:
     """
-    title: Test analyze keeps if branch bindings visible after if.
+    title: Body locals cannot escape, even after a definitely initialized arm.
+    parameters:
+      kind:
+        type: str
     """
-    branchy_proto = astx.FunctionPrototype(
-        "branchy",
-        args=astx.Arguments(astx.Argument("x", astx.Int32())),
-        return_type=astx.Int32(),
+    statement = statement_with_body(
+        kind,
+        _block(
+            astx.InlineVariableDeclaration(
+                "y", type_=astx.Int32(), value=astx.LiteralInt32(5)
+            )
+        ),
     )
-    branchy_body = astx.Block()
-
-    cond = astx.BinaryOp(
-        op_code="<",
-        lhs=astx.Identifier("x"),
-        rhs=astx.LiteralInt32(0),
-    )
-    then_block = astx.Block()
-    then_block.append(astx.FunctionReturn(astx.LiteralInt32(7)))
-    else_block = astx.Block()
-    else_block.append(
-        astx.InlineVariableDeclaration(
-            "y", type_=astx.Int32(), value=astx.LiteralInt32(5)
-        )
-    )
-    branchy_body.append(
-        astx.IfStmt(condition=cond, then=then_block, else_=else_block)
-    )
+    if isinstance(statement, astx.IfStmt) and kind == "else":
+        statement.then.append(astx.FunctionReturn(astx.LiteralInt32(7)))
     return_ident = astx.Identifier("y")
-    branchy_body.append(astx.FunctionReturn(return_ident))
+    module = _module_with_main(statement, astx.FunctionReturn(return_ident))
 
-    module = astx.Module()
-    module.block.append(
-        astx.FunctionDef(prototype=branchy_proto, body=branchy_body)
-    )
-
-    analyze(module)
-
-    resolved_symbol = _semantic(return_ident).resolved_symbol
-
-    assert resolved_symbol is not None
-    assert resolved_symbol.name == "y"
+    with pytest.raises(SemanticError, match="cannot resolve name 'y'"):
+        analyze(module)
+    assert _semantic(return_ident).resolved_symbol is None
 
 
 def test_diagnostic_bag_formats_messages() -> None:

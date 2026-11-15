@@ -2,6 +2,21 @@
 
 Arx supports `if`/`elif`/`else`, `while`, and two `for` loop styles.
 
+## Declaration Scopes
+
+Each `if`, `elif`, or `else` arm and each loop body has a lexical declaration
+scope. A declaration is visible only in its enclosing scope and nested bodies;
+it cannot be read after that scope ends, even if that body always executes.
+Sibling bodies may reuse a name, and inner declarations may shadow outer ones.
+Assignment without a declaration updates the nearest visible binding instead.
+This differs from Python's function-wide local declarations.
+
+Declaring the same name twice in one scope is an error. Function parameters and
+the top-level function body share a scope; a loop target and its body also share
+their loop scope. Leaving a body releases its local owners on fallthrough or
+control transfer, without releasing shadowed outer owners. See the
+[ownership contract](../irx/runtime-ownership.md) for resource-specific rules.
+
 ## If / Elif / Else
 
 Conditions must be Boolean and are evaluated in order, stopping at the first
