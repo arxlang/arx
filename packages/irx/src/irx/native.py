@@ -1,5 +1,5 @@
 """
-title: Declarative native capabilities supplied by compiler hosts.
+title: Declarative native dependencies and builtin C ABI contracts.
 """
 
 from __future__ import annotations
@@ -29,6 +29,43 @@ TableIOOperation = Literal[
     "csv_write_frame",
     "parquet_write_frame",
 ]
+
+
+@public
+@typechecked
+@dataclass(frozen=True, init=False)
+class NativeFunctionABI:
+    """
+    title: Fixed C parameter and result types for a builtin extern symbol.
+    summary: >-
+      Parameter names and defaults are source-level details, not C ABI facts.
+      This record describes nonvariadic calls only; a runtime symbol opts into
+      automatic extern association by supplying it in its registered spec.
+    attributes:
+      parameters:
+        type: tuple[astx.DataType, Ellipsis]
+      return_type:
+        type: astx.DataType
+    """
+
+    parameters: tuple[astx.DataType, ...]
+    return_type: astx.DataType
+
+    def __init__(
+        self,
+        parameters: tuple[astx.DataType, ...],
+        return_type: astx.DataType,
+    ) -> None:
+        """
+        title: Validate builtin ABI types, including every parameter item.
+        parameters:
+          parameters:
+            type: tuple[astx.DataType, Ellipsis]
+          return_type:
+            type: astx.DataType
+        """
+        object.__setattr__(self, "parameters", parameters)
+        object.__setattr__(self, "return_type", return_type)
 
 
 @public

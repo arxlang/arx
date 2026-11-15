@@ -15,6 +15,10 @@
 
 ## Unreleased
 
+- Plain `sqrt`/`exp`/`log`/`pow` externs now acquire the registered libm link
+  dependency. **Breaking:** incompatible builtin C signatures and conflicting
+  native providers fail during analysis; custom providers need distinct C symbols.
+
 - **Breaking:** `if`/`elif`/`else` and `while` bodies now have lexical
   declaration scopes. Body-local names no longer leak into sibling bodies or
   the enclosing function. Inner declarations may shadow outer bindings;

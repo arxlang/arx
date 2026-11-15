@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Callable, Mapping, TypeAlias, cast
 
 from llvmlite import ir
 
-from irx.native import NativeArtifact, NativeArtifactKind
+from irx.native import NativeArtifact, NativeArtifactKind, NativeFunctionABI
 from irx.typecheck import typechecked
 
 if TYPE_CHECKING:
@@ -22,7 +22,7 @@ else:
 
 
 @typechecked
-@dataclass(frozen=True)
+@dataclass(frozen=True, init=False)
 class ExternalSymbolSpec:
     """
     title: Describe one external symbol exposed by a runtime feature.
@@ -31,10 +31,36 @@ class ExternalSymbolSpec:
         type: str
       declare:
         type: RuntimeSymbolFactory
+      ffi_abi:
+        type: NativeFunctionABI | None
+        description: >-
+          Opt into builtin extern association and exact nonvariadic C ABI
+          validation. Symbols without this record retain explicit activation.
     """
 
     name: str
     declare: RuntimeSymbolFactory
+    ffi_abi: NativeFunctionABI | None = None
+
+    def __init__(
+        self,
+        name: str,
+        declare: RuntimeSymbolFactory,
+        ffi_abi: NativeFunctionABI | None = None,
+    ) -> None:
+        """
+        title: Validate a symbol factory and its optional builtin ABI contract.
+        parameters:
+          name:
+            type: str
+          declare:
+            type: RuntimeSymbolFactory
+          ffi_abi:
+            type: NativeFunctionABI | None
+        """
+        object.__setattr__(self, "name", name)
+        object.__setattr__(self, "declare", declare)
+        object.__setattr__(self, "ffi_abi", ffi_abi)
 
 
 @typechecked

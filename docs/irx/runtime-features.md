@@ -44,13 +44,28 @@ activating a native feature are different compiler operations.
 
 Public extern prototypes can name `runtime_feature` or `runtime_features`.
 
-- a plain extern emits an LLVM declaration and relies on the platform linker
+- an uncatalogued plain extern emits an LLVM declaration and relies on the
+  platform linker
 - a feature-backed extern also activates the feature's artifacts and flags
 - a symbol already owned by a feature reuses the feature declaration rather than
   creating a parallel native path
 
 This is the same mechanism used by built-in lowering; it is not a special path
 only for handwritten externs.
+
+The bounded libm catalog automatically associates plain C symbols `sqrt`, `exp`,
+and `log` with unary `f64 -> f64` calls, and `pow` with `(f64, f64) -> f64`.
+Analysis validates this exact, nonvariadic ABI even for an unused declaration.
+Association uses the resolved C symbol, not a source alias or an ordinary
+function's name. An explicit binding for these symbols may name only `libm`;
+custom native providers must export a distinct C symbol.
+
+These externs retain native C domain and overflow results, including NaN and
+infinity, rather than raising Python `math` exceptions. The feature supplies
+`-lm` for native Linux/Darwin targets and rejects other targets explicitly. This
+is not automatic support for every C math function or a blanket linker flag on
+unrelated programs. Linux native execution is tested; Darwin's flag selection is
+tested without claiming native execution on that platform.
 
 ## Native Apache Arrow backend
 

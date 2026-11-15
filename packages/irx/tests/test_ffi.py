@@ -112,6 +112,28 @@ def test_plain_extern_symbol_does_not_activate_runtime_feature() -> None:
     )
 
 
+def test_ordinary_math_named_function_does_not_activate_libm() -> None:
+    """
+    title: Builtin association belongs to extern identity, not call spelling.
+    """
+    body = astx.Block()
+    body.append(astx.FunctionReturn(astx.Identifier("value")))
+    definition = astx.FunctionDef(
+        astx.FunctionPrototype(
+            "exp",
+            astx.Arguments(astx.Argument("value", astx.Float64())),
+            astx.Float64(),
+        ),
+        body,
+    )
+    module = _main_module(astx.FunctionCall("exp", [astx.LiteralFloat64(1.0)]))
+    module.block.insert(0, definition)
+    builder = Builder()
+    builder.translate(module)
+    assert not builder.translator.runtime_features.is_active("libm")
+    assert builder.translator.runtime_features.linker_flags() == ()
+
+
 def test_translate_feature_backed_extern_activates_runtime_feature() -> None:
     """
     title: Feature-backed externs should activate the declared runtime feature.

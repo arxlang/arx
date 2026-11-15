@@ -542,6 +542,10 @@ The public FFI layer accepts a validated subset of IRx structs:
 
 - an extern with no runtime features emits only an LLVM external declaration;
   the final system toolchain/linker is expected to resolve the symbol
+- the bounded [libm catalog](runtime-features.md#extern-declarations) associates
+  its known C symbols with validated builtin ABI and feature requirements during
+  analysis, even without explicit feature metadata; ordinary functions are not
+  selected by call spelling
 - an extern with `runtime_feature` / `runtime_features` still emits one semantic
   extern declaration, but it also activates the named runtime feature set for
   that compilation unit

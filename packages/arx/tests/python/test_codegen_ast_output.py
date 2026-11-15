@@ -2,6 +2,7 @@
 title: Test code generation AST output.
 """
 
+import math
 import shutil
 import subprocess
 import sys
@@ -25,6 +26,178 @@ from llvmlite import binding as llvm
 from llvmlite import ir
 
 from .test_file_class_native import build_audited_file_program
+
+
+@pytest.fixture(scope="module")
+def libm_ir(
+    tmp_path_factory: pytest.TempPathFactory,
+) -> tuple[ArxBuilder, str]:
+    """
+    title: Translate plain math externs across modules once for native checks.
+    parameters:
+      tmp_path_factory:
+        type: pytest.TempPathFactory
+    returns:
+      type: tuple[ArxBuilder, str]
+    """
+    root = tmp_path_factory.mktemp("libm")
+    (root / "math_calls.x").write_text(
+        "```\ntitle: Imported C math calls\n```\n"
+        "type Scalar = f64\n"
+        "extern exp(value: f64) -> f64\n"
+        "extern log(value: Scalar) -> Scalar\n"
+        "extern pow(value: f64, power: f64) -> f64\n"
+        "fn evaluate(value: f64) -> none:\n"
+        "  print(exp(value))\n"
+        "  print(log(value))\n"
+        "  print(pow(value, 3.0))\n"
+        "  print(pow(value, 0.5))\n"
+        "  print(exp(value * 1000.0))\n",
+        encoding="utf-8",
+    )
+    source = (
+        "```\ntitle: Plain libm source integration\n```\n"
+        "import evaluate from math_calls\n"
+        "extern sqrt(value: f64) -> f64\n"
+        "extern exp(number: f64) -> f64\n"
+        "extern log(number: f64) -> f64\n"
+        "extern getchar() -> i32\n"
+        "fn main() -> i32:\n"
+        "  value: f64 = cast(getchar() - 48, f64)\n"
+        "  evaluate(value)\n"
+        "  print(sqrt(value))\n"
+        "  print(exp(value))\n"
+        "  return 0\n"
+    )
+    entry = root / "main.x"
+    entry.write_text(source, encoding="utf-8")
+    ArxIO.string_to_buffer(source)
+    module = Parser().parse(Lexer().lex(), "main")
+    builder = ArxBuilder()
+    text = builder.translate_modules(
+        ParsedModule("main", module, str(entry)),
+        FileImportResolver((str(entry),)),
+    )
+    llvm.parse_assembly(text).verify()
+    return builder, text
+
+
+def test_plain_libm_externs_translate(libm_ir: tuple[ArxBuilder, str]) -> None:
+    """
+    title: Plain externs select libm once, including imported and shared names.
+    parameters:
+      libm_ir:
+        type: tuple[ArxBuilder, str]
+    """
+    builder, text = libm_ir
+    assert builder.translator.runtime_features.is_active("libm")
+    assert builder.translator.runtime_features.linker_flags() == ("-lm",)
+    for name, arity in {"sqrt": 1, "exp": 1, "log": 1, "pow": 2}.items():
+        assert text.count(f'declare external double @"{name}"') == 1
+        function = builder.translator._llvm.module.globals[name]
+        assert isinstance(function, ir.Function)
+        assert function.function_type == ir.FunctionType(
+            ir.DoubleType(), [ir.DoubleType()] * arity
+        )
+
+
+@pytest.mark.parametrize(
+    "call,code",
+    [
+        ('exp("wrong")', DiagnosticCodes.SEMANTIC_TYPE_MISMATCH),
+        ("pow(1.0)", DiagnosticCodes.SEMANTIC_CALL_ARITY),
+    ],
+)
+def test_plain_libm_call_arguments_remain_checked(
+    call: str, code: str
+) -> None:
+    """
+    title: Inferred feature requirements do not bypass ordinary call checking.
+    parameters:
+      call:
+        type: str
+      code:
+        type: str
+    """
+    ArxIO.string_to_buffer(
+        "```\ntitle: Invalid C math arguments\n```\n"
+        "extern exp(value: f64) -> f64\n"
+        "extern pow(value: f64, power: f64) -> f64\n"
+        "fn main() -> i32:\n"
+        f"  {call}\n"
+        "  return 0\n"
+    )
+    with pytest.raises(SemanticError) as error:
+        ArxBuilder().translate(Parser().parse(Lexer().lex()))
+    assert any(
+        item.code == code for item in error.value.diagnostics.diagnostics
+    )
+
+
+@pytest.fixture(scope="module")
+def libm_binary(
+    libm_ir: tuple[ArxBuilder, str],
+    tmp_path_factory: pytest.TempPathFactory,
+) -> Path:
+    """
+    title: Link one verified libm artifact for all runtime input cases.
+    parameters:
+      libm_ir:
+        type: tuple[ArxBuilder, str]
+      tmp_path_factory:
+        type: pytest.TempPathFactory
+    returns:
+      type: Path
+    """
+    if shutil.which("clang") is None:
+        pytest.skip("clang required")
+    builder, text = libm_ir
+    executable = tmp_path_factory.mktemp("libm-binary") / "math"
+    builder._build_from_ir_result(text, str(executable), True, "auto")
+    return executable
+
+
+@pytest.mark.parametrize("value", [2, 0, -1])
+def test_plain_libm_native_results(libm_binary: Path, value: int) -> None:
+    """
+    title: Non-foldable inputs preserve finite, domain, and overflow C results.
+    parameters:
+      libm_binary:
+        type: Path
+      value:
+        type: int
+    """
+    result = subprocess.run(
+        [str(libm_binary)],
+        input=chr(value + 48),
+        text=True,
+        capture_output=True,
+        check=False,
+        timeout=10,
+    )
+    assert result.returncode == 0, result.stderr
+    assert result.stderr == ""
+    root = math.sqrt(value) if value >= 0 else math.nan
+    expected = (
+        math.exp(value),
+        math.log(value)
+        if value > 0
+        else (-math.inf if value == 0 else math.nan),
+        float(value**3),
+        root,
+        math.inf if value > 0 else math.exp(value * 1000.0),
+        root,
+        math.exp(value),
+    )
+    actual = tuple(float(line) for line in result.stdout.splitlines())
+    assert len(actual) == len(expected)
+    for observed, wanted in zip(actual, expected):
+        if math.isnan(wanted):
+            assert math.isnan(observed)
+        elif math.isinf(wanted):
+            assert observed == wanted
+        else:
+            assert observed == pytest.approx(wanted, rel=1e-6, abs=1e-6)
 
 
 @pytest.fixture(scope="module")

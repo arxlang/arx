@@ -15,6 +15,7 @@ import pytest
 
 from irx.builder import Builder, Visitor
 from irx.builder.runtime.errors.feature import build_runtime_failure_feature
+from irx.builder.runtime.feature_libm import build_libm_runtime_feature
 from irx.builder.runtime.features import (
     ExternalSymbolSpec,
     NativeArtifact,
@@ -35,8 +36,11 @@ from irx.diagnostics import (
     NativeCompileError,
     RuntimeFeatureError,
 )
+from irx.native import NativeFunctionABI
 from irx.system import PrintExpr
+from llvmlite import binding as llvm
 from llvmlite import ir
+from typeguard import TypeCheckError
 
 if TYPE_CHECKING:
     from irx.builder.protocols import VisitorProtocol
@@ -116,6 +120,81 @@ def test_runtime_feature_registry_rejects_duplicate_names() -> None:
 
     with pytest.raises(ValueError, match="already exists"):
         registry.register(feature)
+
+
+def test_libm_catalog_declares_the_registered_abis() -> None:
+    """
+    title: Unary/binary semantic ABI metadata agrees with LLVM declarations.
+    """
+    registry = RuntimeFeatureRegistry()
+    feature = build_libm_runtime_feature()
+    registry.register(feature)
+    state = RuntimeFeatureState(Visitor(), registry)
+    arities = {"sqrt": 1, "exp": 1, "log": 1, "pow": 2}
+    assert set(feature.symbols) == set(arities)
+    for name, arity in arities.items():
+        abi = feature.symbols[name].ffi_abi
+        assert abi is not None
+        assert len(abi.parameters) == arity
+        assert all(isinstance(type_, astx.Float64) for type_ in abi.parameters)
+        assert isinstance(abi.return_type, astx.Float64)
+        binding = registry.builtin_extern(name)
+        assert binding is not None and binding[0] == "libm"
+        assert binding[1] is abi
+        declaration = state.require_symbol("libm", name)
+        assert declaration.function_type == ir.FunctionType(
+            ir.DoubleType(), [ir.DoubleType()] * arity
+        )
+    with pytest.raises(ValueError, match="already belongs"):
+        registry.register(RuntimeFeature("other", symbols=feature.symbols))
+
+
+@pytest.mark.parametrize(
+    "triple,available",
+    [
+        ("x86_64-unknown-linux-gnu", True),
+        ("arm64-apple-darwin", True),
+        ("x86_64-pc-windows-msvc", False),
+    ],
+)
+def test_libm_target_availability(
+    triple: str, available: bool, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """
+    title: Native linker policy rejects targets without a defined libm route.
+    parameters:
+      triple:
+        type: str
+      available:
+        type: bool
+      monkeypatch:
+        type: pytest.MonkeyPatch
+    """
+    visitor = Visitor()
+    monkeypatch.setattr(llvm, "get_default_triple", lambda: triple)
+    feature = build_libm_runtime_feature()
+    assert feature.linker_flags == (("-lm",) if available else ())
+    assert (feature.unavailable_reason is None) is available
+    if available:
+        return
+    registry = RuntimeFeatureRegistry()
+    registry.register(feature)
+    state = RuntimeFeatureState(visitor, registry)
+    with pytest.raises(RuntimeFeatureError, match="unavailable"):
+        state.activate("libm")
+    assert not state.is_active("libm")
+
+
+def test_builtin_abi_records_validate_collection_items() -> None:
+    """
+    title: Builtin symbol contracts reject invalid nonfirst ABI parameters.
+    """
+    with pytest.raises(TypeCheckError):
+        NativeFunctionABI((astx.Float64(), 3), astx.Float64())  # type: ignore[arg-type]
+    with pytest.raises(TypeCheckError):
+        NativeFunctionABI((astx.Float64(),), 3)  # type: ignore[arg-type]
+    with pytest.raises(TypeCheckError):
+        ExternalSymbolSpec("bad", _declare_dummy_symbol, ffi_abi=3)  # type: ignore[arg-type]
 
 
 def test_runtime_feature_state_reuses_symbol_declarations() -> None:

@@ -23,6 +23,7 @@ from irx.analysis.ffi import (
     build_ffi_callable_info,
     ffi_returns_owned_string,
     normalize_runtime_features,
+    resolve_builtin_extern,
 )
 from irx.analysis.module_interfaces import ModuleKey
 from irx.analysis.resolved_nodes import (
@@ -531,6 +532,12 @@ class SemanticRegistry:
             is_extern=is_extern,
             symbol_name=symbol_name,
             required_runtime_features=required_runtime_features,
+        )
+        signature = resolve_builtin_extern(
+            signature,
+            prototype=prototype,
+            diagnostics=self.context.diagnostics,
+            validate_abi=validate_ffi,
         )
 
         table_io = self.context.native_table_io.get(id(prototype))

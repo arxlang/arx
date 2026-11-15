@@ -14,10 +14,11 @@ from typing import Iterable, cast
 
 import astx
 
-from public import public
+from public import private, public
 
 from irx.analysis.context import SemanticContext
 from irx.analysis.resolved_nodes import (
+    CallingConvention,
     FFIAdmissibility,
     FFICallableInfo,
     FFILinkStrategy,
@@ -33,8 +34,10 @@ from irx.analysis.types import (
     is_integer_type,
     is_none_type,
     is_string_type,
+    same_type,
 )
 from irx.diagnostics import DiagnosticBag, DiagnosticCodes
+from irx.native import NativeFunctionABI
 from irx.typecheck import typechecked
 
 
@@ -138,6 +141,85 @@ def normalize_runtime_features(
             )
 
     return tuple(normalized)
+
+
+@private
+@typechecked
+def resolve_builtin_extern(
+    signature: FunctionSignature,
+    *,
+    prototype: astx.FunctionPrototype,
+    diagnostics: DiagnosticBag,
+    validate_abi: bool,
+) -> FunctionSignature:
+    """
+    title: Associate resolved C symbols with an opt-in builtin feature ABI.
+    summary: >-
+      Ordinary functions and uncatalogued C symbols keep their existing
+      requirements. Catalogued symbols allow only their owning feature as an
+      explicit binding; custom providers must export a distinct C symbol.
+      Predeclaration associates features without checking unresolved type
+      aliases. Full normalization validates exact types and fixed arity. Do not
+      mutate prototypes or cache inferred requirements on source nodes.
+    parameters:
+      signature:
+        type: FunctionSignature
+      prototype:
+        type: astx.FunctionPrototype
+      diagnostics:
+        type: DiagnosticBag
+      validate_abi:
+        type: bool
+    returns:
+      type: FunctionSignature
+    """
+    if not signature.is_extern:
+        return signature
+    registry_module = importlib.import_module("irx.builder.runtime.registry")
+    registry = getattr(
+        registry_module, "get_default_runtime_feature_registry"
+    )()
+    binding = cast(
+        tuple[str, NativeFunctionABI] | None,
+        registry.builtin_extern(signature.symbol_name),
+    )
+    if binding is None:
+        return signature
+    feature, abi = binding
+    if signature.required_runtime_features not in ((), (feature,)):
+        if validate_abi:
+            diagnostics.add(
+                f"Builtin extern '{signature.symbol_name}' belongs to "
+                f"runtime feature '{feature}' and conflicts with explicit "
+                f"runtime features {signature.required_runtime_features}",
+                node=prototype,
+                code=DiagnosticCodes.FFI_INVALID_SIGNATURE,
+                hint="use a distinct C symbol for a custom native provider",
+            )
+        return signature
+    if validate_abi and (
+        signature.calling_convention is not CallingConvention.C
+        or signature.is_variadic
+        or len(signature.parameters) != len(abi.parameters)
+        or not same_type(signature.return_type, abi.return_type)
+        or any(
+            not same_type(parameter.type_, expected)
+            for parameter, expected in zip(
+                signature.parameters, abi.parameters
+            )
+        )
+    ):
+        parameters = ", ".join(
+            display_type_name(item) for item in abi.parameters
+        )
+        diagnostics.add(
+            f"Builtin extern '{signature.symbol_name}' requires C ABI "
+            f"({parameters}) -> {display_type_name(abi.return_type)} "
+            "without variadic arguments",
+            node=prototype,
+            code=DiagnosticCodes.FFI_INVALID_SIGNATURE,
+        )
+    return replace(signature, required_runtime_features=(feature,))
 
 
 @public

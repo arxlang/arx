@@ -35,7 +35,7 @@ from irx.diagnostics import (
     DiagnosticCodes,
     RuntimeFeatureError,
 )
-from irx.native import NativeFeature
+from irx.native import NativeFeature, NativeFunctionABI
 from irx.typecheck import typechecked
 
 if TYPE_CHECKING:
@@ -68,7 +68,33 @@ class RuntimeFeatureRegistry:
             raise ValueError(
                 f"Runtime feature '{feature.name}' already exists"
             )
+        for name, symbol in feature.symbols.items():
+            if symbol.ffi_abi is None:
+                continue
+            previous = self.builtin_extern(name)
+            if previous is not None:
+                raise ValueError(
+                    f"Builtin extern '{name}' already belongs to runtime "
+                    f"feature '{previous[0]}'"
+                )
         self._features[feature.name] = feature
+
+    def builtin_extern(
+        self, symbol_name: str
+    ) -> tuple[str, NativeFunctionABI] | None:
+        """
+        title: Find an explicitly catalogued builtin C symbol and its ABI.
+        parameters:
+          symbol_name:
+            type: str
+        returns:
+          type: tuple[str, NativeFunctionABI] | None
+        """
+        for feature in self._features.values():
+            symbol = feature.symbols.get(symbol_name)
+            if symbol is not None and symbol.ffi_abi is not None:
+                return feature.name, symbol.ffi_abi
+        return None
 
     def with_native_features(
         self, features: tuple[NativeFeature, ...]

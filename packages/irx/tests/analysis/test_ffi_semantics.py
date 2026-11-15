@@ -10,7 +10,7 @@ import astx
 import irx.builder.runtime.registry as runtime_registry_module
 import pytest
 
-from irx.analysis import SemanticError, analyze
+from irx.analysis import ParsedModule, SemanticError, analyze, analyze_modules
 from irx.analysis.resolved_nodes import (
     FFILinkStrategy,
     FFITypeClass,
@@ -18,6 +18,10 @@ from irx.analysis.resolved_nodes import (
 )
 from irx.builder.runtime.features import RuntimeFeature
 from irx.builder.runtime.registry import RuntimeFeatureRegistry
+from irx.diagnostics import DiagnosticCodes
+from irx.native import NativeBinding, NativeFeature
+
+from ..conftest import StaticImportResolver
 
 
 def _semantic(node: astx.AST) -> SemanticInfo:
@@ -101,6 +105,167 @@ def test_analyze_attaches_ffi_metadata_for_feature_backed_extern() -> None:
         resolved_function.signature.ffi.return_type.classification
         is FFITypeClass.FLOAT
     )
+
+
+@pytest.mark.parametrize(
+    "name,symbol,arity",
+    [
+        ("sqrt", "sqrt", 1),
+        ("exp", "exp", 1),
+        ("log", "log", 1),
+        ("pow", "pow", 2),
+        ("aliased_exp", "exp", 1),
+    ],
+)
+def test_builtin_libm_externs_infer_feature_by_c_symbol(
+    name: str, symbol: str, arity: int
+) -> None:
+    """
+    title: Plain catalogued externs acquire libm without prototype mutation.
+    parameters:
+      name:
+        type: str
+      symbol:
+        type: str
+      arity:
+        type: int
+    """
+    prototype = _extern_prototype(
+        name,
+        *(
+            astx.Argument(f"arg{index}", astx.Float64())
+            for index in range(arity)
+        ),
+        return_type=astx.Float64(),
+        symbol_name=symbol,
+    )
+    module = astx.Module()
+    module.append(prototype)
+    analyze(module)
+    function = _semantic(prototype).resolved_function
+    assert function is not None
+    assert function.signature.required_runtime_features == ("libm",)
+    assert function.signature.ffi is not None
+    assert function.signature.ffi.required_runtime_features == ("libm",)
+    assert (
+        function.signature.ffi.link_strategy
+        is FFILinkStrategy.RUNTIME_FEATURES
+    )
+    assert not hasattr(prototype, "runtime_feature")
+    assert not hasattr(prototype, "runtime_features")
+
+
+@pytest.mark.parametrize(
+    "symbol,parameters,result,variadic",
+    [
+        ("exp", (astx.Float64(), astx.Float64()), astx.Float64(), False),
+        ("pow", (astx.Float64(),), astx.Float64(), False),
+        ("exp", (astx.Float32(),), astx.Float64(), False),
+        ("exp", (astx.Int64(),), astx.Float64(), False),
+        ("log", (astx.Float64(),), astx.Float32(), False),
+        ("sqrt", (astx.Float64(),), astx.Int32(), False),
+        ("exp", (astx.Float64(),), astx.Float64(), True),
+    ],
+)
+def test_builtin_extern_abi_mismatch_fails_during_analysis(
+    symbol: str,
+    parameters: tuple[astx.DataType, ...],
+    result: astx.DataType,
+    variadic: bool,
+) -> None:
+    """
+    title: Even unused builtin externs must match their exact fixed C ABI.
+    parameters:
+      symbol:
+        type: str
+      parameters:
+        type: tuple[astx.DataType, Ellipsis]
+      result:
+        type: astx.DataType
+      variadic:
+        type: bool
+    """
+    prototype = _extern_prototype(
+        "alias",
+        *(
+            astx.Argument(f"arg{index}", type_)
+            for index, type_ in enumerate(parameters)
+        ),
+        return_type=result,
+        symbol_name=symbol,
+    )
+    prototype.is_variadic = variadic
+    prototype.loc = astx.SourceLocation(4, 1)
+    module = astx.Module()
+    module.append(prototype)
+    with pytest.raises(SemanticError, match="requires C ABI") as error:
+        analyze(module)
+    diagnostic = next(
+        item
+        for item in error.value.diagnostics.diagnostics
+        if "requires C ABI" in item.message
+    )
+    assert diagnostic.code == DiagnosticCodes.FFI_INVALID_SIGNATURE
+    assert diagnostic.node is prototype
+    source = diagnostic.resolved_source()
+    assert source is not None and (source.line, source.col) == (4, 1)
+
+
+@pytest.mark.parametrize("host_bound", [False, True])
+def test_builtin_extern_rejects_conflicting_explicit_provider(
+    host_bound: bool,
+) -> None:
+    """
+    title: Source metadata and host bindings cannot replace builtin providers.
+    parameters:
+      host_bound:
+        type: bool
+    """
+    prototype = _extern_prototype(
+        "exp",
+        astx.Argument("value", astx.Float64()),
+        return_type=astx.Float64(),
+    )
+    module = astx.Module("main")
+    module.append(prototype)
+    if host_bound:
+        root = ParsedModule(
+            "main",
+            module,
+            native_features=(NativeFeature("custom_math"),),
+            native_bindings=(NativeBinding(prototype, ("custom_math",)),),
+        )
+        with pytest.raises(SemanticError, match="conflicts with explicit"):
+            analyze_modules(root, StaticImportResolver({}))
+        return
+    prototype.runtime_features = ("libm", "libc")
+    with pytest.raises(SemanticError, match="conflicts with explicit"):
+        analyze(module)
+
+
+def test_reanalysis_does_not_retain_inferred_libm_by_source_name() -> None:
+    """
+    title: Only the currently resolved C symbol determines builtin ownership.
+    """
+    prototype = _extern_prototype(
+        "exp",
+        astx.Argument("value", astx.Float64()),
+        return_type=astx.Float64(),
+    )
+    module = astx.Module()
+    module.append(prototype)
+    for symbol, expected in (
+        ("custom_exp", ()),
+        ("exp", ("libm",)),
+        ("custom_exp", ()),
+    ):
+        prototype.symbol_name = symbol
+        analyze(module)
+        function = _semantic(prototype).resolved_function
+        assert function is not None
+        assert function.signature.required_runtime_features == expected
+        assert function.signature.ffi is not None
+        assert function.signature.ffi.required_runtime_features == expected
 
 
 def test_runtime_feature_validation_sees_late_registry_registrations(
