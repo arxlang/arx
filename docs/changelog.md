@@ -15,6 +15,11 @@
 
 ## Unreleased
 
+- **Breaking:** `if`/`elif`/`else` and `while` bodies now have lexical
+  declaration scopes. Body-local names no longer leak into sibling bodies or
+  the enclosing function. Inner declarations may shadow outer bindings;
+  assignment without redeclaration still updates the nearest visible binding.
+
 - **Breaking:** `range` returns an immutable lazy value rather than a list;
   use `list(range(...), max_items=N)` when owned list storage is required.
   Add stop-only and named forms, allocation-free i64 length and checked i32

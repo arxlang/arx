@@ -1130,7 +1130,7 @@ def owned_list_ir() -> tuple[ArxBuilder, str]:
 @pytest.fixture(scope="module")
 def loop_transfer_ir() -> tuple[ArxBuilder, str]:
     """
-    title: Translate loop transfers and cleanup once for native assertions.
+    title: Translate statement scopes and loop cleanup once for native checks.
     returns:
       type: tuple[ArxBuilder, str]
     """
@@ -1141,6 +1141,8 @@ def loop_transfer_ir() -> tuple[ArxBuilder, str]:
         "\nfn main() -> i32:\n"
         "  test_loop_transfers()\n"
         "  test_loop_transfer_finalizers()\n"
+        "  test_statement_body_scopes()\n"
+        "  test_scoped_owner_exits()\n"
         "  loop_transfer_owners()\n"
         "  return 0\n"
     )
@@ -1155,7 +1157,7 @@ def test_loop_transfers_translate(
     loop_transfer_ir: tuple[ArxBuilder, str],
 ) -> None:
     """
-    title: Source loop transfers use verified IR and registered owner cleanup.
+    title: Statement scopes and transfers use verified IR and owner cleanup.
     parameters:
       loop_transfer_ir:
         type: tuple[ArxBuilder, str]
@@ -1173,7 +1175,7 @@ def test_loop_transfers_execute(
     optimization: int,
 ) -> None:
     """
-    title: Transfers advance, finalize once, and free pending returns.
+    title: Shadowed owners survive or release once across all body exits.
     parameters:
       loop_transfer_ir:
         type: tuple[ArxBuilder, str]

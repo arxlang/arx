@@ -236,6 +236,14 @@ def test_if_one_branch_returns_other_falls_through(
         return_type=astx.Int32(),
     )
     branchy_body = astx.Block()
+    branchy_body.append(
+        astx.InlineVariableDeclaration(
+            "y",
+            type_=astx.Int32(),
+            value=astx.LiteralInt32(0),
+            mutability=astx.MutabilityKind.mutable,
+        )
+    )
 
     cond = astx.BinaryOp(
         op_code="<",
@@ -245,11 +253,7 @@ def test_if_one_branch_returns_other_falls_through(
     then_block = astx.Block()
     then_block.append(astx.FunctionReturn(astx.LiteralInt32(7)))
     else_block = astx.Block()
-    else_block.append(
-        astx.InlineVariableDeclaration(
-            "y", type_=astx.Int32(), value=astx.LiteralInt32(5)
-        )
-    )
+    else_block.append(astx.VariableAssignment("y", astx.LiteralInt32(5)))
     branchy_body.append(
         astx.IfStmt(condition=cond, then=then_block, else_=else_block)
     )

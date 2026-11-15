@@ -500,7 +500,7 @@ def test_else_requires_normally_initialized_try_local(
     conditional: bool,
 ) -> None:
     """
-    title: Else sees direct try owners but cannot read conditional locals.
+    title: Else sees direct try owners but not nested statement-body locals.
     parameters:
       conditional:
         type: bool
@@ -522,7 +522,7 @@ def test_else_requires_normally_initialized_try_local(
     )
     tree = module(region, astx.FunctionReturn(astx.LiteralInt32(0)))
     if conditional:
-        with pytest.raises(SemanticError, match="not definitely initialized"):
+        with pytest.raises(SemanticError, match="cannot resolve name 'error'"):
             analyze(tree)
     else:
         analyze(tree)
