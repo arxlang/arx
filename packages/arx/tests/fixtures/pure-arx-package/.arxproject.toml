@@ -1,0 +1,7 @@
+[project]
+name = "demo-arx-math"
+version = "0.0.0"
+
+[build]
+package = "demo_arx_math"
+src_dir = "src"

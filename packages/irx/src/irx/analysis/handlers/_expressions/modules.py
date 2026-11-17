@@ -741,8 +741,9 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
                     code=DiagnosticCodes.SEMANTIC_UNRESOLVED_NAME,
                 )
                 return
+            length_args = tuple(node.args)
             if (
-                len(node.args) != 1
+                len(length_args) != 1
                 or node.keywords
                 or astx.get_template_args(node)
             ):
@@ -752,7 +753,7 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
                     code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
                 )
                 return
-            query = astx.CollectionLength(node.args[0])
+            query = astx.CollectionLength(length_args[0])
             query.loc = node.loc
             self.visit(query)
             info.collection_length = query

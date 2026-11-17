@@ -91,6 +91,29 @@ REQUIRED_IRX_NATIVE_ASSETS = (
     "irx/builder/runtime/classes/native/irx_class_runtime.h",
 )
 
+PURE_ARX_MODULE = """```
+title: Installed pure-Arx package and shared Arrow compute smoke
+summary: Baseline operators, not the future stdlib math kernel API.
+```
+import (squared as scalar_square, shifted, scaled) from demo_arx_math
+
+fn square(value: i64) -> i64:
+  return 7
+
+fn escaped() -> series[f64]:
+  frame: dataframe[value: f64] = dataframe({value: [0.0, 1.0, 2.0]})
+  return scaled(shifted(frame.value, 0.5), 2.0)
+
+fn main() -> i32:
+  assert scalar_square(4) == 16
+  assert square(4) == 7
+  result: series[f64] = escaped()
+  assert result[0] == 1.0
+  assert result[1] == 3.0
+  assert result[2] == 5.0
+  return 0
+"""
+
 SCALAR_MODULE = """```
 title: Installed wheel scalar smoke
 ```
@@ -375,6 +398,7 @@ for source_name in (
     "tensor_smoke.x",
     "file_smoke.x",
     "native_smoke.x",
+    "pure_arx_smoke.x",
     "csv_smoke.x",
     "parquet_smoke.x",
     "nullable_smoke.x",
@@ -592,14 +616,15 @@ def audit_artifacts(workspace: Path) -> tuple[Path, ...]:
                     raise RuntimeError(f"{wheel} is missing stdlib: {missing}")
 
             if package.directory == "irx":
-                missing = [
+                native_missing = [
                     asset
                     for asset in REQUIRED_IRX_NATIVE_ASSETS
                     if asset not in names
                 ]
-                if missing:
+                if native_missing:
                     raise RuntimeError(
-                        f"{wheel} is missing native source assets: {missing}"
+                        f"{wheel} is missing native source assets: "
+                        f"{native_missing}"
                     )
 
         with tarfile.open(sdist, "r:gz") as archive:
@@ -709,20 +734,69 @@ def build_native_fixture_wheel(workspace: Path, output: Path) -> Path:
     returns:
       type: Path
     """
-    fixture = workspace / "packages/arx/tests/fixtures/native-package"
+    return build_source_fixture_wheel(
+        workspace / "packages/arx/tests/fixtures/native-package",
+        output,
+        "arx_native_fixture",
+        "native_fixture_data",
+    )
+
+
+def build_pure_arx_fixture_wheel(workspace: Path, output: Path) -> Path:
+    """
+    title: Package the source-only library baseline without native adapters.
+    parameters:
+      workspace:
+        type: Path
+      output:
+        type: Path
+    returns:
+      type: Path
+    """
+    fixture = workspace / "packages/arx/tests/fixtures/pure-arx-package"
+    if any(
+        path.is_file() and path.suffix not in (".x", ".toml")
+        for path in fixture.rglob("*")
+    ):
+        raise ValueError("pure-Arx fixture must contain only sources/metadata")
+    manifest = tomllib.loads((fixture / ".arxproject.toml").read_text())
+    if "native" in manifest:
+        raise ValueError("pure-Arx fixture must not declare native providers")
+    return build_source_fixture_wheel(
+        fixture, output, "demo_arx_math", "pure_arx_fixture_data"
+    )
+
+
+def build_source_fixture_wheel(
+    fixture: Path, output: Path, distribution: str, resource: str
+) -> Path:
+    """
+    title: Build an independent fixture distribution from source resources.
+    parameters:
+      fixture:
+        type: Path
+      output:
+        type: Path
+      distribution:
+        type: str
+      resource:
+        type: str
+    returns:
+      type: Path
+    """
     if not (fixture / ".arxproject.toml").is_file():
-        raise FileNotFoundError(f"native wheel fixture is missing: {fixture}")
-    wheel = output / "arx_native_fixture-0.0.0-py3-none-any.whl"
-    info = "arx_native_fixture-0.0.0.dist-info"
+        raise FileNotFoundError(f"wheel fixture is missing: {fixture}")
+    wheel = output / f"{distribution}-0.0.0-py3-none-any.whl"
+    info = f"{distribution}-0.0.0.dist-info"
     entries: dict[str, bytes] = {}
     for path in fixture.rglob("*"):
         if not path.is_file():
             continue
-        name = f"native_fixture_data/{path.relative_to(fixture).as_posix()}"
+        name = f"{resource}/{path.relative_to(fixture).as_posix()}"
         entries[name] = path.read_bytes()
     entries[f"{info}/METADATA"] = (
-        b"Metadata-Version: 2.1\nName: arx-native-fixture\nVersion: 0.0.0\n"
-    )
+        f"Metadata-Version: 2.1\nName: {distribution}\nVersion: 0.0.0\n"
+    ).encode()
     entries[f"{info}/WHEEL"] = (
         b"Wheel-Version: 1.0\nRoot-Is-Purelib: true\nTag: py3-none-any\n"
     )
@@ -758,8 +832,9 @@ def run_smoke(
     ) as temporary_path:
         work_dir = Path(temporary_path)
         dependency = build_native_fixture_wheel(workspace, work_dir)
+        pure_arx = build_pure_arx_fixture_wheel(workspace, work_dir)
         python, env = _install_wheels(
-            (*wheels, dependency),
+            (*wheels, dependency, pure_arx),
             work_dir,
             current_environment,
         )
@@ -773,6 +848,7 @@ def run_smoke(
             "tensor_smoke.x": TENSOR_MODULE,
             "file_smoke.x": FILE_MODULE,
             "native_smoke.x": NATIVE_MODULE,
+            "pure_arx_smoke.x": PURE_ARX_MODULE,
             "csv_smoke.x": CSV_MODULE,
             "parquet_smoke.x": PARQUET_MODULE,
             "nullable_smoke.x": NULLABLE_MODULE,
@@ -780,7 +856,7 @@ def run_smoke(
         }
         (work_dir / ".arxproject.toml").write_text(
             '[project]\nname="wheel-consumer"\nversion="0"\n'
-            'dependencies=["arx-native-fixture"]\n',
+            'dependencies=["arx-native-fixture", "demo-arx-math"]\n',
             encoding="utf-8",
         )
         for name, content in sources.items():

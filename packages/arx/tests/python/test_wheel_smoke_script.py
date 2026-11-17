@@ -55,6 +55,84 @@ def test_list_smoke_compiles_lazy_range_and_materialization() -> None:
     llvm.parse_assembly(artifact.llvm_ir).verify()
 
 
+@pytest.mark.parametrize("invalid", [False, True])
+def test_installed_pure_arx_library(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, invalid: bool
+) -> None:
+    """
+    title: Resolve typed scalar/Series calls from a source-only wheel.
+    parameters:
+      tmp_path:
+        type: Path
+      monkeypatch:
+        type: pytest.MonkeyPatch
+      invalid:
+        type: bool
+    """
+    wheel = wheel_smoke.build_pure_arx_fixture_wheel(
+        SCRIPT_PATH.parents[1], tmp_path
+    )
+    site = tmp_path / "installed"
+    with ZipFile(wheel) as archive:
+        assert all(
+            name.endswith((".x", ".toml")) or ".dist-info/" in name
+            for name in archive.namelist()
+        )
+        archive.extractall(site)
+    monkeypatch.syspath_prepend(str(site))
+    app = tmp_path / "app"
+    app.mkdir()
+    (app / ".arxproject.toml").write_text(
+        '[project]\nname="consumer"\nversion="0"\n'
+        'dependencies=["demo-arx-math"]\n'
+    )
+    source = app / "main.x"
+    text = wheel_smoke.PURE_ARX_MODULE
+    if invalid:
+        text = text.replace(
+            "scaled(shifted(frame.value, 0.5), 2.0)", "scaled(0.5, 2.0)"
+        )
+    source.write_text(text)
+    compiler = Compiler()
+    if invalid:
+        with pytest.raises(CompileError) as captured:
+            compiler.compile_file(source, kind=ArtifactKind.LLVM_IR)
+        assert any(
+            diagnostic.code and diagnostic.code.startswith("S")
+            for diagnostic in captured.value.diagnostics
+        )
+        return
+    artifact = compiler.compile_file(source, kind=ArtifactKind.LLVM_IR)
+    assert artifact.llvm_ir is not None
+    llvm.parse_assembly(artifact.llvm_ir).verify()
+    assert "add_checked" in artifact.llvm_ir
+    assert "multiply_checked" in artifact.llvm_ir
+
+
+@pytest.mark.parametrize("content", ["adapter.cpp", "build.py", "native"])
+def test_pure_arx_fixture_rejects_author_glue(
+    tmp_path: Path, content: str
+) -> None:
+    """
+    title: Do not let the source-only acceptance fixture acquire native glue.
+    parameters:
+      tmp_path:
+        type: Path
+      content:
+        type: str
+    """
+    fixture = tmp_path / "packages/arx/tests/fixtures/pure-arx-package"
+    fixture.mkdir(parents=True)
+    manifest = fixture / ".arxproject.toml"
+    manifest.write_text('[project]\nname="demo-arx-math"\nversion="0"\n')
+    if content == "native":
+        manifest.write_text(manifest.read_text() + "\n[native]\nversion=1\n")
+    else:
+        (fixture / content).write_text("not a pure-Arx source")
+    with pytest.raises(ValueError, match="pure-Arx fixture"):
+        wheel_smoke.build_pure_arx_fixture_wheel(tmp_path, tmp_path)
+
+
 def test_smoke_driver_reports_structured_diagnostics(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
@@ -250,6 +328,11 @@ def test_run_smoke_uses_and_removes_only_a_tool_owned_directory(
         wheel_smoke,
         "build_native_fixture_wheel",
         Mock(return_value=tmp_path / "fixture.whl"),
+    )
+    monkeypatch.setattr(
+        wheel_smoke,
+        "build_pure_arx_fixture_wheel",
+        Mock(return_value=tmp_path / "pure-arx.whl"),
     )
     monkeypatch.setattr(wheel_smoke.subprocess, "run", execute)
 

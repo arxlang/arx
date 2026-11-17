@@ -9,6 +9,8 @@ summary: >-
 
 from __future__ import annotations
 
+from typing import cast
+
 import astx
 
 from plum import dispatch
@@ -62,7 +64,7 @@ def list_iteration_owner(node: astx.Cast) -> str | None:
     returns:
       type: str | None
     """
-    return list_iteration_owner(node.value)
+    return cast(str | None, list_iteration_owner(node.value))
 
 
 @public

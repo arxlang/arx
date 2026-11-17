@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "operation": "add_checked_f64",
+  "rhs": 0.5,
+  "generator": "float(index % 1024) / 8; null at index % null_every == 0",
+  "cases": [
+    {
+      "name": "scalar",
+      "length": 1,
+      "chunks": 1,
+      "offset": 0,
+      "null_every": 0
+    },
+    {
+      "name": "dense",
+      "length": 65536,
+      "chunks": 1,
+      "offset": 0,
+      "null_every": 0
+    },
+    {
+      "name": "nullable_chunked",
+      "length": 4096,
+      "chunks": 4,
+      "offset": 3,
+      "null_every": 7
+    },
+    { "name": "empty", "length": 0, "chunks": 1, "offset": 0, "null_every": 0 }
+  ]
+}

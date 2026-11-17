@@ -855,7 +855,7 @@ class ExpressionClassAccessVisitorMixin(ExpressionClassSupportVisitorMixin):
             )
             self._set_type(node, None)
             return
-        field = self._resolve_class_field_slot(
+        layout_field = self._resolve_class_field_slot(
             class_,
             member,
             visible_name=node.field_name,
@@ -863,7 +863,7 @@ class ExpressionClassAccessVisitorMixin(ExpressionClassSupportVisitorMixin):
         self._set_class(node, class_)
         self._set_class_field_access(
             node,
-            ResolvedClassFieldAccess(class_, member, field),
+            ResolvedClassFieldAccess(class_, member, layout_field),
         )
         self._set_type(node, member.type_)
         kind = field_resource(member.type_)
