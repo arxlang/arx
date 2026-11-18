@@ -10,13 +10,29 @@ from typing import Literal
 
 import astx
 
-from public import public
+from public import private, public
 
 from irx.typecheck import typechecked
 
 NativeArtifactKind = Literal[
     "c_source", "cxx_source", "object", "static_library"
 ]
+
+ComputeKernel = Literal["sqrt", "exp"]
+
+
+@private
+@typechecked
+def validate_compute_kernel(kernel: ComputeKernel) -> None:
+    """
+    title: Enforce the closed catalog even without developer type checking.
+    parameters:
+      kernel:
+        type: ComputeKernel
+    """
+    if kernel not in ("sqrt", "exp"):
+        raise ValueError("unsupported compute kernel")
+
 
 TableIOOperation = Literal[
     "read_csv",
@@ -140,17 +156,21 @@ class NativeBinding:
         type: tuple[str, Ellipsis]
       table_io:
         type: TableIOOperation | None
+      compute:
+        type: ComputeKernel | None
     """
 
     declaration: astx.FunctionPrototype
     features: tuple[str, ...]
     table_io: TableIOOperation | None = None
+    compute: ComputeKernel | None = None
 
     def __init__(
         self,
         declaration: astx.FunctionPrototype,
         features: tuple[str, ...],
         table_io: TableIOOperation | None = None,
+        compute: ComputeKernel | None = None,
     ) -> None:
         """
         title: Validate a declaration identity and its feature names.
@@ -161,11 +181,23 @@ class NativeBinding:
             type: tuple[str, Ellipsis]
           table_io:
             type: TableIOOperation | None
+          compute:
+            type: ComputeKernel | None
         """
         if not features or any(not name.strip() for name in features):
             raise ValueError("native bindings require nonempty feature names")
         if len(features) != len(set(features)):
             raise ValueError("duplicate native binding features")
+        if compute is not None:
+            validate_compute_kernel(compute)
+        if compute is not None and (
+            table_io is not None or features != ("dataframe",)
+        ):
+            raise ValueError(
+                "compute bindings require only the dataframe feature "
+                "and cannot also bind table I/O"
+            )
         object.__setattr__(self, "declaration", declaration)
         object.__setattr__(self, "features", features)
         object.__setattr__(self, "table_io", table_io)
+        object.__setattr__(self, "compute", compute)

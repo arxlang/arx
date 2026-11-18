@@ -942,11 +942,11 @@ class SemanticAnalyzerCore(BaseVisitor):
           session:
             type: CompilationSession | None
         """
-        from irx.analysis.table_io import (  # noqa: PLC0415
-            TableIOAnalysisVisitor,
+        from irx.analysis.compute import (  # noqa: PLC0415
+            ComputeAnalysisVisitor,
         )
 
-        self.call_visitor = TableIOAnalysisVisitor()
+        self.call_visitor = ComputeAnalysisVisitor()
         self.session = session
         self.context = context or SemanticContext()
         if session is not None:
@@ -954,6 +954,7 @@ class SemanticAnalyzerCore(BaseVisitor):
             self.context.native_feature_names = tuple(session.native_features)
             self.context.native_bindings = dict(session.native_bindings)
             self.context.native_table_io = dict(session.native_table_io)
+            self.context.native_compute = dict(session.native_compute)
             self.context.exception_declarations = tuple(
                 declaration
                 for module in session.modules.values()
@@ -1798,10 +1799,15 @@ class SemanticAnalyzerCore(BaseVisitor):
                 node=node,
                 code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
             )
-        validate_column_declaration(self, type_, node)
-        if not isinstance(
-            type_, astx.DataFrameType | astx.SeriesType
-        ) and contains_arrow(type_):
+        # A template bound lists alternatives; it does not own union storage.
+        if storage_required or not isinstance(type_, astx.UnionType):
+            validate_column_declaration(self, type_, node)
+        if (
+            storage_required
+            and not contains_template_variables(type_)
+            and not isinstance(type_, astx.DataFrameType | astx.SeriesType)
+            and contains_arrow(type_)
+        ):
             self.context.diagnostics.add(
                 "Arrow references inside containers/unions are unsupported",
                 node=node,
@@ -1841,6 +1847,7 @@ class SemanticAnalyzerCore(BaseVisitor):
                     member,
                     node=node,
                     unknown_message=unknown_message,
+                    storage_required=storage_required,
                 )
             self._semantic(type_).numeric_storage = union_storage_type(type_)
             if storage_required and union_storage_type(type_) is None:

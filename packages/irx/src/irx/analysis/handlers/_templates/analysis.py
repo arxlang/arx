@@ -45,6 +45,7 @@ class TemplateAnalysisVisitorMixin(TemplateResolutionVisitorMixin):
         if (
             not function.template_params
             or function.template_definition is not None
+            or function.signature.operation is not None
         ):
             return
         if function.definition is None:
@@ -85,6 +86,7 @@ class TemplateAnalysisVisitorMixin(TemplateResolutionVisitorMixin):
                     function is not None
                     and function.template_params
                     and function.definition is None
+                    and function.signature.operation is None
                 ):
                     self.context.diagnostics.add(
                         f"Template function '{function.name}' must have a "

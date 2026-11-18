@@ -21,7 +21,7 @@ from irx.analysis.module_interfaces import (
 )
 from irx.analysis.resolved_nodes import ResolvedExceptionType, SemanticBinding
 from irx.diagnostics import DiagnosticBag, DiagnosticCodes
-from irx.native import NativeFeature, TableIOOperation
+from irx.native import ComputeKernel, NativeFeature, TableIOOperation
 from irx.typecheck import typechecked
 
 _IMPORTABLE_BINDING_KINDS = frozenset({"function", "struct", "class"})
@@ -99,6 +99,8 @@ class CompilationSession:
         type: dict[int, tuple[str, Ellipsis]]
       native_table_io:
         type: dict[int, TableIOOperation]
+      native_compute:
+        type: dict[int, ComputeKernel]
       lowering_declarations:
         type: frozenset[int] | None
       runtime_exception_types:
@@ -121,6 +123,7 @@ class CompilationSession:
     native_features: dict[str, NativeFeature] = field(default_factory=dict)
     native_bindings: dict[int, tuple[str, ...]] = field(default_factory=dict)
     native_table_io: dict[int, TableIOOperation] = field(default_factory=dict)
+    native_compute: dict[int, ComputeKernel] = field(default_factory=dict)
     lowering_declarations: frozenset[int] | None = None
     runtime_exception_types: dict[str, ResolvedExceptionType] = field(
         default_factory=dict
@@ -215,6 +218,8 @@ class CompilationSession:
                 self.native_table_io[id(binding.declaration)] = (
                     binding.table_io
                 )
+            if binding.compute is not None:
+                self.native_compute[id(binding.declaration)] = binding.compute
 
     def module(self, module_key: ModuleKey) -> ParsedModule:
         """

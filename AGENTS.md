@@ -15,6 +15,29 @@ release changes unless a more specific instruction file overrides it.
    necessary.
 5. Report evidence honestly; never invent commands, results, spans, or support.
 
+## Milestone Implementation Workflow
+
+Apply this approach to every implementation:
+
+- Be objective and concise. Read the current plan and local implementation,
+  identify the requested milestone's scope and acceptance criteria, and deliver
+  the smallest complete, correct change that satisfies them.
+- Prioritize rapid delivery, especially when many milestones must fit a short
+  timeline. Reuse existing code and extension points; avoid speculative
+  infrastructure, unrelated refactors, formatting churn, and future-milestone
+  work.
+- Do not add or change documentation, tests, or benchmarks by default. Do so
+  only when directly relevant and necessary for the changed contract,
+  correctness, safety, or milestone acceptance. Reuse existing coverage before
+  adding tests; defer benchmarking unless the requested scope requires it.
+  Preserve required source contracts and docstrings.
+- Run the smallest relevant existing checks first. Broaden verification when
+  affected boundaries require it; do not turn a focused implementation into an
+  unrelated documentation, testing, or tooling project.
+- Gain speed by limiting scope, not by weakening validation, ownership, cleanup,
+  diagnostics, or required CI gates. Report changes, executed checks, and
+  remaining blockers briefly; distinguish completed work from deferred work.
+
 ## Compatibility Before Arx 2.0
 
 - Backward compatibility is not a requirement before Arx 2.0. Prefer the
