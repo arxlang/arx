@@ -13,6 +13,21 @@ from arx.exceptions import ParserException
 from arx.io import ArxIO
 from arx.lexer import Lexer
 from arx.parser import Parser
+from irx.analysis import SemanticError, analyze
+
+
+def test_parse_template_extern_requires_semantic_capability() -> None:
+    """
+    title: Parse extern type variables without granting arbitrary native calls.
+    """
+    tree = _parse("@<T: f64>\nextern sqrt(value: T) -> T\n")
+    prototype = tree.nodes[0]
+    assert isinstance(prototype, astx.FunctionPrototype)
+    assert prototype.is_extern
+    assert astx.get_template_params(prototype)[0].name == "T"
+    assert isinstance(prototype.args.nodes[0].type_, astx.TemplateTypeVar)
+    with pytest.raises(SemanticError, match="must have a definition"):
+        analyze(tree)
 
 
 def _parse(code: str) -> astx.Module:
@@ -210,10 +225,6 @@ def test_parse_template_method_with_inline_modifiers() -> None:
             ).lstrip(),
             "template parameter blocks are only allowed "
             "before functions or methods",
-        ),
-        (
-            "@<T: i32 | f64>\nextern add(value: i32) -> i32\n",
-            "extern functions cannot declare templates",
         ),
         (
             "fn main() -> i32:\n  foo<i32>\n",

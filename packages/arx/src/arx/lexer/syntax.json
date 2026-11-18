@@ -206,7 +206,8 @@
     "template_parameter_block": {
       "start": "@<",
       "separator": ",",
-      "end": ">"
+      "end": ">",
+      "targets": ["function", "method", "extern"]
     },
     "explicit_template_call": {
       "uses_angle_brackets": true

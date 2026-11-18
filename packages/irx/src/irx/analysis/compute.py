@@ -17,6 +17,7 @@ from dataclasses import dataclass
 from typing import Literal
 
 import astx
+import pyarrow as pa
 
 from plum import dispatch
 from public import private
@@ -224,10 +225,12 @@ def validate_compute_plan(
         raise ValueError("compute plan does not match its callable identity")
     if (
         compute_shape(result_type) != shape
-        or not same_type(conversion.source_type, conversion.target_type)
+        or conversion.source_type is None
+        or compute_shape(conversion.source_type) is None
+        or not is_assignable(result_type, conversion.source_type)
         or not same_type(conversion.target_type, result_type)
     ):
-        raise ValueError("compute plans require identical f64 input/output")
+        raise ValueError("compute plans require compatible f64 input/output")
     expected = (
         arrow_ownership(result_type, OwnershipKind.OWNED)
         if shape == "series"
@@ -302,6 +305,18 @@ class ComputeAnalysisVisitor(TableIOAnalysisVisitor):
         node, info = call.node, call.info
         info.resolved_type = None
         info.resource_ownership = None
+        if (pa.__version__, pa.cpp_version) != (
+            operation.arrow_version,
+            operation.arrow_version,
+        ):
+            call.diagnostics.add(
+                "compute calls require matching Arrow "
+                f"{operation.arrow_version} "
+                "Python and C++ runtimes",
+                node=node,
+                code=DiagnosticCodes.RUNTIME_FEATURE_UNAVAILABLE,
+            )
+            return
         if argument_slots(call.function, node, call.diagnostics) is None:
             return
         argument = call_evaluations(node)[0]
@@ -341,7 +356,13 @@ class ComputeAnalysisVisitor(TableIOAnalysisVisitor):
                 code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
             )
             return
-        result = clone_type(source)
+        # Monomorphic nullable parameters box scalar inputs. A template instead
+        # preserves its inferred concrete shape, including known Series length.
+        result = clone_type(
+            declared if isinstance(declared, astx.NullableType) else source
+        )
+        shape = compute_shape(result)
+        assert shape is not None
         ownership = (
             arrow_ownership(result, OwnershipKind.OWNED)
             if shape == "series"

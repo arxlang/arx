@@ -322,14 +322,25 @@ class DeclarationParserMixin(ParserMixinBase):
             astx.set_template_params(function, template_params)
         return function
 
-    def parse_extern(self) -> astx.FunctionPrototype:
+    def parse_extern(
+        self, template_params: tuple[astx.TemplateParam, ...] = ()
+    ) -> astx.FunctionPrototype:
         """
         title: Parse an extern declaration.
+        parameters:
+          template_params:
+            type: tuple[astx.TemplateParam, Ellipsis]
         returns:
           type: astx.FunctionPrototype
         """
         self.tokens.get_next_token()  # eat extern
-        prototype = self.parse_prototype(expect_colon=False)
+        self._push_template_scope(template_params)
+        try:
+            prototype = self.parse_prototype(expect_colon=False)
+        finally:
+            self._pop_template_scope()
+        if template_params:
+            astx.set_template_params(prototype, template_params)
         if self._is_operator(":"):
             raise ParserException(
                 "extern function cannot define a body",

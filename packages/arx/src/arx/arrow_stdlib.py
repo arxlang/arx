@@ -12,9 +12,12 @@ from irx.builder.runtime.record_batch_api import (
     ARROW_API_SIGNATURES,
     PARQUET_API_SYMBOLS,
 )
-from irx.native import NativeBinding, TableIOOperation
+from irx.native import ComputeKernel, NativeBinding, TableIOOperation
 
-MODULE_NAMES = frozenset({"stdlib.arrow", "stdlib.csv", "stdlib.parquet"})
+MODULE_NAMES = frozenset(
+    {"stdlib.arrow", "stdlib.csv", "stdlib.parquet", "stdlib.math"}
+)
+COMPUTE_FUNCTIONS: dict[str, ComputeKernel] = {"sqrt": "sqrt", "exp": "exp"}
 
 
 IO_FUNCTIONS: dict[str, dict[str, TableIOOperation]] = {
@@ -47,6 +50,7 @@ def type_bindings(module_name: str) -> dict[str, astx.DataType]:
         "stdlib.arrow": ("Schema", "Batch", "Builder", "Reader", "Writer"),
         "stdlib.csv": ("Schema", "Batch", "Csv"),
         "stdlib.parquet": ("Schema", "Batch", "Parquet", "Options"),
+        "stdlib.math": (),
     }
     if module_name not in kinds:
         raise ValueError(f"unregistered bundled module: {module_name}")
@@ -78,6 +82,14 @@ def prepare_module(
         if not isinstance(node, astx.FunctionPrototype):
             continue
         if not getattr(node, "is_extern", False):
+            continue
+        if module_name == "stdlib.math":
+            kernel = COMPUTE_FUNCTIONS.get(node.name)
+            if kernel is None:
+                raise ValueError(f"unregistered math extern: {node.name}")
+            bindings.append(
+                NativeBinding(node, ("dataframe",), compute=kernel)
+            )
             continue
         operation = IO_FUNCTIONS.get(module_name, {}).get(node.name)
         if operation is not None:

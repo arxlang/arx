@@ -4,8 +4,17 @@ summary: >-
   Pure-Arx helpers for signed i8, i16, i32, and i64 scalars. Inferred calls
   require the same concrete argument type and preserve it in the result.
   Explicit specialization uses ordinary argument conversions. Unsigned,
-  floating, Boolean, and nullable specializations are not supported.
+  floating, Boolean, and nullable specializations of these helpers are not
+  supported. sqrt and exp have semantic-only f64 scalar/Series declarations;
+  their native execution is not implemented yet. These preserve null validity
+  and use IEEE domain results, not Python math domain exceptions.
 ```
+
+@<T: f64 | nullable[f64] | series[f64] | series[nullable[f64]]>
+extern sqrt(value: T) -> T
+
+@<T: f64 | nullable[f64] | series[f64] | series[nullable[f64]]>
+extern exp(value: T) -> T
 
 type SignedInteger = i8 | i16 | i32 | i64
 

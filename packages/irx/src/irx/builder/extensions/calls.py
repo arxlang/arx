@@ -1,3 +1,4 @@
+# mypy: disable-error-code=no-redef
 """
 title: Narrow LLVM services for resolved call-plan emission.
 """
@@ -12,9 +13,13 @@ from llvmlite import ir
 from plum import dispatch
 from public import private, public
 
+from irx.analysis.compute import ComputePlan
 from irx.analysis.extensions.records import CallPlan
 from irx.analysis.resolved_nodes import ResolvedClassConstruction
-from irx.builder.diagnostics import raise_lowering_internal_error
+from irx.builder.diagnostics import (
+    raise_lowering_error,
+    raise_lowering_internal_error,
+)
 from irx.builder.state import CleanupAction
 from irx.diagnostics import DiagnosticCodes
 from irx.typecheck import typechecked
@@ -230,6 +235,23 @@ class CallLoweringVisitor:
     title: Reject unsupported resolved plans through nominal dispatch.
     summary: Concrete visitors emit plans without rediscovering meaning.
     """
+
+    @dispatch
+    def visit(self, plan: ComputePlan, call: LoweringCall) -> None:
+        """
+        title: Report known math plans whose native execution is unavailable.
+        parameters:
+          plan:
+            type: ComputePlan
+          call:
+            type: LoweringCall
+        """
+        raise_lowering_error(
+            f"native execution of stdlib.math.{plan.operation.kernel} "
+            "is not yet supported",
+            code=DiagnosticCodes.RUNTIME_FEATURE_UNAVAILABLE,
+            node=call.node,
+        )
 
     @dispatch
     def visit(self, plan: CallPlan, call: LoweringCall) -> None:

@@ -780,9 +780,14 @@ class ParserMixinBase:
         del modifiers
         raise NotImplementedError
 
-    def parse_extern(self) -> astx.FunctionPrototype:
+    def parse_extern(
+        self, template_params: tuple[astx.TemplateParam, ...] = ()
+    ) -> astx.FunctionPrototype:
         """
         title: Parse an extern declaration.
+        parameters:
+          template_params:
+            type: tuple[astx.TemplateParam, Ellipsis]
         returns:
           type: astx.FunctionPrototype
         """
