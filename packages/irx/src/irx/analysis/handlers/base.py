@@ -1977,7 +1977,13 @@ class SemanticAnalyzerCore(BaseVisitor):
         if node is None:
             return None
         info = cast(SemanticInfo | None, getattr(node, "semantic", None))
-        if info is not None and info.resolved_type is not None:
+        if info is not None and (
+            info.resolved_type is not None
+            or (
+                info.resolved_function is not None
+                and info.resolved_function.signature.operation is not None
+            )
+        ):
             return info.resolved_type
         declared_type = getattr(node, "type_", None)
         if isinstance(declared_type, astx.DataType):

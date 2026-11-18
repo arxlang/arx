@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import cast
 
 import astx
+import pyarrow as pa
 import pytest
 
 from irx.analysis import ParsedModule, SemanticError, analyze_modules
@@ -14,7 +15,7 @@ from irx.analysis.extensions.records import CALL_PLAN
 from irx.analysis.resolved_nodes import SemanticInfo
 from irx.builder import Builder
 from irx.builder.runtime.registry import get_default_runtime_feature_registry
-from irx.diagnostics import LoweringError
+from irx.diagnostics import DiagnosticCodes, LoweringError
 from irx.native import (
     ComputeKernel,
     NativeArtifact,
@@ -266,6 +267,50 @@ def test_compute_shadowing_and_ffi_are_independent() -> None:
     assert info.facts.get(CALL_PLAN) is None
     assert info.resolved_function is not None
     assert info.resolved_function.signature.operation is None
+
+
+def test_compute_monomorphic_nullable_conversion() -> None:
+    """
+    title: A nullable declaration preserves its result contract for f64 inputs.
+    """
+    root, resolver, call = compute_modules("sqrt", astx.Float64())
+    provider = resolver("root", astx.ImportStmt([]), "provider")
+    prototype = provider.native_bindings[0].declaration
+    optional = astx.NullableType(astx.Float64())
+    prototype.args.nodes[0].type_ = optional
+    prototype.return_type = optional
+    astx.set_template_params(prototype, ())
+    analyze_modules(root, resolver)
+    plan = cast(SemanticInfo, call.semantic).facts.get(CALL_PLAN)
+    assert isinstance(plan, ComputePlan)
+    assert plan.shape == "nullable_scalar"
+    assert isinstance(plan.result_type, astx.NullableType)
+    assert isinstance(plan.conversion.source_type, astx.Float64)
+    assert isinstance(plan.conversion.target_type, astx.NullableType)
+
+
+@pytest.mark.parametrize("attribute", ["__version__", "cpp_version"])
+def test_compute_rejects_unqualified_runtime(
+    attribute: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """
+    title: Reject either runtime version mismatch before publishing a plan.
+    parameters:
+      attribute:
+        type: str
+      monkeypatch:
+        type: pytest.MonkeyPatch
+    """
+    root, resolver, call = compute_modules("sqrt", astx.Float64())
+    monkeypatch.setattr(pa, attribute, "26.0.0")
+    with pytest.raises(
+        SemanticError, match=r"matching Arrow 26\.0\.1"
+    ) as captured:
+        analyze_modules(root, resolver)
+    assert captured.value.diagnostics.diagnostics[0].code == (
+        DiagnosticCodes.RUNTIME_FEATURE_UNAVAILABLE
+    )
+    assert cast(SemanticInfo, call.semantic).facts.get(CALL_PLAN) is None
 
 
 def native_module(name: str = "package:test:backend") -> ParsedModule:

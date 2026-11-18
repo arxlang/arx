@@ -208,10 +208,11 @@ class ParserCore(ParserMixinBase):
                     )
                 if prefixes.template_params:
                     if self.tokens.cur_tok.kind == TokenKind.kw_extern:
-                        raise ParserException(
-                            "extern functions cannot declare templates",
-                            self.tokens.cur_tok.location,
+                        tree.nodes.append(
+                            self.parse_extern(prefixes.template_params)
                         )
+                        allow_module_docstring = False
+                        continue
                     if self.tokens.cur_tok.kind != TokenKind.kw_function:
                         raise ParserException(
                             "template parameter blocks are only allowed "

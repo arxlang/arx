@@ -8,6 +8,7 @@ import tomllib
 
 from pathlib import Path
 from textwrap import dedent
+from typing import cast
 
 import astx as irx_astx
 import pytest
@@ -17,8 +18,114 @@ from arx.codegen import ArxBuilder
 from arx.io import ArxIO
 from arx.lexer import Lexer
 from arx.parser import Parser
+from irx.analysis import analyze_modules
+from irx.analysis.compute import ComputePlan
+from irx.analysis.extensions.records import CALL_PLAN
 from irx.analysis.module_interfaces import ParsedModule
+from irx.analysis.resolved_nodes import SemanticInfo
 from irx.diagnostics import SemanticError
+
+from .test_app_paths import _write_installed_arx_distribution
+
+
+@pytest.mark.parametrize("kernel", ["sqrt", "exp"])
+def test_math_compute_plans_through_source_reexports(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, kernel: str
+) -> None:
+    """
+    title: Resolve installed source reexports and nullable shapes before LLVM.
+    parameters:
+      tmp_path:
+        type: Path
+      monkeypatch:
+        type: pytest.MonkeyPatch
+      kernel:
+        type: str
+    """
+    document = "```\ntitle: Math semantic consumer\n```\n"
+    site = tmp_path / "installed"
+    package = _write_installed_arx_distribution(
+        site,
+        "arx-math-plan-fixture",
+        "library",
+        {
+            "__init__.x": document
+            + f"import {kernel} as forwarded from stdlib.math\n"
+        },
+    )
+    assert all(
+        path.suffix in {".x", ".toml"}
+        for path in package.rglob("*")
+        if path.is_file()
+    )
+    app = tmp_path / "app"
+    app.mkdir()
+    (app / ".arxproject.toml").write_text(
+        '[project]\nname="consumer"\nversion="0"\n'
+        'dependencies=["arx-math-plan-fixture"]\n',
+        encoding="utf-8",
+    )
+    monkeypatch.syspath_prepend(str(site))
+    monkeypatch.chdir(app)
+    source = document + (
+        "import forwarded as compute from library\n"
+        f"import {kernel} as direct from stdlib.math\n"
+        "type Number = f64\n"
+        "fn scalar(value: Number) -> Number:\n"
+        "  return compute(value=value)\n"
+        "fn optional(value: nullable[f64]) -> nullable[f64]:\n"
+        "  return compute(value)\n"
+        "fn column(value: series[nullable[f64]]) "
+        "-> series[nullable[f64]]:\n"
+        "  return compute(value)\n"
+        "fn direct_value(value: Number) -> Number:\n"
+        "  return direct(value)\n"
+    )
+    path = app / "main.x"
+    path.write_text(source, encoding="utf-8")
+    ArxIO.string_to_buffer(source)
+    module = Parser().parse(Lexer().lex(), "main")
+    root = ParsedModule(
+        "main", main_module.inject_ambient_builtin_imports(module)
+    )
+    resolver = main_module.FileImportResolver((str(path),))
+    for _ in range(2):
+        analyze_modules(root, resolver)
+        plans = []
+        for function in module.nodes:
+            if not isinstance(function, irx_astx.FunctionDef):
+                continue
+            result = function.body.nodes[0]
+            assert isinstance(result, irx_astx.FunctionReturn)
+            info = cast(SemanticInfo, result.value.semantic)
+            plan = info.facts.get(CALL_PLAN)
+            assert isinstance(plan, ComputePlan)
+            assert plan.operation.kernel == kernel
+            assert plan.function.module_key == "stdlib.math"
+            plans.append(plan)
+        assert [plan.shape for plan in plans] == [
+            "scalar",
+            "nullable_scalar",
+            "series",
+            "scalar",
+        ]
+        assert isinstance(plans[2].result_type, irx_astx.SeriesType)
+        assert plans[2].result_type.nullable
+        assert plans[0].function.prototype is plans[-1].function.prototype
+
+    invalid = source.replace("value=value)", "value=value, options=1)")
+    ArxIO.string_to_buffer(invalid)
+    module = Parser().parse(Lexer().lex(), "main")
+    with pytest.raises(
+        SemanticError, match="unknown argument 'options'"
+    ) as err:
+        analyze_modules(
+            ParsedModule(
+                "main", main_module.inject_ambient_builtin_imports(module)
+            ),
+            resolver,
+        )
+    assert len(err.value.diagnostics.diagnostics) == 1
 
 
 def test_bundled_stdlib_package_data_is_present() -> None:
