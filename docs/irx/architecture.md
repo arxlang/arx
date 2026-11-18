@@ -569,6 +569,13 @@ notes; standard Arrow interchange ownership contracts do not become optional.
 
 ### Proposed numerical and public API contract
 
+For proposed `stdlib.math` functions such as `sqrt`, `exp`, `log` and `pow`,
+prefer Apache Arrow Compute for both scalars and Series through the same typed
+operation catalog and registered dispatcher. Use LLVM-native or custom
+implementations only when Arrow cannot satisfy the required Arx semantics;
+scalar input alone is not a reason to choose a different implementation. These
+functions remain unimplemented in M0.
+
 Keep current checked integer/Boolean results, null validity and error categories
 exact. Ordinary scalar IEEE arithmetic is unchanged in M0. If Arrow cannot
 implement a supported contract, an LLVM/custom fallback must pass the same
@@ -672,7 +679,6 @@ Paths below are relative to `packages/irx/` except where marked otherwise.
 | Slice                           | Existing source owner                                                                                                                  | Earliest-layer / native ABI / compiled owner                                                                                                                                        |
 | ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | A00/M0 policy                   | This decision; `docs/support-matrix.md`; `docs/apache-arrow.md`                                                                        | Documentation review; existing capability/example tests in `packages/arx/tests/python/test_documentation.py`.                                                                       |
-| A01/M0 baseline                 | `scripts/benchmark_arrow_first.py` and versioned `scripts/benchmarks/arrow-first-v1.*` inputs                                          | `tests/test_arrow_baseline.py`; existing `tests/test_nullable_kernels.py` and `tests/test_arrow_interop.py`; no new source semantics.                                               |
 | A02/M1 types and operation plan | `src/irx/analysis/{numeric_policy,nullable,arrow_conversion,resolved_nodes}.py`; existing `ColumnOperation`, `set_operation`           | `tests/analysis/test_nullable_columns.py`, `test_numeric_policy.py`, `test_numeric_semantics.py`; unsupported combinations tested before lowering.                                  |
 | A03/M2 feature and ABI          | `src/irx/builder/runtime/{registry,arrowcpp}.py`, `array/feature.py`, `arrow/native/{irx_arrow_runtime.h,irx_native_status.h}`         | Runtime feature/ABI tests, `tests/native/arrow_interop.cpp`, sanitizer and `scripts/test_wheels.py`; compiled feature-selection regression.                                         |
 | A04/M3 scalar adapter           | `arrow/native/irx_arrow_series.h` (`column_scalar`, `scalar_bits`, `irx_arrow_column_compute`), `src/irx/builder/lowering/nullable.py` | Extend `tests/test_nullable_kernels.py` for status/output/lifetime and LLVM verification; compiled regression in `packages/arx/tests/python/test_codegen_ast_output.py`.            |
@@ -686,7 +692,7 @@ Paths below are relative to `packages/irx/` except where marked otherwise.
 | A08 owned values                | `analysis/ownership.py`, lowering cleanup and native handles                                                                           | Ownership analysis tests; `tests/native/arrow_interop.cpp` plus sanitizer/failure injection; compiled escaping-owner/exception boundaries.                                          |
 | A09–A11 rich families           | Column descriptors, `analysis/arrow_conversion.py`, native RecordBatch and selected stdlib                                             | `tests/analysis/test_nullable_columns.py` extensions; native schema/interop tests; extend `test_nullable_series.py` rich-schema compiled coverage for each new supported operation. |
 | A12 interchange                 | `record_batch*` and native C Data/C Stream headers                                                                                     | Import validation tests; `tests/test_arrow_interop.py`; compiled `packages/arx/tests/python/test_arrow_interop.py` and Arrow examples.                                              |
-| A13 performance                 | Versioned baseline harness and resolved execution profiles                                                                             | Oracle/profile analysis tests; shared ABI/conformance suites; compare A05/A05b compiled workloads on the same machine.                                                              |
+| A13/M9 performance              | Future benchmark harness and resolved execution profiles                                                                               | Future oracle/profile tests; reuse shared ABI/conformance suites; compare A05/A05b compiled workloads on the same machine.                                                          |
 | A14 release                     | Existing CI, manifests, release scripts and wheel tool                                                                                 | Artifact/manifest tests; native sanitizers and version rejection; clean installed-wheel source-only consumer.                                                                       |
 | A15 optional Acero              | A future registered runtime feature only after a concrete workload                                                                     | New analysis capability rejection, native bounded-memory/error tests and compiled streaming scenario; no existing implementation is implied.                                        |
 
@@ -744,48 +750,8 @@ the missing print location/secondary AnyType error, and local/field failed-auto
 cascades respectively; `nullable[i64]` succeeds in the reduction probe. M0
 audits these gaps; it does not expand into unrelated diagnostic fixes.
 
-### Repeatable baseline
+### Deferred performance work (M9)
 
-**Deferred:** existing benchmark artifacts are parked. No benchmark run or
-performance report is an M0 or two-day implementation exit gate.
-
-Run from the checkout with the development environment installed:
-
-```bash
-python scripts/benchmark_arrow_first.py --arrow-major 24 --output .tmp/arrow-before
-# After the dependency upgrade, qualify Arrow 26 on the same host/toolchain:
-python scripts/benchmark_arrow_first.py --output .tmp/arrow-after
-```
-
-JSON contains raw cold/warm samples, separate compilation/link/setup costs,
-source/input hashes, Git dirty state, installed and manifest versions, compiler
-flags, CPU/OS, native object/library sizes and peak RSS. Run `makim all.build`
-before measuring wheel footprints; JSON records sizes and hashes of existing
-wheels, or an empty list if wheel size was not measured. Markdown is generated
-from those measurements, not hand-maintained evidence. `--samples`,
-`--iterations`, `--case`, `--cxx` and repeatable `--cxx-flag=...` allow explicit
-local qualification; changed settings must be reported in comparisons. Preserve
-artifacts outside the temporary checkout for PR/CI comparison, not as a
-checked-in machine-specific result log.
-
-The default qualification target is exactly Arrow 26.0.1; another 26 patch is
-not silently accepted. `--arrow-major 24` is explicitly the historical
-before-upgrade measurement, not permission to ship the first slice on Arrow 24.
-Installing/locking and qualifying Arrow 26 remains an M0 exit gate; an offline
-Arrow 24 run cannot satisfy it.
-
-The baseline measures **existing f64 addition**, not unimplemented sqrt: a
-versioned unboxed LLVM loop, current scalar/Series C ABI and PyArrow checked
-addition. Inputs include scalar, dense, nullable sliced chunks and empty data.
-The oracle is independent exact dyadic arithmetic, not one backend's output.
-Native inputs cross the standard C Stream boundary; handle release precedes
-result checks. Every backend/case starts in a fresh subprocess. First-call
-kernel time and warm allocation/release time are separate; cold does not mean
-flushing OS/library page caches. LLVM preallocates its output, unlike Arrow;
-these are representation costs, not a claim of equivalent allocation policy or
-frontend/compiler throughput. Arrow pool allocation counters exclude C++
-Scalar/handle and Python heap allocations; pool high-water marks and RSS include
-inputs/setup. Whole-heap boxing instrumentation and the original list/tensor
-hot-loop workload remain M9 follow-ups. A before/after result for a future
-backend is not available in M0; no speedup or cross-platform support is inferred
-from this harness.
+Performance benchmarking, including its harness, inputs, tests and reports, is
+deferred to M9. M0 retains numerical conformance tests as correctness gates; no
+performance benchmark or report is required.
