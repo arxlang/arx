@@ -154,6 +154,12 @@ def validate_native_registration(
         declarations.add(id(declaration))
         if binding.table_io is not None:
             validate_table_io_registration(declaration, binding.table_io)
+        if binding.compute is not None:
+            from irx.analysis.compute import (  # noqa: PLC0415
+                validate_compute_registration,
+            )
+
+            validate_compute_registration(declaration)
 
 
 @private

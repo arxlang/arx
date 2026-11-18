@@ -397,6 +397,8 @@ class SemanticRegistry:
             return False
         if lhs.is_extern != rhs.is_extern:
             return False
+        if lhs.operation != rhs.operation:
+            return False
         if lhs.symbol_name != rhs.symbol_name:
             return False
         if lhs.required_runtime_features != rhs.required_runtime_features:
@@ -534,11 +536,21 @@ class SemanticRegistry:
         )
 
         table_io = self.context.native_table_io.get(id(prototype))
+        compute = self.context.native_compute.get(id(prototype))
         if table_io is not None:
             from irx.analysis.table_io import table_operation  # noqa: PLC0415
 
             signature = replace(signature, operation=table_operation(table_io))
-        if validate_ffi and signature.is_extern and table_io is None:
+        if compute is not None:
+            from irx.analysis.compute import ComputeOperation  # noqa: PLC0415
+
+            signature = replace(signature, operation=ComputeOperation(compute))
+        if (
+            validate_ffi
+            and signature.is_extern
+            and table_io is None
+            and compute is None
+        ):
             ffi = build_ffi_callable_info(
                 self.context,
                 signature=signature,
@@ -721,10 +733,13 @@ class SemanticRegistry:
                 return updated
             return existing
 
-        if signature.is_extern:
+        if signature.is_extern and signature.operation is None:
             for candidate in self.context.functions.values():
                 candidate_signature = candidate.signature
-                if not candidate_signature.is_extern:
+                if (
+                    not candidate_signature.is_extern
+                    or candidate_signature.operation is not None
+                ):
                     continue
                 if candidate_signature.symbol_name != signature.symbol_name:
                     continue

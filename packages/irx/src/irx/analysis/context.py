@@ -24,7 +24,7 @@ from irx.analysis.resolved_nodes import (
 )
 from irx.analysis.scopes import ScopeStack
 from irx.diagnostics import DiagnosticBag
-from irx.native import TableIOOperation
+from irx.native import ComputeKernel, TableIOOperation
 from irx.typecheck import typechecked
 
 
@@ -68,6 +68,8 @@ class SemanticContext:
         type: dict[int, tuple[str, Ellipsis]]
       native_table_io:
         type: dict[int, TableIOOperation]
+      native_compute:
+        type: dict[int, ComputeKernel]
       exception_declarations:
         type: tuple[astx.ClassDefStmt, Ellipsis]
       runtime_exception_types:
@@ -99,6 +101,7 @@ class SemanticContext:
     native_feature_names: tuple[str, ...] = ()
     native_bindings: dict[int, tuple[str, ...]] = field(default_factory=dict)
     native_table_io: dict[int, TableIOOperation] = field(default_factory=dict)
+    native_compute: dict[int, ComputeKernel] = field(default_factory=dict)
     exception_declarations: tuple[astx.ClassDefStmt, ...] = ()
     runtime_exception_types: dict[str, ResolvedExceptionType] = field(
         default_factory=dict

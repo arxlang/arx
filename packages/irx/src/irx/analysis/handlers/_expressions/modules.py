@@ -493,6 +493,16 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
         operation = function.signature.operation
         if operation is None:
             return False
+        if isinstance(node, astx.FunctionCall) and (
+            self.context.scopes.resolve(node.fn) is not None
+        ):
+            self.context.diagnostics.add(
+                f"name '{node.fn}' does not resolve to a function",
+                node=node,
+                code=DiagnosticCodes.SEMANTIC_UNRESOLVED_NAME,
+            )
+            self._set_type(node, None)
+            return True
         self._set_function(node, function)
         current = self.context.current_function
         services = AnalysisServices(

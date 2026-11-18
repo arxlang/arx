@@ -3,16 +3,28 @@ title: Host-supplied native capabilities and compilation isolation.
 """
 
 from pathlib import Path
+from typing import cast
 
 import astx
 import pytest
 
 from irx.analysis import ParsedModule, SemanticError, analyze_modules
+from irx.analysis.compute import ComputeOperation, ComputePlan
+from irx.analysis.extensions.records import CALL_PLAN
+from irx.analysis.resolved_nodes import SemanticInfo
 from irx.builder import Builder
 from irx.builder.runtime.registry import get_default_runtime_feature_registry
-from irx.native import NativeArtifact, NativeBinding, NativeFeature
+from irx.diagnostics import LoweringError
+from irx.native import (
+    ComputeKernel,
+    NativeArtifact,
+    NativeBinding,
+    NativeFeature,
+)
 from llvmlite import binding as llvm
 from typeguard import TypeCheckError
+
+from ..conftest import StaticImportResolver
 
 
 def unavailable(
@@ -35,6 +47,225 @@ def unavailable(
     raise LookupError(
         f"unexpected import {requesting}: {specifier}: {type(node)}"
     )
+
+
+def compute_modules(
+    kernel: ComputeKernel, type_: astx.DataType
+) -> tuple[ParsedModule, StaticImportResolver, astx.FunctionCall]:
+    """
+    title: Reexport a trusted unary declaration without any frontend hooks.
+    parameters:
+      kernel:
+        type: ComputeKernel
+      type_:
+        type: astx.DataType
+    returns:
+      type: tuple[ParsedModule, StaticImportResolver, astx.FunctionCall]
+    """
+    bound = astx.UnionType(
+        [
+            astx.Float64(),
+            astx.NullableType(astx.Float64()),
+            astx.SeriesType(astx.Float64()),
+            astx.SeriesType(astx.Float64(), nullable=True),
+        ]
+    )
+    variable = astx.TemplateTypeVar("T", bound=bound)
+    prototype = astx.FunctionPrototype(
+        "host_math", astx.Arguments(astx.Argument("value", variable)), variable
+    )
+    astx.set_template_params(prototype, (astx.TemplateParam("T", bound),))
+    prototype.is_extern = True
+    provider = astx.Module()
+    provider.block.append(prototype)
+    parsed = ParsedModule(
+        "provider",
+        provider,
+        native_bindings=(
+            NativeBinding(prototype, ("dataframe",), compute=kernel),
+        ),
+    )
+    bridge = astx.Module()
+    bridge.block.append(
+        astx.ImportFromStmt(
+            names=[astx.AliasExpr("host_math", "exported")],
+            module="provider",
+        )
+    )
+    call = astx.FunctionCall("local_math", [astx.Identifier("input")])
+    body = astx.Block()
+    body.append(call)
+    body.append(astx.FunctionReturn(astx.LiteralInt32(0)))
+    root = astx.Module()
+    root.block.append(
+        astx.ImportFromStmt(
+            names=[astx.AliasExpr("exported", "local_math")],
+            module="bridge",
+        )
+    )
+    root.block.append(
+        astx.FunctionDef(
+            astx.FunctionPrototype(
+                "consumer",
+                astx.Arguments(astx.Argument("input", type_)),
+                astx.Int32(),
+            ),
+            body,
+        )
+    )
+    return (
+        ParsedModule("root", root),
+        StaticImportResolver(
+            {
+                "provider": parsed,
+                "bridge": ParsedModule("bridge", bridge),
+            }
+        ),
+        call,
+    )
+
+
+@pytest.mark.parametrize("kernel", ["sqrt", "exp"])
+@pytest.mark.parametrize(
+    "type_",
+    [
+        astx.Float64(),
+        astx.NullableType(astx.Float64()),
+        astx.SeriesType(astx.Float64(), size=0),
+        astx.SeriesType(astx.Float64(), nullable=True, size=3),
+    ],
+)
+def test_compute_plan_identity_and_reanalysis(
+    kernel: ComputeKernel, type_: astx.DataType
+) -> None:
+    """
+    title: Imported aliases retain typed shape/ownership without AST mutation.
+    parameters:
+      kernel:
+        type: ComputeKernel
+      type_:
+        type: astx.DataType
+    """
+    root, resolver, call = compute_modules(kernel, type_)
+    astx.set_template_args(call, (type_,))
+    for _ in range(2):
+        session = analyze_modules(root, resolver)
+        info = cast(SemanticInfo, call.semantic)
+        plan = info.facts.get(CALL_PLAN)
+        assert isinstance(plan, ComputePlan)
+        assert plan.operation.kernel == kernel
+        assert plan.operation.arrow_version == "26.0.1"
+        assert plan.function.module_key == "provider"
+        assert plan.function.signature.required_runtime_features == (
+            "dataframe",
+        )
+        assert plan.argument is call.args[0]
+        assert plan.shape == (
+            "series"
+            if isinstance(type_, astx.SeriesType)
+            else "nullable_scalar"
+            if isinstance(type_, astx.NullableType)
+            else "scalar"
+        )
+        assert (plan.ownership is not None) == isinstance(
+            type_, astx.SeriesType
+        )
+        if isinstance(plan.result_type, astx.SeriesType):
+            assert isinstance(type_, astx.SeriesType)
+            assert plan.result_type.size == type_.size
+            assert plan.result_type.nullable == type_.nullable
+        assert tuple(session.native_compute.values()) == (kernel,)
+    if kernel == "sqrt" and isinstance(type_, astx.Float64):
+        with pytest.raises(LoweringError, match="ComputePlan"):
+            Builder().translate_modules(root, resolver)
+    call.keywords = [astx.KeywordArgument("options", astx.LiteralInt32(1))]
+    with pytest.raises(SemanticError, match="unknown argument 'options'"):
+        analyze_modules(root, resolver)
+    assert cast(SemanticInfo, call.semantic).facts.get(CALL_PLAN) is None
+
+
+@pytest.mark.parametrize(
+    "type_",
+    [
+        astx.Float32(),
+        astx.Int64(),
+        astx.TensorType(astx.Float64(), shape=(2,)),
+    ],
+)
+def test_compute_rejects_unsupported_shape(type_: astx.DataType) -> None:
+    """
+    title: Existing storage support never implies a math capability or cast.
+    parameters:
+      type_:
+        type: astx.DataType
+    """
+    root, resolver, call = compute_modules("sqrt", type_)
+    with pytest.raises(SemanticError, match="supported f64 scalar/Series"):
+        analyze_modules(root, resolver)
+    assert cast(SemanticInfo, call.semantic).facts.get(CALL_PLAN) is None
+
+
+def test_compute_capability_validation() -> None:
+    """
+    title: Reject arbitrary kernels, malformed bindings and runtime values.
+    """
+    prototype = astx.FunctionPrototype(
+        "sqrt",
+        astx.Arguments(astx.Argument("value", astx.Float32())),
+        astx.Float32(),
+    )
+    prototype.is_extern = True
+    with pytest.raises(TypeCheckError):
+        ComputeOperation("unknown")  # type: ignore[arg-type]
+    with pytest.raises(TypeCheckError):
+        NativeBinding(
+            prototype,
+            ("dataframe",),
+            compute="unknown",  # type: ignore[arg-type]
+        )
+    with pytest.raises(ValueError, match="only the dataframe feature"):
+        NativeBinding(prototype, ("libc",), compute="sqrt")
+    module = astx.Module()
+    module.block.append(prototype)
+    with pytest.raises(ValueError, match="only f64 shapes"):
+        ParsedModule(
+            "bad",
+            module,
+            native_bindings=(
+                NativeBinding(prototype, ("dataframe",), compute="sqrt"),
+            ),
+        )
+
+
+def test_compute_shadowing_and_ffi_are_independent() -> None:
+    """
+    title: Local names and ordinary C sqrt never acquire a compute capability.
+    """
+    root, resolver, call = compute_modules("sqrt", astx.Float64())
+    consumer = root.ast.nodes[1]
+    assert isinstance(consumer, astx.FunctionDef)
+    consumer.body.nodes.insert(
+        0,
+        astx.VariableDeclaration(
+            "local_math", astx.Int32(), value=astx.LiteralInt32(1)
+        ),
+    )
+    with pytest.raises(SemanticError, match="does not resolve to a function"):
+        analyze_modules(root, resolver)
+    consumer.body.nodes.pop(0)
+    external = astx.FunctionPrototype(
+        "sqrt",
+        astx.Arguments(astx.Argument("value", astx.Float64())),
+        astx.Float64(),
+    )
+    external.is_extern = True
+    root.ast.block.insert(0, external)
+    call.fn = "sqrt"
+    analyze_modules(root, resolver)
+    info = cast(SemanticInfo, call.semantic)
+    assert info.facts.get(CALL_PLAN) is None
+    assert info.resolved_function is not None
+    assert info.resolved_function.signature.operation is None
 
 
 def native_module(name: str = "package:test:backend") -> ParsedModule:
