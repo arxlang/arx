@@ -18,15 +18,17 @@ The current monorepo already provides:
 
 ## Native Arrow and collections
 
-- [ ] Add dynamic indexing for runtime-shaped Tensor parameters.
+- [x] Add checked rank-one indexing for runtime-shaped Tensor parameters via
+      numeric sequence adapters; general shape calculus remains future work.
 - [ ] Define ownership and return semantics for runtime-shaped Tensor values.
 - [ ] Add runtime validation when an unknown shape or row count flows into a
       statically sized target.
 - [ ] Support partial Tensor constraints such as `tensor[f64, 2, ...]`.
 - [ ] Add symbolic shape parameters for generic algorithms.
-- [ ] Expand the Arx DataFrame surface to UTF-8, nullable, and temporal columns
+- [x] Expand the Arx DataFrame surface to UTF-8, nullable, and temporal columns
       already represented by lower-level Arrow facilities.
-- [ ] Define an Arx-facing RecordBatch and streaming surface.
+- [x] Provide RecordBatch/streaming through `stdlib.arrow` and CSV/Parquet
+      streams, without dedicated RecordBatch syntax.
 - [ ] Add selected Arrow Compute operations without turning IRx into a general
       query engine.
 - [ ] Complete dynamic-list storage reclamation and collection ownership.
@@ -35,8 +37,8 @@ The current monorepo already provides:
 
 - [ ] Stabilize language semantics and publish a versioned language
       specification beyond the lexical manifest.
-- [ ] Decide the final `const` declaration behavior; it is currently reserved
-      lexically but not a general parsed declaration form.
+- [x] Implement name-first `name: const :: T = value` declarations, including
+      checked initializer inference; see the [syntax guide](arx/syntax.md).
 - [x] Add `break` and `continue` to the Arx surface after aligning parser, ASTx,
       IRx, and documentation behavior.
 - [ ] Expand string, temporal, and collection operations.
@@ -44,6 +46,11 @@ The current monorepo already provides:
 - [x] Remove the unimplemented `arx --shell` option from the stable CLI. An
       interactive shell can return later as a separately designed feature.
 - [ ] Grow the bundled pure-Arx standard library.
+
+The [Arrow-first M0 decision](irx/architecture.md#arrow-first-decision-m0)
+defines the proposed scalar/Series math slice and its approval gates. Imported
+`stdlib.math.sqrt` is not implemented yet; Arrow-first does not mean boxing
+every scalar or replacing general-purpose native facilities.
 
 ## IRx and ASTx
 

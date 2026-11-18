@@ -205,6 +205,58 @@ Important root locations:
   phase. Reject unsupported input at the earliest responsible boundary with an
   actionable diagnostic.
 
+### Arrow-First Runtime And Pure-Arx Libraries
+
+- Arx is a general-purpose, LLVM-compiled language with data-intensive computing
+  at its core: Arrow-first, not Arrow-exclusive. Prefer Arrow Scalar, Datum,
+  storage, compute, memory and interchange where they implement approved Arx
+  semantics. Unsupported contracts may use reviewed LLVM, native or pure-Arx
+  implementations; Arrow is not the language's capability ceiling.
+- Primitive LLVM register/stack transport is allowed; persistent scalar boxing
+  is not mandatory. Do not select a different mathematical implementation just
+  because an operand is scalar. Measure boxing and Arrow-resident chains before
+  choosing a representation or enabling a conformant fast path.
+- The migration target is one exact Arrow 26 release, initially 26.0.1, shared
+  by PyArrow and `arx-arrowcpp-sources`. The currently deployed versions remain
+  those in the IRx manifest and root lockfile until the matching artifact is
+  available and qualified. Upgrade source headers, libraries, native cache
+  inputs and pins together, using root `poetry lock`; never invent a published
+  bundle or leave mismatched manifests/lockfiles. Reject version/ABI mismatch;
+  do not add a multiple-Arrow-major compatibility framework. Historical
+  benchmark runs do not establish support for additional runtime versions.
+- Preserve the current interpreter/Ubuntu CI stack and C++20 toolchain unless a
+  verified dependency or correctness requirement justifies a minimal change.
+  Keep support facts in manifests, CI and the compact support matrix.
+- Resolve imported callable identity, argument types/shapes, conversions, typed
+  options, null/overflow/error policy, ownership and native requirements in
+  `irx.analysis`. Lowering consumes closed semantic plans. Reuse a typed
+  operation catalog and shared registered Arrow C++ dispatcher; adding another
+  supported kernel should not require another handwritten C++ wrapper. Never
+  expose arbitrary kernel strings or embed Arrow C++ layouts in LLVM.
+- Independently installed libraries containing only `.x` and declarative
+  metadata must be able to consume supported Arrow operations through typed Arx
+  modules, without author-written C/C++ shims, native build hooks or raw-pointer
+  plumbing. External native kernel producers still need explicit, trusted
+  registration. C Data/C Stream exchanges data, not arbitrary C++ function
+  calls; automatic foreign bindings and Arx UDF exports are separate work.
+- Put mathematical functions in imported `stdlib.math`, starting with the
+  proposed `sqrt(f64)` / `sqrt(series[f64])`. Keep unimplemented APIs labeled.
+  Require IEEE NaN/infinity/signed-zero behavior and operation-specific floating
+  ULP/relative/absolute bounds, plus exact integer, Boolean, validity and error
+  semantics. Preserve registered features, typed statuses, success-only output
+  reads and explicit lifetime/cleanup contracts.
+
+Before declaring the first public compute slice complete, prove:
+
+- a separately installed `.x`-only package calls scalar and Series `sqrt`;
+- a second approved typed kernel uses the same dispatcher without new C++ glue;
+- aliases, shadowing, unsupported types/options, errors and escaped owners work
+  through the installed package graph, using current name-first syntax,
+  two-space indentation and valid Douki module docstrings;
+- semantic, compiled-language, native ABI/sanitizer and clean installed-wheel
+  tests pass on the declared single-version build. Existing arithmetic/package
+  tests alone do not establish that the proposed math API is implemented.
+
 ### Long-Term Direction
 
 Python is the current implementation language. Keep typed Python APIs and stable

@@ -21,17 +21,21 @@ The
 defines the tested interpreter matrix. Installability alone does not imply CI
 coverage or a support guarantee.
 
-| Dimension            | CI-verified now                                                                   | Release candidate                                                       | Experimental / unsupported                                   |
-| -------------------- | --------------------------------------------------------------------------------- | ----------------------------------------------------------------------- | ------------------------------------------------------------ |
-| Operating system     | Ubuntu GitHub-hosted runner                                                       | A named Ubuntu LTS release, to be frozen before RC                      | macOS and Windows are experimental                           |
-| Architecture         | GitHub-hosted x86-64                                                              | x86-64                                                                  | AArch64 and other architectures are experimental             |
-| Python               | CPython versions exercised by the CI package/language jobs                        | The versions that pass the RC wheel gate                                | PyPy and CPython outside the tested matrix are unsupported   |
-| Native compiler      | Conda-forge Clang/Clangdev 14 in `conda/dev.yaml`                                 | Clang 14 until a newer range is explicitly qualified                    | GCC/MSVC and other Clang versions are experimental           |
-| LLVM code generation | The LLVM bundled by the resolved `llvmlite` package                               | Exact `llvmlite`/LLVM combinations from the RC lock and wheels          | System LLVM replacement is unsupported                       |
-| Linker               | Toolchain-default linker, plus explicit PIE/non-PIE modes in tests                | The linker shipped with the selected Ubuntu/Clang environment           | Other linkers are experimental                               |
-| C/C++ runtime        | The glibc/libstdc++ environment of the Ubuntu runner                              | Versions shipped by the selected Ubuntu LTS                             | musl and alternative C++ runtimes are experimental           |
-| Arrow                | PyArrow 24.x and `arx-arrowcpp-sources` 24.0.0 from package metadata              | The exact lockstep dependency range that passes RC                      | Other Arrow major versions are unsupported                   |
-| Package artifact     | Pure-Python-tagged wheels plus on-demand native compilation from packaged sources | Fresh isolated wheel install and native smoke on every supported target | Precompiled platform-native wheels are not currently shipped |
+The M0 compatibility decision is to retain those executable requirements and
+tests, not restore the older Python 3.10 expectation. Best-effort native targets
+below are experimental, not supported merely because installation succeeds.
+
+| Dimension            | CI-verified now                                                                   | Release candidate                                                       | Experimental / unsupported                                    |
+| -------------------- | --------------------------------------------------------------------------------- | ----------------------------------------------------------------------- | ------------------------------------------------------------- |
+| Operating system     | Ubuntu GitHub-hosted runner                                                       | A named Ubuntu LTS release, to be frozen before RC                      | macOS and Windows are experimental                            |
+| Architecture         | GitHub-hosted x86-64                                                              | x86-64                                                                  | AArch64 and other architectures are experimental              |
+| Python               | CPython versions exercised by the CI package/language jobs                        | The versions that pass the RC wheel gate                                | PyPy and CPython outside the tested matrix are unsupported    |
+| Native compiler      | Conda-forge Clang/Clangdev 14 in `conda/dev.yaml`                                 | Clang 14 until a newer range is explicitly qualified                    | GCC/MSVC and other Clang versions are experimental            |
+| LLVM code generation | The LLVM bundled by the resolved `llvmlite` package                               | Exact `llvmlite`/LLVM combinations from the RC lock and wheels          | System LLVM replacement is unsupported                        |
+| Linker               | Toolchain-default linker, plus explicit PIE/non-PIE modes in tests                | The linker shipped with the selected Ubuntu/Clang environment           | Other linkers are experimental                                |
+| C/C++ runtime        | The glibc/libstdc++ environment of the Ubuntu runner                              | Versions shipped by the selected Ubuntu LTS                             | musl and alternative C++ runtimes are experimental            |
+| Arrow                | Exact matching pins in the IRx manifest and root lockfile                         | The same pins, qualified by native and isolated-wheel jobs              | Unqualified Arrow/header/library combinations are unsupported |
+| Package artifact     | Pure-Python-tagged wheels plus on-demand native compilation from packaged sources | Fresh isolated wheel install and native smoke on every supported target | Precompiled platform-native wheels are not currently shipped  |
 
 “Pure-Python-tagged” describes the wheel container, not the runtime
 requirements. IRx compiles native C/C++ runtime features on demand and therefore
@@ -129,10 +133,12 @@ project support.
 
 The Arx/IRx package suites include standalone IPC file/stream exchange,
 runtime-schema preservation, C Data/C Stream ownership, and compiled TCP
-producer/consumer tests against PyArrow 24.x. `examples/arrow/run.py` exercises
-the same public API. TCP requires POSIX sockets and trusted numeric-address
-peers; a sandbox-denied socket test is explicitly skipped, not counted as a
-successful interoperability run. C++20 is required for the Arrow build.
+producer/consumer tests against the PyArrow selected by IRx package metadata.
+The requested Arrow 26 upgrade still needs these gates; before-upgrade results
+do not qualify it. `examples/arrow/run.py` exercises the same public API. TCP
+requires POSIX sockets and trusted numeric-address peers; a sandbox-denied
+socket test is explicitly skipped, not counted as a successful interoperability
+run. C++20 is required for the Arrow build.
 
 The standalone `packages/irx/tests/native/arrow_interop.cpp` harness can be
 built with AddressSanitizer/UndefinedBehaviorSanitizer. LeakSanitizer

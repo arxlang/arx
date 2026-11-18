@@ -45,9 +45,9 @@ def is_using_jupyter_notebook() -> bool:
       type: bool
     """
     try:
-        from IPython import get_ipython  # type: ignore
+        from IPython import get_ipython
 
-        if "IPKernelApp" in get_ipython().config:  # type: ignore
+        if "IPKernelApp" in get_ipython().config:
             return True
     except Exception:
         pass

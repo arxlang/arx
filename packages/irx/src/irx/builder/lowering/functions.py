@@ -1238,7 +1238,10 @@ class FunctionVisitorMixin(ClassVisitorMixin):
         fn_return_type = self._llvm_type_for_ast_type(
             return_resolution.expected_type
         )
-        if is_int_type(fn_return_type) and fn_return_type.width == 1:
+        if (
+            isinstance(fn_return_type, ir.IntType)
+            and fn_return_type.width == 1
+        ):
             if is_int_type(retval.type) and retval.type.width != 1:
                 retval = self._llvm.ir_builder.trunc(retval, ir.IntType(1))
         previous_pending = self.pending_returns

@@ -37,6 +37,7 @@ from irx.buffer import (
     BUFFER_FLAG_VALIDITY_BITMAP,
 )
 from irx.builder import Builder
+from irx.builder.runtime import arrowcpp
 from irx.builder.runtime.array.feature import (
     ARRAY_PRIMITIVE_TYPE_SPECS,
     IRX_ARROW_TYPE_BOOL,
@@ -56,6 +57,7 @@ from irx.builder.runtime.linking import (
     compile_native_artifacts,
     link_executable,
 )
+from irx.diagnostics import DiagnosticCodes, RuntimeFeatureError
 from llvmlite import binding as llvm
 
 
@@ -908,6 +910,84 @@ def test_arrow_feature_uses_arrowcpp_runtime() -> None:
     for artifact in feature.artifacts:
         if artifact.kind == "cxx_source":
             assert get_arrowcpp_include_dir() in artifact.include_dirs
+
+
+@pytest.mark.parametrize(
+    "component",
+    [
+        "source",
+        "source_tree",
+        "missing_source",
+        "missing_source_header",
+        "malformed_source",
+        "__version__",
+        "cpp_version",
+        "header",
+        "missing",
+    ],
+)
+def test_arrow_build_rejects_mixed_versions(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, component: str
+) -> None:
+    """
+    title: Reject mixed source/header/library builds before compilation.
+    parameters:
+      tmp_path:
+        type: Path
+      monkeypatch:
+        type: pytest.MonkeyPatch
+      component:
+        type: str
+    """
+    if component == "source":
+        monkeypatch.setattr(
+            arrowcpp, "bundled_arrowcpp_version", lambda: "0.0.0"
+        )
+    elif component in (
+        "source_tree",
+        "missing_source",
+        "missing_source_header",
+        "malformed_source",
+    ):
+        include = tmp_path / "cpp/src"
+        include.mkdir(parents=True)
+        if component != "missing_source":
+            text = (
+                "not an Arrow version declaration\n"
+                if component == "malformed_source"
+                else f'set(ARROW_VERSION "{pa.__version__}")\n'
+            )
+            if component == "source_tree":
+                text = 'set(ARROW_VERSION "0.0.0")\n'
+            (include.parent / "CMakeLists.txt").write_text(text)
+        if component != "missing_source_header":
+            header = include / "arrow/api.h"
+            header.parent.mkdir()
+            header.touch()
+        monkeypatch.setattr(
+            arrowcpp, "get_arrowcpp_source_include_dir", lambda: include
+        )
+    elif component in ("header", "missing"):
+        header = tmp_path / "arrow/util/config.h"
+        if component == "header":
+            header.parent.mkdir(parents=True)
+            header.write_text('#define ARROW_VERSION_STRING "0.0.0"\n')
+        monkeypatch.setattr(pa, "get_include", lambda: str(tmp_path))
+    else:
+        monkeypatch.setattr(pa, component, "0.0.0")
+    for configure in (
+        arrowcpp.arrowcpp_include_dirs,
+        arrowcpp.arrowcpp_linker_flags,
+    ):
+        with pytest.raises(RuntimeFeatureError) as captured:
+            configure()
+        assert captured.value.diagnostic.code == (
+            DiagnosticCodes.RUNTIME_FEATURE_UNAVAILABLE
+        )
+        if component in ("missing_source", "missing_source_header"):
+            assert isinstance(
+                captured.value.diagnostic.cause, FileNotFoundError
+            )
 
 
 def test_arrow_feature_metadata_exposes_supported_primitive_mapping() -> None:

@@ -16,8 +16,8 @@ dependencies = [
   "plum-dispatch >= 2.2.2",
   "xhell (>=0.2.1)",
   "typeguard >= 4",
-  "pyarrow (>=24.0.0,<25.0.0)",
-  "arx-arrowcpp-sources == 24.0.0",
+  "pyarrow == 26.0.1",
+  "arx-arrowcpp-sources == 26.0.1",
 ]
 
 [build-system]

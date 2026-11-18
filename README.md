@@ -44,7 +44,10 @@ IRx provides an on-demand native runtime backed by Arrow C++:
 The RecordBatch layer currently supports signed and unsigned integers,
 `float32`, `float64`, booleans, UTF-8 and large UTF-8 strings, dates,
 timestamps, times, and nullable fields. The higher-level Arx DataFrame surface
-is deliberately narrower: fixed-width numeric and Boolean columns only.
+supports static nullable, string, temporal and rich schemas, with checked
+RecordBatch conversion for runtime schemas. Scalar Series expressions remain
+limited to supported numeric and Boolean types; storing a rich Arrow type does
+not imply scalar arithmetic support.
 
 Read [Apache Arrow in ArxLang](https://arxlang.org/apache-arrow.html) for the
 architecture, supported types, and current limitations.

@@ -2,7 +2,7 @@
 
 Apache Arrow is the storage and interoperability foundation for ArxLang's
 data-oriented runtime. IRx implements the integration in native C++ and exposes
-it to generated LLVM through a stable C ABI.
+it to generated LLVM through an opaque C ABI.
 
 ## Architecture
 
@@ -22,6 +22,15 @@ This boundary provides three useful properties:
    them.
 3. Arrow C Data and Arrow IPC provide interoperable boundaries instead of a
    project-specific serialization format.
+
+Arx is **Arrow-first, not Arrow-exclusive**: supported scalar operations should
+prefer Arrow Scalar/compute where they implement Arx semantics, with LLVM/custom
+implementations for unsupported contracts. Control flow, classes, lists and
+files retain native language semantics. M0 does not yet change the existing
+scalar backend. The
+[M0 architecture decision](irx/architecture.md#arrow-first-decision-m0) records
+representation, version, numerical and approval gates. The proposed imported
+scalar/Series `stdlib.math.sqrt` is not implemented by this baseline.
 
 IRx installs `pyarrow` and `arx-arrowcpp-sources` as runtime dependencies. They
 provide PyArrow interoperability plus the Arrow C++ headers, sources, library
@@ -60,7 +69,8 @@ Current tensor constraints:
 - element types: `i8`, `i16`, `i32`, `i64`, `f32`, and `f64`
 - variables, fields, and return types require a static shape
 - `tensor[T, ...]` is supported for runtime-shaped parameters
-- dynamic indexing of runtime-shaped parameters is not implemented
+- rank-one runtime-shaped parameters support checked numeric-sequence indexing;
+  general runtime shape calculus and returns remain restricted
 - Arrow-backed tensor storage is readonly in the current phase
 
 Current DataFrame constraints:

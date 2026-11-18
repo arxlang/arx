@@ -12,6 +12,7 @@ summary: >-
 from __future__ import annotations
 
 from dataclasses import replace
+from typing import cast
 
 import astx
 
@@ -343,7 +344,9 @@ class DeclarationFunctionVisitorMixin(SemanticVisitorMixinBase):
                     self.context.scopes.declare(arg_symbol)
                     self._set_symbol(arg_node, arg_symbol)
                     self._set_type(arg_node, arg_symbol.type_)
-                    resolve_parameter_ownership(self, arg_node, arg_symbol)
+                    resolve_parameter_ownership(
+                        cast(SemanticAnalyzerCore, self), arg_node, arg_symbol
+                    )
                 self.visit(node.body)
         if (
             not isinstance(function.return_type, astx.NoneType)

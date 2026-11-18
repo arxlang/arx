@@ -395,7 +395,8 @@ class DeclarationBlockVisitorMixin(SemanticVisitorMixinBase):
           node:
             type: astx.VariableDeclaration | astx.InlineVariableDeclaration
         """
-        resolved_type = resolve_initializer_type(self, node)
+        analyzer = cast(SemanticAnalyzerCore, self)
+        resolved_type = resolve_initializer_type(analyzer, node)
         if resolved_type is None:
             return
         symbol = self.registry.declare_local(
@@ -406,4 +407,4 @@ class DeclarationBlockVisitorMixin(SemanticVisitorMixinBase):
         )
         self._set_symbol(node, symbol)
         self._resolve_local_resource_ownership(node, symbol)
-        resolve_module_storage(self, node, symbol)
+        resolve_module_storage(analyzer, node, symbol)
