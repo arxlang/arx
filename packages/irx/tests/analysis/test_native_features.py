@@ -176,9 +176,14 @@ def test_compute_plan_identity_and_reanalysis(
             assert plan.result_type.size == type_.size
             assert plan.result_type.nullable == type_.nullable
         assert tuple(session.native_compute.values()) == (kernel,)
-    if kernel == "sqrt" and isinstance(type_, astx.Float64):
-        with pytest.raises(LoweringError, match="ComputePlan"):
-            Builder().translate_modules(root, resolver)
+    with pytest.raises(LoweringError, match="native execution") as captured:
+        Builder().translate_modules(root, resolver)
+    diagnostic = captured.value.diagnostic
+    assert diagnostic.code == DiagnosticCodes.RUNTIME_FEATURE_UNAVAILABLE
+    assert diagnostic.phase == "lowering"
+    assert diagnostic.node is call
+    assert f"stdlib.math.{kernel} is not yet supported" in diagnostic.message
+    assert "internal compiler error" not in diagnostic.message
     call.keywords = [astx.KeywordArgument("options", astx.LiteralInt32(1))]
     with pytest.raises(SemanticError, match="unknown argument 'options'"):
         analyze_modules(root, resolver)
