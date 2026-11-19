@@ -15,6 +15,11 @@
 
 ## Unreleased
 
+- `stdlib.math.sqrt` and `exp` execute f64 scalar, nullable and Series calls
+  through shared Arrow Compute, including imports from `.x`-only libraries.
+  IEEE domain results and null propagation apply; no options or implicit
+  integer/f32 overloads are provided.
+
 - **Breaking:** `if`/`elif`/`else` and `while` bodies now have lexical
   declaration scopes. Body-local names no longer leak into sibling bodies or
   the enclosing function. Inner declarations may shadow outer bindings;

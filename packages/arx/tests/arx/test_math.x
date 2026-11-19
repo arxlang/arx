@@ -5,6 +5,29 @@ summary: Validate bundled stdlib math helpers with the compiled test runner.
 
 import math from stdlib
 
+fn test_arrow_math() -> none:
+  ```
+  title: Shared f64 scalar and Series math
+  summary: Check contextual literals, nulls, empty values and IEEE domain results.
+  ```
+  assert isinstance(math.sqrt(4.0), f64)
+  assert math.sqrt(4.0) == 2.0
+  assert math.exp(cast(0, f64)) == 1.0
+  missing: nullable[f64] = none
+  assert is_null(math.sqrt(missing))
+  assert is_null(math.exp(missing))
+  negative: f64 = math.sqrt(-1.0)
+  assert not (negative == negative)
+  frame: dataframe[x:f64 | none] = dataframe({x:[0.0, none, 4.0]})
+  roots: series[nullable[f64]] = math.sqrt(frame.x)
+  assert fill_null(roots[2], 0.0) == math.sqrt(4.0)
+  assert is_null(roots[1])
+  grown: series[nullable[f64]] = math.exp(roots)
+  assert fill_null(grown[0], 0.0) == 1.0
+  assert is_null(grown[1])
+  assert len(math.sqrt(frame.x[:0])) == 0
+  assert len(math.exp(frame.x[:0])) == 0
+
 fn test_abs() -> none:
   ```
   title: test_abs

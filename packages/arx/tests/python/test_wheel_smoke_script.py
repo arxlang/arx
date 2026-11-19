@@ -15,6 +15,8 @@ from types import ModuleType
 from unittest.mock import Mock
 from zipfile import ZipFile
 
+import pyarrow as pa
+import pyarrow.compute as pc
 import pytest
 
 from arxpy import (
@@ -29,17 +31,33 @@ from llvmlite import binding as llvm
 SCRIPT_PATH = (
     Path(__file__).resolve().parents[4] / "scripts" / "test_wheels.py"
 )
-SCRIPT_SPEC = importlib.util.spec_from_file_location(
-    "arx_test_wheels_script",
-    SCRIPT_PATH,
+
+
+def load_test_module(name: str, path: Path) -> ModuleType:
+    """
+    title: Load shared scripts and oracles without test-package collisions.
+    parameters:
+      name:
+        type: str
+      path:
+        type: Path
+    returns:
+      type: ModuleType
+    """
+    spec = importlib.util.spec_from_file_location(name, path)
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"could not load {path}")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+wheel_smoke = load_test_module("arx_test_wheels_script", SCRIPT_PATH)
+math_contract = load_test_module(
+    "arx_test_math_oracle",
+    SCRIPT_PATH.parents[1] / "packages/irx/tests/test_arrow_math_contract.py",
 )
-if SCRIPT_SPEC is None or SCRIPT_SPEC.loader is None:
-    raise RuntimeError(f"could not load wheel smoke script at {SCRIPT_PATH}")
-wheel_smoke = importlib.util.module_from_spec(SCRIPT_SPEC)
-sys.modules[SCRIPT_SPEC.name] = wheel_smoke
-SCRIPT_SPEC.loader.exec_module(wheel_smoke)
-if not isinstance(wheel_smoke, ModuleType):  # pragma: no cover
-    raise RuntimeError("wheel smoke script did not load as a module")
 
 
 def test_list_smoke_compiles_lazy_range_and_materialization() -> None:
@@ -55,19 +73,19 @@ def test_list_smoke_compiles_lazy_range_and_materialization() -> None:
     llvm.parse_assembly(artifact.llvm_ir).verify()
 
 
-@pytest.mark.parametrize("invalid", [False, True])
+@pytest.mark.parametrize("invalid", [None, "type", "options"])
 def test_installed_pure_arx_library(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, invalid: bool
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, invalid: str | None
 ) -> None:
     """
-    title: Resolve typed scalar/Series calls from a source-only wheel.
+    title: Execute installed source-only math against the shared f64 oracle.
     parameters:
       tmp_path:
         type: Path
       monkeypatch:
         type: pytest.MonkeyPatch
       invalid:
-        type: bool
+        type: str | None
     """
     wheel = wheel_smoke.build_pure_arx_fixture_wheel(
         SCRIPT_PATH.parents[1], tmp_path
@@ -88,13 +106,16 @@ def test_installed_pure_arx_library(
     )
     source = app / "main.x"
     text = wheel_smoke.PURE_ARX_MODULE
-    if invalid:
+    if invalid is not None:
         text = text.replace(
-            "scaled(shifted(frame.value, 0.5), 2.0)", "scaled(0.5, 2.0)"
+            "package_sqrt(value=value)",
+            "package_sqrt(value=cast(value, f32))"
+            if invalid == "type"
+            else "package_sqrt(value=value, options=1)",
         )
     source.write_text(text)
     compiler = Compiler()
-    if invalid:
+    if invalid is not None:
         with pytest.raises(CompileError) as captured:
             compiler.compile_file(source, kind=ArtifactKind.LLVM_IR)
         assert any(
@@ -105,8 +126,75 @@ def test_installed_pure_arx_library(
     artifact = compiler.compile_file(source, kind=ArtifactKind.LLVM_IR)
     assert artifact.llvm_ir is not None
     llvm.parse_assembly(artifact.llvm_ir).verify()
-    assert "add_checked" in artifact.llvm_ir
-    assert "multiply_checked" in artifact.llvm_ir
+    module = llvm.parse_assembly(artifact.llvm_ir)
+    operations = {
+        tuple(instruction.operands)[1].get_constant_value()
+        for function in module.functions
+        for block in function.blocks
+        for instruction in block.instructions
+        if instruction.opcode == "call"
+        and tuple(instruction.operands)[-1].name == "irx_arrow_compute"
+    }
+    assert operations == {1, 2}
+    assert "llvm.sqrt" not in artifact.llvm_ir
+    assert 'call double @"sqrt"' not in artifact.llvm_ir
+
+    # One authoritative vector/ULP policy covers PyArrow, the raw native ABI,
+    # and this compiled installed-package path; do not copy the matrix here.
+    vectors = {
+        kernel: [
+            (arguments[0], math_contract.decimal_reference(kernel, arguments))
+            for arguments in math_contract.FINITE[kernel]
+        ]
+        + [
+            (arguments[0], expected)
+            for arguments, expected in math_contract.SPECIAL[kernel]
+        ]
+        for kernel in ("sqrt", "exp")
+    }
+    rows = max(len(values) for values in vectors.values())
+    inputs = pa.record_batch(
+        [
+            pa.array(
+                [value for value, _ in values] + [None] * (rows - len(values)),
+                type=pa.float64(),
+            )
+            for values in vectors.values()
+        ],
+        names=["root", "exponent"],
+    )
+    empty = inputs.slice(0, 0)
+    nulls = pa.record_batch(
+        [pa.array([None], type=pa.float64())] * 2, schema=inputs.schema
+    )
+    with pa.OSFile(str(app / "math-input.arrow"), "wb") as sink:
+        with pa.ipc.new_stream(sink, inputs.schema) as writer:
+            for batch in (inputs, empty, nulls):
+                writer.write_batch(batch)
+    executable = compiler.compile_file(source, output=app / "program")
+    result = compiler.run(executable, cwd=app, timeout=30)
+    assert result.exit_code == 0, result.stderr
+    with pa.ipc.open_stream(app / "math-output.arrow") as reader:
+        batches = list(reader)
+    assert [batch.num_rows for batch in batches] == [rows, 0, 1]
+    table = pa.Table.from_batches(batches)
+    for index, (kernel, values) in enumerate(vectors.items()):
+        expected_values = (
+            [expected for _, expected in values]
+            + [None] * (rows - len(values))
+            + [None]
+        )
+        arrow = pc.call_function(kernel, [inputs.column(index)])
+        for shape in ("scalar", "series"):
+            output = table.column(f"{kernel}_{shape}")
+            assert output.type == pa.float64()
+            assert output.null_count == expected_values.count(None)
+            for row, expected in enumerate(expected_values):
+                math_contract.assert_result(kernel, output[row], expected)
+                if row < rows:
+                    math_contract.assert_result(
+                        kernel, output[row], arrow[row].as_py()
+                    )
 
 
 @pytest.mark.parametrize("content", ["adapter.cpp", "build.py", "native"])
@@ -180,6 +268,13 @@ def test_smoke_driver_reports_structured_diagnostics(
     compiler.compile_file.side_effect = error
     monkeypatch.setattr("arxpy.Compiler", Mock(return_value=compiler))
     monkeypatch.chdir(tmp_path)
+    # This unit test mocks the installed interpreter and compilation boundary.
+    for name in ("aix", "arx", "arxjit", "astx", "irx", "arxpy"):
+        monkeypatch.setattr(
+            importlib.import_module(name),
+            "__file__",
+            str(tmp_path / name / "__init__.py"),
+        )
     driver = tmp_path / "smoke.py"
     driver.write_text(wheel_smoke.SMOKE_DRIVER, encoding="utf-8")
 

@@ -60,6 +60,7 @@ REQUIRED_ARX_STDLIB_ASSETS = (
     "arx/stdlib/arrow.x",
     "arx/stdlib/csv.x",
     "arx/stdlib/parquet.x",
+    "arx/stdlib/math.x",
 )
 
 REQUIRED_IRX_NATIVE_ASSETS = (
@@ -97,24 +98,60 @@ REQUIRED_IRX_NATIVE_ASSETS = (
 
 PURE_ARX_MODULE = """```
 title: Installed pure-Arx package and shared Arrow compute smoke
-summary: Baseline operators, not the future stdlib math kernel API.
+summary: Typed library calls, escaped owners and Arrow IPC interchange.
 ```
-import (squared as scalar_square, shifted, scaled) from demo_arx_math
+import (rooted as package_sqrt, exponentiated) from demo_arx_math
+import sqrt as direct_sqrt from stdlib.math
+import (Schema, BatchBuilder, IPCReader, IPCWriter) from stdlib.arrow
 
-fn square(value: i64) -> i64:
-  return 7
+fn sqrt(value: f64) -> f64:
+  return -1.0
 
 fn escaped() -> series[f64]:
-  frame: dataframe[value: f64] = dataframe({value: [0.0, 1.0, 2.0]})
-  return scaled(shifted(frame.value, 0.5), 2.0)
+  frame: dataframe[value: f64] = dataframe({value: [0.0, 1.0, 4.0]})
+  return package_sqrt(frame.value)
+
+fn append_value(builder: BatchBuilder, col: i32, value: nullable[f64]) -> none:
+  if is_null(value):
+    builder.append_null(col)
+  else:
+    builder.append_f64(col, fill_null(value, 0.0))
+  return none
 
 fn main() -> i32:
-  assert scalar_square(4) == 16
-  assert square(4) == 7
+  value: f64 = 4.0
+  assert package_sqrt(value=value) == direct_sqrt(value)
+  assert sqrt(value) == -1.0
+  assert exponentiated(cast(0.0, f64)) == 1.0
   result: series[f64] = escaped()
-  assert result[0] == 1.0
-  assert result[1] == 3.0
-  assert result[2] == 5.0
+  assert result[0] == 0.0
+  assert result[1] == 1.0
+  assert result[2] == 2.0
+
+  schema: Schema = Schema()
+  schema.add("sqrt_scalar", "float64", true)
+  schema.add("sqrt_series", "float64", true)
+  schema.add("exp_scalar", "float64", true)
+  schema.add("exp_series", "float64", true)
+  builder: BatchBuilder = BatchBuilder(schema)
+  writer: IPCWriter = IPCWriter(schema)
+  writer.open_stream("math-output.arrow")
+  reader: IPCReader = IPCReader()
+  reader.open_stream("math-input.arrow")
+  while reader.next():
+    frame: dataframe[root:f64 | none, exponent:f64 | none] = cast(\
+      reader.batch(), dataframe[root:f64 | none, exponent:f64 | none]\
+    )
+    roots: series[nullable[f64]] = package_sqrt(frame.root)
+    exponents: series[nullable[f64]] = exponentiated(frame.exponent)
+    for index in range(cast(frame.nrows(), i32)):
+      append_value(builder, 0, package_sqrt(frame.root[index]))
+      append_value(builder, 1, roots[index])
+      append_value(builder, 2, exponentiated(frame.exponent[index]))
+      append_value(builder, 3, exponents[index])
+    writer.write(builder.finish())
+  reader.close()
+  writer.close()
   return 0
 """
 
@@ -394,6 +431,10 @@ from irx.record_batch import (
 )
 
 root = Path.cwd()
+# An editable checkout must not substitute for any of the six core wheels.
+for module in (aix, arx, arxjit, astx, irx, sys.modules["arxpy"]):
+    if not Path(module.__file__).resolve().is_relative_to(root):
+        raise RuntimeError(f"{module.__name__} was not loaded from its wheel")
 from irx.builder.runtime.arrow_compute import (
     COMPUTE_SIGNATURES, build_arrow_compute_runtime_feature,
 )
@@ -433,6 +474,13 @@ for name, (operation, _) in COMPUTE_CATALOG.items():
     assert result == (0.0 if name == "sqrt" else 1.0)
 
 compiler = Compiler()
+math_input = pa.record_batch(
+    [pa.array([0.0, None, 4.0]), pa.array([0.0, None, 0.0])],
+    names=["root", "exponent"],
+)
+with pa.OSFile(str(root / "math-input.arrow"), "wb") as sink:
+    with pa.ipc.new_stream(sink, math_input.schema) as stream:
+        stream.write_batch(math_input)
 pq.write_table(
     pa.table({"id": [1, 2, 3]}), root / "python.parquet", row_group_size=1
 )
@@ -475,6 +523,17 @@ for source_name in (
         raise RuntimeError(
             f"{source_name} returned {result.exit_code}: {result.stderr}"
         )
+
+with pa.ipc.open_stream(root / "math-output.arrow") as stream:
+    math_result = stream.read_all()
+expected_math = pa.table({
+    "sqrt_scalar": pa.array([0.0, None, 2.0]),
+    "sqrt_series": pa.array([0.0, None, 2.0]),
+    "exp_scalar": pa.array([1.0, None, 1.0]),
+    "exp_series": pa.array([1.0, None, 1.0]),
+})
+if not math_result.equals(expected_math):
+    raise RuntimeError("Pure-Arx installed math/Arrow interchange failed")
 
 if pq.read_table(root / "compiled.parquet").to_pydict() != {"id": [1, 2, 3]}:
     raise RuntimeError("Compiled Parquet wheel smoke returned wrong data")
@@ -795,7 +854,7 @@ def build_native_fixture_wheel(workspace: Path, output: Path) -> Path:
 
 def build_pure_arx_fixture_wheel(workspace: Path, output: Path) -> Path:
     """
-    title: Package the source-only library baseline without native adapters.
+    title: Package the typed Arrow math library without native adapters.
     parameters:
       workspace:
         type: Path
