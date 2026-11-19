@@ -305,6 +305,7 @@ int main() {
         [
             "c++",
             str(source),
+            str(runtime / "arrow/native/irx_arrow_compute.cc"),
             "-o",
             str(binary),
             *arrowcpp_compile_flags(),

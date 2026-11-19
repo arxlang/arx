@@ -65,10 +65,11 @@ def _build_runtime_feature(feature_name: str) -> RuntimeFeature:
     artifacts = [
         NativeArtifact(
             kind="cxx_source",
-            path=native_root / "irx_arrow_runtime.cc",
+            path=native_root / source,
             include_dirs=include_dirs,
             compile_flags=compile_flags,
         )
+        for source in ("irx_arrow_runtime.cc", "irx_arrow_compute.cc")
     ]
 
     symbols = {

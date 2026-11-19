@@ -14,6 +14,7 @@ import astx
 import pytest
 
 from irx.builder import Builder, Visitor
+from irx.builder.runtime.arrow_compute import COMPUTE_SIGNATURES
 from irx.builder.runtime.errors.feature import build_runtime_failure_feature
 from irx.builder.runtime.features import (
     ExternalSymbolSpec,
@@ -29,13 +30,16 @@ from irx.builder.runtime.list.feature import build_list_runtime_feature
 from irx.builder.runtime.registry import (
     RuntimeFeatureRegistry,
     RuntimeFeatureState,
+    get_default_runtime_feature_registry,
 )
 from irx.diagnostics import (
     LinkingError,
     NativeCompileError,
     RuntimeFeatureError,
 )
+from irx.native import BUILTIN_RUNTIME_FEATURES, NativeFeature
 from irx.system import PrintExpr
+from llvmlite import binding as llvm
 from llvmlite import ir
 
 if TYPE_CHECKING:
@@ -143,6 +147,73 @@ def test_runtime_feature_state_reuses_symbol_declarations() -> None:
 
     assert fn_first is fn_second
     assert state.active_feature_names() == ("dummy",)
+
+
+def test_builtin_capabilities_are_immutable() -> None:
+    """
+    title: Analysis and lowering share closed names and copied symbol maps.
+    """
+    registry = get_default_runtime_feature_registry()
+    assert frozenset(registry.names()) == BUILTIN_RUNTIME_FEATURES
+    with pytest.raises(ValueError, match="immutable"):
+        registry.register(RuntimeFeature("extra"))
+    with pytest.raises(ValueError, match="already exists"):
+        registry.with_native_features((NativeFeature("arrow_compute"),))
+    symbols = {
+        "dummy_rt": ExternalSymbolSpec("dummy_rt", _declare_dummy_symbol)
+    }
+    feature = RuntimeFeature("owned", symbols=symbols)
+    symbols.clear()
+    assert tuple(feature.symbols) == ("dummy_rt",)
+    with pytest.raises(TypeError):
+        feature.symbols["bad"] = feature.symbols["dummy_rt"]
+
+
+def test_focused_compute_feature(tmp_path: Path) -> None:
+    """
+    title: Compile and run the C-only ABI without DataFrame or Parquet glue.
+    parameters:
+      tmp_path:
+        type: Path
+    """
+    registry = get_default_runtime_feature_registry()
+    visitor = Visitor()
+    state = RuntimeFeatureState(visitor, registry)
+    for name in COMPUTE_SIGNATURES:
+        state.require_symbol("arrow_compute", name)
+    llvm.parse_assembly(str(visitor._llvm.module)).verify()
+    assert state.active_feature_names() == ("arrow_compute",)
+    artifacts = state.native_artifacts()
+    assert [item.path.name for item in artifacts] == ["irx_arrow_compute.cc"]
+    assert not any("parquet" in flag for flag in state.linker_flags())
+    source = tmp_path / "compute.c"
+    source.write_text("""#include "irx_arrow_compute.h"
+#include <assert.h>
+#include <string.h>
+int main(void) {
+  assert(irx_arrow_compute_abi_version() == IRX_COMPUTE_ABI_VERSION);
+  for (int op = IRX_COMPUTE_SQRT; op <= IRX_COMPUTE_EXP; ++op) {
+    irx_arrow_chunked_array_handle* output = 0;
+    uint64_t input_bits, output_bits;
+    int32_t valid;
+    double value = 0.0, result;
+    memcpy(&input_bits, &value, sizeof(value));
+    assert(irx_arrow_compute(1, op, 1, 0, IRX_COMPUTE_F64,
+        IRX_COMPUTE_SCALAR, 0, input_bits, 1, &output,
+        &output_bits, &valid) == IRX_OK);
+    memcpy(&result, &output_bits, sizeof(result));
+    assert(!output && valid == 1);
+    assert(result == (op == IRX_COMPUTE_SQRT ? 0.0 : 1.0));
+  }
+}
+""")
+    primary = compile_native_artifacts(
+        (NativeArtifact("c_source", source, (artifacts[0].path.parent,)),),
+        tmp_path,
+    ).objects[0]
+    binary = tmp_path / "compute"
+    link_executable(primary, binary, artifacts, state.linker_flags())
+    subprocess.run([str(binary)], check=True)
 
 
 def test_runtime_feature_state_collects_only_active_artifacts() -> None:

@@ -38,7 +38,7 @@ from irx.analysis.table_io import TableIOAnalysisVisitor
 from irx.analysis.types import clone_type, is_assignable, same_type
 from irx.builtins.collections.column_types import column_arrow_type
 from irx.diagnostics import DiagnosticCodes
-from irx.native import ComputeKernel, validate_compute_kernel
+from irx.native import COMPUTE_CATALOG, ComputeKernel, validate_compute_kernel
 from irx.typecheck import copy_type, typechecked
 
 ComputeShape = Literal["scalar", "nullable_scalar", "series"]
@@ -77,6 +77,8 @@ class ComputeOperation(CallOperation):
     attributes:
       kernel:
         type: ComputeKernel
+      operation_id:
+        type: int
       arrow_version:
         type: Literal[26.0.1]
       arrow_type_id:
@@ -92,6 +94,7 @@ class ComputeOperation(CallOperation):
     """
 
     kernel: ComputeKernel
+    operation_id: int
     arrow_version: Literal["26.0.1"]
     arrow_type_id: int
     required_runtime_features: tuple[str, ...]
@@ -108,14 +111,17 @@ class ComputeOperation(CallOperation):
         """
         validate_compute_kernel(kernel)
         object.__setattr__(self, "kernel", kernel)
+        object.__setattr__(self, "operation_id", COMPUTE_CATALOG[kernel][0])
         object.__setattr__(self, "arrow_version", "26.0.1")
         object.__setattr__(
             self, "arrow_type_id", column_arrow_type(astx.Float64()).id
         )
-        object.__setattr__(self, "required_runtime_features", ("dataframe",))
+        object.__setattr__(
+            self, "required_runtime_features", ("arrow_compute",)
+        )
         object.__setattr__(self, "null_policy", "propagate")
         object.__setattr__(self, "domain_policy", "ieee")
-        object.__setattr__(self, "max_ulps", 4 if kernel == "sqrt" else 8)
+        object.__setattr__(self, "max_ulps", COMPUTE_CATALOG[kernel][1])
 
 
 @private

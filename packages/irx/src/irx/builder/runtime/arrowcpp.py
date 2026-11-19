@@ -83,11 +83,14 @@ def validate_arrowcpp_versions() -> None:
         pyarrow.cpp_version,
         match.group(1) if match else None,
     )
-    if all(version == versions[0] for version in versions):
+    if all(version == "26.0.1" for version in versions):
         return
     raise RuntimeFeatureError(
         Diagnostic(
-            message="Arrow source/header/library versions do not match",
+            message=(
+                "Arrow source/header/library versions do not match "
+                "the required 26.0.1 build"
+            ),
             code=DiagnosticCodes.RUNTIME_FEATURE_UNAVAILABLE,
             phase="runtime",
             notes=(

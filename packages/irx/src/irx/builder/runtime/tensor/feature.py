@@ -49,10 +49,11 @@ def build_tensor_runtime_feature() -> RuntimeFeature:
     artifacts = [
         NativeArtifact(
             kind="cxx_source",
-            path=native_root / "irx_arrow_runtime.cc",
+            path=native_root / source,
             include_dirs=include_dirs,
             compile_flags=compile_flags,
         )
+        for source in ("irx_arrow_runtime.cc", "irx_arrow_compute.cc")
     ]
 
     return RuntimeFeature(

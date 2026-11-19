@@ -4,9 +4,12 @@ title: Declarative native capabilities supplied by compiler hosts.
 
 from __future__ import annotations
 
+import re
+
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Literal
+from types import MappingProxyType
+from typing import Literal, Mapping, get_args
 
 import astx
 
@@ -21,6 +24,70 @@ NativeArtifactKind = Literal[
 ComputeKernel = Literal["sqrt", "exp"]
 
 
+# Pure immutable names: analysis never imports LLVM or the builder registry.
+# The default lowering registry verifies this exact contract before use.
+BUILTIN_RUNTIME_FEATURES = frozenset(
+    {
+        "array",
+        "arrow_compute",
+        "buffer",
+        "class",
+        "dataframe",
+        "errors",
+        "exceptions",
+        "file",
+        "libc",
+        "libm",
+        "list",
+        "parquet",
+        "record_batch",
+        "tensor",
+        "text",
+    }
+)
+
+
+@private
+@typechecked
+def read_compute_catalog() -> Mapping[str, tuple[int, int]]:
+    """
+    title: Read the shared closed native operation IDs and numerical bounds.
+    returns:
+      type: Mapping[str, tuple[int, int]]
+    """
+    path = (
+        Path(__file__).parent
+        / "builder/runtime/arrow/native"
+        / "irx_arrow_compute_catalog.h"
+    )
+    operations: dict[str, tuple[int, int]] = {}
+    for line in path.read_text(encoding="utf-8").splitlines():
+        if not line or line.startswith("//"):
+            continue
+        match = re.fullmatch(
+            r"IRX_COMPUTE_OPERATION\(([A-Z]+), ([1-9][0-9]*), "
+            r"([a-z]+), ([1-9][0-9]*)\)",
+            line,
+        )
+        if match is None:
+            raise ValueError("invalid native compute catalog entry")
+        symbol, identifier, name, ulps = match.groups()
+        if symbol != name.upper() or name in operations:
+            raise ValueError("duplicate or mismatched compute operation")
+        if int(identifier) > 2**31 - 1:
+            raise ValueError("compute operation ID exceeds the native ABI")
+        operations[name] = (int(identifier), int(ulps))
+    identifiers = [value[0] for value in operations.values()]
+    if set(operations) != set(get_args(ComputeKernel)) or len(
+        identifiers
+    ) != len(set(identifiers)):
+        raise ValueError("native compute catalog disagrees with semantic API")
+    return MappingProxyType(operations)
+
+
+COMPUTE_CATALOG = read_compute_catalog()
+
+
 @private
 @typechecked
 def validate_compute_kernel(kernel: ComputeKernel) -> None:
@@ -30,7 +97,7 @@ def validate_compute_kernel(kernel: ComputeKernel) -> None:
       kernel:
         type: ComputeKernel
     """
-    if kernel not in ("sqrt", "exp"):
+    if kernel not in COMPUTE_CATALOG:
         raise ValueError("unsupported compute kernel")
 
 
@@ -191,10 +258,10 @@ class NativeBinding:
         if compute is not None:
             validate_compute_kernel(compute)
         if compute is not None and (
-            table_io is not None or features != ("dataframe",)
+            table_io is not None or features != ("arrow_compute",)
         ):
             raise ValueError(
-                "compute bindings require only the dataframe feature "
+                "compute bindings require only the arrow_compute feature "
                 "and cannot also bind table I/O"
             )
         object.__setattr__(self, "declaration", declaration)

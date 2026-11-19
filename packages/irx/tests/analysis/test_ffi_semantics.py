@@ -103,11 +103,11 @@ def test_analyze_attaches_ffi_metadata_for_feature_backed_extern() -> None:
     )
 
 
-def test_runtime_feature_validation_sees_late_registry_registrations(
+def test_runtime_feature_validation_ignores_builder_registry_mutations(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """
-    title: Runtime feature validation should observe later registry updates.
+    title: Semantic capabilities do not depend on a mutable builder registry.
     parameters:
       monkeypatch:
         type: pytest.MonkeyPatch
@@ -143,14 +143,11 @@ def test_runtime_feature_validation_sees_late_registry_registrations(
     second_module = astx.Module()
     second_module.block.append(second_prototype)
 
-    analyze(second_module)
-
-    resolved_function = _semantic(second_prototype).resolved_function
-
-    assert resolved_function is not None
-    assert resolved_function.signature.required_runtime_features == (
-        "late_feature",
-    )
+    with pytest.raises(
+        SemanticError,
+        match="unknown runtime feature 'late_feature'",
+    ):
+        analyze(second_module)
 
 
 def test_analyze_accepts_pointer_and_opaque_handle_ffi_types() -> None:

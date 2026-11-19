@@ -21,7 +21,12 @@ from irx.analysis.module_interfaces import (
 )
 from irx.analysis.resolved_nodes import ResolvedExceptionType, SemanticBinding
 from irx.diagnostics import DiagnosticBag, DiagnosticCodes
-from irx.native import ComputeKernel, NativeFeature, TableIOOperation
+from irx.native import (
+    BUILTIN_RUNTIME_FEATURES,
+    ComputeKernel,
+    NativeFeature,
+    TableIOOperation,
+)
 from irx.typecheck import typechecked
 
 _IMPORTABLE_BINDING_KINDS = frozenset({"function", "struct", "class"})
@@ -93,6 +98,8 @@ class CompilationSession:
         type: DiagnosticBag
       visible_bindings:
         type: dict[ModuleKey, dict[str, SemanticBinding]]
+      builtin_features:
+        type: frozenset[str]
       native_features:
         type: dict[str, NativeFeature]
       native_bindings:
@@ -119,6 +126,9 @@ class CompilationSession:
     diagnostics: DiagnosticBag = field(default_factory=DiagnosticBag)
     visible_bindings: dict[ModuleKey, dict[str, SemanticBinding]] = field(
         default_factory=dict
+    )
+    builtin_features: frozenset[str] = field(
+        default=BUILTIN_RUNTIME_FEATURES, init=False
     )
     native_features: dict[str, NativeFeature] = field(default_factory=dict)
     native_bindings: dict[int, tuple[str, ...]] = field(default_factory=dict)

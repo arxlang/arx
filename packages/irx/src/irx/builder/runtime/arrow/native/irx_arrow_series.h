@@ -11,6 +11,7 @@ namespace {
 template <typename ArrowType>
 std::shared_ptr<arrow::Scalar> scalar_from_bits(uint64_t bits, bool valid) {
   using Value = typename ArrowType::c_type;
+  if (!valid) return arrow::MakeNullScalar(arrow::TypeTraits<ArrowType>::type_singleton());
   Value value{};
   if constexpr (std::is_floating_point_v<Value>) {
     if constexpr (sizeof(Value) == 4) {
@@ -101,10 +102,10 @@ arrow::Result<arrow::Datum> reduce_column(const std::string& name, const arrow::
     return unsigned_type ? arrow::Datum(unsigned_total) : arrow::Datum(signed_total);
   }
   if (name == "min" || name == "max") {
-    ARROW_ASSIGN_OR_RAISE(auto result, arrow::compute::CallFunction("min_max", {input}));
+    ARROW_ASSIGN_OR_RAISE(auto result, irx::call_compute("min_max", {input}));
     return arrow::Datum(static_cast<const arrow::StructScalar&>(*result.scalar()).value[name == "min" ? 0 : 1]);
   }
-  return arrow::compute::CallFunction(name, {input});
+  return irx::call_compute(name, {input});
 }
 }
 
@@ -165,14 +166,14 @@ extern "C" int irx_arrow_column_compute(
         return set_error(IRX_ERR_TYPE, "Series operand type mismatch");
     if (lhs && rhs && lhs->column->length() != rhs->column->length())
       return set_error(EINVAL, "Series lengths must match");
-    static const auto initialized = arrow::compute::Initialize();
+    const auto initialized = irx::initialize_compute();
     if (!initialized.ok()) return set_error(irx::record_batch_status(initialized), "%s", initialized.ToString().c_str());
     std::vector<arrow::Datum> inputs = {lhs ? arrow::Datum(lhs->column) : arrow::Datum(left_scalar)};
     const bool reduction = name == "sum" || name == "min" || name == "max" || name == "mean" || name == "count" || name == "any" || name == "all";
     const bool unary = reduction || name == "is_null" || name == "identity" || name == "negate_checked" || name == "invert";
     if (!unary) inputs.push_back(rhs ? arrow::Datum(rhs->column) : arrow::Datum(right_scalar));
     arrow::Result<arrow::Datum> computed = name == "identity" ? arrow::Result<arrow::Datum>(inputs[0])
-        : reduction ? reduce_column(name, inputs[0]) : arrow::compute::CallFunction(name, inputs);
+        : reduction ? reduce_column(name, inputs[0]) : irx::call_compute(name, inputs);
     if (!computed.ok()) return set_error(irx::record_batch_status(computed.status()), "%s", computed.status().ToString().c_str());
     if (computed->is_scalar()) {
       auto status = scalar_bits(*computed->scalar(), out_bits, out_valid);
@@ -207,7 +208,7 @@ extern "C" int irx_arrow_column_compute_promoted(
   try {
     auto scalar = column_scalar(type, 0, false);
     if (!scalar) return irx_arrow_column_compute(kernel, type, lhs, lhs_bits, lhs_valid, rhs, rhs_bits, rhs_valid, out_column, out_bits, out_valid);
-    static const auto initialized = arrow::compute::Initialize();
+    const auto initialized = irx::initialize_compute();
     if (!initialized.ok()) return set_error(irx::record_batch_status(initialized), "%s", initialized.ToString().c_str());
     irx_arrow_chunked_array_handle left{}, right{};
     auto convert = [&scalar](const irx_arrow_chunked_array_handle* source, irx_arrow_chunked_array_handle* target) -> arrow::Status {
@@ -258,7 +259,7 @@ extern "C" int irx_arrow_series_slice(
     }
     auto indices = builder.Finish();
     if (!indices.ok()) return set_error(irx::record_batch_status(indices.status()), "%s", indices.status().ToString().c_str());
-    static const auto initialized = arrow::compute::Initialize();
+    const auto initialized = irx::initialize_compute();
     if (!initialized.ok()) return set_error(irx::record_batch_status(initialized), "%s", initialized.ToString().c_str());
     auto taken = arrow::compute::Take(arrow::Datum(column->column), arrow::Datum(*indices));
     if (!taken.ok()) return set_error(irx::record_batch_status(taken.status()), "%s", taken.status().ToString().c_str());

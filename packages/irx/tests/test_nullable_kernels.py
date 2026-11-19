@@ -9,7 +9,16 @@ import struct
 import pyarrow as pa
 import pytest
 
+from irx.builder.runtime.arrow_compute import COMPUTE_SIGNATURES
+from irx.native import COMPUTE_CATALOG, ComputeKernel
+
 from .test_arrow_interop import import_batch, native  # noqa: F401
+from .test_arrow_math_contract import (
+    FINITE,
+    SPECIAL,
+    assert_result,
+    decimal_reference,
+)
 from .test_dataframe_conversion import import_schema
 
 
@@ -21,6 +30,19 @@ def bind_kernels(native: ctypes.CDLL) -> None:
         type: ctypes.CDLL
     """
     pointer = ctypes.c_void_p
+    types = {
+        "v": None,
+        "p": pointer,
+        "pp": ctypes.POINTER(pointer),
+        "i32": ctypes.c_int32,
+        "i64": ctypes.c_uint64,
+        "i32p": ctypes.POINTER(ctypes.c_int32),
+        "i64p": ctypes.POINTER(ctypes.c_uint64),
+    }
+    for name, signature in COMPUTE_SIGNATURES.items():
+        function = getattr(native, name)
+        function.restype = types[signature[0]]
+        function.argtypes = [types[item] for item in signature[1:]]
     native.irx_arrow_column_compute.argtypes = [
         ctypes.c_char_p,
         ctypes.c_int32,
@@ -52,6 +74,214 @@ def bind_kernels(native: ctypes.CDLL) -> None:
     for name in ("irx_arrow_table_release", "irx_arrow_chunked_array_release"):
         getattr(native, name).argtypes = [pointer]
         getattr(native, name).restype = None
+
+
+@pytest.mark.parametrize("kernel", tuple(COMPUTE_CATALOG))
+def test_versioned_math_abi(
+    native: ctypes.CDLL, kernel: ComputeKernel
+) -> None:
+    """
+    title: Reuse independent scalar oracles through the two-kernel native ABI.
+    parameters:
+      native:
+        type: ctypes.CDLL
+      kernel:
+        type: ComputeKernel
+    """
+    bind_kernels(native)
+    assert native.irx_arrow_compute_abi_version() == 1
+    operation = COMPUTE_CATALOG[kernel][0]
+    assert native.irx_arrow_compute_supports(1, operation, 1, 0, 12, 1) == 0
+    vectors = [
+        (arguments, decimal_reference(kernel, arguments))
+        for arguments in FINITE[kernel]
+    ] + list(SPECIAL[kernel])
+    for (value,), expected in vectors:
+        payload = (
+            0x7FF0000000000001  # Invalid (signaling NaN) payload is ignored.
+            if value is None
+            else struct.unpack("=Q", struct.pack("=d", value))[0]
+        )
+        column = ctypes.c_void_p(123)
+        bits, valid = ctypes.c_uint64(123), ctypes.c_int32(123)
+        assert (
+            native.irx_arrow_compute(
+                1,
+                operation,
+                1,
+                0,
+                12,
+                1,
+                None,
+                payload,
+                int(value is not None),
+                ctypes.byref(column),
+                ctypes.byref(bits),
+                ctypes.byref(valid),
+            )
+            == 0
+        )
+        assert column.value is None
+        actual = (
+            struct.unpack("=d", struct.pack("=Q", bits.value))[0]
+            if valid.value
+            else None
+        )
+        assert_result(kernel, pa.scalar(actual, type=pa.float64()), expected)
+        if not valid.value:
+            assert bits.value == 0
+
+
+@pytest.mark.parametrize("kernel", tuple(COMPUTE_CATALOG))
+@pytest.mark.parametrize("rows", [[], [None, None], [0.0, None, 4.0]])
+def test_math_series_ownership(
+    native: ctypes.CDLL, kernel: ComputeKernel, rows: list[float | None]
+) -> None:
+    """
+    title: Owned compute results survive release of borrowed input and parents.
+    parameters:
+      native:
+        type: ctypes.CDLL
+      kernel:
+        type: ComputeKernel
+      rows:
+        type: list[float | None]
+    """
+    bind_kernels(native)
+    values = pa.array([99.0, *rows], type=pa.float64()).slice(1)
+    batch = pa.record_batch([values], names=["x"])
+    handle = import_batch(native, batch)
+    schema = import_schema(native, batch.schema)
+    table, column, result = (ctypes.c_void_p() for _ in range(3))
+    bits, valid = ctypes.c_uint64(123), ctypes.c_int32(123)
+    assert (
+        native.irx_rb_batch_to_table(handle, schema, ctypes.byref(table)) == 0
+    )
+    assert (
+        native.irx_arrow_table_column_by_index(table, 0, ctypes.byref(column))
+        == 0
+    )
+    native.irx_rb_batch_release(handle)
+    native.irx_rb_schema_release(schema)
+    native.irx_arrow_table_release(table)
+    try:
+        assert (
+            native.irx_arrow_compute(
+                1,
+                COMPUTE_CATALOG[kernel][0],
+                1,
+                0,
+                12,
+                2,
+                column,
+                0,
+                0,
+                ctypes.byref(result),
+                ctypes.byref(bits),
+                ctypes.byref(valid),
+            )
+            == 0
+        )
+        assert result.value and (bits.value, valid.value) == (0, 0)
+        assert native.irx_arrow_chunked_array_retain(result) == 0
+        native.irx_arrow_chunked_array_release(result)
+    finally:
+        native.irx_arrow_chunked_array_release(column)
+    try:
+        for index, value in enumerate(rows):
+            assert (
+                native.irx_arrow_series_index(
+                    result, index, 10, ctypes.byref(bits), ctypes.byref(valid)
+                )
+                == 0
+            )
+            actual = struct.unpack("=d", struct.pack("=Q", bits.value))[0]
+            expected = (
+                None if value is None else decimal_reference(kernel, (value,))
+            )
+            assert_result(
+                kernel,
+                pa.scalar(actual if valid.value else None, type=pa.float64()),
+                expected,
+            )
+    finally:
+        native.irx_arrow_chunked_array_release(result)
+
+
+@pytest.mark.parametrize(
+    "abi,operation,arity,options,dtype,shape,column,bits,valid,status",
+    [
+        (2, 1, 1, 0, 12, 2, 1, 0, 0, -6),  # ABI before pointer access.
+        (1, 999, 1, 0, 12, 1, None, 0, 1, -6),
+        (1, 1, 2, 0, 12, 1, None, 0, 1, -6),
+        (1, 1, 1, 1, 12, 1, None, 0, 1, -6),
+        (1, 1, 1, 0, 10, 1, None, 0, 1, -4),  # Legacy ID is not f64.
+        (1, 1, 1, 0, 12, 3, None, 0, 1, -4),
+        (1, 1, 1, 0, 12, 1, None, 0, 2, -6),
+        (1, 1, 1, 0, 12, 1, 1, 0, 1, -6),
+        (1, 1, 1, 0, 12, 2, None, 0, 0, -2),
+    ],
+)
+def test_math_abi_fail_closed(
+    native: ctypes.CDLL,
+    abi: int,
+    operation: int,
+    arity: int,
+    options: int,
+    dtype: int,
+    shape: int,
+    column: int | None,
+    bits: int,
+    valid: int,
+    status: int,
+) -> None:
+    """
+    title: Reject unsupported descriptors and clear poison outputs.
+    parameters:
+      native:
+        type: ctypes.CDLL
+      abi:
+        type: int
+      operation:
+        type: int
+      arity:
+        type: int
+      options:
+        type: int
+      dtype:
+        type: int
+      shape:
+        type: int
+      column:
+        type: int | None
+      bits:
+        type: int
+      valid:
+        type: int
+      status:
+        type: int
+    """
+    bind_kernels(native)
+    output = ctypes.c_void_p(123)
+    out_bits, out_valid = ctypes.c_uint64(123), ctypes.c_int32(123)
+    assert (
+        native.irx_arrow_compute(
+            abi,
+            operation,
+            arity,
+            options,
+            dtype,
+            shape,
+            column,
+            bits,
+            valid,
+            ctypes.byref(output),
+            ctypes.byref(out_bits),
+            ctypes.byref(out_valid),
+        )
+        == status
+    )
+    assert (output.value, out_bits.value, out_valid.value) == (None, 0, 0)
 
 
 def compute(
