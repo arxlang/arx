@@ -88,7 +88,7 @@ def prepare_module(
             if kernel is None:
                 raise ValueError(f"unregistered math extern: {node.name}")
             bindings.append(
-                NativeBinding(node, ("dataframe",), compute=kernel)
+                NativeBinding(node, ("arrow_compute",), compute=kernel)
             )
             continue
         operation = IO_FUNCTIONS.get(module_name, {}).get(node.name)

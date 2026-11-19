@@ -323,6 +323,7 @@ def build_record_batch_runtime_feature() -> RuntimeFeature:
         for source in (
             _native_source(),
             native_dir / "irx_arrow_runtime.cc",
+            native_dir / "irx_arrow_compute.cc",
             native_dir / "irx_arrow_transport.cc",
             native_dir / "irx_record_batch_api.cc",
         )

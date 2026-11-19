@@ -64,6 +64,10 @@ REQUIRED_ARX_STDLIB_ASSETS = (
 
 REQUIRED_IRX_NATIVE_ASSETS = (
     "irx/builder/runtime/arrow/native/irx_arrow_runtime.cc",
+    "irx/builder/runtime/arrow/native/irx_arrow_compute.cc",
+    "irx/builder/runtime/arrow/native/irx_arrow_compute.h",
+    "irx/builder/runtime/arrow/native/irx_arrow_compute_catalog.h",
+    "irx/builder/runtime/arrow/native/irx_arrow_common.h",
     "irx/builder/runtime/arrow/native/irx_arrow_series.h",
     "irx/builder/runtime/arrow/native/irx_arrow_c_abi.h",
     "irx/builder/runtime/arrow/native/irx_record_batch.cpp",
@@ -356,6 +360,9 @@ fn main() -> i32:
 """
 
 SMOKE_DRIVER = r"""
+import ctypes
+import struct
+import subprocess
 import sys
 
 from pathlib import Path
@@ -387,6 +394,44 @@ from irx.record_batch import (
 )
 
 root = Path.cwd()
+from irx.builder.runtime.arrow_compute import (
+    COMPUTE_SIGNATURES, build_arrow_compute_runtime_feature,
+)
+from irx.builder.runtime.linking import compile_native_artifacts
+from irx.native import COMPUTE_CATALOG
+
+feature = build_arrow_compute_runtime_feature()
+work = root / "compute-abi"
+work.mkdir()
+inputs = compile_native_artifacts(feature.artifacts, work)
+library = work / "compute.so"
+subprocess.run([
+    "c++", "-shared", *(str(path) for path in inputs.objects),
+    *inputs.linker_flags, *feature.linker_flags, "-o", str(library),
+], check=True)
+native = ctypes.CDLL(str(library))
+pointer = ctypes.c_void_p
+types = {
+    "v": None, "p": pointer, "pp": ctypes.POINTER(pointer),
+    "i32": ctypes.c_int32, "i64": ctypes.c_uint64,
+    "i32p": ctypes.POINTER(ctypes.c_int32),
+    "i64p": ctypes.POINTER(ctypes.c_uint64),
+}
+for name, signature in COMPUTE_SIGNATURES.items():
+    function = getattr(native, name)
+    function.restype = types[signature[0]]
+    function.argtypes = [types[item] for item in signature[1:]]
+assert native.irx_arrow_compute_abi_version() == 1
+for name, (operation, _) in COMPUTE_CATALOG.items():
+    output, bits, valid = pointer(), ctypes.c_uint64(), ctypes.c_int32()
+    assert native.irx_arrow_compute(
+        1, operation, 1, 0, 12, 1, None, 0, 1,
+        ctypes.byref(output), ctypes.byref(bits), ctypes.byref(valid),
+    ) == 0
+    result = struct.unpack("=d", struct.pack("=Q", bits.value))[0]
+    assert output.value is None and valid.value == 1
+    assert result == (0.0 if name == "sqrt" else 1.0)
+
 compiler = Compiler()
 pq.write_table(
     pa.table({"id": [1, 2, 3]}), root / "python.parquet", row_group_size=1
@@ -628,13 +673,19 @@ def audit_artifacts(workspace: Path) -> tuple[Path, ...]:
                     )
 
         with tarfile.open(sdist, "r:gz") as archive:
-            if package.directory == "arx":
-                for asset in REQUIRED_ARX_STDLIB_ASSETS:
-                    if not any(
-                        name.endswith("/src/" + asset)
-                        for name in archive.getnames()
-                    ):
-                        raise RuntimeError(f"{sdist} is missing {asset}")
+            required_assets = (
+                REQUIRED_ARX_STDLIB_ASSETS
+                if package.directory == "arx"
+                else REQUIRED_IRX_NATIVE_ASSETS
+                if package.directory == "irx"
+                else ()
+            )
+            for asset in required_assets:
+                if not any(
+                    name.endswith("/src/" + asset)
+                    for name in archive.getnames()
+                ):
+                    raise RuntimeError(f"{sdist} is missing {asset}")
             license_members = [
                 member
                 for member in archive.getmembers()

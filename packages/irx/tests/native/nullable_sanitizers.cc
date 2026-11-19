@@ -1,10 +1,94 @@
 // Copyright IRx contributors.
 #include "irx_arrow_runtime.h"
+#include "irx_arrow_common.h"
 #include "irx_record_batch.h"
 #include <cassert>
+#include <cmath>
+#include <cstdlib>
+#include <cstring>
 #include <cstdint>
 #include <cstdio>
 #include <limits>
+
+// Exercise an actual allocation failure without adding a runtime test API.
+static bool fail_allocation = false;
+void* operator new(std::size_t size) {
+  if (fail_allocation) {
+    fail_allocation = false;
+    throw std::bad_alloc();
+  }
+  if (auto* value = std::malloc(size ? size : 1)) return value;
+  throw std::bad_alloc();
+}
+void operator delete(void* value) noexcept { std::free(value); }
+void operator delete(void* value, std::size_t) noexcept { std::free(value); }
+
+static void check_compute_abi() {
+  assert(irx_arrow_compute_abi_version() == IRX_COMPUTE_ABI_VERSION);
+  arrow::DoubleBuilder builder;
+  assert(builder.AppendValues({0.0, 4.0}).ok());
+  auto first = builder.Finish().ValueOrDie();
+  assert(builder.AppendNull().ok());
+  auto second = builder.Finish().ValueOrDie();
+  for (int operation : {IRX_COMPUTE_SQRT, IRX_COMPUTE_EXP}) {
+    auto* input = new irx_arrow_chunked_array_handle();
+    input->refcount = 1;
+    input->column = std::make_shared<arrow::ChunkedArray>(
+        arrow::ArrayVector{first, second});
+    irx_arrow_chunked_array_handle* output = nullptr;
+    uint64_t bits = 123;
+    int32_t valid = 123;
+    assert(irx_arrow_compute(1, operation, 1, 0, 12, 2, input, 0, 0,
+                            &output, &bits, &valid) == IRX_OK);
+    assert(output && bits == 0 && valid == 0);
+    irx_arrow_chunked_array_release(input);
+    assert(irx_arrow_chunked_array_retain(output) == IRX_OK);
+    irx_arrow_chunked_array_release(output);
+    assert(output->column->length() == 3 && output->column->null_count() == 1);
+    auto scalar = output->column->GetScalar(1).ValueOrDie();
+    const double value = static_cast<const arrow::DoubleScalar&>(*scalar).value;
+    assert(std::abs(value - (operation == IRX_COMPUTE_SQRT ? 2.0 : std::exp(4.0))) < 1e-12);
+    irx_arrow_chunked_array_release(output);
+
+    // Missing slots clear every remaining output; an incompatible revision is
+    // rejected without dereferencing even an inaccessible input pointer.
+    for (int missing = 0; missing < 3; ++missing) {
+      output = reinterpret_cast<irx_arrow_chunked_array_handle*>(1);
+      bits = valid = 123;
+      assert(irx_arrow_compute(1, operation, 1, 0, 12, 1, nullptr, 0, 1,
+          missing == 0 ? nullptr : &output, missing == 1 ? nullptr : &bits,
+          missing == 2 ? nullptr : &valid) == IRX_ERR_NULLPTR);
+      if (missing != 0) assert(output == nullptr);
+      if (missing != 1) assert(bits == 0);
+      if (missing != 2) assert(valid == 0);
+    }
+    assert(irx_arrow_compute(99, operation, 1, 0, 12, 2,
+        reinterpret_cast<irx_arrow_chunked_array_handle*>(1), 0, 0,
+        &output, &bits, &valid) == IRX_ERR_INVALID);
+    assert(!output && bits == 0 && valid == 0);
+    irx_arrow_chunked_array_handle wrong_tag;
+    wrong_tag.tag = 0;
+    assert(irx_arrow_compute(1, operation, 1, 0, 12, 2, &wrong_tag, 0, 0,
+                            &output, &bits, &valid) == IRX_ERR_TYPE);
+    assert(!output && bits == 0 && valid == 0);
+    wrong_tag.tag = irx_arrow_chunked_array_handle::tag_value;
+    wrong_tag.refcount = 1;
+    wrong_tag.column = arrow::ChunkedArray::MakeEmpty(arrow::int32()).ValueOrDie();
+    assert(irx_arrow_compute(1, operation, 1, 0, 12, 2, &wrong_tag, 0, 0,
+                            &output, &bits, &valid) == IRX_ERR_TYPE);
+    assert(!output && bits == 0 && valid == 0);
+    fail_allocation = true;
+    assert(irx_arrow_compute(1, operation, 1, 0, 12, 1, nullptr, 0, 1,
+                            &output, &bits, &valid) == IRX_ERR_ALLOC);
+    assert(!fail_allocation && !output && bits == 0 && valid == 0);
+  }
+  assert(irx::record_batch_status(arrow::Status::OutOfMemory("test")) == IRX_ERR_ALLOC);
+  assert(irx::record_batch_status(arrow::Status::CapacityError("test")) == IRX_ERR_OVERFLOW);
+  assert(irx::record_batch_status(arrow::Status::IndexError("test")) == IRX_ERR_OOB);
+  assert(irx::record_batch_status(arrow::Status::TypeError("test")) == IRX_ERR_TYPE);
+  assert(irx::record_batch_status(arrow::Status::IOError("test")) == IRX_ERR_IO);
+  assert(irx::native_exception_status(std::overflow_error("test")) == IRX_ERR_OVERFLOW);
+}
 
 static void release_tensor_context(void* context) {
   irx_arrow_tensor_release(static_cast<irx_arrow_tensor_handle*>(context));
@@ -45,6 +129,7 @@ static void check_tensor_lifetimes() {
 }
 
 int main() {
+  check_compute_abi();
   check_tensor_lifetimes();
   for (int repeat = 0; repeat < 16; ++repeat) {
     IrxRbSchema* schema = nullptr;

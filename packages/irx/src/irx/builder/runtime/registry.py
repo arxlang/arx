@@ -5,11 +5,15 @@ title: Runtime feature registry and per-module activation state.
 from __future__ import annotations
 
 from functools import lru_cache
-from typing import TYPE_CHECKING, Iterable
+from types import MappingProxyType
+from typing import TYPE_CHECKING, Iterable, Mapping
 
 from llvmlite import ir
 
 from irx.builder.runtime.array.feature import build_array_runtime_feature
+from irx.builder.runtime.arrow_compute import (
+    build_arrow_compute_runtime_feature,
+)
 from irx.builder.runtime.buffer.feature import build_buffer_runtime_feature
 from irx.builder.runtime.classes import build_class_runtime_feature
 from irx.builder.runtime.dataframe.feature import (
@@ -35,7 +39,7 @@ from irx.diagnostics import (
     DiagnosticCodes,
     RuntimeFeatureError,
 )
-from irx.native import NativeFeature
+from irx.native import BUILTIN_RUNTIME_FEATURES, NativeFeature
 from irx.typecheck import typechecked
 
 if TYPE_CHECKING:
@@ -48,14 +52,14 @@ class RuntimeFeatureRegistry:
     title: Registry of named runtime features.
     attributes:
       _features:
-        type: dict[str, RuntimeFeature]
+        type: Mapping[str, RuntimeFeature]
     """
 
     def __init__(self) -> None:
         """
         title: Initialize RuntimeFeatureRegistry.
         """
-        self._features: dict[str, RuntimeFeature] = {}
+        self._features: Mapping[str, RuntimeFeature] = {}
 
     def register(self, feature: RuntimeFeature) -> None:
         """
@@ -64,11 +68,22 @@ class RuntimeFeatureRegistry:
           feature:
             type: RuntimeFeature
         """
+        if not isinstance(self._features, dict):
+            raise ValueError("runtime capability snapshot is immutable")
         if feature.name in self._features:
             raise ValueError(
                 f"Runtime feature '{feature.name}' already exists"
             )
         self._features[feature.name] = feature
+
+    def freeze(self) -> RuntimeFeatureRegistry:
+        """
+        title: Close registration before sharing this capability snapshot.
+        returns:
+          type: RuntimeFeatureRegistry
+        """
+        self._features = MappingProxyType(dict(self._features))
+        return self
 
     def with_native_features(
         self, features: tuple[NativeFeature, ...]
@@ -92,7 +107,7 @@ class RuntimeFeatureRegistry:
                     linker_flags=native.linker_flags,
                 )
             )
-        return registry
+        return registry.freeze()
 
     def get(self, name: str) -> RuntimeFeature:
         """
@@ -374,6 +389,7 @@ def get_default_runtime_feature_registry() -> RuntimeFeatureRegistry:
     registry.register(build_exception_runtime_feature())
     registry.register(build_libm_runtime_feature())
     registry.register(build_buffer_runtime_feature())
+    registry.register(build_arrow_compute_runtime_feature())
     registry.register(build_array_runtime_feature())
     registry.register(build_dataframe_runtime_feature())
     registry.register(build_tensor_runtime_feature())
@@ -381,4 +397,6 @@ def get_default_runtime_feature_registry() -> RuntimeFeatureRegistry:
     registry.register(build_text_runtime_feature())
     registry.register(build_record_batch_runtime_feature())
     registry.register(build_parquet_runtime_feature())
-    return registry
+    if frozenset(registry.names()) != BUILTIN_RUNTIME_FEATURES:
+        raise ValueError("builtin runtime capabilities disagree with analysis")
+    return registry.freeze()

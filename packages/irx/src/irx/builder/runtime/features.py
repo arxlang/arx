@@ -5,6 +5,7 @@ title: Runtime feature specifications and LLVM symbol helpers.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from types import MappingProxyType
 from typing import TYPE_CHECKING, Callable, Mapping, TypeAlias, cast
 
 from llvmlite import ir
@@ -66,6 +67,17 @@ class RuntimeFeature:
     metadata: Mapping[str, object] = field(default_factory=dict)
     dependencies: tuple[str, ...] = ()
     unavailable_reason: str | None = None
+
+    def __post_init__(self) -> None:
+        """
+        title: Snapshot capability maps instead of retaining mutable inputs.
+        """
+        object.__setattr__(
+            self, "symbols", MappingProxyType(dict(self.symbols))
+        )
+        object.__setattr__(
+            self, "metadata", MappingProxyType(dict(self.metadata))
+        )
 
 
 @typechecked

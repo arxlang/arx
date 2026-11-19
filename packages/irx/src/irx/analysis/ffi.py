@@ -7,10 +7,8 @@ summary: >-
 
 from __future__ import annotations
 
-import importlib
-
 from dataclasses import replace
-from typing import Iterable, cast
+from typing import Iterable
 
 import astx
 
@@ -35,22 +33,8 @@ from irx.analysis.types import (
     is_string_type,
 )
 from irx.diagnostics import DiagnosticBag, DiagnosticCodes
+from irx.native import BUILTIN_RUNTIME_FEATURES
 from irx.typecheck import typechecked
-
-
-@typechecked
-def _runtime_feature_names() -> tuple[str, ...]:
-    """
-    title: Return the registered runtime feature names.
-    returns:
-      type: tuple[str, Ellipsis]
-    """
-    registry_module = importlib.import_module("irx.builder.runtime.registry")
-    registry_factory = getattr(
-        registry_module,
-        "get_default_runtime_feature_registry",
-    )
-    return cast(tuple[str, ...], registry_factory().names())
 
 
 @typechecked
@@ -107,7 +91,7 @@ def normalize_runtime_features(
 
     normalized: list[str] = []
     seen: set[str] = set()
-    known_features = set(_runtime_feature_names()) | set(available_features)
+    known_features = set(BUILTIN_RUNTIME_FEATURES) | set(available_features)
     for value in (*values, *bound_features):
         if not isinstance(value, str) or not value.strip():
             diagnostics.add(

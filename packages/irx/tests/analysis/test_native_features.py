@@ -83,7 +83,7 @@ def compute_modules(
         "provider",
         provider,
         native_bindings=(
-            NativeBinding(prototype, ("dataframe",), compute=kernel),
+            NativeBinding(prototype, ("arrow_compute",), compute=kernel),
         ),
     )
     bridge = astx.Module()
@@ -156,9 +156,10 @@ def test_compute_plan_identity_and_reanalysis(
         assert isinstance(plan, ComputePlan)
         assert plan.operation.kernel == kernel
         assert plan.operation.arrow_version == "26.0.1"
+        assert plan.operation.operation_id == (1 if kernel == "sqrt" else 2)
         assert plan.function.module_key == "provider"
         assert plan.function.signature.required_runtime_features == (
-            "dataframe",
+            "arrow_compute",
         )
         assert plan.argument is call.args[0]
         assert plan.shape == (
@@ -226,10 +227,10 @@ def test_compute_capability_validation() -> None:
     with pytest.raises(TypeCheckError):
         NativeBinding(
             prototype,
-            ("dataframe",),
+            ("arrow_compute",),
             compute="unknown",  # type: ignore[arg-type]
         )
-    with pytest.raises(ValueError, match="only the dataframe feature"):
+    with pytest.raises(ValueError, match="only the arrow_compute feature"):
         NativeBinding(prototype, ("libc",), compute="sqrt")
     module = astx.Module()
     module.block.append(prototype)
@@ -238,7 +239,7 @@ def test_compute_capability_validation() -> None:
             "bad",
             module,
             native_bindings=(
-                NativeBinding(prototype, ("dataframe",), compute="sqrt"),
+                NativeBinding(prototype, ("arrow_compute",), compute="sqrt"),
             ),
         )
 

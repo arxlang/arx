@@ -2,6 +2,12 @@
 // Copyright IRx contributors.
 
 #include "irx_arrow_runtime.h"
+#include "irx_arrow_common.h"
+
+using irx::clear_error;
+using irx::set_error;
+using irx::set_arrow_error;
+using irx::set_exception_error;
 
 #include <arrow/api.h>
 #include <arrow/c/bridge.h>
@@ -31,7 +37,6 @@ constexpr int kArrowOk = 0;
 constexpr int64_t kInitialRefcount = 1;
 constexpr int64_t kPrimitiveArrayBufferCount = 2;
 
-thread_local char last_error[512] = {0};
 
 enum class AppendKind {
   kSigned,
@@ -247,44 +252,7 @@ struct irx_arrow_table_handle {
   std::shared_ptr<arrow::Table> table;
 };
 
-struct irx_arrow_chunked_array_handle {
-  int64_t refcount = 0;
-  std::shared_ptr<arrow::ChunkedArray> column;
-};
-
 namespace {
-
-void clear_error() { last_error[0] = '\0'; }
-
-int set_error(int code, const char* format, ...) {
-  va_list args;
-  va_start(args, format);
-  std::vsnprintf(last_error, sizeof(last_error), format, args);
-  va_end(args);
-  switch (code) {
-    case EINVAL: return IRX_ERR_INVALID;
-    case ERANGE: return IRX_ERR_OOB;
-    case EOVERFLOW: return IRX_ERR_OVERFLOW;
-    case ENOMEM: return IRX_ERR_ALLOC;
-    case EIO: return IRX_ERR_IO;
-    default: return code;
-  }
-}
-
-int set_arrow_error(int code, const char* context, const arrow::Status& status) {
-  (void)code;
-  return set_error(irx::record_batch_status(status), "%s: %s", context,
-                   status.ToString().c_str());
-}
-
-int set_exception_error(const char* context, const std::exception& exc) {
-    int code = IRX_ERR_ARROW;
-  if (dynamic_cast<const std::bad_alloc*>(&exc)) code = IRX_ERR_ALLOC;
-  else if (dynamic_cast<const std::out_of_range*>(&exc)) code = IRX_ERR_OOB;
-  else if (dynamic_cast<const std::invalid_argument*>(&exc)) code = IRX_ERR_INVALID;
-  else if (dynamic_cast<const std::overflow_error*>(&exc)) code = IRX_ERR_OVERFLOW;
-  return set_error(code, "%s: %s", context, exc.what());
-}
 
 const TypeSpec* type_spec_from_type_id(int32_t type_id) {
   for (const TypeSpec& spec : kTypeSpecs) {
@@ -2068,39 +2036,6 @@ void irx_arrow_table_release(irx_arrow_table_handle* table) {
   if (table->refcount == 0) {
     delete table;
   }
-}
-
-int irx_arrow_chunked_array_retain(irx_arrow_chunked_array_handle* column) {
-  try {
-  clear_error();
-  if (column == nullptr) {
-    return kArrowOk;
-  }
-  if (column->refcount <= 0) {
-    return set_error(EINVAL, "chunked array handle is released");
-  }
-  column->refcount += 1;
-  return kArrowOk;
-
-  } catch (const std::exception& native_error) {
-    return set_exception_error("irx_arrow_chunked_array_retain", native_error);
-  } catch (...) {
-    return set_error(IRX_ERR_ARROW, "unknown native Arrow failure");
-  }
-}
-
-void irx_arrow_chunked_array_release(irx_arrow_chunked_array_handle* column) {
-  if (column == nullptr || column->refcount <= 0) {
-    return;
-  }
-  column->refcount -= 1;
-  if (column->refcount == 0) {
-    delete column;
-  }
-}
-
-const char* irx_arrow_last_error(void) {
-  return last_error;
 }
 
 int irx_arrow_table_import_stream(ArrowArrayStream* stream,
