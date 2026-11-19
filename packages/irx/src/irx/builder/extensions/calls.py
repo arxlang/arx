@@ -17,7 +17,6 @@ from irx.analysis.compute import ComputePlan
 from irx.analysis.extensions.records import CallPlan
 from irx.analysis.resolved_nodes import ResolvedClassConstruction
 from irx.builder.diagnostics import (
-    raise_lowering_error,
     raise_lowering_internal_error,
 )
 from irx.builder.state import CleanupAction
@@ -103,6 +102,19 @@ class CallLoweringServices(Protocol):
           type: ir.Value
         """
         del node, value, target
+        raise NotImplementedError
+
+    @abstractmethod
+    def compute(self, node: astx.AST, plan: ComputePlan) -> None:
+        """
+        title: Emit a closed compute plan through shared value services.
+        parameters:
+          node:
+            type: astx.AST
+          plan:
+            type: ComputePlan
+        """
+        del node, plan
         raise NotImplementedError
 
     @abstractmethod
@@ -239,19 +251,14 @@ class CallLoweringVisitor:
     @dispatch
     def visit(self, plan: ComputePlan, call: LoweringCall) -> None:
         """
-        title: Report known math plans whose native execution is unavailable.
+        title: Emit a resolved compute plan without rediscovering its meaning.
         parameters:
           plan:
             type: ComputePlan
           call:
             type: LoweringCall
         """
-        raise_lowering_error(
-            f"native execution of stdlib.math.{plan.operation.kernel} "
-            "is not yet supported",
-            code=DiagnosticCodes.RUNTIME_FEATURE_UNAVAILABLE,
-            node=call.node,
-        )
+        call.services.compute(call.node, plan)
 
     @dispatch
     def visit(self, plan: CallPlan, call: LoweringCall) -> None:

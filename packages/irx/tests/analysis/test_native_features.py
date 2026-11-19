@@ -15,7 +15,7 @@ from irx.analysis.extensions.records import CALL_PLAN
 from irx.analysis.resolved_nodes import SemanticInfo
 from irx.builder import Builder
 from irx.builder.runtime.registry import get_default_runtime_feature_registry
-from irx.diagnostics import DiagnosticCodes, LoweringError
+from irx.diagnostics import DiagnosticCodes
 from irx.native import (
     ComputeKernel,
     NativeArtifact,
@@ -177,14 +177,16 @@ def test_compute_plan_identity_and_reanalysis(
             assert plan.result_type.size == type_.size
             assert plan.result_type.nullable == type_.nullable
         assert tuple(session.native_compute.values()) == (kernel,)
-    with pytest.raises(LoweringError, match="native execution") as captured:
-        Builder().translate_modules(root, resolver)
-    diagnostic = captured.value.diagnostic
-    assert diagnostic.code == DiagnosticCodes.RUNTIME_FEATURE_UNAVAILABLE
-    assert diagnostic.phase == "lowering"
-    assert diagnostic.node is call
-    assert f"stdlib.math.{kernel} is not yet supported" in diagnostic.message
-    assert "internal compiler error" not in diagnostic.message
+    builder = Builder()
+    text = builder.translate_modules(root, resolver)
+    llvm.parse_assembly(text).verify()
+    assert 'call i32 @"irx_arrow_compute"' in text
+    assert 'call i32 @"irx_arrow_compute_abi_version"' in text
+    features = builder.translator.runtime_features.active_feature_names()
+    assert "arrow_compute" in features
+    assert "libm" not in features
+    if not isinstance(type_, astx.SeriesType):
+        assert "dataframe" not in features
     call.keywords = [astx.KeywordArgument("options", astx.LiteralInt32(1))]
     with pytest.raises(SemanticError, match="unknown argument 'options'"):
         analyze_modules(root, resolver)

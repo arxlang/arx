@@ -1,7 +1,7 @@
 """
 title: Closed f64 math capabilities and compilation-local semantic call plans.
 summary: >-
-  Semantic support only; native dispatch and bundled declarations are separate.
+  Lowering consumes these plans through the shared versioned Arrow runtime.
   sqrt and exp use Arrow 26.0.1 unchecked IEEE kernels, with null propagation,
   no options or fast-math, and finite error budgets of 4 and 8 ULP
   respectively. sqrt preserves signed zero and maps negative inputs to NaN. exp

@@ -85,6 +85,8 @@ class DataFrameVisitorMixin(ClassVisitorMixin):
         status: ir.Value,
         operation: str,
         message: ir.Value | None = None,
+        *,
+        feature: str = "dataframe",
     ) -> None:
         """
         title: Translate typed native failures without parsing diagnostic text.
@@ -97,6 +99,8 @@ class DataFrameVisitorMixin(ClassVisitorMixin):
             type: str
           message:
             type: ir.Value | None
+          feature:
+            type: str
         """
         function = self._llvm.ir_builder.function
         success = function.append_basic_block(operation + ".success")
@@ -111,9 +115,7 @@ class DataFrameVisitorMixin(ClassVisitorMixin):
         self._llvm.ir_builder.position_at_end(failure)
         if message is None:
             message = self._llvm.ir_builder.call(
-                self.require_runtime_symbol(
-                    "dataframe", "irx_arrow_last_error"
-                ),
+                self.require_runtime_symbol(feature, "irx_arrow_last_error"),
                 [],
             )
         fallback = function.append_basic_block("arrow.runtime_error")

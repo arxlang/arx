@@ -10,6 +10,7 @@ import astx
 from llvmlite import ir
 from public import private
 
+from irx.analysis.compute import ComputePlan
 from irx.analysis.resolved_nodes import ResolvedClassConstruction
 from irx.builder.backend import Visitor
 from irx.builder.diagnostics import require_lowered_value
@@ -142,6 +143,17 @@ class VisitorCallServices:
         return self.owner.checked_native_call(
             node, self.owner.require_runtime_symbol(feature, name), args
         )
+
+    def compute(self, node: astx.AST, plan: ComputePlan) -> None:
+        """
+        title: Reuse typed scalar transport and Arrow ownership emission.
+        parameters:
+          node:
+            type: astx.AST
+          plan:
+            type: ComputePlan
+        """
+        self.owner.lower_compute(node, plan)
 
     def track(
         self, node: astx.AST, feature: str, destroy: str, value: ir.Value
