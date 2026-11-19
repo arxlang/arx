@@ -18,13 +18,14 @@ from arx.codegen import ArxBuilder
 from arx.io import ArxIO
 from arx.lexer import Lexer
 from arx.parser import Parser
-from arxpy import ArtifactKind, CompileError, Compiler
+from arxpy import ArtifactKind, Compiler
 from irx.analysis import analyze_modules
 from irx.analysis.compute import ComputePlan
 from irx.analysis.extensions.records import CALL_PLAN
 from irx.analysis.module_interfaces import ParsedModule
 from irx.analysis.resolved_nodes import SemanticInfo
-from irx.diagnostics import DiagnosticCodes, SemanticError
+from irx.diagnostics import SemanticError
+from llvmlite import binding as llvm
 
 from .test_app_paths import _write_installed_arx_distribution
 
@@ -116,17 +117,11 @@ def test_math_compute_plans_through_source_reexports(
 
     compiler = Compiler()
     checked = compiler.check(compiler.parse_file(path))
-    with pytest.raises(CompileError) as captured:
-        compiler.compile(checked, kind=ArtifactKind.LLVM_IR)
-    [diagnostic] = captured.value.diagnostics
-    assert diagnostic.code == DiagnosticCodes.RUNTIME_FEATURE_UNAVAILABLE
-    assert f"stdlib.math.{kernel} is not yet supported" in diagnostic.message
-    assert "internal compiler error" not in diagnostic.message
-    assert diagnostic.filename == str(path)
-    assert (
-        diagnostic.line
-        == source.splitlines().index("  return compute(value=value)") + 1
-    )
+    artifact = compiler.compile(checked, kind=ArtifactKind.LLVM_IR)
+    assert artifact.llvm_ir is not None
+    llvm.parse_assembly(artifact.llvm_ir).verify()
+    assert 'call i32 @"irx_arrow_compute"' in artifact.llvm_ir
+    assert 'call double @"sqrt"' not in artifact.llvm_ir
 
     invalid = source.replace("value=value)", "value=value, options=1)")
     ArxIO.string_to_buffer(invalid)

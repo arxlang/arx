@@ -2,6 +2,7 @@
 title: Test code generation AST output.
 """
 
+import os
 import shutil
 import subprocess
 import sys
@@ -20,11 +21,237 @@ from arx.parser import Parser
 from irx.analysis.module_interfaces import ParsedModule
 from irx.analysis.resolved_nodes import OwnershipTransferKind, SemanticInfo
 from irx.analysis.types import same_type
+from irx.builder.runtime.exceptions import parse_exception_output
+from irx.builder.runtime.features import NativeArtifact
+from irx.builder.runtime.linking import link_executable
 from irx.diagnostics import DiagnosticCodes, SemanticError
 from llvmlite import binding as llvm
 from llvmlite import ir
 
 from .test_file_class_native import build_audited_file_program
+
+
+@pytest.fixture(scope="module")
+def compute_program(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    """
+    title: Verify and link cross-module math with boundary auditing.
+    parameters:
+      tmp_path_factory:
+        type: pytest.TempPathFactory
+    returns:
+      type: Path
+    """
+    if sys.platform != "linux":
+        pytest.skip("compute boundary auditing requires ELF --wrap")
+    work = tmp_path_factory.mktemp("compute")
+    (work / "compute_bridge.x").write_text(
+        "```\ntitle: Typed source-only compute bridge\n```\n"
+        "import (sqrt as root, exp) from stdlib.math\n"
+        "fn scalar(value: f64) -> f64:\n"
+        "  return root(value)\n"
+        "fn optional(value: nullable[f64]) -> nullable[f64]:\n"
+        "  return root(value)\n"
+        "fn series(value: series[nullable[f64]]) "
+        "-> series[nullable[f64]]:\n"
+        "  return root(exp(value))\n"
+    )
+    source = work / "main.x"
+    source.write_text(
+        "```\ntitle: Native compute transport and cleanup\n```\n"
+        "import (scalar, optional, series) from compute_bridge\n"
+        "import (sqrt as root, exp) from stdlib.math\n"
+        "calls: i32 = 0\n"
+        "fn value() -> f64:\n"
+        "  calls += 1\n"
+        "  return 4.0\n"
+        "fn sqrt(value: f64) -> f64:\n"
+        "  return -99.0\n"
+        "fn escaped() -> series[nullable[f64]]:\n"
+        "  frame: dataframe[x:f64 | none] = "
+        "dataframe({x:[0.0, none, 4.0]})\n"
+        "  return series(frame.x)\n"
+        "fn main() -> i32:\n"
+        "  assert scalar(value()) == 2.0\n"
+        "  assert calls == 1\n"
+        "  assert sqrt(4.0) == -99.0\n"
+        "  assert root(root(16.0)) == 2.0\n"
+        "  missing: nullable[f64] = none\n"
+        "  assert is_null(optional(missing))\n"
+        "  assert fill_null(optional(9.0), 0.0) == 3.0\n"
+        "  wide: nullable[i64] = cast(9007199254740993, i64)\n"
+        "  assert fill_null(wide, cast(0, i64)) == "
+        "cast(9007199254740993, i64)\n"
+        "  unsigned: nullable[u64] = cast(18446744073709551615, u64)\n"
+        "  assert fill_null(unsigned, cast(0, u64)) == "
+        "cast(18446744073709551615, u64)\n"
+        "  flag: nullable[bool] = false\n"
+        "  assert fill_null(flag, true) == false\n"
+        "  negative: f64 = root(-1.0)\n"
+        "  assert not (negative == negative)\n"
+        "  single: dataframe[x:f64] = dataframe({x:[4.0]})\n"
+        "  assert root(single.x)[0] == scalar(4.0)\n"
+        "  values: series[nullable[f64]] = escaped()\n"
+        "  assert fill_null(values[0], 0.0) == exp(0.0)\n"
+        "  assert is_null(values[1])\n"
+        "  assert fill_null(values[2], 0.0) > 7.0\n"
+        "  copied: series[nullable[f64]] = root(values)\n"
+        "  values[0] = 9.0\n"
+        "  assert fill_null(copied[0], 0.0) == 1.0\n"
+        "  root(root(copied))\n"
+        "  return 0\n"
+    )
+    ArxIO.string_to_buffer(source.read_text())
+    root = ParsedModule(
+        "main", inject_ambient_builtin_imports(Parser().parse(Lexer().lex()))
+    )
+    builder = ArxBuilder()
+    text = builder.translate_modules(root, FileImportResolver((str(source),)))
+    module = llvm.parse_assembly(text)
+    module.verify()
+    assert "llvm.sqrt" not in text and 'call double @"sqrt"' not in text
+    assert (
+        "libm"
+        not in builder.translator.runtime_features.active_feature_names()
+    )
+    for function in module.functions:
+        for block in function.blocks:
+            for instruction in block.instructions:
+                if instruction.opcode == "load" and next(
+                    iter(instruction.operands)
+                ).name.startswith(
+                    ("compute.bits", "compute.valid", "compute.column")
+                ):
+                    assert block.name.startswith("compute.success")
+    primary = work / "main.o"
+    primary.write_bytes(builder.translator.target_machine.emit_object(module))
+    audit = work / "audit.c"
+    audit.write_text(r"""#include "irx_arrow_compute.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+static void* owners[32];
+static int references[32], series_calls;
+static int find(void* value) {
+  for (int i = 0; i < 32; ++i)
+    if (references[i] && owners[i] == value) return i;
+  return -1;
+}
+static int mode(const char* name) {
+  const char* value = getenv("ARX_TEST_COMPUTE");
+  return value && !strcmp(value, name);
+}
+uint32_t __real_irx_arrow_compute_abi_version(void);
+uint32_t __wrap_irx_arrow_compute_abi_version(void) {
+  // Fail only after the inner Series result exists, exercising rollback.
+  return mode("abi") && series_calls == 2 ? 99 :
+      __real_irx_arrow_compute_abi_version();
+}
+int32_t __real_irx_arrow_compute(uint32_t, int32_t, int32_t, int32_t,
+    int32_t, int32_t, const irx_arrow_chunked_array_handle*, uint64_t,
+    int32_t, irx_arrow_chunked_array_handle**, uint64_t*, int32_t*);
+int32_t __wrap_irx_arrow_compute(uint32_t abi, int32_t op, int32_t arity,
+    int32_t options, int32_t dtype, int32_t shape,
+    const irx_arrow_chunked_array_handle* input, uint64_t bits, int32_t valid,
+    irx_arrow_chunked_array_handle** output, uint64_t* out_bits,
+    int32_t* out_valid) {
+  int fail = shape == IRX_COMPUTE_SERIES &&
+      ++series_calls == 3 && mode("type");
+  int status = __real_irx_arrow_compute(abi, op, arity, options,
+      fail ? -1 : dtype, shape, input, bits, valid,
+      output, out_bits, out_valid);
+  if (fail) { // Prove lowering never reads/publishes outputs after failure.
+    *output = (irx_arrow_chunked_array_handle*)1;
+    *out_bits = 123; *out_valid = 123;
+  }
+  if (!status && *output) {
+    for (int i = 0; i < 32; ++i) if (!references[i]) {
+      owners[i] = *output; references[i] = 1; break;
+    }
+  }
+  return status;
+}
+int __real_irx_arrow_chunked_array_retain(irx_arrow_chunked_array_handle*);
+int __wrap_irx_arrow_chunked_array_retain(
+    irx_arrow_chunked_array_handle* value) {
+  int status = __real_irx_arrow_chunked_array_retain(value);
+  int index = find(value);
+  if (!status && index >= 0) ++references[index];
+  return status;
+}
+void __real_irx_arrow_chunked_array_release(irx_arrow_chunked_array_handle*);
+void __wrap_irx_arrow_chunked_array_release(
+    irx_arrow_chunked_array_handle* value) {
+  int index = find(value);
+  if (index >= 0) --references[index];
+  __real_irx_arrow_chunked_array_release(value);
+}
+__attribute__((destructor)) static void audit(void) {
+  int live = 0;
+  for (int i = 0; i < 32; ++i) live += references[i];
+  fprintf(stderr, "COMPUTE live=%d\n", live);
+}
+""")
+    artifacts = builder.translator.runtime_features.native_artifacts()
+    native = next(
+        a.path.parent for a in artifacts if a.path.stem == "irx_arrow_compute"
+    )
+    binary = work / "program"
+    link_executable(
+        primary,
+        binary,
+        (*artifacts, NativeArtifact("c_source", audit, (native,))),
+        (
+            *builder.translator.runtime_features.linker_flags(),
+            *(
+                "-Wl,--wrap=" + name
+                for name in (
+                    "irx_arrow_compute_abi_version",
+                    "irx_arrow_compute",
+                    "irx_arrow_chunked_array_retain",
+                    "irx_arrow_chunked_array_release",
+                )
+            ),
+        ),
+    )
+    return binary
+
+
+@pytest.mark.parametrize(
+    "mode, role", [("", None), ("abi", "RuntimeError"), ("type", "TypeError")]
+)
+def test_compute_transport_and_cleanup(
+    compute_program: Path, mode: str, role: str | None
+) -> None:
+    """
+    title: Shared native math preserves values and cleans owners on failure.
+    parameters:
+      compute_program:
+        type: Path
+      mode:
+        type: str
+      role:
+        type: str | None
+    """
+    result = subprocess.run(
+        [str(compute_program)],
+        capture_output=True,
+        text=True,
+        check=False,
+        env={**os.environ, "ARX_TEST_COMPUTE": mode},
+        timeout=15,
+    )
+    assert "COMPUTE live=0" in result.stderr, result.stderr
+    if role is None:
+        assert result.returncode == 0, result.stderr
+        return
+    assert result.returncode != 0
+    report = parse_exception_output(result.stderr)
+    assert report is not None, result.stderr
+    assert report.type_name.endswith("::class::" + role)
+    if mode == "abi":
+        assert report.message == "incompatible Arrow compute ABI revision"
+    else:
+        assert "compute requires Arrow f64" in report.message
 
 
 @pytest.fixture(scope="module")

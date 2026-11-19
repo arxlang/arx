@@ -238,6 +238,8 @@ class ExceptionLoweringTypingBase:
         status: ir.Value,
         operation: str,
         message: ir.Value | None = None,
+        *,
+        feature: str = "dataframe",
     ) -> None:
         """
         title: Convert a native Arrow failure category into an exception.
@@ -250,8 +252,10 @@ class ExceptionLoweringTypingBase:
             type: str
           message:
             type: ir.Value | None
+          feature:
+            type: str
         """
-        del node, status, operation, message
+        del node, status, operation, message, feature
         raise NotImplementedError
 
     def track_native_handle(

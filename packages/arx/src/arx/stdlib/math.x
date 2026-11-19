@@ -5,9 +5,9 @@ summary: >-
   require the same concrete argument type and preserve it in the result.
   Explicit specialization uses ordinary argument conversions. Unsigned,
   floating, Boolean, and nullable specializations of these helpers are not
-  supported. sqrt and exp have semantic-only f64 scalar/Series declarations;
-  their native execution is not implemented yet. These preserve null validity
-  and use IEEE domain results, not Python math domain exceptions.
+  supported. sqrt and exp use Arrow Compute for f64 scalars and Series,
+  including nullable values. These preserve null validity and use IEEE domain
+  results, not Python math domain exceptions.
 ```
 
 @<T: f64 | nullable[f64] | series[f64] | series[nullable[f64]]>

@@ -2,7 +2,7 @@
 title: Focused versioned Arrow Compute runtime feature.
 summary: >-
   Only shared compute, scalar transport and chunked-handle lifetime code is
-  linked. Public math lowering is intentionally not enabled by this feature.
+  linked. LLVM transports primitive bits and validity, never Arrow C++ layouts.
 """
 
 from __future__ import annotations
@@ -30,6 +30,8 @@ from irx.typecheck import typechecked
 
 if TYPE_CHECKING:
     from irx.builder.protocols import VisitorProtocol
+
+COMPUTE_ABI_VERSION = 1
 
 # Return type first; the flat ABI never embeds Arrow or descriptor layouts.
 COMPUTE_SIGNATURES: dict[str, tuple[str, ...]] = {
@@ -121,5 +123,8 @@ def build_arrow_compute_runtime_feature() -> RuntimeFeature:
             ),
         ),
         linker_flags=arrowcpp_linker_flags(),
-        metadata={"compute_abi": 1, **arrowcpp_runtime_metadata()},
+        metadata={
+            "compute_abi": COMPUTE_ABI_VERSION,
+            **arrowcpp_runtime_metadata(),
+        },
     )
