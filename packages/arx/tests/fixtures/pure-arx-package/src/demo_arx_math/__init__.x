@@ -1,5 +1,5 @@
 ```
-title: Installed pure-Arx numeric library baseline
-summary: Existing operations only; Arrow-backed stdlib sqrt is not implemented.
+title: Installed pure-Arx Arrow math library
+summary: Reexport typed source wrappers without native providers or build hooks.
 ```
-import (squared, shifted, scaled) from demo_arx_math.kernels
+import (rooted, exponentiated) from demo_arx_math.kernels

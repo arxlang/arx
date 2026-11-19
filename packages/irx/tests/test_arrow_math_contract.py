@@ -1,11 +1,11 @@
 """
-title: Independent f64 oracles for the proposed Arrow-first math contract.
+title: Shared independent f64 math contract oracles.
 summary: >-
-  These tests specify candidate per-operation tolerances, not implemented Arx
-  math functions. Rerun with pinned Arrow 26 before approving its contract.
-  Passing with historical dependencies does not qualify Arrow 26 or the
-  frontend/IRx call path. Decimal references use 200 significant digits and
-  round only at the final conversion to binary64.
+  PyArrow, native ABI and installed-source tests reuse these vectors and bounds
+  for the approved sqrt/exp slice. Log/power remain candidate contracts, not
+  implemented Arx APIs. Decimal references use 200 significant digits and round
+  only at the final conversion to binary64. These checks alone do not qualify
+  the declared CI matrix or a clean installed-wheel environment.
 """
 
 from __future__ import annotations
