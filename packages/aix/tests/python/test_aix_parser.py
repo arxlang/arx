@@ -140,3 +140,11 @@ def test_parameters_preserve_mutable_bindings() -> None:
         is astx.MutabilityKind.mutable
     )
     analyze(module)
+
+
+def test_power_operator_error() -> None:
+    with pytest.raises(
+        ParserException,
+        match="the power operator '\\^' is not supported yet",
+    ):
+        parse("∴ square ⟦ x:ℤ ⟧ → ℤ ⊢ x ^ 2 ∎")
