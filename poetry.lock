@@ -1225,38 +1225,41 @@ files = [
 
 [[package]]
 name = "douki"
-version = "0.13.0"
+version = "0.14.0"
 description = "Documetatio from annotations"
 optional = false
 python-versions = "<4,>=3.10"
 groups = ["dev"]
 files = [
-    {file = "douki-0.13.0-py3-none-any.whl", hash = "sha256:b366291df67e46e4616b061ed69ab831b270d9b8fffe24422444c914f4e4f3bc"},
-    {file = "douki-0.13.0.tar.gz", hash = "sha256:46056887b24507d7dbbc44f9ba239cb3e1c30379a6f5d7a33d135d9f1889eadc"},
+    {file = "douki-0.14.0-py3-none-any.whl", hash = "sha256:617012a5fc14cdce49b469a36cb548920cd9fcc2a1d64dd79783dd6011916268"},
+    {file = "douki-0.14.0.tar.gz", hash = "sha256:6245a321dd48ef04f947d073b1ea3bd1e4bb05a06a8a078c57c81d366fe66623"},
 ]
 
 [package.dependencies]
+atpublic = ">=5,<6"
 jsonschema = ">=4"
+plum-dispatch = ">=2.5,<3"
 pyyaml = ">=6"
 rich = ">=13"
+typeguard = ">=4.4,<5"
 typer = ">=0.9"
 
 [[package]]
 name = "doukimd"
-version = "1.4.2"
+version = "1.4.3"
 description = "Markdown documentation with first-class Douki API references"
 optional = false
-python-versions = "<4,>=3.10"
+python-versions = "<4,>=3.11"
 groups = ["dev"]
 files = [
-    {file = "doukimd-1.4.2-py3-none-any.whl", hash = "sha256:eb44112965d1bac2d59d73632c1925c4e73b5bbfeaea68d759db0c779686a58a"},
-    {file = "doukimd-1.4.2.tar.gz", hash = "sha256:c1183243e0a93c4de682d71c77a678da5e4ecf00da3eeaa07bdbda08e4bad1aa"},
+    {file = "doukimd-1.4.3-py3-none-any.whl", hash = "sha256:4e824a93188e5ed97ee7051559f28aa513527c093de9bb458690498be865c7e4"},
+    {file = "doukimd-1.4.3.tar.gz", hash = "sha256:94d20dce45aba4a91e988be47006ef8c556f9e6eb69e0c173bfeb2f8513061a4"},
 ]
 
 [package.dependencies]
 atpublic = ">=5,<6"
 click = ">=8.1,<9"
-douki = "0.13.0"
+douki = ">=0.14.0"
 griffe = ">=1.15,<2"
 Jinja2 = ">=3.1.6,<4"
 jsonschema = ">=4.23,<5"
@@ -4763,4 +4766,4 @@ test = ["coverage (>=5.3.1)", "prompt-toolkit (>=3.0.29)", "pygments (>=2.2)", "
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11,<4"
-content-hash = "65cb837d51d658f37b43a99ca879876d97e50a94750f43b8e46b5d9a22ad69c0"
+content-hash = "101ec825fad574db5000cfba93e815965424beb25fe0dd980c8e936213f5f4cc"
