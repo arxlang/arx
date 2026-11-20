@@ -15,6 +15,7 @@ encoding those containers directly in LLVM IR.
 - Documentation: <https://arxlang.org>
 - Issue tracker: <https://github.com/arxlang/arx/issues>
 - License: Apache-2.0
+- Maintained by: [SciStitch](https://scistitch.com) and the ArxLang community
 
 ## Ecosystem
 
