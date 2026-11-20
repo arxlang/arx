@@ -32,10 +32,8 @@ class _DummyVisitor(BuilderVisitor):
         """
         title: Translate.
         parameters:
-          expr:
-            type: astx.AST
-        returns:
-          type: str
+          expr: Expression to process.
+        returns: 'Result of this operation: translate.'
         """
         return f"translated:{expr.__class__.__name__}"
 
@@ -44,8 +42,7 @@ class _DummyBuilder(Builder):
     """
     title: Concrete Builder for unit tests.
     attributes:
-      translator:
-        type: _DummyVisitor
+      translator: Translator.
     """
 
     def __init__(self) -> None:
@@ -59,10 +56,8 @@ class _DummyBuilder(Builder):
         """
         title: Build.
         parameters:
-          expr:
-            type: astx.AST
-          output_file:
-            type: str
+          expr: Expression to process.
+          output_file: Destination file for generated output.
         """
         self.output_file = output_file
 
@@ -89,9 +84,8 @@ def test_run_command_nonzero_raises() -> None:
 
 def test_run_command_nonzero_no_raise() -> None:
     """
-    title: >-
-      run_command with raise_on_error=False should return result instead of
-      raising.
+    title: run_command with raise_on_error=False should return result instead
+      of raising.
     """
     result = run_command(
         [sys.executable, "-c", "raise SystemExit(7)"], raise_on_error=False
@@ -145,9 +139,8 @@ def test_run_command_capture_stderr_false_preserves_stdout() -> None:
 
 def test_run_command_missing_executable_raises() -> None:
     """
-    title: >-
-      run_command should raise CommandError for a missing executable when
-      raise_on_error=True.
+    title: run_command should raise CommandError for a missing
+      executable when raise_on_error=True.
     """
     with pytest.raises(CommandError) as exc_info:
         run_command(["/no/such/binary"], raise_on_error=True)
@@ -156,9 +149,8 @@ def test_run_command_missing_executable_raises() -> None:
 
 def test_run_command_missing_executable_no_raise() -> None:
     """
-    title: >-
-      run_command with raise_on_error=False should return a result for a
-      missing executable instead of raising.
+    title: run_command with raise_on_error=False should return a result for
+      a missing executable instead of raising.
     """
     result = run_command(["/no/such/binary"], raise_on_error=False)
     assert isinstance(result, CommandResult)
@@ -171,12 +163,10 @@ def test_builder_run_forwards_all_kwargs(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """
-    title: >-
-      Builder.run should forward command, capture_stderr, raise_on_error, and
-      debug to run_command.
+    title: Builder.run should forward command, capture_stderr, raise_on_error,
+      and debug to run_command.
     parameters:
-      monkeypatch:
-        type: pytest.MonkeyPatch
+      monkeypatch: Fixture for temporarily replacing dependencies and settings.
     """
     calls: list[dict[str, Any]] = []
     fake_bin = ".tmp/tests/fake-bin"
@@ -194,16 +184,11 @@ def test_builder_run_forwards_all_kwargs(
         """
         title: Fake run.
         parameters:
-          command:
-            type: Sequence[str]
-          capture_stderr:
-            type: bool
-          raise_on_error:
-            type: bool
-          debug:
-            type: bool
-        returns:
-          type: CommandResult
+          command: Command.
+          capture_stderr: Whether to use capture stderr.
+          raise_on_error: Whether to use raise on error.
+          debug: Whether to use debug.
+        returns: 'Result of this operation: fake run.'
         """
         calls.append(
             {

@@ -1,6 +1,6 @@
 """
-title: >-
-  Batched mathematical oracles for checked scalar and SIMD integer lowering.
+title: Batched mathematical oracles for checked scalar and SIMD integer
+  lowering.
 """
 
 from __future__ import annotations
@@ -34,24 +34,19 @@ def integer_kernel(
     type_: astx.DataType, operator: str, mode: astx.NumericMode, lanes: int = 1
 ) -> tuple[llvm.ExecutionEngine, Callable[[int, int, ctypes.c_void_p], int]]:
     """
-    title: >-
-      Expose the actual lowering guard predicate without terminating a batch.
-    summary: >-
-      Native subprocess tests independently verify fatal reporting. This
-      fixture captures the very same guard condition to exhaustively test every
-      8-bit input pair without starting hundreds of thousands of subprocesses.
+    title: Expose the actual lowering guard predicate without terminating
+      a batch.
+    summary: Native subprocess tests independently verify fatal reporting.
+      This fixture captures the very same guard condition to exhaustively
+      test every 8-bit input pair without starting hundreds of thousands
+      of subprocesses.
     parameters:
-      type_:
-        type: astx.DataType
-      operator:
-        type: str
-      mode:
-        type: astx.NumericMode
-      lanes:
-        type: int
-    returns:
-      type: >-
-        tuple[llvm.ExecutionEngine, Callable[[int, int, ctypes.c_void_p], int]]
+      type_: Type expression to process.
+      operator: Operator to apply.
+      mode: Selected processing mode.
+      lanes: Lanes.
+    returns: 'Result of this operation: expose the actual lowering guard
+      predicate without terminating a batch.'
     """
     visitor = Builder().translator
     bounds = integer_bounds(type_)
@@ -101,21 +96,15 @@ def integer_kernel(
         exception_role: str = "RuntimeError",
     ) -> None:
         """
-        title: >-
-          Capture the pre-publication validity condition for the batch oracle.
+        title: Capture the pre-publication validity condition for the batch
+          oracle.
         parameters:
-          node:
-            type: astx.AST
-          condition:
-            type: ir.Value
-          code:
-            type: str
-          message:
-            type: str
-          block_name:
-            type: str
-          exception_role:
-            type: str
+          node: Syntax node to process.
+          condition: Condition controlling the operation.
+          code: Source code or diagnostic identifier.
+          message: Diagnostic or output message.
+          block_name: Name of block.
+          exception_role: Exception role.
         """
         checks.append(condition)
 
@@ -160,16 +149,12 @@ def test_exhaustive_eight_bit_arithmetic(
     unsigned: bool, operator: str, mode: astx.NumericMode
 ) -> None:
     """
-    title: >-
-      Compare every 8-bit pair, overflow flag, and modulo result to Python
-      ints.
+    title: Compare every 8-bit pair, overflow flag, and modulo result to
+      Python ints.
     parameters:
-      unsigned:
-        type: bool
-      operator:
-        type: str
-      mode:
-        type: astx.NumericMode
+      unsigned: Whether to use unsigned semantics.
+      operator: Operator to apply.
+      mode: Selected processing mode.
     """
     type_ = astx.UInt8() if unsigned else astx.Int8()
     bounds = integer_bounds(type_)
@@ -211,13 +196,11 @@ def test_wider_boundary_biased_oracle(
     type_class: type[astx.DataType], operator: str
 ) -> None:
     """
-    title: >-
-      Seeded wider arithmetic includes all extrema and near-boundary products.
+    title: Seeded wider arithmetic includes all extrema and near-boundary
+      products.
     parameters:
-      type_class:
-        type: type[astx.DataType]
-      operator:
-        type: str
+      type_class: Type class.
+      operator: Operator to apply.
     """
     type_ = type_class()
     bounds = integer_bounds(type_)
@@ -254,13 +237,11 @@ def test_simd_rejects_one_overflowing_active_lane(
     type_class: type[astx.DataType], operator: str
 ) -> None:
     """
-    title: >-
-      SIMD checks all active lanes and reports any single overflowing lane.
+    title: SIMD checks all active lanes and reports any single overflowing
+      lane.
     parameters:
-      type_class:
-        type: type[astx.DataType]
-      operator:
-        type: str
+      type_class: Type class.
+      operator: Operator to apply.
     """
     type_ = type_class()
     bounds = integer_bounds(type_)
@@ -296,8 +277,7 @@ def test_null_cast_does_not_inspect_invalid_payload(floating: bool) -> None:
     """
     title: Invalid nullable payload bits never reach numeric conversion guards.
     parameters:
-      floating:
-        type: bool
+      floating: Whether to use floating.
     """
 
     visitor = Builder().translator
@@ -333,21 +313,15 @@ def test_null_cast_does_not_inspect_invalid_payload(floating: bool) -> None:
         exception_role: str = "RuntimeError",
     ) -> None:
         """
-        title: >-
-          Record whether a conversion guard executed and accepted the payload.
+        title: Record whether a conversion guard executed and accepted the
+          payload.
         parameters:
-          node:
-            type: astx.AST
-          condition:
-            type: ir.Value
-          code:
-            type: str
-          message:
-            type: str
-          block_name:
-            type: str
-          exception_role:
-            type: str
+          node: Syntax node to process.
+          condition: Condition controlling the operation.
+          code: Source code or diagnostic identifier.
+          message: Diagnostic or output message.
+          block_name: Name of block.
+          exception_role: Exception role.
         """
         builder.store(
             builder.select(

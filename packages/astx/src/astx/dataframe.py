@@ -1,8 +1,7 @@
 """
 title: ASTx DataFrame AST nodes.
-summary: >-
-  Provide internal nodes for Arrow C++ backed DataFrame and Series runtime
-  values.
+summary: Provide internal nodes for Arrow C++ backed DataFrame and Series
+  runtime values.
 """
 
 from __future__ import annotations
@@ -22,10 +21,8 @@ def _format_type_name(type_: astx.DataType) -> str:
     """
     title: Return one stable DataFrame type name.
     parameters:
-      type_:
-        type: astx.DataType
-    returns:
-      type: str
+      type_: Type expression to process.
+    returns: One stable DataFrame type name.
     """
     if isinstance(type_, astx.PointerType):
         if type_.pointee_type is None:
@@ -45,12 +42,9 @@ class DataFrameColumn:
     """
     title: Static DataFrame column schema entry.
     attributes:
-      name:
-        type: str
-      type_:
-        type: astx.DataType
-      nullable:
-        type: bool
+      name: Name identifying this declaration.
+      type_: Type associated with this expression.
+      nullable: Whether null values are permitted.
     """
 
     name: str
@@ -61,10 +55,8 @@ class DataFrameColumn:
         """
         title: Return the structured representation of the column schema.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: dict[str, object]
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         return {
             "name": self.name,
@@ -79,10 +71,8 @@ class DataFrameLiteralColumn:
     """
     title: One DataFrame literal column payload.
     attributes:
-      name:
-        type: str
-      values:
-        type: tuple[astx.AST, Ellipsis]
+      name: Name identifying this declaration.
+      values: Values to process, in order.
     """
 
     name: str
@@ -92,10 +82,8 @@ class DataFrameLiteralColumn:
         """
         title: Return the structured representation of the literal column.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: dict[str, object]
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         return {
             "name": self.name,
@@ -107,16 +95,12 @@ class DataFrameLiteralColumn:
 class SeriesType(AnyType):
     """
     title: Internal Series semantic type.
-    summary: >-
-      Represent a one-dimensional typed DataFrame column backed by Arrow
-      ChunkedArray storage.
+    summary: Represent a one-dimensional typed DataFrame column backed
+      by Arrow ChunkedArray storage.
     attributes:
-      element_type:
-        type: astx.DataType | None
-      nullable:
-        type: bool
-      size:
-        type: int | None
+      element_type: Type of each element.
+      nullable: Whether null values are permitted.
+      size: Requested or declared size.
     """
 
     element_type: astx.DataType | None
@@ -133,12 +117,9 @@ class SeriesType(AnyType):
         """
         title: Initialize one Series type.
         parameters:
-          element_type:
-            type: astx.DataType | None
-          nullable:
-            type: bool
-          size:
-            type: int | None
+          element_type: Type of each element.
+          nullable: Whether null values are permitted.
+          size: Requested or declared size.
         """
         super().__init__()
         if size is not None and size < 0:
@@ -150,8 +131,7 @@ class SeriesType(AnyType):
     def __str__(self) -> str:
         """
         title: Render the Series type.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         if self.element_type is None:
             return "SeriesType"
@@ -165,14 +145,11 @@ class SeriesType(AnyType):
 class DataFrameType(AnyType):
     """
     title: Internal DataFrame semantic type.
-    summary: >-
-      Represent a heterogeneous named-column table backed by Arrow Table
-      storage.
+    summary: Represent a heterogeneous named-column table backed by Arrow
+      Table storage.
     attributes:
-      columns:
-        type: tuple[DataFrameColumn, Ellipsis] | None
-      row_count:
-        type: int | None
+      columns: Column declarations or values.
+      row_count: Number of row.
     """
 
     columns: tuple[DataFrameColumn, ...] | None
@@ -187,10 +164,8 @@ class DataFrameType(AnyType):
         """
         title: Initialize one DataFrame type.
         parameters:
-          columns:
-            type: Sequence[DataFrameColumn] | None
-          row_count:
-            type: int | None
+          columns: Column declarations or values.
+          row_count: Number of row.
         """
         super().__init__()
         if row_count is not None and row_count < 0:
@@ -201,8 +176,7 @@ class DataFrameType(AnyType):
     def __str__(self) -> str:
         """
         title: Render the DataFrame type.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         if self.columns is None:
             if self.row_count is not None:
@@ -224,10 +198,9 @@ def _infer_literal_row_count(
     """
     title: Infer row count for a DataFrame literal when statically consistent.
     parameters:
-      columns:
-        type: tuple[DataFrameLiteralColumn, Ellipsis]
-    returns:
-      type: int | None
+      columns: Column declarations or values.
+    returns: 'Result of this operation: infer row count for a DataFrame literal
+      when statically consistent.'
     """
     row_count: int | None = None
     for column in columns:
@@ -245,10 +218,8 @@ class DataFrameLiteral(astx.base.DataType):
     title: Internal Arrow C++ backed DataFrame literal node.
     summary: Build one Arrow C++ table from named column values.
     attributes:
-      columns:
-        type: tuple[DataFrameLiteralColumn, Ellipsis]
-      type_:
-        type: DataFrameType
+      columns: Column declarations or values.
+      type_: Type associated with this expression.
     """
 
     columns: tuple[DataFrameLiteralColumn, ...]
@@ -263,10 +234,8 @@ class DataFrameLiteral(astx.base.DataType):
         """
         title: Initialize one DataFrame literal.
         parameters:
-          columns:
-            type: Sequence[DataFrameLiteralColumn]
-          type_:
-            type: DataFrameType | None
+          columns: Column declarations or values.
+          type_: Type expression to process.
         """
         super().__init__()
         self.columns = tuple(columns)
@@ -277,10 +246,8 @@ class DataFrameLiteral(astx.base.DataType):
         """
         title: Return the structured representation of the DataFrame literal.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: astx.base.ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         value: dict[str, object] = {
             "columns": [
@@ -305,12 +272,9 @@ class DataFrameColumnAccess(astx.base.DataType):
     """
     title: Internal DataFrame column access by static column name.
     attributes:
-      base:
-        type: astx.AST
-      column_name:
-        type: str
-      type_:
-        type: SeriesType
+      base: Base value or declaration.
+      column_name: Name of column.
+      type_: Type associated with this expression.
     """
 
     base: astx.AST
@@ -321,10 +285,8 @@ class DataFrameColumnAccess(astx.base.DataType):
         """
         title: Initialize one DataFrame column access.
         parameters:
-          base:
-            type: astx.AST
-          column_name:
-            type: str
+          base: Base value or declaration.
+          column_name: Name of column.
         """
         super().__init__()
         self.base = base
@@ -335,10 +297,8 @@ class DataFrameColumnAccess(astx.base.DataType):
         """
         title: Return the structured representation of the column access.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: astx.base.ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         value = {
             "base": self.base.get_struct(simplified),
@@ -356,22 +316,17 @@ class DataFrameStringColumnAccess(DataFrameColumnAccess):
     """
     title: Internal DataFrame column access by string key.
     attributes:
-      base:
-        type: astx.AST
-      column_name:
-        type: str
-      type_:
-        type: SeriesType
+      base: Base value or declaration.
+      column_name: Name of column.
+      type_: Type associated with this expression.
     """
 
     def get_struct(self, simplified: bool = False) -> astx.base.ReprStruct:
         """
         title: Return the structured representation of the string access.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: astx.base.ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         value = {
             "base": self.base.get_struct(simplified),
@@ -389,10 +344,8 @@ class DataFrameRowCount(astx.base.DataType):
     """
     title: Internal DataFrame row-count query.
     attributes:
-      base:
-        type: astx.AST
-      type_:
-        type: astx.Int64
+      base: Base value or declaration.
+      type_: Type associated with this expression.
     """
 
     base: astx.AST
@@ -402,8 +355,7 @@ class DataFrameRowCount(astx.base.DataType):
         """
         title: Initialize one DataFrame row-count query.
         parameters:
-          base:
-            type: astx.AST
+          base: Base value or declaration.
         """
         super().__init__()
         self.base = base
@@ -413,10 +365,8 @@ class DataFrameRowCount(astx.base.DataType):
         """
         title: Return the structured representation of the row-count query.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: astx.base.ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         return self._prepare_struct(
             "DataFrameRowCount",
@@ -430,10 +380,8 @@ class DataFrameColumnCount(astx.base.DataType):
     """
     title: Internal DataFrame column-count query.
     attributes:
-      base:
-        type: astx.AST
-      type_:
-        type: astx.Int64
+      base: Base value or declaration.
+      type_: Type associated with this expression.
     """
 
     base: astx.AST
@@ -443,8 +391,7 @@ class DataFrameColumnCount(astx.base.DataType):
         """
         title: Initialize one DataFrame column-count query.
         parameters:
-          base:
-            type: astx.AST
+          base: Base value or declaration.
         """
         super().__init__()
         self.base = base
@@ -454,10 +401,8 @@ class DataFrameColumnCount(astx.base.DataType):
         """
         title: Return the structured representation of the column-count query.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: astx.base.ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         return self._prepare_struct(
             "DataFrameColumnCount",
@@ -471,10 +416,8 @@ class DataFrameRetain(astx.base.DataType):
     """
     title: Internal explicit retain for DataFrame-backed storage.
     attributes:
-      base:
-        type: astx.AST
-      type_:
-        type: astx.Int32
+      base: Base value or declaration.
+      type_: Type associated with this expression.
     """
 
     base: astx.AST
@@ -484,8 +427,7 @@ class DataFrameRetain(astx.base.DataType):
         """
         title: Initialize one DataFrame retain helper.
         parameters:
-          base:
-            type: astx.AST
+          base: Base value or declaration.
         """
         super().__init__()
         self.base = base
@@ -497,10 +439,8 @@ class DataFrameRelease(astx.base.DataType):
     """
     title: Internal explicit release for DataFrame-backed storage.
     attributes:
-      base:
-        type: astx.AST
-      type_:
-        type: astx.Int32
+      base: Base value or declaration.
+      type_: Type associated with this expression.
     """
 
     base: astx.AST
@@ -510,8 +450,7 @@ class DataFrameRelease(astx.base.DataType):
         """
         title: Initialize one DataFrame release helper.
         parameters:
-          base:
-            type: astx.AST
+          base: Base value or declaration.
         """
         super().__init__()
         self.base = base
@@ -523,10 +462,8 @@ class SeriesRetain(astx.base.DataType):
     """
     title: Internal explicit retain for Series-backed storage.
     attributes:
-      base:
-        type: astx.AST
-      type_:
-        type: astx.Int32
+      base: Base value or declaration.
+      type_: Type associated with this expression.
     """
 
     base: astx.AST
@@ -536,8 +473,7 @@ class SeriesRetain(astx.base.DataType):
         """
         title: Initialize one Series retain helper.
         parameters:
-          base:
-            type: astx.AST
+          base: Base value or declaration.
         """
         super().__init__()
         self.base = base
@@ -549,10 +485,8 @@ class SeriesRelease(astx.base.DataType):
     """
     title: Internal explicit release for Series-backed storage.
     attributes:
-      base:
-        type: astx.AST
-      type_:
-        type: astx.Int32
+      base: Base value or declaration.
+      type_: Type associated with this expression.
     """
 
     base: astx.AST
@@ -562,8 +496,7 @@ class SeriesRelease(astx.base.DataType):
         """
         title: Initialize one Series release helper.
         parameters:
-          base:
-            type: astx.AST
+          base: Base value or declaration.
         """
         super().__init__()
         self.base = base

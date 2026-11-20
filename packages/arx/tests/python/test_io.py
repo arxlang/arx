@@ -12,8 +12,7 @@ def test_write_and_read_single_value(value: str) -> None:
     """
     title: Test write and read of a single value.
     parameters:
-      value:
-        type: str
+      value: Value to process.
     """
     ArxIO.string_to_buffer(value)
     assert ArxIO.buffer.read() == value

@@ -20,17 +20,14 @@ def owned_column(
     native: ctypes.CDLL, values: list[int | None], type_: pa.DataType
 ) -> Iterator[ctypes.c_void_p]:
     """
-    title: >-
-      Retain only a column after releasing imported batch and table owners.
+    title: Retain only a column after releasing imported batch and table
+      owners.
     parameters:
-      native:
-        type: ctypes.CDLL
-      values:
-        type: list[int | None]
-      type_:
-        type: pa.DataType
-    returns:
-      type: Iterator[ctypes.c_void_p]
+      native: Loaded native runtime used by the ABI test.
+      values: Values to process, in order.
+      type_: Type expression to process.
+    returns: 'Result of this operation: retain only a column after releasing
+      imported batch and table owners.'
     """
     bind_kernels(native)
     batch = pa.record_batch([pa.array(values, type=type_)], names=["x"])
@@ -66,16 +63,11 @@ def read_value(
     """
     title: Decode a successful checked scalar access.
     parameters:
-      native:
-        type: ctypes.CDLL
-      column:
-        type: ctypes.c_void_p
-      index:
-        type: int
-      type_id:
-        type: int
-    returns:
-      type: int | None
+      native: Loaded native runtime used by the ABI test.
+      column: Column to process.
+      index: Index selecting the item.
+      type_id: Identifier for type.
+    returns: Decoded a successful checked scalar access.
     """
     bits, valid = ctypes.c_uint64(), ctypes.c_int32()
     assert (
@@ -108,12 +100,9 @@ def test_native_slices(
     """
     title: Match Python clipping and stride semantics including extreme bounds.
     parameters:
-      native:
-        type: ctypes.CDLL
-      bounds:
-        type: tuple[int | None, int | None, int]
-      rows:
-        type: list[int | None]
+      native: Loaded native runtime used by the ABI test.
+      bounds: Bounds.
+      rows: Rows.
     """
     pointer = ctypes.c_void_p
     native.irx_arrow_series_slice.argtypes = [
@@ -158,11 +147,10 @@ def test_native_slices(
 
 def test_native_updates(native: ctypes.CDLL) -> None:
     """
-    title: >-
-      Bounds, type and nullability errors leave the previous column intact.
+    title: Bounds, type and nullability errors leave the previous column
+      intact.
     parameters:
-      native:
-        type: ctypes.CDLL
+      native: Loaded native runtime used by the ABI test.
     """
     native.irx_arrow_series_set.argtypes = [
         ctypes.c_void_p,
@@ -219,14 +207,10 @@ def test_checked_sum(
     """
     title: Integer reductions skip nulls and diagnose accumulator overflow.
     parameters:
-      native:
-        type: ctypes.CDLL
-      rows:
-        type: list[int | None]
-      status:
-        type: int
-      expected:
-        type: int | None
+      native: Loaded native runtime used by the ABI test.
+      rows: Rows.
+      status: Native operation status.
+      expected: Expected result for this case.
     """
     with owned_column(native, rows, pa.int64()) as column:
         output, bits, valid = (
@@ -258,8 +242,7 @@ def test_checked_unary(native: ctypes.CDLL) -> None:
     """
     title: Unary numeric overflow and null propagation retain the scalar ABI.
     parameters:
-      native:
-        type: ctypes.CDLL
+      native: Loaded native runtime used by the ABI test.
     """
     assert compute(native, b"negate_checked", 1, 2, 0) == (0, 2**64 - 2, 1)
     assert compute(native, b"negate_checked", 1, 2, 0, False) == (0, 0, 0)
@@ -271,8 +254,7 @@ def test_ipc_literal_ownership_and_errors(native: ctypes.CDLL) -> None:
     """
     title: Literal tables own input buffers and clear outputs on malformed IPC.
     parameters:
-      native:
-        type: ctypes.CDLL
+      native: Loaded native runtime used by the ABI test.
     """
     bind_kernels(native)
     pointer = ctypes.c_void_p

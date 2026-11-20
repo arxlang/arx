@@ -1,8 +1,10 @@
 """
 title: Focused versioned Arrow Compute runtime feature.
-summary: >-
-  Only shared compute, scalar transport and chunked-handle lifetime code is
-  linked. LLVM transports primitive bits and validity, never Arrow C++ layouts.
+summary: Only shared compute, scalar transport and chunked-handle lifetime
+  code is linked. LLVM transports primitive bits and validity, never Arrow
+  C++ layouts.
+attributes:
+  COMPUTE_SIGNATURES: Compute signatures.
 """
 
 from __future__ import annotations
@@ -65,14 +67,11 @@ def declare_compute_symbol(
     """
     title: Declare one closed compute ABI signature.
     parameters:
-      visitor:
-        type: VisitorProtocol
-      name:
-        type: str
-      signature:
-        type: tuple[str, Ellipsis]
-    returns:
-      type: ir.Function
+      visitor: Visitor performing the traversal or lowering.
+      name: Name identifying the declaration or operation.
+      signature: Resolved callable signature.
+    returns: 'Result of this operation: declare one closed compute
+      ABI signature.'
     """
     pointer = ir.IntType(8).as_pointer()
     types: dict[str, ir.Type] = {
@@ -98,8 +97,8 @@ def declare_compute_symbol(
 def build_arrow_compute_runtime_feature() -> RuntimeFeature:
     """
     title: Register shared compute without DataFrame or Parquet dependencies.
-    returns:
-      type: RuntimeFeature
+    returns: 'Result of this operation: register shared compute without
+      DataFrame or Parquet dependencies.'
     """
     native = Path(__file__).parent / "arrow" / "native"
     return RuntimeFeature(

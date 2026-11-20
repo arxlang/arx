@@ -20,8 +20,7 @@ EXPECTED_ROW_OR_COLUMN_COUNT = 3
 def _dataframe_type() -> astx.DataFrameType:
     """
     title: Build one static DataFrame test schema.
-    returns:
-      type: astx.DataFrameType
+    returns: Constructed one static DataFrame test schema.
     """
     return astx.DataFrameType(
         (
@@ -38,10 +37,8 @@ def _dataframe_literal(
     """
     title: Build one DataFrame literal aligned to the test schema.
     parameters:
-      type_:
-        type: astx.DataFrameType | None
-    returns:
-      type: astx.DataFrameLiteral
+      type_: Type expression to process.
+    returns: Constructed one DataFrame literal aligned to the test schema.
     """
     schema = type_ or _dataframe_type()
     return astx.DataFrameLiteral(
@@ -79,10 +76,8 @@ def _declare_dataframe(name: str = "rows") -> astx.VariableDeclaration:
     """
     title: Build one DataFrame variable declaration.
     parameters:
-      name:
-        type: str
-    returns:
-      type: astx.VariableDeclaration
+      name: Name identifying the declaration or operation.
+    returns: Constructed one DataFrame variable declaration.
     """
     type_ = _dataframe_type()
     return astx.VariableDeclaration(
@@ -288,8 +283,8 @@ def test_dataframe_build_releases_accessed_series_and_returns_ncols() -> None:
 
 def test_explicit_arrow_lifetime_and_scoped_aliases() -> None:
     """
-    title: >-
-      Explicit retain/release pairs preserve live bindings and scoped aliases.
+    title: Explicit retain/release pairs preserve live bindings and scoped
+      aliases.
     """
     module = make_main_module(
         _declare_dataframe(),
@@ -315,8 +310,8 @@ def test_explicit_arrow_lifetime_and_scoped_aliases() -> None:
 
 def test_dataframe_identity_cast_keeps_temporary_owner() -> None:
     """
-    title: >-
-      A redundant cast borrows until its caller acquires an independent owner.
+    title: A redundant cast borrows until its caller acquires an independent
+      owner.
     """
     type_ = _dataframe_type()
     module = make_main_module(

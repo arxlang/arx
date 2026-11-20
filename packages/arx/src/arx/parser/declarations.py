@@ -1,8 +1,7 @@
 """
 title: Declaration parser mixin.
-summary: >-
-  Parse functions, classes, templates, modifiers, and related declaration
-  constructs.
+summary: Parse functions, classes, templates, modifiers, and related
+  declaration constructs.
 """
 
 from __future__ import annotations
@@ -57,8 +56,8 @@ class DeclarationParserMixin(ParserMixinBase):
     def is_declaration_start(self) -> bool:
         """
         title: Recognize a same-line name-first declaration.
-        returns:
-          type: bool
+        returns: 'Result of this operation: recognize a same-line name-first
+          declaration.'
         """
         token = self.tokens.cur_tok
         following = self._peek_token()
@@ -73,14 +72,12 @@ class DeclarationParserMixin(ParserMixinBase):
     ) -> ParsedAnnotation | None:
         """
         title: Parse optional whitespace-separated declaration modifiers.
-        summary: >-
-          Keep declaration policy outside the type. Reject unknown, repeated,
-          conflicting, and unterminated groups without accepting ignored flags.
+        summary: Keep declaration policy outside the type. Reject unknown,
+          repeated, conflicting, and unterminated groups without accepting
+          ignored flags.
         parameters:
-          allow_layout:
-            type: bool
-        returns:
-          type: ParsedAnnotation | None
+          allow_layout: Whether to use allow layout.
+        returns: Parsed optional whitespace-separated declaration modifiers.
         """
         first = self.tokens.cur_tok
         if self._is_operator("::"):
@@ -151,8 +148,8 @@ class DeclarationParserMixin(ParserMixinBase):
     def parse_declaration_head(self) -> tuple[Token, ParsedAnnotation | None]:
         """
         title: Consume a declaration name, colon, and optional modifier group.
-        returns:
-          type: tuple[Token, ParsedAnnotation | None]
+        returns: 'Result of this operation: consume a declaration name, colon,
+          and optional modifier group.'
         """
         name = self.tokens.cur_tok
         if not self.is_declaration_start():
@@ -166,8 +163,8 @@ class DeclarationParserMixin(ParserMixinBase):
     def parse_named_declaration(self) -> astx.VariableDeclaration:
         """
         title: Parse a name-first variable declaration without function syntax.
-        returns:
-          type: astx.VariableDeclaration
+        returns: Parsed a name-first variable declaration without function
+          syntax.
         """
         name, modifiers = self.parse_declaration_head()
         if self.tokens.cur_tok.kind == TokenKind.kw_function:
@@ -191,14 +188,11 @@ class DeclarationParserMixin(ParserMixinBase):
         """
         title: Coerce one expression for declared collection target types.
         parameters:
-          expr:
-            type: astx.Expr
-          target_type:
-            type: astx.DataType
-          context:
-            type: str
-        returns:
-          type: astx.Expr
+          expr: Expression to process.
+          target_type: Destination type for the conversion.
+          context: Context for the operation.
+        returns: 'Result of this operation: coerce one expression for declared
+          collection target types.'
         """
         return coerce_dataframe_expression(
             expr,
@@ -214,12 +208,9 @@ class DeclarationParserMixin(ParserMixinBase):
         """
         title: Parse one optional function argument default value.
         parameters:
-          arg_name:
-            type: str
-          arg_type:
-            type: astx.DataType
-        returns:
-          type: astx.Expr | None
+          arg_name: Name of arg.
+          arg_type: Type of arg.
+        returns: Parsed one optional function argument default value.
         """
         if not self._is_operator("="):
             return None
@@ -246,16 +237,11 @@ class DeclarationParserMixin(ParserMixinBase):
         """
         title: Append one parsed argument, including an optional default.
         parameters:
-          args:
-            type: astx.Arguments
-          arg_name:
-            type: str
-          arg_type:
-            type: astx.DataType
-          arg_loc:
-            type: SourceLocation
-          mutability:
-            type: astx.MutabilityKind
+          args: Arguments supplied to the operation.
+          arg_name: Name of arg.
+          arg_type: Type of arg.
+          arg_loc: Arg loc.
+          mutability: Mutability.
         """
         default = self._parse_argument_default(arg_name, arg_type)
         if default is None:
@@ -283,10 +269,8 @@ class DeclarationParserMixin(ParserMixinBase):
         """
         title: Parse a function definition.
         parameters:
-          template_params:
-            type: tuple[astx.TemplateParam, Ellipsis]
-        returns:
-          type: astx.FunctionDef
+          template_params: Template parameters declared by the callable.
+        returns: Parsed a function definition.
         """
         self.tokens.get_next_token()  # eat fn
         self._push_template_scope(template_params)
@@ -328,10 +312,8 @@ class DeclarationParserMixin(ParserMixinBase):
         """
         title: Parse an extern declaration.
         parameters:
-          template_params:
-            type: tuple[astx.TemplateParam, Ellipsis]
-        returns:
-          type: astx.FunctionPrototype
+          template_params: Template parameters declared by the callable.
+        returns: Parsed an extern declaration.
         """
         self.tokens.get_next_token()  # eat extern
         self._push_template_scope(template_params)
@@ -356,10 +338,8 @@ class DeclarationParserMixin(ParserMixinBase):
         """
         title: Parse one class declaration.
         parameters:
-          annotations:
-            type: ParsedAnnotation | None
-        returns:
-          type: astx.ClassDefStmt
+          annotations: Annotations.
+        returns: Parsed one class declaration.
         """
         class_loc = self.tokens.cur_tok.location
         self._validate_modifier_target(
@@ -413,8 +393,7 @@ class DeclarationParserMixin(ParserMixinBase):
     ) -> tuple[list[astx.VariableDeclaration], list[astx.FunctionDef]]:
         """
         title: Parse a class body.
-        returns:
-          type: tuple[list[astx.VariableDeclaration], list[astx.FunctionDef]]
+        returns: Parsed a class body.
         """
         start_token = self.tokens.cur_tok
         if start_token.kind != TokenKind.indent:
@@ -525,12 +504,9 @@ class DeclarationParserMixin(ParserMixinBase):
         """
         title: Parse one class field declaration.
         parameters:
-          name_token:
-            type: Token
-          modifiers:
-            type: ParsedAnnotation | None
-        returns:
-          type: astx.VariableDeclaration
+          name_token: Name token.
+          modifiers: Modifiers.
+        returns: Parsed one class field declaration.
         """
         field_loc = name_token.location
         self._validate_modifier_target(
@@ -592,10 +568,8 @@ class DeclarationParserMixin(ParserMixinBase):
         """
         title: Parse one class method declaration.
         parameters:
-          template_params:
-            type: tuple[astx.TemplateParam, Ellipsis]
-        returns:
-          type: astx.FunctionDef
+          template_params: Template parameters declared by the callable.
+        returns: Parsed one class method declaration.
         """
         method_loc = self.tokens.cur_tok.location
         self.tokens.get_next_token()  # eat fn
@@ -691,10 +665,8 @@ class DeclarationParserMixin(ParserMixinBase):
         """
         title: Parse declaration prefixes that precede one declaration.
         parameters:
-          body_indent:
-            type: int | None
-        returns:
-          type: ParsedDeclarationPrefixes
+          body_indent: Body indent.
+        returns: Parsed declaration prefixes that precede one declaration.
         """
         prefixes = ParsedDeclarationPrefixes()
 
@@ -743,8 +715,7 @@ class DeclarationParserMixin(ParserMixinBase):
     def parse_declaration_prefix(self) -> ParsedDeclarationPrefixes:
         """
         title: Parse one declaration prefix.
-        returns:
-          type: ParsedDeclarationPrefixes
+        returns: Parsed one declaration prefix.
         """
         next_token = self._peek_token()
         if next_token == Token(TokenKind.operator, "["):
@@ -770,8 +741,7 @@ class DeclarationParserMixin(ParserMixinBase):
     ) -> tuple[astx.TemplateParam, ...]:
         """
         title: Parse one template-parameter block.
-        returns:
-          type: tuple[astx.TemplateParam, Ellipsis]
+        returns: Parsed one template-parameter block.
         """
         self._consume_operator("@")
         self._consume_operator("<")
@@ -832,8 +802,7 @@ class DeclarationParserMixin(ParserMixinBase):
     ) -> tuple[astx.DataType, ...]:
         """
         title: Parse one explicit template-argument list.
-        returns:
-          type: tuple[astx.DataType, Ellipsis]
+        returns: Parsed one explicit template-argument list.
         """
         self._consume_operator("<")
 
@@ -863,8 +832,7 @@ class DeclarationParserMixin(ParserMixinBase):
     def parse_modifier_list(self) -> ParsedAnnotation:
         """
         title: Parse one annotation-line modifier list.
-        returns:
-          type: ParsedAnnotation
+        returns: Parsed one annotation-line modifier list.
         """
         annotation_loc = self.tokens.cur_tok.location
         self._consume_operator("@")
@@ -906,8 +874,7 @@ class DeclarationParserMixin(ParserMixinBase):
         """
         title: Validate duplicate-group modifier conflicts.
         parameters:
-          modifiers:
-            type: list[str]
+          modifiers: Modifiers.
         """
         visibility = [
             name for name in modifiers if name in VISIBILITY_MODIFIERS
@@ -936,12 +903,9 @@ class DeclarationParserMixin(ParserMixinBase):
         """
         title: Validate one modifier list against a declaration target.
         parameters:
-          modifiers:
-            type: ParsedAnnotation | None
-          allowed:
-            type: frozenset[str]
-          target:
-            type: str
+          modifiers: Modifiers.
+          allowed: Allowed.
+          target: Destination of the operation.
         """
         if modifiers is None:
             return
@@ -960,12 +924,9 @@ class DeclarationParserMixin(ParserMixinBase):
         """
         title: Return whether one modifier is present.
         parameters:
-          modifiers:
-            type: ParsedAnnotation | None
-          expected:
-            type: str
-        returns:
-          type: bool
+          modifiers: Modifiers.
+          expected: Expected result for this case.
+        returns: Whether one modifier is present.
         """
         if modifiers is None:
             return False
@@ -978,10 +939,8 @@ class DeclarationParserMixin(ParserMixinBase):
         """
         title: Resolve class/member visibility defaults.
         parameters:
-          modifiers:
-            type: ParsedAnnotation | None
-        returns:
-          type: astx.VisibilityKind
+          modifiers: Modifiers.
+        returns: Resolved class/member visibility defaults.
         """
         if modifiers is None:
             return astx.VisibilityKind.public
@@ -997,10 +956,8 @@ class DeclarationParserMixin(ParserMixinBase):
         """
         title: Return explicit visibility when one was written.
         parameters:
-          modifiers:
-            type: ParsedAnnotation | None
-        returns:
-          type: astx.VisibilityKind | None
+          modifiers: Modifiers.
+        returns: Explicit visibility when one was written.
         """
         if modifiers is None:
             return None
@@ -1014,13 +971,12 @@ class DeclarationParserMixin(ParserMixinBase):
         modifiers: ParsedAnnotation | None,
     ) -> astx.MutabilityKind:
         """
-        title: >-
-          Resolve Arx binding mutability for variables, fields, and parameters.
+        title: Resolve Arx binding mutability for variables, fields, and
+          parameters.
         parameters:
-          modifiers:
-            type: ParsedAnnotation | None
-        returns:
-          type: astx.MutabilityKind
+          modifiers: Modifiers.
+        returns: Resolved arx binding mutability for variables, fields, and
+          parameters.
         """
         if modifiers is None:
             return astx.MutabilityKind.mutable
@@ -1036,10 +992,8 @@ class DeclarationParserMixin(ParserMixinBase):
         """
         title: Return explicit field mutability when one was written.
         parameters:
-          modifiers:
-            type: ParsedAnnotation | None
-        returns:
-          type: astx.MutabilityKind | None
+          modifiers: Modifiers.
+        returns: Explicit field mutability when one was written.
         """
         if modifiers is None:
             return None
@@ -1056,10 +1010,8 @@ class DeclarationParserMixin(ParserMixinBase):
         """
         title: Attach explicit class modifier metadata to the IRx node.
         parameters:
-          declaration:
-            type: astx.ClassDefStmt
-          modifiers:
-            type: ParsedAnnotation | None
+          declaration: Declaration being processed.
+          modifiers: Modifiers.
         """
         explicit_visibility = self._explicit_visibility(modifiers)
         if explicit_visibility is not None:
@@ -1076,10 +1028,8 @@ class DeclarationParserMixin(ParserMixinBase):
         """
         title: Attach explicit field modifier metadata to the IRx node.
         parameters:
-          declaration:
-            type: astx.VariableDeclaration
-          modifiers:
-            type: ParsedAnnotation | None
+          declaration: Declaration being processed.
+          modifiers: Modifiers.
         """
         explicit_visibility = self._explicit_visibility(modifiers)
         if explicit_visibility is not None:
@@ -1097,14 +1047,11 @@ class DeclarationParserMixin(ParserMixinBase):
         modifiers: ParsedAnnotation | None,
     ) -> None:
         """
-        title: >-
-          Attach callable declaration policies without qualifying the return
-          type.
+        title: Attach callable declaration policies without qualifying the
+          return type.
         parameters:
-          prototype:
-            type: astx.FunctionPrototype
-          modifiers:
-            type: ParsedAnnotation | None
+          prototype: Prototype.
+          modifiers: Modifiers.
         """
         prototype.visibility = self._resolve_visibility(modifiers)
         explicit_visibility = self._explicit_visibility(modifiers)
@@ -1127,10 +1074,10 @@ class DeclarationParserMixin(ParserMixinBase):
     def skip_callable_layout(self) -> None:
         """
         title: Consume continuation markers inside an unfinished signature.
-        summary: >-
-          Never change indent_level. Body indentation is relative to the fn
-          declaration, not the last continuation line. Callers stop using this
-          helper after the return type, except for a pending body colon.
+        summary: Never change indent_level. Body indentation is relative
+          to the fn declaration, not the last continuation line. Callers
+          stop using this helper after the return type, except for a pending
+          body colon.
         """
         while self.tokens.cur_tok.kind == TokenKind.indent:
             self.tokens.get_next_token()
@@ -1139,19 +1086,15 @@ class DeclarationParserMixin(ParserMixinBase):
         self, *, is_method: bool = False
     ) -> tuple[astx.FunctionPrototype, Token | None, ParsedAnnotation | None]:
         """
-        title: >-
-          Parse callable arguments, declaration modifiers, and return type.
-        summary: >-
-          Parenthesized parameters and the return tail may span lines. The
-          modifier group belongs to the callable, not the returned value. Keep
-          the next member's indentation intact for bodyless declarations.
+        title: Parse callable arguments, declaration modifiers, and return
+          type.
+        summary: Parenthesized parameters and the return tail may span lines.
+          The modifier group belongs to the callable, not the returned value.
+          Keep the next member's indentation intact for bodyless declarations.
         parameters:
-          is_method:
-            type: bool
-        returns:
-          type: >-
-            tuple[astx.FunctionPrototype, Token | None, ParsedAnnotation |
-            None]
+          is_method: Whether is method.
+        returns: Parsed callable arguments, declaration modifiers, and return
+          type.
         """
         name_token = self.tokens.cur_tok
         if name_token.kind != TokenKind.identifier:
@@ -1259,10 +1202,8 @@ class DeclarationParserMixin(ParserMixinBase):
         """
         title: Parse function/extern prototypes with declaration modifiers.
         parameters:
-          expect_colon:
-            type: bool
-        returns:
-          type: astx.FunctionPrototype
+          expect_colon: Whether to use expect colon.
+        returns: Parsed function/extern prototypes with declaration modifiers.
         """
         prototype, _, _ = self.parse_callable_signature()
         if expect_colon:
@@ -1276,10 +1217,8 @@ class DeclarationParserMixin(ParserMixinBase):
         """
         title: Build one tensor scope map for function arguments.
         parameters:
-          arguments:
-            type: tuple[astx.Argument, Ellipsis] | list[astx.Argument]
-        returns:
-          type: dict[str, TensorBinding | None]
+          arguments: Arguments supplied to the call.
+        returns: Constructed one tensor scope map for function arguments.
         """
         bindings: dict[str, TensorBinding | None] = {}
         for argument in arguments:
@@ -1295,10 +1234,8 @@ class DeclarationParserMixin(ParserMixinBase):
         """
         title: Build one DataFrame scope map for function arguments.
         parameters:
-          arguments:
-            type: tuple[astx.Argument, Ellipsis] | list[astx.Argument]
-        returns:
-          type: dict[str, DataFrameBinding | None]
+          arguments: Arguments supplied to the call.
+        returns: Constructed one DataFrame scope map for function arguments.
         """
         bindings: dict[str, DataFrameBinding | None] = {}
         for argument in arguments:
@@ -1316,10 +1253,8 @@ class DeclarationParserMixin(ParserMixinBase):
         """
         title: Return visible list-typed argument names.
         parameters:
-          arguments:
-            type: tuple[astx.Argument, Ellipsis] | list[astx.Argument]
-        returns:
-          type: tuple[str, Ellipsis]
+          arguments: Arguments supplied to the call.
+        returns: Visible list-typed argument names.
         """
         return tuple(
             argument.name

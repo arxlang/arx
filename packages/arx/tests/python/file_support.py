@@ -16,10 +16,9 @@ def analyze_arx(module: astx.Module) -> astx.Module:
     """
     title: Analyze Arx source through its owning builtin-module host.
     parameters:
-      module:
-        type: astx.Module
-    returns:
-      type: astx.Module
+      module: Module to process.
+    returns: 'Result of this operation: analyze Arx source through its
+      owning builtin-module host.'
     """
     if not needs_file_builtin(module):
         return cast(astx.Module, analyze(module))

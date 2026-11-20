@@ -50,10 +50,8 @@ def _declare_dummy_symbol(visitor: "VisitorProtocol") -> ir.Function:
     """
     title: Declare dummy symbol.
     parameters:
-      visitor:
-        type: VisitorProtocol
-    returns:
-      type: ir.Function
+      visitor: Visitor performing the traversal or lowering.
+    returns: 'Result of this operation: declare dummy symbol.'
     """
     fn_type = ir.FunctionType(visitor._llvm.INT32_TYPE, [])
     return declare_external_function(visitor._llvm.module, "dummy_rt", fn_type)
@@ -62,8 +60,7 @@ def _declare_dummy_symbol(visitor: "VisitorProtocol") -> ir.Function:
 def _main_return_zero_module() -> astx.Module:
     """
     title: Main return zero module.
-    returns:
-      type: astx.Module
+    returns: 'Result of this operation: main return zero module.'
     """
     module = astx.Module()
     main_proto = astx.FunctionPrototype(
@@ -84,17 +81,13 @@ def _extern_prototype(
     """
     title: Build one explicit extern prototype.
     parameters:
-      name:
-        type: str
-      return_type:
-        type: astx.DataType
-      runtime_feature:
-        type: str | None
+      name: Name identifying the declaration or operation.
+      return_type: Declared result type.
+      runtime_feature: Runtime feature.
       args:
-        type: astx.Argument
         variadic: positional
-    returns:
-      type: astx.FunctionPrototype
+        description: Positional arguments.
+    returns: Constructed one explicit extern prototype.
     """
     prototype = astx.FunctionPrototype(
         name,
@@ -124,8 +117,8 @@ def test_runtime_feature_registry_rejects_duplicate_names() -> None:
 
 def test_runtime_feature_state_reuses_symbol_declarations() -> None:
     """
-    title: >-
-      Runtime feature state should reuse one external declaration per module.
+    title: Runtime feature state should reuse one external declaration per
+      module.
     """
     registry = RuntimeFeatureRegistry()
     registry.register(
@@ -173,8 +166,7 @@ def test_focused_compute_feature(tmp_path: Path) -> None:
     """
     title: Compile and run the C-only ABI without DataFrame or Parquet glue.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     registry = get_default_runtime_feature_registry()
     visitor = Visitor()
@@ -414,10 +406,8 @@ def test_compile_native_artifact_failure_surfaces_compile_phase_diagnostic(
     """
     title: Native compile failures should preserve command and phase context.
     parameters:
-      monkeypatch:
-        type: pytest.MonkeyPatch
-      tmp_path:
-        type: Path
+      monkeypatch: Fixture for temporarily replacing dependencies and settings.
+      tmp_path: Temporary directory for this test.
     """
     artifact = NativeArtifact("c_source", tmp_path / "runtime.c")
 
@@ -428,13 +418,12 @@ def test_compile_native_artifact_failure_surfaces_compile_phase_diagnostic(
         title: Return a failing compiler result.
         parameters:
           args:
-            type: object
             variadic: positional
+            description: Positional arguments.
           kwargs:
-            type: object
             variadic: keyword
-        returns:
-          type: subprocess.CompletedProcess[str]
+            description: Keyword arguments.
+        returns: A failing compiler result.
         """
         command = list(cast(Sequence[str], args[0])) if args else []
         _ = kwargs
@@ -468,10 +457,8 @@ def test_link_failure_surfaces_link_phase_diagnostic(
     """
     title: Link failures should preserve command and output context.
     parameters:
-      monkeypatch:
-        type: pytest.MonkeyPatch
-      tmp_path:
-        type: Path
+      monkeypatch: Fixture for temporarily replacing dependencies and settings.
+      tmp_path: Temporary directory for this test.
     """
     primary_object = tmp_path / "main.o"
 
@@ -482,13 +469,12 @@ def test_link_failure_surfaces_link_phase_diagnostic(
         title: Return a failing linker result.
         parameters:
           args:
-            type: object
             variadic: positional
+            description: Positional arguments.
           kwargs:
-            type: object
             variadic: keyword
-        returns:
-          type: subprocess.CompletedProcess[str]
+            description: Keyword arguments.
+        returns: A failing linker result.
         """
         command = list(cast(Sequence[str], args[0])) if args else []
         _ = kwargs
@@ -516,9 +502,8 @@ def test_link_failure_surfaces_link_phase_diagnostic(
 
 def test_optional_feature_dependencies_and_availability() -> None:
     """
-    title: >-
-      Resolve dependencies atomically and fail only when unavailable work
-      activates.
+    title: Resolve dependencies atomically and fail only when unavailable
+      work activates.
     """
     registry = RuntimeFeatureRegistry()
     registry.register(RuntimeFeature("base"))
@@ -541,8 +526,8 @@ def test_optional_feature_dependencies_and_availability() -> None:
 
 def test_runtime_dependency_cycles_fail_without_activation() -> None:
     """
-    title: >-
-      Detect cycles instead of recurring forever or activating partial graphs.
+    title: Detect cycles instead of recurring forever or activating partial
+      graphs.
     """
     registry = RuntimeFeatureRegistry()
     registry.register(RuntimeFeature("one", dependencies=("two",)))

@@ -22,10 +22,8 @@ def _parse(code: str) -> astx.Module:
     """
     title: Parse source text into an AST module.
     parameters:
-      code:
-        type: str
-    returns:
-      type: astx.Module
+      code: Source code or diagnostic identifier.
+    returns: Parsed source text into an AST module.
     """
     ArxIO.string_to_buffer(code)
     return Parser().parse(Lexer().lex())
@@ -66,10 +64,8 @@ def test_subscript_preserves_omitted_bounds(
     """
     title: Text subscripts retain the distinction between slices and none keys.
     parameters:
-      suffix:
-        type: str
-      slicing:
-        type: bool
+      suffix: Suffix.
+      slicing: Whether to use slicing.
     """
     tree = _parse(f'fn value() -> str:\n  return "abc"{suffix}\n')
     function = tree.nodes[0]
@@ -166,10 +162,8 @@ def test_parse_for_error_paths(code: str, expected: str) -> None:
     """
     title: For-loop parser errors.
     parameters:
-      code:
-        type: str
-      expected:
-        type: str
+      code: Source code or diagnostic identifier.
+      expected: Expected result for this case.
     """
     with pytest.raises(ParserException, match=expected):
         _parse(code)
@@ -670,8 +664,7 @@ def test_parse_builtin_imports_are_rejected(code: str) -> None:
     """
     title: User source cannot import internal builtin modules directly.
     parameters:
-      code:
-        type: str
+      code: Source code or diagnostic identifier.
     """
     with pytest.raises(
         ParserException,
@@ -717,10 +710,8 @@ def test_tensor_index_validation_is_semantic(code: str, expected: str) -> None:
     """
     title: The parser preserves indices; IRx diagnoses rank and bounds.
     parameters:
-      code:
-        type: str
-      expected:
-        type: str
+      code: Source code or diagnostic identifier.
+      expected: Expected result for this case.
     """
     tree = _parse(code)
     with pytest.raises(SemanticError, match=expected):
@@ -762,10 +753,8 @@ def test_parse_tensor_error_paths(code: str, expected: str) -> None:
     """
     title: Tensor parser diagnostics cover shape and indexing failures.
     parameters:
-      code:
-        type: str
-      expected:
-        type: str
+      code: Source code or diagnostic identifier.
+      expected: Expected result for this case.
     """
     with pytest.raises(ParserException, match=expected):
         _parse(code)
@@ -873,8 +862,7 @@ def test_parse_bare_return_produces_none_literal(following: str) -> None:
     """
     title: Bare returns stop before a following name-first declaration.
     parameters:
-      following:
-        type: str
+      following: Following.
     """
     tree = _parse("fn do_nothing() -> none:\n  return\n" + following)
 
@@ -900,8 +888,7 @@ def test_parse_function_without_return_statement() -> None:
 
 def test_parse_explicit_return_none_value() -> None:
     """
-    title: >-
-      Explicit return of the none literal emits FunctionReturn with
+    title: Explicit return of the none literal emits FunctionReturn with
       LiteralNone.
     """
     tree = _parse("fn do_nothing() -> none:\n  return none\n")
@@ -929,8 +916,7 @@ def test_slice_double_colon_remains_contextual(suffix: str) -> None:
     """
     title: The declaration separator preserves existing slice-bound semantics.
     parameters:
-      suffix:
-        type: str
+      suffix: Suffix.
     """
     module = _parse(f'fn value() -> str:\n  return "abc"{suffix}\n')
     function = module.nodes[0]

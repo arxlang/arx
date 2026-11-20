@@ -1,9 +1,8 @@
 """
 title: Checked numeric execution from resolved semantic plans.
-summary: >-
-  Guards precede unsafe conversions, mutation, and result publication. LLVM
-  overflow intrinsics do not rely on undefined signed-overflow flags. Runtime
-  failures use the registered reporter at every optimization level.
+summary: Guards precede unsafe conversions, mutation, and result publication.
+  LLVM overflow intrinsics do not rely on undefined signed-overflow flags.
+  Runtime failures use the registered reporter at every optimization level.
 """
 
 from __future__ import annotations
@@ -33,14 +32,10 @@ def numeric_guard(
     """
     title: Deliver a deterministic arithmetic or conversion failure.
     parameters:
-      visitor:
-        type: VisitorCore
-      node:
-        type: astx.AST
-      valid:
-        type: ir.Value
-      conversion:
-        type: bool
+      visitor: Visitor performing the traversal or lowering.
+      node: Syntax node to process.
+      valid: Whether the scalar payload is valid.
+      conversion: Whether to use conversion.
     """
     visitor._guard_runtime_condition(
         node,
@@ -69,23 +64,17 @@ def integer_operation(
     operator: str,
 ) -> ir.Value:
     """
-    title: >-
-      Emit checked or explicitly wrapping integer arithmetic, including SIMD.
+    title: Emit checked or explicitly wrapping integer arithmetic, including
+      SIMD.
     parameters:
-      visitor:
-        type: VisitorCore
-      node:
-        type: astx.AST
-      lhs:
-        type: ir.Value
-      rhs:
-        type: ir.Value
-      plan:
-        type: ResolvedOperator
-      operator:
-        type: str
-    returns:
-      type: ir.Value
+      visitor: Visitor performing the traversal or lowering.
+      node: Syntax node to process.
+      lhs: Left operand.
+      rhs: Right operand.
+      plan: Resolved semantic execution plan.
+      operator: Operator to apply.
+    returns: 'Result of this operation: emit checked or explicitly wrapping
+      integer arithmetic, including SIMD.'
     """
     builder = visitor._llvm.ir_builder
     name = {"+": "add", "-": "sub", "*": "mul"}[operator]
@@ -142,21 +131,16 @@ def resolved_integer_operation(
     operator: str,
 ) -> ir.Value:
     """
-    title: >-
-      Require an analyzed arithmetic plan before emitting a checked operation.
+    title: Require an analyzed arithmetic plan before emitting a checked
+      operation.
     parameters:
-      visitor:
-        type: VisitorCore
-      node:
-        type: astx.AST
-      lhs:
-        type: ir.Value
-      rhs:
-        type: ir.Value
-      operator:
-        type: str
-    returns:
-      type: ir.Value
+      visitor: Visitor performing the traversal or lowering.
+      node: Syntax node to process.
+      lhs: Left operand.
+      rhs: Right operand.
+      operator: Operator to apply.
+    returns: 'Result of this operation: require an analyzed arithmetic plan
+      before emitting a checked operation.'
     """
     semantic = require_semantic_metadata(
         getattr(node, "semantic", None),
@@ -177,15 +161,13 @@ def resolved_integer_operation(
 @typechecked
 def finite_value(visitor: VisitorCore, value: ir.Value) -> ir.Value:
     """
-    title: >-
-      Test finiteness without rejecting preexisting floating NaN or infinity.
+    title: Test finiteness without rejecting preexisting floating NaN or
+      infinity.
     parameters:
-      visitor:
-        type: VisitorCore
-      value:
-        type: ir.Value
-    returns:
-      type: ir.Value
+      visitor: Visitor performing the traversal or lowering.
+      value: Value to process.
+    returns: 'Result of this operation: test finiteness without rejecting
+      preexisting floating NaN or infinity.'
     """
     builder = visitor._llvm.ir_builder
     above = builder.fcmp_ordered(
@@ -207,21 +189,16 @@ def numeric_cast(
     mode: astx.NumericMode,
 ) -> ir.Value:
     """
-    title: >-
-      Convert a valid scalar payload using the analyzed conversion contract.
+    title: Convert a valid scalar payload using the analyzed conversion
+      contract.
     parameters:
-      visitor:
-        type: VisitorCore
-      node:
-        type: astx.Cast
-      value:
-        type: ir.Value
-      plan:
-        type: NumericConversion
-      mode:
-        type: astx.NumericMode
-    returns:
-      type: ir.Value
+      visitor: Visitor performing the traversal or lowering.
+      node: Syntax node to process.
+      value: Value to process.
+      plan: Resolved semantic execution plan.
+      mode: Selected processing mode.
+    returns: Converted a valid scalar payload using the analyzed
+      conversion contract.
     """
     builder = visitor._llvm.ir_builder
     if mode is astx.NumericMode.CHECKED and plan.requires_range_check:
@@ -317,18 +294,13 @@ def lower_numeric_cast(
     """
     title: Guard nullable conversion payloads only when the input is valid.
     parameters:
-      visitor:
-        type: VisitorCore
-      node:
-        type: astx.Cast
-      value:
-        type: ir.Value
-      plan:
-        type: NumericConversion
-      mode:
-        type: astx.NumericMode
-    returns:
-      type: ir.Value
+      visitor: Visitor performing the traversal or lowering.
+      node: Syntax node to process.
+      value: Value to process.
+      plan: Resolved semantic execution plan.
+      mode: Selected processing mode.
+    returns: 'Result of this operation: guard nullable conversion payloads
+      only when the input is valid.'
     """
     source = visitor._resolved_ast_type(node.value)
     target = visitor._resolved_ast_type(node)
@@ -375,12 +347,9 @@ def guard_collection_length(
     title: Keep i32 collection length, index, and count results representable.
     summary: The backing ABI uses i64 lengths; no narrowing may silently wrap.
     parameters:
-      visitor:
-        type: VisitorCore
-      node:
-        type: astx.AST
-      length:
-        type: ir.Value
+      visitor: Visitor performing the traversal or lowering.
+      node: Syntax node to process.
+      length: Number of elements.
     """
     builder = visitor._llvm.ir_builder
     valid = builder.icmp_unsigned(

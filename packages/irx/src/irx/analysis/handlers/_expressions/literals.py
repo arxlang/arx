@@ -4,8 +4,7 @@
 
 """
 title: Expression literal visitors.
-summary: >-
-  Handle literal expressions, list operations, and generic subscript
+summary: Handle literal expressions, list operations, and generic subscript
   expressions during semantic analysis.
 """
 
@@ -89,14 +88,13 @@ def collection_probe_matches(
     expected: astx.DataType, actual: astx.DataType | None
 ) -> bool:
     """
-    title: Numeric searches use comparison domains, not assignment domains.
+    title: Numeric searches use comparison domains, not assignment
+      domains.
     parameters:
-      expected:
-        type: astx.DataType
-      actual:
-        type: astx.DataType | None
-    returns:
-      type: bool
+      expected: Expected result for this case.
+      actual: Actual.
+    returns: 'Result of this operation: numeric searches use comparison
+      domains, not assignment domains.'
     """
     if is_numeric_type(expected) and is_numeric_type(actual):
         return common_numeric_type(expected, actual) is not None
@@ -132,19 +130,12 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
     ) -> None:
         """
         title: Resolve supported scalar literals, including nominal subtypes.
-        summary: >-
-          Plain type annotations do not grant expression support. Contextual
-          widths and unsupported numeric representations retain their existing
-          semantic validation; specialized literals use their own handlers.
+        summary: Plain type annotations do not grant expression support.
+          Contextual widths and unsupported numeric representations retain
+          their existing semantic validation; specialized literals use their
+          own handlers.
         parameters:
-          node:
-            type: >-
-              astx.LiteralInteger | astx.LiteralFloat | astx.LiteralInt8 |
-              astx.LiteralInt16 | astx.LiteralInt32 | astx.LiteralInt64 |
-              astx.LiteralInt128 | astx.LiteralUInt8 | astx.LiteralUInt16 |
-              astx.LiteralUInt32 | astx.LiteralUInt64 | astx.LiteralUInt128 |
-              astx.LiteralFloat16 | astx.LiteralFloat32 | astx.LiteralFloat64 |
-              astx.LiteralBoolean | astx.LiteralNone
+          node: Syntax node to process.
         """
         literal_type = resolve_numeric_literal(node, self.context.diagnostics)
         self._set_type(node, literal_type or node.type_)
@@ -156,8 +147,7 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Validate one comprehension filter expression.
         parameters:
-          condition:
-            type: astx.AST
+          condition: Condition controlling the operation.
         """
         if not self._require_value_expression(
             condition,
@@ -179,8 +169,7 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Visit string literal nodes as immortal static storage.
         parameters:
-          node:
-            type: astx.LiteralString
+          node: Syntax node to process.
         """
         if "\0" in node.value:
             text_error(
@@ -210,10 +199,8 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Visit one comprehension clause in the active scope.
         parameters:
-          clause:
-            type: astx.ComprehensionClause
-          borrows:
-            type: ExitStack
+          clause: Clause.
+          borrows: Borrows.
         """
         if clause.is_async:
             self.context.diagnostics.add(
@@ -266,10 +253,9 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Borrow iterable owners through dependent clauses and results.
         parameters:
-          clauses:
-            type: list[astx.ComprehensionClause]
-        returns:
-          type: Iterator[None]
+          clauses: Clauses.
+        returns: 'Result of this operation: borrow iterable owners through
+          dependent clauses and results.'
         """
         with ExitStack() as borrows:
             for clause in clauses:
@@ -281,8 +267,7 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Visit AliasExpr nodes.
         parameters:
-          node:
-            type: astx.AliasExpr
+          node: Syntax node to process.
         """
         self._set_type(node, None)
 
@@ -290,8 +275,7 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Visit one temporal literal.
         parameters:
-          node:
-            type: astx.AST
+          node: Syntax node to process.
         """
         try:
             literal_value = cast(str, getattr(node, "value"))
@@ -334,8 +318,7 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Validate calendar dates and resolve their epoch representation.
         parameters:
-          node:
-            type: astx.LiteralDate
+          node: Syntax node to process.
         """
         self._visit_temporal_literal(node)
 
@@ -344,8 +327,7 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Visit LiteralTime nodes.
         parameters:
-          node:
-            type: astx.LiteralTime
+          node: Syntax node to process.
         """
         self._visit_temporal_literal(node)
 
@@ -354,8 +336,7 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Visit LiteralTimestamp nodes.
         parameters:
-          node:
-            type: astx.LiteralTimestamp
+          node: Syntax node to process.
         """
         self._visit_temporal_literal(node)
 
@@ -364,8 +345,7 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Visit LiteralDateTime nodes.
         parameters:
-          node:
-            type: astx.LiteralDateTime
+          node: Syntax node to process.
         """
         self._visit_temporal_literal(node)
 
@@ -373,8 +353,7 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Reject class references in aggregate storage without ownership.
         parameters:
-          node:
-            type: astx.AST
+          node: Syntax node to process.
         """
         if contains_class(self._expr_type(node)) or contains_arrow(
             self._expr_type(node)
@@ -390,8 +369,7 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Visit one element-sequence literal.
         parameters:
-          node:
-            type: astx.AST
+          node: Syntax node to process.
         """
         for element in cast(list[astx.AST], getattr(node, "elements")):
             self.visit(element)
@@ -424,12 +402,9 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Return whether one collection probe type is compatible.
         parameters:
-          expected_types:
-            type: tuple[astx.DataType, Ellipsis]
-          actual_type:
-            type: astx.DataType | None
-        returns:
-          type: bool
+          expected_types: Types of expected.
+          actual_type: Type of actual.
+        returns: Whether one collection probe type is compatible.
         """
         if actual_type is None or not expected_types:
             return True
@@ -450,16 +425,11 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Attach resolved collection method metadata.
         parameters:
-          node:
-            type: astx.AST
-          base:
-            type: astx.AST
-          method:
-            type: CollectionMethodKind
-          return_type:
-            type: astx.DataType
-          argument_types:
-            type: tuple[astx.DataType, Ellipsis]
+          node: Syntax node to process.
+          base: Base value or declaration.
+          method: Method.
+          return_type: Declared result type.
+          argument_types: Types of argument.
         """
         receiver_type = self._expr_type(base)
         if receiver_type is None:
@@ -537,16 +507,12 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Validate one collection query receiver.
         parameters:
-          node:
-            type: astx.AST
-          base:
-            type: astx.AST
-          context:
-            type: str
-          analyzed:
-            type: bool
-        returns:
-          type: astx.DataType | None
+          node: Syntax node to process.
+          base: Base value or declaration.
+          context: Context for the operation.
+          analyzed: Whether to use analyzed.
+        returns: 'Result of this operation: validate one collection query
+          receiver.'
         """
         if not analyzed:
             self.visit(base)
@@ -573,14 +539,10 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Return whether the backend can lower a collection method.
         parameters:
-          method:
-            type: CollectionMethodKind
-          base:
-            type: astx.AST
-          base_type:
-            type: astx.DataType | None
-        returns:
-          type: bool
+          method: Method.
+          base: Base value or declaration.
+          base_type: Type of base.
+        returns: Whether the backend can lower a collection method.
         """
         if base_type is None:
             return True
@@ -619,18 +581,13 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Validate that one collection method is currently lowerable.
         parameters:
-          node:
-            type: astx.AST
-          base:
-            type: astx.AST
-          base_type:
-            type: astx.DataType | None
-          method:
-            type: CollectionMethodKind
-          context:
-            type: str
-        returns:
-          type: bool
+          node: Syntax node to process.
+          base: Base value or declaration.
+          base_type: Type of base.
+          method: Method.
+          context: Context for the operation.
+        returns: 'Result of this operation: validate that one collection
+          method is currently lowerable.'
         """
         if self._collection_method_supported_by_lowering(
             method=method,
@@ -652,8 +609,7 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Visit CollectionLength nodes.
         parameters:
-          node:
-            type: astx.CollectionLength
+          node: Syntax node to process.
         """
         info = self._semantic(node)
         info.resolved_text_operation = None
@@ -717,8 +673,7 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Visit CollectionIsEmpty nodes.
         parameters:
-          node:
-            type: astx.CollectionIsEmpty
+          node: Syntax node to process.
         """
         return_type = astx.Boolean()
         base_type = self._validate_collection_query_base(
@@ -747,8 +702,7 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Visit CollectionContains nodes.
         parameters:
-          node:
-            type: astx.CollectionContains
+          node: Syntax node to process.
         """
         return_type = astx.Boolean()
         base_type = self._validate_collection_query_base(
@@ -798,8 +752,7 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Visit CollectionIndex nodes.
         parameters:
-          node:
-            type: astx.CollectionIndex
+          node: Syntax node to process.
         """
         return_type = astx.Int32()
         base_type = self._validate_collection_query_base(
@@ -860,8 +813,7 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Visit CollectionCount nodes.
         parameters:
-          node:
-            type: astx.CollectionCount
+          node: Syntax node to process.
         """
         return_type = astx.Int32()
         base_type = self._validate_collection_query_base(
@@ -922,8 +874,7 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Visit LiteralList nodes.
         parameters:
-          node:
-            type: astx.LiteralList
+          node: Syntax node to process.
         """
         self._visit_element_sequence_literal(node)
         self._set_resource_ownership(
@@ -936,8 +887,7 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Visit LiteralTuple nodes.
         parameters:
-          node:
-            type: astx.LiteralTuple
+          node: Syntax node to process.
         """
         self._visit_element_sequence_literal(node)
 
@@ -946,8 +896,7 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Visit LiteralSet nodes.
         parameters:
-          node:
-            type: astx.LiteralSet
+          node: Syntax node to process.
         """
         for element in node.elements:
             self.visit(element)
@@ -967,8 +916,7 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Visit LiteralDict nodes.
         parameters:
-          node:
-            type: astx.LiteralDict
+          node: Syntax node to process.
         """
         for key, value in node.elements.items():
             self.visit(key)
@@ -982,8 +930,7 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Visit ListCreate nodes.
         parameters:
-          node:
-            type: astx.ListCreate
+          node: Syntax node to process.
         """
         self._set_type(node, node.type_)
         if contains_class(node.element_type) or contains_arrow(
@@ -1016,8 +963,7 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Visit ComprehensionClause nodes.
         parameters:
-          node:
-            type: astx.ComprehensionClause
+          node: Syntax node to process.
         """
         with (
             self.context.scope("comprehension-clause"),
@@ -1030,8 +976,7 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Visit ListComprehension nodes.
         parameters:
-          node:
-            type: astx.ListComprehension
+          node: Syntax node to process.
         """
         with (
             self.context.scope("list-comprehension"),
@@ -1070,8 +1015,7 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Visit GeneratorExpr nodes.
         parameters:
-          node:
-            type: astx.GeneratorExpr
+          node: Syntax node to process.
         """
         with (
             self.context.scope("generator-expression"),
@@ -1090,8 +1034,7 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Visit SetComprehension nodes.
         parameters:
-          node:
-            type: astx.SetComprehension
+          node: Syntax node to process.
         """
         with (
             self.context.scope("set-comprehension"),
@@ -1110,8 +1053,7 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Visit DictComprehension nodes.
         parameters:
-          node:
-            type: astx.DictComprehension
+          node: Syntax node to process.
         """
         with (
             self.context.scope("dict-comprehension"),
@@ -1135,10 +1077,8 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Resolve copied string results without borrowing list storage.
         parameters:
-          node:
-            type: astx.AST
-          element_type:
-            type: astx.DataType | None
+          node: Syntax node to process.
+          element_type: Type of each element.
         """
         self._set_type(node, element_type)
         self._semantic(node).resource_ownership = None
@@ -1164,8 +1104,7 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Visit ListIndex nodes.
         parameters:
-          node:
-            type: astx.ListIndex
+          node: Syntax node to process.
         """
         self.visit(node.base)
         self.visit(node.index)
@@ -1200,8 +1139,7 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Visit ListLength nodes.
         parameters:
-          node:
-            type: astx.ListLength
+          node: Syntax node to process.
         """
         self.visit(node.base)
         if not self._require_value_expression(
@@ -1224,8 +1162,7 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Visit ListAppend nodes.
         parameters:
-          node:
-            type: astx.ListAppend
+          node: Syntax node to process.
         """
         self.visit(node.base)
         base_type = self._expr_type(node.base)
@@ -1313,8 +1250,7 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Visit SubscriptExpr nodes.
         parameters:
-          node:
-            type: astx.SubscriptExpr
+          node: Syntax node to process.
         """
         info = self._semantic(node)
         info.range_access = False

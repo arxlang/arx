@@ -34,10 +34,9 @@ def i32_expression(value: int) -> str:
     """
     title: Spell boundary inputs without an out-of-range positive i32 token.
     parameters:
-      value:
-        type: int
-    returns:
-      type: str
+      value: Value to process.
+    returns: 'Result of this operation: spell boundary inputs without an
+      out-of-range positive i32 token.'
     """
     if value >= 0:
         return str(value)
@@ -47,12 +46,12 @@ def i32_expression(value: int) -> str:
 @private
 def signed_limits(width: int) -> str:
     """
-    title: Declare typed limits using only representable i32 literal tokens.
+    title: Declare typed limits using only representable i32 literal
+      tokens.
     parameters:
-      width:
-        type: int
-    returns:
-      type: str
+      width: Bit width or display width.
+    returns: 'Result of this operation: declare typed limits using
+      only representable i32 literal tokens.'
     """
     type_ = f"i{width}"
     maximum = f"cast({2 ** (width - 1) - 1}, {type_})"
@@ -74,12 +73,10 @@ def run_helpers(tmp_path: Path, body: str) -> subprocess.CompletedProcess[str]:
     """
     title: Verify helper LLVM and execute without unbounded time or allocation.
     parameters:
-      tmp_path:
-        type: Path
-      body:
-        type: str
-    returns:
-      type: subprocess.CompletedProcess[str]
+      tmp_path: Temporary directory for this test.
+      body: Statements forming the body.
+    returns: 'Result of this operation: verify helper LLVM and execute without
+      unbounded time or allocation.'
     """
     source = (
         "```\ntitle: Integer helper boundary regression\n```\n"
@@ -126,8 +123,7 @@ def test_range_matches_python(tmp_path: Path) -> None:
     """
     title: Compare lazy range endpoints and stride boundaries against Python.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     cases: list[tuple[int, int, int | None, str]] = [
         (0, 4, None, "default-step"),
@@ -180,8 +176,8 @@ def test_range_matches_python(tmp_path: Path) -> None:
 def lazy_range_ir() -> tuple[ArxBuilder, str]:
     """
     title: Translate common and advanced range workflows once.
-    returns:
-      type: tuple[ArxBuilder, str]
+    returns: 'Result of this operation: translate common and advanced range
+      workflows once.'
     """
     source = Path(__file__).parents[1] / "arx" / "test_generators.x"
     ArxIO.string_to_buffer(
@@ -218,12 +214,9 @@ def test_lazy_range_execution_and_constant_storage(
     """
     title: Large range values and independent cursors allocate no heap storage.
     parameters:
-      lazy_range_ir:
-        type: tuple[ArxBuilder, str]
-      tmp_path:
-        type: Path
-      optimization:
-        type: int
+      lazy_range_ir: Lazy range IR.
+      tmp_path: Temporary directory for this test.
+      optimization: Optimization level.
     """
     builder, text = lazy_range_ir
     module = llvm.parse_assembly(text)
@@ -279,10 +272,8 @@ def test_math_preserves_signed_integer_types(
     """
     title: Preserve each signed width through arithmetic and boundary cases.
     parameters:
-      tmp_path:
-        type: Path
-      width:
-        type: int
+      tmp_path: Temporary directory for this test.
+      width: Bit width or display width.
     """
     type_ = f"i{width}"
     body = signed_limits(width)
@@ -348,14 +339,10 @@ def test_templated_math_checks_each_width(
     """
     title: Fail before returning a value for every signed-width specialization.
     parameters:
-      tmp_path:
-        type: Path
-      width:
-        type: int
-      expression:
-        type: str
-      message:
-        type: str
+      tmp_path: Temporary directory for this test.
+      width: Bit width or display width.
+      expression: Expression to process.
+      message: Diagnostic or output message.
     """
     result = run_helpers(
         tmp_path, signed_limits(width) + f"print({expression})\nprint(123)"
@@ -416,12 +403,9 @@ def test_invalid_helper_arguments_fail(
     """
     title: Reject invalid arguments before producing a wrapped or bogus result.
     parameters:
-      tmp_path:
-        type: Path
-      statement:
-        type: str
-      message:
-        type: str
+      tmp_path: Temporary directory for this test.
+      statement: Statement to process.
+      message: Diagnostic or output message.
     """
     result = run_helpers(tmp_path, statement + "\nprint(123)")
     assert result.returncode == 1, result.stderr

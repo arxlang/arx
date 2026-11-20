@@ -33,14 +33,11 @@ def build(source: Path, output: Path, shared: bool = False) -> Path:
     """
     title: Compile actual Arx source and its registered runtime artifacts.
     parameters:
-      source:
-        type: Path
-      output:
-        type: Path
-      shared:
-        type: bool
-    returns:
-      type: Path
+      source: Source input to process.
+      output: Output destination or generated result.
+      shared: Whether to use shared.
+    returns: 'Result of this operation: compile actual Arx source and its
+      registered runtime artifacts.'
     """
     output.parent.mkdir(parents=True, exist_ok=True)
     ArxIO.file_to_buffer(str(source))
@@ -82,8 +79,7 @@ def build(source: Path, output: Path, shared: bool = False) -> Path:
 def expected_batch() -> pa.RecordBatch:
     """
     title: Construct the independently declared Python-side dataset.
-    returns:
-      type: pa.RecordBatch
+    returns: Constructed the independently declared Python-side dataset.
     """
     schema = pa.schema(
         [
@@ -102,8 +98,7 @@ def files(directory: Path) -> None:
     """
     title: Run separate-process IPC file exchange in both directions.
     parameters:
-      directory:
-        type: Path
+      directory: Directory.
     """
     writer = build(EXAMPLES / "write_file.x", directory / "write_file")
     subprocess.run([str(writer)], cwd=directory, check=True, timeout=30)
@@ -127,8 +122,7 @@ def c_interfaces(directory: Path) -> None:
     """
     title: Share buffers produced by real compiled Arx in the Python process.
     parameters:
-      directory:
-        type: Path
+      directory: Directory.
     """
     library = ctypes.CDLL(
         str(build(EXAMPLES / "component.x", directory / "component.so", True))
@@ -173,15 +167,13 @@ def call_component(library: ctypes.CDLL, name: str, *addresses: int) -> int:
     """
     title: Call a generated function through the checked native ABI.
     parameters:
-      library:
-        type: ctypes.CDLL
-      name:
-        type: str
+      library: Library.
+      name: Name identifying the declaration or operation.
       addresses:
-        type: int
         variadic: positional
-    returns:
-      type: int
+        description: Addresses.
+    returns: 'Result of this operation: call a generated function through
+      the checked native ABI.'
     notes: Read the result only on success and always release the context.
     """
     create = library.irx_exception_context_create
@@ -217,8 +209,7 @@ def tcp(directory: Path) -> None:
     """
     title: Run both TCP directions with ephemeral ports and separate processes.
     parameters:
-      directory:
-        type: Path
+      directory: Directory.
     """
     for direction in ("send", "receive"):
         with socket.socket() as server:

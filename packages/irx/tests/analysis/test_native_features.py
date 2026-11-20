@@ -36,14 +36,11 @@ def unavailable(
     """
     title: Reject unexpected graph expansion in single-module host fixtures.
     parameters:
-      requesting:
-        type: str
-      node:
-        type: astx.ImportStmt | astx.ImportFromStmt
-      specifier:
-        type: str
-    returns:
-      type: ParsedModule
+      requesting: Requesting.
+      node: Syntax node to process.
+      specifier: Specifier.
+    returns: 'Result of this operation: reject unexpected graph expansion
+      in single-module host fixtures.'
     """
     raise LookupError(
         f"unexpected import {requesting}: {specifier}: {type(node)}"
@@ -56,12 +53,10 @@ def compute_modules(
     """
     title: Reexport a trusted unary declaration without any frontend hooks.
     parameters:
-      kernel:
-        type: ComputeKernel
-      type_:
-        type: astx.DataType
-    returns:
-      type: tuple[ParsedModule, StaticImportResolver, astx.FunctionCall]
+      kernel: Kernel.
+      type_: Type expression to process.
+    returns: 'Result of this operation: reexport a trusted unary declaration
+      without any frontend hooks.'
     """
     bound = astx.UnionType(
         [
@@ -142,10 +137,8 @@ def test_compute_plan_identity_and_reanalysis(
     """
     title: Imported aliases retain typed shape/ownership without AST mutation.
     parameters:
-      kernel:
-        type: ComputeKernel
-      type_:
-        type: astx.DataType
+      kernel: Kernel.
+      type_: Type expression to process.
     """
     root, resolver, call = compute_modules(kernel, type_)
     astx.set_template_args(call, (type_,))
@@ -205,8 +198,7 @@ def test_compute_rejects_unsupported_shape(type_: astx.DataType) -> None:
     """
     title: Existing storage support never implies a math capability or cast.
     parameters:
-      type_:
-        type: astx.DataType
+      type_: Type expression to process.
     """
     root, resolver, call = compute_modules("sqrt", type_)
     with pytest.raises(SemanticError, match="supported f64 scalar/Series"):
@@ -304,10 +296,8 @@ def test_compute_rejects_unqualified_runtime(
     """
     title: Reject either runtime version mismatch before publishing a plan.
     parameters:
-      attribute:
-        type: str
-      monkeypatch:
-        type: pytest.MonkeyPatch
+      attribute: Attribute.
+      monkeypatch: Fixture for temporarily replacing dependencies and settings.
     """
     root, resolver, call = compute_modules("sqrt", astx.Float64())
     monkeypatch.setattr(pa, attribute, "26.0.0")
@@ -325,10 +315,9 @@ def native_module(name: str = "package:test:backend") -> ParsedModule:
     """
     title: Supply native metadata independently of Arx syntax or discovery.
     parameters:
-      name:
-        type: str
-    returns:
-      type: ParsedModule
+      name: Name identifying the declaration or operation.
+    returns: 'Result of this operation: supply native metadata independently
+      of Arx syntax or discovery.'
     """
     prototype = astx.FunctionPrototype(
         "native_value", astx.Arguments(), astx.Int32()
@@ -454,8 +443,8 @@ def test_native_binding_rejects_duplicate_declarations() -> None:
 
 def test_native_conflicts_across_modules_fail_semantically() -> None:
     """
-    title: >-
-      Extern C symbol requirements cannot conflict across module boundaries.
+    title: Extern C symbol requirements cannot conflict across module
+      boundaries.
     """
     root = native_module()
     other = native_module("package:other:backend")
@@ -475,14 +464,10 @@ def test_native_conflicts_across_modules_fail_semantically() -> None:
         """
         title: Return a second module with a contradictory extern contract.
         parameters:
-          requesting:
-            type: str
-          node:
-            type: astx.ImportStmt | astx.ImportFromStmt
-          specifier:
-            type: str
-        returns:
-          type: ParsedModule
+          requesting: Requesting.
+          node: Syntax node to process.
+          specifier: Specifier.
+        returns: A second module with a contradictory extern contract.
         """
         if specifier == "other":
             return other
@@ -522,8 +507,8 @@ def test_extern_rejects_known_nul_literal() -> None:
 
 def test_native_artifact_options_cannot_conflict() -> None:
     """
-    title: >-
-      Duplicate source paths cannot silently discard distinct build inputs.
+    title: Duplicate source paths cannot silently discard distinct build
+      inputs.
     """
     root = native_module()
     feature = NativeFeature(
@@ -565,8 +550,7 @@ def test_table_io_host_capability_validates_shape(invalid: str) -> None:
     """
     title: An explicit host cannot accidentally bypass FFI with an invalid ABI.
     parameters:
-      invalid:
-        type: str
+      invalid: Invalid.
     """
     args = astx.Arguments(astx.Argument("path", astx.String()))
     if invalid == "arity":

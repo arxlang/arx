@@ -93,8 +93,8 @@ def test_translate_implicit_integer_widening_for_reassignment() -> None:
 
 def test_translate_function_call_implicitly_promotes_arguments() -> None:
     """
-    title: >-
-      Calls should apply the same implicit promotions as semantic analysis.
+    title: Calls should apply the same implicit promotions as semantic
+      analysis.
     """
     module = astx.Module()
 

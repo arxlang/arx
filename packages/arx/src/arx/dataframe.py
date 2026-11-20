@@ -1,8 +1,7 @@
 """
 title: DataFrame surface helpers for Arx.
-summary: >-
-  Adapt Arx surface dataframe syntax to IRx DataFrame nodes while keeping user-
-  facing schema rules local to Arx.
+summary: Adapt Arx surface dataframe syntax to IRx DataFrame nodes while
+  keeping user- facing schema rules local to Arx.
 """
 
 from __future__ import annotations
@@ -26,8 +25,7 @@ class DataFrameBinding:
     """
     title: Static DataFrame binding metadata.
     attributes:
-      schema:
-        type: DataFrameSchema
+      schema: Declared data schema.
     """
 
     schema: DataFrameSchema
@@ -37,10 +35,8 @@ def is_dataframe_type(data_type: astx.DataType | None) -> bool:
     """
     title: Return whether one type is a DataFrame type.
     parameters:
-      data_type:
-        type: astx.DataType | None
-    returns:
-      type: bool
+      data_type: Declared data type.
+    returns: Whether one type is a DataFrame type.
     """
     return isinstance(data_type, astx.DataFrameType)
 
@@ -49,10 +45,8 @@ def is_series_type(data_type: astx.DataType | None) -> bool:
     """
     title: Return whether one type is a Series type.
     parameters:
-      data_type:
-        type: astx.DataType | None
-    returns:
-      type: bool
+      data_type: Declared data type.
+    returns: Whether one type is a Series type.
     """
     return isinstance(data_type, astx.SeriesType)
 
@@ -63,10 +57,8 @@ def dataframe_type(
     """
     title: Build one static-schema DataFrame surface type.
     parameters:
-      columns:
-        type: tuple[astx.DataFrameColumn, Ellipsis]
-    returns:
-      type: astx.DataFrameType
+      columns: Column declarations or values.
+    returns: Constructed one static-schema DataFrame surface type.
     """
     if not columns:
         raise ValueError("dataframe types require at least one column")
@@ -86,8 +78,7 @@ def dataframe_type(
 def runtime_dataframe_type() -> astx.DataFrameType:
     """
     title: Build one runtime-schema DataFrame surface type.
-    returns:
-      type: astx.DataFrameType
+    returns: Constructed one runtime-schema DataFrame surface type.
     """
     return astx.DataFrameType()
 
@@ -96,10 +87,8 @@ def series_type(element_type: astx.DataType) -> astx.SeriesType:
     """
     title: Build one Series surface type.
     parameters:
-      element_type:
-        type: astx.DataType
-    returns:
-      type: astx.SeriesType
+      element_type: Type of each element.
+    returns: Constructed one Series surface type.
     """
     nullable = isinstance(element_type, astx.NullableType)
     if isinstance(element_type, astx.NullableType):
@@ -127,10 +116,8 @@ def binding_from_type(
     """
     title: Build one static DataFrame binding from one declared type.
     parameters:
-      data_type:
-        type: astx.DataType | None
-    returns:
-      type: DataFrameBinding | None
+      data_type: Declared data type.
+    returns: Constructed one static DataFrame binding from one declared type.
     """
     if not isinstance(data_type, astx.DataFrameType):
         return None
@@ -144,10 +131,8 @@ def attach_binding(node: astx.AST, binding: DataFrameBinding) -> None:
     """
     title: Attach static DataFrame metadata to one AST node.
     parameters:
-      node:
-        type: astx.AST
-      binding:
-        type: DataFrameBinding
+      node: Syntax node to process.
+      binding: Resolved binding for the operation.
     """
     info = cast(SemanticInfo | None, getattr(node, "semantic", None))
     if info is None or not isinstance(info, SemanticInfo):
@@ -165,14 +150,11 @@ def coerce_expression(
     """
     title: Coerce one parsed expression into one declared DataFrame type.
     parameters:
-      expr:
-        type: astx.Expr
-      target_type:
-        type: astx.DataType
-      context:
-        type: str
-    returns:
-      type: astx.Expr
+      expr: Expression to process.
+      target_type: Destination type for the conversion.
+      context: Context for the operation.
+    returns: 'Result of this operation: coerce one parsed expression into
+      one declared DataFrame type.'
     """
     del context
     if not isinstance(target_type, astx.DataFrameType):
@@ -199,12 +181,9 @@ def column_type(
     """
     title: Return the type of one DataFrame column.
     parameters:
-      binding:
-        type: DataFrameBinding
-      column_name:
-        type: str
-    returns:
-      type: astx.DataType | None
+      binding: Resolved binding for the operation.
+      column_name: Name of column.
+    returns: The type of one DataFrame column.
     """
     column = binding.schema.column(column_name)
     return None if column is None else column.type_
@@ -217,12 +196,9 @@ def _columns_in_schema_order(
     """
     title: Return literal columns ordered by schema.
     parameters:
-      literal:
-        type: astx.DataFrameLiteral
-      schema:
-        type: DataFrameSchema
-    returns:
-      type: tuple[astx.DataFrameLiteralColumn, Ellipsis]
+      literal: Literal.
+      schema: Declared data schema.
+    returns: Literal columns ordered by schema.
     """
     literal_columns = {column.name: column for column in literal.columns}
     ordered: list[astx.DataFrameLiteralColumn] = []

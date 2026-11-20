@@ -80,7 +80,6 @@ def test_ttypes(ttype: DataType) -> None:
     """
     title: Test ttypes.
     parameters:
-      ttype:
-        type: DataType
+      ttype: Ttype.
     """
     Variable("a", type_=ttype)

@@ -1,8 +1,7 @@
 """
 title: Tensor surface helpers for Arx.
-summary: >-
-  Adapt Arx surface tensor syntax to IRx Tensor nodes while keeping user-facing
-  shape and indexing rules local to Arx.
+summary: Adapt Arx surface tensor syntax to IRx Tensor nodes while keeping
+  user-facing shape and indexing rules local to Arx.
 """
 
 from __future__ import annotations
@@ -36,12 +35,9 @@ class TensorBinding:
     """
     title: Static tensor binding metadata.
     attributes:
-      element_type:
-        type: astx.DataType
-      layout:
-        type: TensorLayout
-      flags:
-        type: int
+      element_type: Type of each element.
+      layout: Layout.
+      flags: Flags.
     """
 
     element_type: astx.DataType
@@ -53,10 +49,8 @@ def _shape_of(data_type: astx.DataType) -> tuple[int, ...] | None:
     """
     title: Return the declared tensor shape stored on one type.
     parameters:
-      data_type:
-        type: astx.DataType
-    returns:
-      type: tuple[int, Ellipsis] | None
+      data_type: Declared data type.
+    returns: The declared tensor shape stored on one type.
     """
     if isinstance(data_type, astx.TensorType) and data_type.shape is not None:
         return data_type.shape
@@ -74,12 +68,10 @@ def _mark_tensor_type(
     """
     title: Mark one IRx TensorType as originating from Arx syntax.
     parameters:
-      data_type:
-        type: astx.TensorType
-      shape:
-        type: tuple[int, Ellipsis] | None
-    returns:
-      type: astx.TensorType
+      data_type: Declared data type.
+      shape: Declared dimensions or result shape.
+    returns: 'Result of this operation: mark one IRx TensorType as originating
+      from Arx syntax.'
     """
     setattr(data_type, TENSOR_SURFACE_ATTR, True)
     data_type.shape = shape
@@ -92,10 +84,8 @@ def is_tensor_type(data_type: astx.DataType | None) -> bool:
     """
     title: Return whether one type is an Arx tensor surface type.
     parameters:
-      data_type:
-        type: astx.DataType | None
-    returns:
-      type: bool
+      data_type: Declared data type.
+    returns: Whether one type is an Arx tensor surface type.
     """
     return (
         isinstance(data_type, astx.TensorType)
@@ -107,10 +97,8 @@ def tensor_shape(data_type: astx.DataType | None) -> tuple[int, ...] | None:
     """
     title: Return the declared tensor shape when available.
     parameters:
-      data_type:
-        type: astx.DataType | None
-    returns:
-      type: tuple[int, Ellipsis] | None
+      data_type: Declared data type.
+    returns: The declared tensor shape when available.
     """
     if data_type is None:
         return None
@@ -124,12 +112,9 @@ def tensor_type(
     """
     title: Build one static-shape tensor surface type.
     parameters:
-      element_type:
-        type: astx.DataType
-      shape:
-        type: tuple[int, Ellipsis]
-    returns:
-      type: astx.TensorType
+      element_type: Type of each element.
+      shape: Declared dimensions or result shape.
+    returns: Constructed one static-shape tensor surface type.
     """
     _element_size_bytes(element_type)
     if not shape:
@@ -146,10 +131,8 @@ def runtime_tensor_type(element_type: astx.DataType) -> astx.TensorType:
     """
     title: Build one runtime-shaped tensor surface type.
     parameters:
-      element_type:
-        type: astx.DataType
-    returns:
-      type: astx.TensorType
+      element_type: Type of each element.
+    returns: Constructed one runtime-shaped tensor surface type.
     """
     _element_size_bytes(element_type)
     return _mark_tensor_type(astx.TensorType(element_type), None)
@@ -161,10 +144,8 @@ def binding_from_type(
     """
     title: Build one static tensor binding from one declared type.
     parameters:
-      data_type:
-        type: astx.DataType | None
-    returns:
-      type: TensorBinding | None
+      data_type: Declared data type.
+    returns: Constructed one static tensor binding from one declared type.
     """
     if not is_tensor_type(data_type):
         return None
@@ -197,10 +178,8 @@ def attach_binding(node: astx.AST, binding: TensorBinding) -> None:
     """
     title: Attach static tensor metadata to one AST node.
     parameters:
-      node:
-        type: astx.AST
-      binding:
-        type: TensorBinding
+      node: Syntax node to process.
+      binding: Resolved binding for the operation.
     """
     info = cast(SemanticInfo | None, getattr(node, "semantic", None))
     if info is None or not isinstance(info, SemanticInfo):
@@ -220,14 +199,11 @@ def coerce_expression(
     """
     title: Coerce one parsed expression into one declared tensor type.
     parameters:
-      expr:
-        type: astx.Expr
-      target_type:
-        type: astx.DataType
-      context:
-        type: str
-    returns:
-      type: astx.Expr
+      expr: Expression to process.
+      target_type: Destination type for the conversion.
+      context: Context for the operation.
+    returns: 'Result of this operation: coerce one parsed expression into
+      one declared tensor type.'
     """
     if not is_tensor_type(target_type):
         return expr
@@ -242,10 +218,8 @@ def default_value(target_type: astx.DataType) -> astx.TensorLiteral:
     """
     title: Build one default tensor literal for one declared type.
     parameters:
-      target_type:
-        type: astx.DataType
-    returns:
-      type: astx.TensorLiteral
+      target_type: Destination type for the conversion.
+    returns: Constructed one default tensor literal for one declared type.
     """
     binding = binding_from_type(target_type)
     if binding is None:
@@ -266,14 +240,10 @@ def build_literal_from_literal(
     """
     title: Build one tensor literal from one nested literal value.
     parameters:
-      expr:
-        type: astx.Literal
-      target_type:
-        type: astx.DataType
-      context:
-        type: str
-    returns:
-      type: astx.TensorLiteral
+      expr: Expression to process.
+      target_type: Destination type for the conversion.
+      context: Context for the operation.
+    returns: Constructed one tensor literal from one nested literal value.
     """
     binding = binding_from_type(target_type)
     if binding is None:
@@ -300,10 +270,9 @@ def infer_literal(expr: astx.Literal) -> astx.TensorLiteral:
     """
     title: Infer one tensor literal directly from one literal value.
     parameters:
-      expr:
-        type: astx.Literal
-    returns:
-      type: astx.TensorLiteral
+      expr: Expression to process.
+    returns: 'Result of this operation: infer one tensor literal directly
+      from one literal value.'
     """
     shape, values = _flatten_literal(expr)
     if not values:
@@ -332,10 +301,8 @@ def literal_values(
     """
     title: Return one flattened scalar payload from a tensor literal.
     parameters:
-      node:
-        type: astx.TensorLiteral
-    returns:
-      type: tuple[astx.AST, Ellipsis]
+      node: Syntax node to process.
+    returns: One flattened scalar payload from a tensor literal.
     """
     return tuple(node.values)
 
@@ -347,12 +314,9 @@ def _literal_from_values(
     """
     title: Build one TensorLiteral and attach static metadata.
     parameters:
-      binding:
-        type: TensorBinding
-      values:
-        type: tuple[astx.Literal, Ellipsis]
-    returns:
-      type: astx.TensorLiteral
+      binding: Resolved binding for the operation.
+      values: Values to process, in order.
+    returns: Constructed one TensorLiteral and attach static metadata.
     """
     literal = astx.TensorLiteral(
         values,
@@ -370,10 +334,8 @@ def _element_size_bytes(element_type: astx.DataType) -> int:
     """
     title: Return the byte width of one supported tensor scalar type.
     parameters:
-      element_type:
-        type: astx.DataType
-    returns:
-      type: int
+      element_type: Type of each element.
+    returns: The byte width of one supported tensor scalar type.
     """
     if not isinstance(
         element_type,
@@ -401,10 +363,8 @@ def _dtype_handle(element_type: astx.DataType) -> int:
     """
     title: Return one IRx dtype token for one tensor scalar type.
     parameters:
-      element_type:
-        type: astx.DataType
-    returns:
-      type: int
+      element_type: Type of each element.
+    returns: One IRx dtype token for one tensor scalar type.
     """
     _element_size_bytes(element_type)
     handle = tensor_buffer_dtype(element_type)
@@ -419,10 +379,8 @@ def _flatten_literal(
     """
     title: Flatten one nested tensor literal.
     parameters:
-      expr:
-        type: astx.Literal
-    returns:
-      type: tuple[tuple[int, Ellipsis], tuple[astx.Literal, Ellipsis]]
+      expr: Expression to process.
+    returns: 'Result of this operation: flatten one nested tensor literal.'
     """
     if not isinstance(expr, (astx.LiteralList, astx.LiteralTuple)):
         return (), (expr,)
@@ -452,10 +410,9 @@ def _infer_element_type(value: astx.Literal) -> astx.DataType:
     """
     title: Infer one tensor scalar type from one literal.
     parameters:
-      value:
-        type: astx.Literal
-    returns:
-      type: astx.DataType
+      value: Value to process.
+    returns: 'Result of this operation: infer one tensor scalar type from
+      one literal.'
     """
     if isinstance(value, (astx.LiteralInt8, astx.LiteralUTF8Char)):
         return astx.Int8()
@@ -484,12 +441,9 @@ def _validate_scalar_literal(
     """
     title: Validate one scalar literal against one tensor element type.
     parameters:
-      value:
-        type: astx.Literal
-      element_type:
-        type: astx.DataType
-      context:
-        type: str
+      value: Value to process.
+      element_type: Type of each element.
+      context: Context for the operation.
     """
     if isinstance(
         element_type,
@@ -536,10 +490,8 @@ def _zero_literal(element_type: astx.DataType) -> astx.Literal:
     """
     title: Return one zero-value scalar literal for one tensor type.
     parameters:
-      element_type:
-        type: astx.DataType
-    returns:
-      type: astx.Literal
+      element_type: Type of each element.
+    returns: One zero-value scalar literal for one tensor type.
     """
     if isinstance(element_type, astx.Int8):
         return astx.LiteralInt8(0)
@@ -560,10 +512,9 @@ def _clone_scalar_literal(value: astx.Literal) -> astx.Literal:
     """
     title: Clone one scalar literal so default values do not reuse one node.
     parameters:
-      value:
-        type: astx.Literal
-    returns:
-      type: astx.Literal
+      value: Value to process.
+    returns: 'Result of this operation: clone one scalar literal so default
+      values do not reuse one node.'
     """
     if isinstance(value, astx.LiteralInt8):
         return astx.LiteralInt8(value.value)
@@ -584,10 +535,9 @@ def _format_shape(shape: tuple[int, ...]) -> str:
     """
     title: Render one tensor shape for user-facing diagnostics.
     parameters:
-      shape:
-        type: tuple[int, Ellipsis]
-    returns:
-      type: str
+      shape: Declared dimensions or result shape.
+    returns: 'Result of this operation: render one tensor shape for
+      user-facing diagnostics.'
     """
     if not shape:
         return "()"

@@ -1,6 +1,6 @@
 """
-title: >-
-  Counted native File allocation, publication, close, and failure rollback.
+title: Counted native File allocation, publication, close, and failure
+  rollback.
 """
 
 import shutil
@@ -96,17 +96,13 @@ def test_counted_file_lifetime(
     tmp_path: Path, factory: str, case: str, fault: int
 ) -> None:
     """
-    title: >-
-      Class and native handle ownership release exactly once, even on error.
+    title: Class and native handle ownership release exactly once, even on
+      error.
     parameters:
-      tmp_path:
-        type: Path
-      factory:
-        type: str
-      case:
-        type: str
-      fault:
-        type: int
+      tmp_path: Temporary directory for this test.
+      factory: Factory.
+      case: Case.
+      fault: Fault.
     """
     if shutil.which("clang") is None or sys.platform != "linux":
         pytest.skip(
@@ -160,21 +156,16 @@ def build_audited_file_program(
     close_failure: bool = False,
 ) -> Path:
     """
-    title: >-
-      Link one verified module with allocator and File lifetime accounting.
+    title: Link one verified module with allocator and File lifetime
+      accounting.
     parameters:
-      builder:
-        type: ArxBuilder
-      text:
-        type: str
-      root:
-        type: Path
-      fault:
-        type: int
-      close_failure:
-        type: bool
-    returns:
-      type: Path
+      builder: Builder generating the intermediate representation.
+      text: Text to process.
+      root: Root module or resource.
+      fault: Fault.
+      close_failure: Whether to use close failure.
+    returns: 'Result of this operation: link one verified module
+      with allocator and File lifetime accounting.'
     """
     module = llvm.parse_assembly(text)
     module.verify()
@@ -225,10 +216,8 @@ def test_file_scope_close_failure(tmp_path: Path, body_failure: bool) -> None:
     """
     title: Checked exit promotes close errors or preserves a body failure.
     parameters:
-      tmp_path:
-        type: Path
-      body_failure:
-        type: bool
+      tmp_path: Temporary directory for this test.
+      body_failure: Whether to use body failure.
     """
     if shutil.which("clang") is None or sys.platform != "linux":
         pytest.skip("counted close faults require GNU linker wrapping")

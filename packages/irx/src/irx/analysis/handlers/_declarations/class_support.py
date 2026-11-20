@@ -4,9 +4,8 @@
 
 """
 title: Declaration class-support helpers.
-summary: >-
-  Resolve inheritance metadata and shared class-member support logic used by
-  declaration analysis.
+summary: Resolve inheritance metadata and shared class-member support logic
+  used by declaration analysis.
 """
 
 from __future__ import annotations
@@ -43,10 +42,8 @@ class DeclarationClassSupportVisitorMixin(ClassMemberFormattingVisitorMixin):
         """
         title: Return one normalized visibility rank.
         parameters:
-          visibility:
-            type: astx.VisibilityKind
-        returns:
-          type: int
+          visibility: Visibility.
+        returns: One normalized visibility rank.
         """
         return {
             astx.VisibilityKind.private: 1,
@@ -57,8 +54,7 @@ class DeclarationClassSupportVisitorMixin(ClassMemberFormattingVisitorMixin):
     def _class_resolution_stack(self) -> list[SemanticClass]:
         """
         title: Return the active class-resolution stack.
-        returns:
-          type: list[SemanticClass]
+        returns: The active class-resolution stack.
         """
         stack = getattr(self, "_active_class_resolution", None)
         if isinstance(stack, list):
@@ -74,10 +70,8 @@ class DeclarationClassSupportVisitorMixin(ClassMemberFormattingVisitorMixin):
         """
         title: Return whether one class attribute uses static storage.
         parameters:
-          declaration:
-            type: astx.VariableDeclaration
-        returns:
-          type: bool
+          declaration: Declaration being processed.
+        returns: Whether one class attribute uses static storage.
         """
         raw_value = getattr(declaration, "is_static", None)
         if isinstance(raw_value, bool):
@@ -91,10 +85,8 @@ class DeclarationClassSupportVisitorMixin(ClassMemberFormattingVisitorMixin):
         """
         title: Return whether one class method is static.
         parameters:
-          declaration:
-            type: astx.FunctionDef
-        returns:
-          type: bool
+          declaration: Declaration being processed.
+        returns: Whether one class method is static.
         """
         raw_value = getattr(declaration.prototype, "is_static", None)
         if isinstance(raw_value, bool):
@@ -108,10 +100,8 @@ class DeclarationClassSupportVisitorMixin(ClassMemberFormattingVisitorMixin):
         """
         title: Return whether one class method is abstract.
         parameters:
-          declaration:
-            type: astx.FunctionDef
-        returns:
-          type: bool
+          declaration: Declaration being processed.
+        returns: Whether one class method is abstract.
         """
         raw_value = getattr(declaration.prototype, "is_abstract", None)
         if isinstance(raw_value, bool):
@@ -128,10 +118,8 @@ class DeclarationClassSupportVisitorMixin(ClassMemberFormattingVisitorMixin):
         """
         title: Return whether one class declaration is explicitly abstract.
         parameters:
-          class_:
-            type: SemanticClass
-        returns:
-          type: bool
+          class_: Class being processed.
+        returns: Whether one class declaration is explicitly abstract.
         """
         raw_value = getattr(class_.declaration, "is_abstract", None)
         if isinstance(raw_value, bool):
@@ -145,10 +133,8 @@ class DeclarationClassSupportVisitorMixin(ClassMemberFormattingVisitorMixin):
         """
         title: Return how one class attribute obtains its initial value.
         parameters:
-          value:
-            type: astx.AST | None
-        returns:
-          type: ClassInitializationSourceKind
+          value: Value to process.
+        returns: How one class attribute obtains its initial value.
         """
         if value is None or isinstance(value, astx.Undefined):
             return ClassInitializationSourceKind.DEFAULT
@@ -159,13 +145,11 @@ class DeclarationClassSupportVisitorMixin(ClassMemberFormattingVisitorMixin):
         value: astx.AST | None,
     ) -> bool:
         """
-        title: >-
-          Return whether one static field initializer is deterministic now.
+        title: Return whether one static field initializer is deterministic
+          now.
         parameters:
-          value:
-            type: astx.AST | None
-        returns:
-          type: bool
+          value: Value to process.
+        returns: Whether one static field initializer is deterministic now.
         """
         if value is None or isinstance(value, astx.Undefined):
             return True
@@ -201,14 +185,11 @@ class DeclarationClassSupportVisitorMixin(ClassMemberFormattingVisitorMixin):
         """
         title: Return one canonical visible method signature key.
         parameters:
-          method_name:
-            type: str
-          signature:
-            type: FunctionSignature
-          is_static:
-            type: bool
-        returns:
-          type: str
+          method_name: Name of method.
+          signature: Resolved callable signature.
+          is_static: Whether the member belongs to the class rather than
+            an instance.
+        returns: One canonical visible method signature key.
         """
         dispatch_kind = "static" if is_static else "instance"
         parameters = ",".join(
@@ -232,14 +213,11 @@ class DeclarationClassSupportVisitorMixin(ClassMemberFormattingVisitorMixin):
         """
         title: Return one overload-selection key without the return type.
         parameters:
-          method_name:
-            type: str
-          signature:
-            type: FunctionSignature
-          is_static:
-            type: bool
-        returns:
-          type: str
+          method_name: Name of method.
+          signature: Resolved callable signature.
+          is_static: Whether the member belongs to the class rather than
+            an instance.
+        returns: One overload-selection key without the return type.
         """
         dispatch_kind = "static" if is_static else "instance"
         parameters = ",".join(
@@ -257,10 +235,8 @@ class DeclarationClassSupportVisitorMixin(ClassMemberFormattingVisitorMixin):
         """
         title: Return one overload-selection key for a class method member.
         parameters:
-          member:
-            type: SemanticClassMember
-        returns:
-          type: str
+          member: Member.
+        returns: One overload-selection key for a class method member.
         """
         if member.signature is None:
             raise TypeError("class method must carry a visible signature")
@@ -280,12 +256,8 @@ class DeclarationClassSupportVisitorMixin(ClassMemberFormattingVisitorMixin):
         """
         title: Build the declared member tables for one class.
         parameters:
-          declared_members:
-            type: tuple[SemanticClassMember, Ellipsis]
-        returns:
-          type: >-
-            tuple[dict[str, SemanticClassMember], dict[str,
-            tuple[SemanticClassMember, Ellipsis]]]
+          declared_members: Declared members.
+        returns: Constructed the declared member tables for one class.
         """
         declared_member_table: dict[str, SemanticClassMember] = {}
         declared_method_groups: dict[str, list[SemanticClassMember]] = {}
@@ -313,10 +285,8 @@ class DeclarationClassSupportVisitorMixin(ClassMemberFormattingVisitorMixin):
         """
         title: Collect visible ancestor attributes in MRO order.
         parameters:
-          mro:
-            type: tuple[SemanticClass, Ellipsis]
-        returns:
-          type: dict[str, tuple[SemanticClassMember, Ellipsis]]
+          mro: Mro.
+        returns: Collected visible ancestor attributes in MRO order.
         """
         members: dict[str, list[SemanticClassMember]] = {}
         for ancestor in mro[1:]:
@@ -335,10 +305,9 @@ class DeclarationClassSupportVisitorMixin(ClassMemberFormattingVisitorMixin):
         """
         title: Collect visible ancestor method overload groups in MRO order.
         parameters:
-          mro:
-            type: tuple[SemanticClass, Ellipsis]
-        returns:
-          type: dict[str, tuple[SemanticClassMember, Ellipsis]]
+          mro: Mro.
+        returns: Collected visible ancestor method overload groups in MRO
+          order.
         """
         groups: dict[str, list[SemanticClassMember]] = {}
         for ancestor in mro[1:]:
@@ -357,10 +326,8 @@ class DeclarationClassSupportVisitorMixin(ClassMemberFormattingVisitorMixin):
         """
         title: Resolve the direct base-class list for one class.
         parameters:
-          class_:
-            type: SemanticClass
-        returns:
-          type: tuple[SemanticClass, Ellipsis]
+          class_: Class being processed.
+        returns: Resolved the direct base-class list for one class.
         """
         resolved: list[SemanticClass] = []
         seen: set[str] = set()
@@ -412,12 +379,9 @@ class DeclarationClassSupportVisitorMixin(ClassMemberFormattingVisitorMixin):
         """
         title: Compute one deterministic class linearization.
         parameters:
-          class_:
-            type: SemanticClass
-          bases:
-            type: tuple[SemanticClass, Ellipsis]
-        returns:
-          type: tuple[SemanticClass, Ellipsis]
+          class_: Class being processed.
+          bases: Bases.
+        returns: Computed one deterministic class linearization.
         """
         if not bases:
             return (class_,)
@@ -471,12 +435,9 @@ class DeclarationClassSupportVisitorMixin(ClassMemberFormattingVisitorMixin):
         """
         title: Return ancestors reachable through more than one base lineage.
         parameters:
-          bases:
-            type: tuple[SemanticClass, Ellipsis]
-          mro:
-            type: tuple[SemanticClass, Ellipsis]
-        returns:
-          type: tuple[SemanticClass, Ellipsis]
+          bases: Bases.
+          mro: Mro.
+        returns: Ancestors reachable through more than one base lineage.
         """
         if len(bases) < MIN_SHARED_ANCESTOR_BASE_COUNT:
             return ()
@@ -505,10 +466,8 @@ class DeclarationClassSupportVisitorMixin(ClassMemberFormattingVisitorMixin):
         """
         title: Return the canonical ancestor storage order for one class.
         parameters:
-          bases:
-            type: tuple[SemanticClass, Ellipsis]
-        returns:
-          type: tuple[SemanticClass, Ellipsis]
+          bases: Bases.
+        returns: The canonical ancestor storage order for one class.
         """
         ordered: list[SemanticClass] = []
         seen: set[str] = set()
@@ -517,8 +476,7 @@ class DeclarationClassSupportVisitorMixin(ClassMemberFormattingVisitorMixin):
             """
             title: Visit one base lineage for canonical storage ordering.
             parameters:
-              base:
-                type: SemanticClass
+              base: Base value or declaration.
             """
             for ancestor in base.bases:
                 visit(ancestor)
@@ -539,12 +497,9 @@ class DeclarationClassSupportVisitorMixin(ClassMemberFormattingVisitorMixin):
         """
         title: Return whether one owner dominates another in inheritance.
         parameters:
-          dominant:
-            type: SemanticClass
-          other:
-            type: SemanticClass
-        returns:
-          type: bool
+          dominant: Dominant.
+          other: Other value participating in the operation.
+        returns: Whether one owner dominates another in inheritance.
         """
         if dominant.qualified_name == other.qualified_name:
             return True
@@ -560,10 +515,8 @@ class DeclarationClassSupportVisitorMixin(ClassMemberFormattingVisitorMixin):
         """
         title: Return the unique dominant inherited method, if any.
         parameters:
-          candidates:
-            type: tuple[SemanticClassMember, Ellipsis]
-        returns:
-          type: SemanticClassMember | None
+          candidates: Candidates.
+        returns: The unique dominant inherited method, if any.
         """
         if not candidates:
             return None

@@ -20,10 +20,8 @@ def is_fp_type(type_: ir.Type) -> bool:
     """
     title: Is fp type.
     parameters:
-      type_:
-        type: ir.Type
-    returns:
-      type: bool
+      type_: Type expression to process.
+    returns: 'Result of this operation: is fp type.'
     """
     fp_types = [HalfType, FloatType, DoubleType]
     if FP128Type is not None:
@@ -36,10 +34,8 @@ def is_int_type(type_: ir.Type) -> bool:
     """
     title: Is int type.
     parameters:
-      type_:
-        type: ir.Type
-    returns:
-      type: bool
+      type_: Type expression to process.
+    returns: 'Result of this operation: is int type.'
     """
     return isinstance(type_, ir.IntType)
 
@@ -49,84 +45,45 @@ class VariablesLLVM:
     """
     title: Define LLVM representations for supported runtime types.
     attributes:
-      FLOAT_TYPE:
-        type: ir.types.Type
-      FLOAT16_TYPE:
-        type: ir.types.Type
-      DOUBLE_TYPE:
-        type: ir.types.Type
-      INT8_TYPE:
-        type: ir.types.Type
-      INT64_TYPE:
-        type: ir.types.Type
-      INT16_TYPE:
-        type: ir.types.Type
-      INT32_TYPE:
-        type: ir.types.Type
-      VOID_TYPE:
-        type: ir.types.Type
-      BOOLEAN_TYPE:
-        type: ir.types.Type
-      UINT8_TYPE:
-        type: ir.types.Type
-      UINT16_TYPE:
-        type: ir.types.Type
-      UINT32_TYPE:
-        type: ir.types.Type
-      UINT64_TYPE:
-        type: ir.types.Type
-      UINT128_TYPE:
-        type: ir.types.Type
-      ASCII_STRING_TYPE:
-        type: ir.types.Type
-      UTF8_STRING_TYPE:
-        type: ir.types.Type
-      TIME_TYPE:
-        type: ir.types.Type
-      TIMESTAMP_TYPE:
-        type: ir.types.Type
-      DATETIME_TYPE:
-        type: ir.types.Type
-      SIZE_T_TYPE:
-        type: ir.types.Type | None
-      POINTER_BITS:
-        type: int
-      OPAQUE_POINTER_TYPE:
-        type: ir.types.Type
-      BUFFER_OWNER_HANDLE_TYPE:
-        type: ir.types.Type
-      BUFFER_VIEW_TYPE:
-        type: ir.types.Type
-      ARRAY_BUILDER_HANDLE_TYPE:
-        type: ir.types.Type
-      ARRAY_HANDLE_TYPE:
-        type: ir.types.Type
-      ARROW_ARRAY_BUILDER_HANDLE_TYPE:
-        type: ir.types.Type
-      ARROW_ARRAY_HANDLE_TYPE:
-        type: ir.types.Type
-      TENSOR_BUILDER_HANDLE_TYPE:
-        type: ir.types.Type
-      TENSOR_HANDLE_TYPE:
-        type: ir.types.Type
-      ARROW_TENSOR_BUILDER_HANDLE_TYPE:
-        type: ir.types.Type
-      ARROW_TENSOR_HANDLE_TYPE:
-        type: ir.types.Type
-      TABLE_HANDLE_TYPE:
-        type: ir.types.Type
-      CHUNKED_ARRAY_HANDLE_TYPE:
-        type: ir.types.Type
-      ARROW_TABLE_HANDLE_TYPE:
-        type: ir.types.Type
-      ARROW_CHUNKED_ARRAY_HANDLE_TYPE:
-        type: ir.types.Type
-      context:
-        type: ir.context.Context
-      module:
-        type: ir.module.Module
-      ir_builder:
-        type: ir.builder.IRBuilder
+      FLOAT_TYPE: Float type.
+      FLOAT16_TYPE: Float16 type.
+      DOUBLE_TYPE: Double type.
+      INT8_TYPE: Int8 type.
+      INT64_TYPE: Int64 type.
+      INT16_TYPE: Int16 type.
+      INT32_TYPE: Int32 type.
+      VOID_TYPE: Void type.
+      BOOLEAN_TYPE: Boolean type.
+      UINT8_TYPE: Uint8 type.
+      UINT16_TYPE: Uint16 type.
+      UINT32_TYPE: Uint32 type.
+      UINT64_TYPE: Uint64 type.
+      UINT128_TYPE: Uint128 type.
+      ASCII_STRING_TYPE: Ascii string type.
+      UTF8_STRING_TYPE: Utf8 string type.
+      TIME_TYPE: Time type.
+      TIMESTAMP_TYPE: Timestamp type.
+      DATETIME_TYPE: Datetime type.
+      SIZE_T_TYPE: Size t type.
+      POINTER_BITS: Pointer bits.
+      OPAQUE_POINTER_TYPE: Opaque pointer type.
+      BUFFER_OWNER_HANDLE_TYPE: Buffer owner handle type.
+      BUFFER_VIEW_TYPE: Buffer view type.
+      ARRAY_BUILDER_HANDLE_TYPE: Array builder handle type.
+      ARRAY_HANDLE_TYPE: Array handle type.
+      ARROW_ARRAY_BUILDER_HANDLE_TYPE: Arrow array builder handle type.
+      ARROW_ARRAY_HANDLE_TYPE: Arrow array handle type.
+      TENSOR_BUILDER_HANDLE_TYPE: Tensor builder handle type.
+      TENSOR_HANDLE_TYPE: Tensor handle type.
+      ARROW_TENSOR_BUILDER_HANDLE_TYPE: Arrow tensor builder handle type.
+      ARROW_TENSOR_HANDLE_TYPE: Arrow tensor handle type.
+      TABLE_HANDLE_TYPE: Table handle type.
+      CHUNKED_ARRAY_HANDLE_TYPE: Chunked array handle type.
+      ARROW_TABLE_HANDLE_TYPE: Arrow table handle type.
+      ARROW_CHUNKED_ARRAY_HANDLE_TYPE: Arrow chunked array handle type.
+      context: Context for the operation.
+      module: Module to process.
+      ir_builder: IR builder.
     """
 
     FLOAT_TYPE: ir.types.Type
@@ -174,10 +131,8 @@ class VariablesLLVM:
         """
         title: Get data type.
         parameters:
-          type_name:
-            type: str
-        returns:
-          type: ir.types.Type
+          type_name: Name of type.
+        returns: Data type.
         """
         if type_name == "float32":
             return self.FLOAT_TYPE

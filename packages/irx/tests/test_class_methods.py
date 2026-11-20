@@ -42,10 +42,8 @@ def _semantic(node: astx.AST) -> SemanticInfo:
     """
     title: Return semantic sidecar information for a node.
     parameters:
-      node:
-        type: astx.AST
-    returns:
-      type: SemanticInfo
+      node: Syntax node to process.
+    returns: Semantic sidecar information for a node.
     """
     return cast(SemanticInfo, getattr(node, "semantic"))
 
@@ -58,14 +56,10 @@ def _mangled_method_name(
     """
     title: Return the overload-aware LLVM symbol for one class method.
     parameters:
-      module:
-        type: astx.Module
-      class_node:
-        type: astx.ClassDefStmt
-      method_name:
-        type: str
-    returns:
-      type: str
+      module: Module to process.
+      class_node: Class node.
+      method_name: Name of method.
+    returns: The overload-aware LLVM symbol for one class method.
     """
     analyze(module)
     resolved = _semantic(class_node).resolved_class
@@ -84,10 +78,8 @@ def _class_type(name: str) -> astx.ClassType:
     """
     title: Build one named class type reference.
     parameters:
-      name:
-        type: str
-    returns:
-      type: astx.ClassType
+      name: Name identifying the declaration or operation.
+    returns: Constructed one named class type reference.
     """
     return astx.ClassType(name)
 
@@ -103,18 +95,13 @@ def _attribute(
     """
     title: Build one instance attribute declaration.
     parameters:
-      name:
-        type: str
-      type_:
-        type: astx.DataType
-      mutability:
-        type: astx.MutabilityKind
-      is_static:
-        type: bool
-      value:
-        type: astx.AST | None
-    returns:
-      type: astx.VariableDeclaration
+      name: Name identifying the declaration or operation.
+      type_: Type expression to process.
+      mutability: Mutability.
+      is_static: Whether the member belongs to the class rather than
+        an instance.
+      value: Value to process.
+    returns: Constructed one instance attribute declaration.
     """
     declaration = astx.VariableDeclaration(
         name=name,
@@ -138,19 +125,16 @@ def _returning_method(
     """
     title: Build one class method definition with a single return.
     parameters:
-      name:
-        type: str
-      return_value:
-        type: astx.AST
-      return_type:
-        type: astx.DataType | None
-      is_static:
-        type: bool
+      name: Name identifying the declaration or operation.
+      return_value: Return value.
+      return_type: Declared result type.
+      is_static: Whether the member belongs to the class rather than
+        an instance.
       args:
-        type: astx.Argument
         variadic: positional
-    returns:
-      type: astx.FunctionDef
+        description: Positional arguments.
+    returns: Constructed one class method definition with a single
+      return.
     """
     prototype = astx.FunctionPrototype(
         name,
@@ -172,15 +156,12 @@ def _abstract_method(
     """
     title: Build one abstract class method declaration.
     parameters:
-      name:
-        type: str
-      return_type:
-        type: astx.DataType | None
+      name: Name identifying the declaration or operation.
+      return_type: Declared result type.
       args:
-        type: astx.Argument
         variadic: positional
-    returns:
-      type: astx.FunctionDef
+        description: Positional arguments.
+    returns: Constructed one abstract class method declaration.
     """
     prototype = astx.FunctionPrototype(
         name,
@@ -195,10 +176,8 @@ def _single_return_body(value: astx.AST) -> astx.Block:
     """
     title: Build one single-return block.
     parameters:
-      value:
-        type: astx.AST
-    returns:
-      type: astx.Block
+      value: Value to process.
+    returns: Constructed one single-return block.
     """
     body = astx.Block()
     body.append(astx.FunctionReturn(value))
@@ -210,10 +189,9 @@ def _main_int32(*body_nodes: astx.AST) -> astx.FunctionDef:
     title: Build a simple int32-returning main function.
     parameters:
       body_nodes:
-        type: astx.AST
         variadic: positional
-    returns:
-      type: astx.FunctionDef
+        description: Body nodes.
+    returns: Constructed a simple int32-returning main function.
     """
     body = astx.Block()
     for node in body_nodes:
@@ -237,8 +215,7 @@ def test_instance_method_definition_emits_hidden_receiver_and_dispatch_table(
     """
     title: Instance methods lower to functions plus one class dispatch table.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     area = _returning_method("area", astx.LiteralInt32(1))
@@ -269,8 +246,7 @@ def test_instance_method_call_uses_dispatch_lookup(
     """
     title: Instance method calls lower through the dispatch-table slot.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     shape = astx.ClassDefStmt(
@@ -305,8 +281,7 @@ def test_static_method_call_lowers_to_direct_call_without_receiver(
     """
     title: Static method calls lower directly without a hidden receiver.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     identity = _returning_method(
@@ -348,8 +323,7 @@ def test_base_typed_method_dispatch_uses_upcast_and_shared_slot(
     """
     title: Base-typed calls bitcast derived values and dispatch indirectly.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     base = astx.ClassDefStmt(
@@ -398,8 +372,7 @@ def test_abstract_base_method_dispatch_lowers_without_base_body(
     """
     title: Abstract base method calls lower through subclass dispatch entries.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     base = astx.ClassDefStmt(
@@ -462,8 +435,7 @@ def test_instance_method_body_reads_class_field_slot(
     """
     title: Method bodies use the flattened class layout for self field reads.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     read = _returning_method(
@@ -491,8 +463,7 @@ def test_inherited_base_method_call_on_derived_receiver_uses_upcast(
     """
     title: Inherited base-method calls upcast derived receivers.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     base = astx.ClassDefStmt(
@@ -530,8 +501,7 @@ def test_base_method_call_lowers_directly_to_selected_base(
     """
     title: Base-qualified calls bypass override dispatch and call the base.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     base = astx.ClassDefStmt(
@@ -578,8 +548,7 @@ def test_base_field_access_reads_inherited_storage_from_receiver(
     """
     title: Base-qualified field reads use the receiver's flattened storage.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     base = astx.ClassDefStmt(
@@ -625,8 +594,7 @@ def test_static_field_assignment_updates_global_and_reads_back(
     """
     title: Static field assignment stores through the emitted global.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     counter = astx.ClassDefStmt(
@@ -666,8 +634,7 @@ def test_inherited_static_field_assignment_reuses_base_global(
     """
     title: Derived static writes store through inherited base globals.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     base = astx.ClassDefStmt(
@@ -711,8 +678,7 @@ def test_instance_field_assignment_updates_value(
     """
     title: Instance field assignment stores through the receiver layout slot.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     body = astx.Block()
@@ -766,8 +732,7 @@ def test_base_field_assignment_updates_shared_receiver_storage(
     """
     title: Base-qualified writes update the receiver's flattened storage.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     body = astx.Block()
@@ -823,8 +788,7 @@ def test_static_field_increment_updates_global(
     """
     title: Unary mutation stores the updated value back to static globals.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     counter = astx.ClassDefStmt(
@@ -860,8 +824,7 @@ def test_default_class_construction_initializes_fields_and_dispatch(
     """
     title: Default construction allocates, initializes, and dispatches.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     read = _returning_method(
@@ -897,8 +860,7 @@ def test_instance_method_call_uses_default_argument_bound_to_self(
     """
     title: Omitted method arguments may lower through defaults that read self.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     read = _returning_method(

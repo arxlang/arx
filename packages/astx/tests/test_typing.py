@@ -63,10 +63,8 @@ def test_runtime_checking_is_opt_in(
     """
     title: Default-off decoration has no wrappers; opt-in checks all items.
     parameters:
-      setting:
-        type: str | None
-      tmp_path:
-        type: Path
+      setting: Setting.
+      tmp_path: Temporary directory for this test.
     """
     probe = tmp_path / "policy_probe.py"
     probe.write_text(POLICY_PROBE, encoding="utf-8")

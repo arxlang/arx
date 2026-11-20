@@ -20,12 +20,10 @@ def execute(tmp_path: Path, source: str) -> str:
     """
     title: Compile and run a documented keyword-call program.
     parameters:
-      tmp_path:
-        type: Path
-      source:
-        type: str
-    returns:
-      type: str
+      tmp_path: Temporary directory for this test.
+      source: Source input to process.
+    returns: 'Result of this operation: compile and run a documented
+      keyword-call program.'
     """
     if shutil.which("clang") is None:
         pytest.skip("native keyword-call tests require clang")
@@ -52,10 +50,8 @@ def test_keyword_binding_and_middle_defaults(
     """
     title: Explicit later parameters leave default holes, not a default suffix.
     parameters:
-      tmp_path:
-        type: Path
-      call:
-        type: str
+      tmp_path: Temporary directory for this test.
+      call: Call being processed.
     """
     execute(
         tmp_path,
@@ -103,11 +99,10 @@ fn main() -> i32:
 
 def test_keyword_and_default_evaluation_order(tmp_path: Path) -> None:
     """
-    title: >-
-      Explicit source order precedes exactly-once declaration-order defaults.
+    title: Explicit source order precedes exactly-once declaration-order
+      defaults.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     stdout = execute(
         tmp_path,
@@ -129,11 +124,10 @@ def test_method_keywords_defaults_templates_and_overloads(
     tmp_path: Path,
 ) -> None:
     """
-    title: >-
-      Ordinary, static, inherited, template and overloaded calls bind names.
+    title: Ordinary, static, inherited, template and overloaded calls bind
+      names.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     execute(
         tmp_path,
@@ -191,8 +185,7 @@ def test_invalid_keywords_fail_semantically(arguments: str) -> None:
     """
     title: Binding errors never reach native execution.
     parameters:
-      arguments:
-        type: str
+      arguments: Arguments supplied to the call.
     """
     compiler = Compiler()
     program = compiler.parse_string(
@@ -221,8 +214,7 @@ def test_invalid_keyword_syntax_and_intrinsics(body: str) -> None:
     """
     title: Unsupported intrinsic keywords are rejected, never silently dropped.
     parameters:
-      body:
-        type: str
+      body: Statements forming the body.
     """
     compiler = Compiler()
     source = (
@@ -241,8 +233,7 @@ def test_imported_keywords_and_declaration_default_scope(
     """
     title: Imported defaults resolve in their declaration, not the caller.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     (tmp_path / "helper.x").write_text(
         DOC
@@ -283,8 +274,7 @@ def test_file_keywords_pin_receiver_and_snapshot_strings(
     """
     title: Native File keywords and class arguments retain borrowed owners.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     execute(
         tmp_path,
@@ -318,8 +308,7 @@ def test_extern_fixed_keyword(tmp_path: Path) -> None:
     """
     title: Extern keywords bind only the declared fixed ABI parameters.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     execute(
         tmp_path,
@@ -337,8 +326,7 @@ def test_keyword_function_lookup_keeps_visible_namespace(
     """
     title: Named calls preserve separate callable and lexical-value lookup.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     execute(
         tmp_path,
@@ -357,11 +345,10 @@ def test_nested_default_bindings_restore_caller_parameters(
     tmp_path: Path,
 ) -> None:
     """
-    title: >-
-      Recursive calls restore the lexical parameter slots used by defaults.
+    title: Recursive calls restore the lexical parameter slots used
+      by defaults.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     execute(
         tmp_path,
@@ -382,11 +369,10 @@ def test_default_class_argument_survives_later_default_effects(
     tmp_path: Path,
 ) -> None:
     """
-    title: >-
-      A default class reference stays pinned when a later default replaces it.
+    title: A default class reference stays pinned when a later default replaces
+      it.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     execute(
         tmp_path,
@@ -409,8 +395,8 @@ fn main() -> i32:
 
 def test_file_method_keywords_use_declared_binding_errors() -> None:
     """
-    title: >-
-      The native method bridge retains ordinary named-argument diagnostics.
+    title: The native method bridge retains ordinary named-argument
+      diagnostics.
     """
     compiler = Compiler()
     with pytest.raises(CompileError) as error:
@@ -435,8 +421,7 @@ def test_dataframe_metadata_keywords_fail_in_check(annotation: str) -> None:
     """
     title: ArxPy exposes metadata signature errors only at semantic checking.
     parameters:
-      annotation:
-        type: str
+      annotation: Annotation.
     """
     source = (
         DOC + "fn frame() -> dataframe[value:i32]:\n"

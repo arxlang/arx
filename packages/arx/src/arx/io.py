@@ -15,8 +15,7 @@ def validate_source_size(value: str) -> None:
     """
     title: Reject source text beyond the documented UTF-8 byte limit.
     parameters:
-      value:
-        type: str
+      value: Value to process.
     """
     try:
         source_size = len(value.encode("utf-8"))
@@ -37,10 +36,8 @@ class ArxBuffer:
     """
     title: ArxBuffer gathers function for handle the system buffer.
     attributes:
-      buffer:
-        type: str
-      position:
-        type: int
+      buffer: Buffer holding the data.
+      position: Position.
     """
 
     buffer: str = ""
@@ -63,8 +60,7 @@ class ArxBuffer:
         """
         title: Write the given text to the buffer.
         parameters:
-          text:
-            type: str
+          text: Text to process.
         """
         self.buffer += text
         self.position = 0
@@ -72,8 +68,7 @@ class ArxBuffer:
     def read(self) -> str:
         """
         title: Read the buffer content.
-        returns:
-          type: str
+        returns: Read the buffer content.
         """
         try:
             i = self.position
@@ -87,14 +82,10 @@ class ArxIO:
     """
     title: Arx class for Input and Output operations.
     attributes:
-      INPUT_FROM_STDIN:
-        type: bool
-      INPUT_FILE:
-        type: str
-      EOF:
-        type: int
-      buffer:
-        type: ArxBuffer
+      INPUT_FROM_STDIN: Whether to use input from stdin.
+      INPUT_FILE: Input file.
+      EOF: Eof.
+      buffer: Buffer holding the data.
     """
 
     INPUT_FROM_STDIN: bool = False
@@ -106,9 +97,7 @@ class ArxIO:
     def get_char(cls) -> str:
         """
         title: Get a char from the buffer or from the default input.
-        returns:
-          type: str
-          description: A char from the buffer.
+        returns: A char from the buffer.
         """
         if cls.INPUT_FROM_STDIN:
             return sys.stdin.read(1)
@@ -119,9 +108,7 @@ class ArxIO:
         """
         title: Copy the file content to the buffer.
         parameters:
-          filename:
-            type: str
-            description: The name of the file to be copied to the buffer.
+          filename: The name of the file to be copied to the buffer.
         """
         try:
             if os.path.getsize(filename) > MAX_SOURCE_BYTES:
@@ -150,9 +137,7 @@ class ArxIO:
         """
         title: Copy the given string to the buffer.
         parameters:
-          value:
-            type: str
-            description: The string to be copied to the buffer.
+          value: The string to be copied to the buffer.
         """
         validate_source_size(value)
         cls.buffer.clean()
@@ -183,12 +168,8 @@ class ArxFile:
         """
         title: Create a temporary file with the given content.
         parameters:
-          content:
-            type: str
-            description: The content of the temporary file.
-        returns:
-          type: str
-          description: The name of the created temporary file.
+          content: The content of the temporary file.
+        returns: The name of the created temporary file.
         """
         # Create a temporary file.
         with tempfile.NamedTemporaryFile(delete=False) as tmpfile:
@@ -206,12 +187,8 @@ class ArxFile:
         """
         title: Delete the specified file.
         parameters:
-          filename:
-            type: str
-            description: The name of the file to be deleted.
-        returns:
-          type: int
-          description: Returns 0 on success, or -1 on failure.
+          filename: The name of the file to be deleted.
+        returns: Returns 0 on success, or -1 on failure.
         """
         try:
             os.remove(filename)

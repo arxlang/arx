@@ -1,9 +1,8 @@
 """
 title: Public semantic contract for hosts and lowering.
-summary: >-
-  Encode the stable semantic-analysis phases, required metadata, host input
-  constraints, and phase error boundaries that IRx guarantees before backend
-  lowering begins.
+summary: Encode the stable semantic-analysis phases, required metadata, host
+  input constraints, and phase error boundaries that IRx guarantees before
+  backend lowering begins.
 """
 
 from __future__ import annotations
@@ -28,16 +27,12 @@ __all__ = [
 class SemanticPhase:
     """
     title: One stable semantic phase.
-    summary: >-
-      Describe one externally-visible stage in the semantic pipeline and the
-      guarantees it establishes for later lowering.
+    summary: Describe one externally-visible stage in the semantic pipeline
+      and the guarantees it establishes for later lowering.
     attributes:
-      name:
-        type: str
-      entrypoints:
-        type: tuple[str, Ellipsis]
-      guarantees:
-        type: tuple[str, Ellipsis]
+      name: Name identifying this declaration.
+      entrypoints: Entrypoints.
+      guarantees: Guarantees.
     """
 
     name: str
@@ -51,18 +46,13 @@ class SemanticPhase:
 class PhaseErrorBoundary:
     """
     title: One compiler-phase error boundary.
-    summary: >-
-      Describe which category of failure belongs to which pipeline phase and
-      how callers should interpret it.
+    summary: Describe which category of failure belongs to which pipeline
+      phase and how callers should interpret it.
     attributes:
-      phase:
-        type: str
-      raises:
-        type: str
-      surfaces:
-        type: tuple[str, Ellipsis]
-      summary:
-        type: str
+      phase: Phase.
+      raises: Raises.
+      surfaces: Surfaces.
+      summary: Summary.
     """
 
     phase: str
@@ -77,23 +67,16 @@ class PhaseErrorBoundary:
 class SemanticContract:
     """
     title: Stable semantic contract exposed by IRx.
-    summary: >-
-      Collect the semantic phases, metadata requirements, host input
+    summary: Collect the semantic phases, metadata requirements, host input
       constraints, and error boundaries that analysis guarantees to lowering
       and host compilers.
     attributes:
-      stable_phases:
-        type: tuple[SemanticPhase, Ellipsis]
-      required_node_semantic_fields:
-        type: tuple[str, Ellipsis]
-      required_session_fields:
-        type: tuple[str, Ellipsis]
-      allowed_host_entrypoints:
-        type: tuple[str, Ellipsis]
-      allowed_host_inputs:
-        type: tuple[str, Ellipsis]
-      phase_error_boundaries:
-        type: tuple[PhaseErrorBoundary, Ellipsis]
+      stable_phases: Stable phases.
+      required_node_semantic_fields: Required node semantic fields.
+      required_session_fields: Required session fields.
+      allowed_host_entrypoints: Allowed host entrypoints.
+      allowed_host_inputs: Allowed host inputs.
+      phase_error_boundaries: Phase error boundaries.
     """
 
     stable_phases: tuple[SemanticPhase, ...]
@@ -272,10 +255,8 @@ _SEMANTIC_CONTRACT = SemanticContract(
 def get_semantic_contract() -> SemanticContract:
     """
     title: Return the stable public semantic contract.
-    summary: >-
-      Expose the semantic contract that hosts and backend lowering may rely on
-      before code generation begins.
-    returns:
-      type: SemanticContract
+    summary: Expose the semantic contract that hosts and backend lowering
+      may rely on before code generation begins.
+    returns: The stable public semantic contract.
     """
     return _SEMANTIC_CONTRACT

@@ -31,19 +31,15 @@ def _extern_prototype(
     """
     title: Build one extern prototype with the hardened semantic attributes.
     parameters:
-      name:
-        type: str
-      return_type:
-        type: astx.DataType
-      symbol_name:
-        type: str | None
-      is_variadic:
-        type: bool
+      name: Name identifying the declaration or operation.
+      return_type: Declared result type.
+      symbol_name: Name of symbol.
+      is_variadic: Whether is variadic.
       args:
-        type: astx.Argument
         variadic: positional
-    returns:
-      type: astx.FunctionPrototype
+        description: Positional arguments.
+    returns: Constructed one extern prototype with the hardened semantic
+      attributes.
     """
     prototype = astx.FunctionPrototype(
         name,
@@ -101,8 +97,8 @@ def test_uses_canonical_function_signature_for_definition_and_call() -> None:
 
 def test_translate_emits_status_and_typed_result_slots() -> None:
     """
-    title: >-
-      Void and value returns publish status with typed success-only output.
+    title: Void and value returns publish status with typed success-only
+      output.
     """
     module = astx.Module()
     noop = astx.FunctionDef(
@@ -264,8 +260,7 @@ def test_build_helper_function_called_from_main(tmp_path: Path) -> None:
     """
     title: A helper call should produce a deterministic Int32 process exit.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     builder = Builder()
     module = astx.Module()
@@ -303,8 +298,7 @@ def test_build_extern_puts_call(tmp_path: Path) -> None:
     """
     title: Extern calls should build and run through the hardened C path.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     builder = Builder()
     module = astx.Module()

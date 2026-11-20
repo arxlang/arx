@@ -10,8 +10,8 @@ import pytest
 def usage_demo() -> str:
     """
     title: Execute an exact copy of the code shown in README.md.
-    returns:
-      type: str
+    returns: 'Result of this operation: execute an exact copy of the code
+      shown in README.md.'
     """
     import astx
 

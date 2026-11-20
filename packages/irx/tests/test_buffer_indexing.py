@@ -30,10 +30,9 @@ def checked_store_binary(tmp_path_factory: pytest.TempPathFactory) -> Path:
     """
     title: Compile dynamic stores once against sentinel-guarded storage.
     parameters:
-      tmp_path_factory:
-        type: pytest.TempPathFactory
-    returns:
-      type: Path
+      tmp_path_factory: Factory for shared temporary test directories.
+    returns: 'Result of this operation: compile dynamic stores once
+      against sentinel-guarded storage.'
     """
     if shutil.which("clang") is None:
         pytest.skip("native buffer checks require clang")
@@ -101,10 +100,8 @@ def test_dynamic_store_checks_bounds_before_writing(
     """
     title: Negative and excess indices never overwrite adjacent storage.
     parameters:
-      checked_store_binary:
-        type: Path
-      index:
-        type: int
+      checked_store_binary: Checked store binary.
+      index: Index selecting the item.
     """
     result = subprocess.run(
         [str(checked_store_binary)],
@@ -125,16 +122,11 @@ def _metadata(
     """
     title: Build static descriptor metadata for indexed access tests.
     parameters:
-      shape:
-        type: tuple[int, Ellipsis]
-      strides:
-        type: tuple[int, Ellipsis]
-      offset_bytes:
-        type: int
-      mutability:
-        type: BufferMutability
-    returns:
-      type: BufferViewMetadata
+      shape: Declared dimensions or result shape.
+      strides: Strides.
+      offset_bytes: Offset bytes.
+      mutability: Mutability.
+    returns: Constructed static descriptor metadata for indexed access tests.
     """
     return BufferViewMetadata(
         data=BufferHandle(4096),
@@ -155,12 +147,9 @@ def _descriptor(
     """
     title: Build a typed buffer view descriptor node.
     parameters:
-      metadata:
-        type: BufferViewMetadata
-      element_type:
-        type: astx.DataType | None
-    returns:
-      type: astx.BufferViewDescriptor
+      metadata: Metadata associated with the operation.
+      element_type: Type of each element.
+    returns: Constructed a typed buffer view descriptor node.
     """
     return astx.BufferViewDescriptor(
         metadata,
@@ -173,10 +162,9 @@ def _module_with_main(*nodes: astx.AST) -> astx.Module:
     title: Build an int32 main module.
     parameters:
       nodes:
-        type: astx.AST
         variadic: positional
-    returns:
-      type: astx.Module
+        description: Syntax nodes in source order.
+    returns: Constructed an int32 main module.
     """
     module = astx.Module()
     prototype = astx.FunctionPrototype(

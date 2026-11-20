@@ -4,8 +4,7 @@
 
 """
 title: Expression array visitors.
-summary: >-
-  Handle array-specific semantic helpers that are separate from tensor
+summary: Handle array-specific semantic helpers that are separate from tensor
   expression semantics.
 """
 
@@ -32,8 +31,7 @@ class ExpressionArrayVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Visit ArrayInt32ArrayLength nodes.
         parameters:
-          node:
-            type: astx.ArrayInt32ArrayLength
+          node: Syntax node to process.
         """
         for item in node.values:
             self.visit(item)

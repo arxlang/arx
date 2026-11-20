@@ -36,10 +36,8 @@ class ModuleVisitorMixin(ClassVisitorMixin):
         """
         title: Return one zero or null global initializer.
         parameters:
-          llvm_type:
-            type: ir.Type
-        returns:
-          type: ir.Constant
+          llvm_type: Type of LLVM.
+        returns: One zero or null global initializer.
         """
         if is_int_type(llvm_type):
             return ir.Constant(llvm_type, 0)
@@ -55,12 +53,9 @@ class ModuleVisitorMixin(ClassVisitorMixin):
         """
         title: Return one constant initializer for a static class attribute.
         parameters:
-          value:
-            type: astx.AST | None
-          llvm_type:
-            type: ir.Type
-        returns:
-          type: ir.Constant
+          value: Value to process.
+          llvm_type: Type of LLVM.
+        returns: One constant initializer for a static class attribute.
         """
         if value is None or isinstance(value, astx.Undefined):
             return self._default_global_initializer(llvm_type)
@@ -118,10 +113,8 @@ class ModuleVisitorMixin(ClassVisitorMixin):
         """
         title: Return one constant dispatch-table initializer when needed.
         parameters:
-          node:
-            type: astx.ClassDefStmt
-        returns:
-          type: tuple[ir.ArrayType, ir.Constant] | None
+          node: Syntax node to process.
+        returns: One constant dispatch-table initializer when needed.
         """
         semantic = getattr(node, "semantic", None)
         resolved_class = getattr(semantic, "resolved_class", None)
@@ -153,14 +146,11 @@ class ModuleVisitorMixin(ClassVisitorMixin):
         """
         title: Ensure one identified LLVM type has a body.
         parameters:
-          type_key:
-            type: str
-          llvm_name:
-            type: str
-          field_types:
-            type: list[ir.Type]
-        returns:
-          type: ir.IdentifiedStructType
+          type_key: Type key.
+          llvm_name: Name of LLVM.
+          field_types: Types of field.
+        returns: 'Result of this operation: ensure one identified LLVM type
+          has a body.'
         """
         composite_type = self._llvm.module.context.get_identified_type(
             llvm_name
@@ -176,8 +166,7 @@ class ModuleVisitorMixin(ClassVisitorMixin):
         """
         title: Visit Module nodes.
         parameters:
-          node:
-            type: astx.Module
+          node: Syntax node to process.
         """
         self._translate_modules([node])
 
@@ -186,8 +175,7 @@ class ModuleVisitorMixin(ClassVisitorMixin):
         """
         title: Visit StructDefStmt nodes.
         parameters:
-          node:
-            type: astx.StructDefStmt
+          node: Syntax node to process.
         """
         struct_key = semantic_struct_key(node, node.name)
         semantic = getattr(node, "semantic", None)
@@ -217,8 +205,7 @@ class ModuleVisitorMixin(ClassVisitorMixin):
         """
         title: Visit ClassDefStmt nodes.
         parameters:
-          node:
-            type: astx.ClassDefStmt
+          node: Syntax node to process.
         """
         class_key = semantic_class_key(node, node.name)
         semantic = getattr(node, "semantic", None)
@@ -297,8 +284,7 @@ class ModuleVisitorMixin(ClassVisitorMixin):
         """
         title: Lower methods after module object layouts are declared.
         parameters:
-          node:
-            type: astx.ClassDefStmt
+          node: Syntax node to process.
         """
         self.declare_class(node)
         for method in node.methods:

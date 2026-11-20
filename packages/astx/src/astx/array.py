@@ -1,8 +1,7 @@
 """
 title: ASTx array AST nodes.
-summary: >-
-  Provide internal nodes for the Arrow C++ backed one-dimensional array
-  runtime.
+summary: Provide internal nodes for the Arrow C++ backed one-dimensional
+  array runtime.
 """
 
 from __future__ import annotations
@@ -18,14 +17,11 @@ from astx.tools.typing import typechecked
 class ArrayInt32ArrayLength(astx.base.DataType):
     """
     title: Internal array helper AST node.
-    summary: >-
-      Build an int32 array using the ASTx-compatible array runtime, then return
-      its length.
+    summary: Build an int32 array using the ASTx-compatible array runtime,
+      then return its length.
     attributes:
-      values:
-        type: list[astx.AST]
-      type_:
-        type: astx.Int32
+      values: Values to process, in order.
+      type_: Type associated with this expression.
     """
 
     values: list[astx.AST]
@@ -35,8 +31,7 @@ class ArrayInt32ArrayLength(astx.base.DataType):
         """
         title: Initialize ArrayInt32ArrayLength.
         parameters:
-          values:
-            type: list[astx.AST]
+          values: Values to process, in order.
         """
         super().__init__()
         self.values = values
@@ -46,10 +41,8 @@ class ArrayInt32ArrayLength(astx.base.DataType):
         """
         title: Return the structured representation of the array helper.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: astx.base.ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         value = cast(
             astx.base.ReprStruct,

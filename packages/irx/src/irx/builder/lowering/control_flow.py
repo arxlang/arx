@@ -67,10 +67,8 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
         """
         title: Return one node's resolved context-manager sidecar.
         parameters:
-          node:
-            type: astx.WithStmt
-        returns:
-          type: ResolvedContextManager
+          node: Syntax node to process.
+        returns: One node's resolved context-manager sidecar.
         """
         semantic = getattr(node, "semantic", None)
         resolution = getattr(semantic, "resolved_context_manager", None)
@@ -91,14 +89,11 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
         """
         title: Require one lowered control-flow condition to be Boolean.
         parameters:
-          value:
-            type: ir.Value | None
-          node:
-            type: astx.AST
-          context:
-            type: str
-        returns:
-          type: ir.Value
+          value: Value to process.
+          node: Syntax node to process.
+          context: Context for the operation.
+        returns: 'Result of this operation: require one lowered control-flow
+          condition to be Boolean.'
         """
         if value is None:
             raise_lowering_internal_error(
@@ -124,13 +119,12 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
         """
         title: Append one canonical sequence of basic blocks.
         parameters:
-          prefix:
-            type: str
+          prefix: Prefix.
           roles:
-            type: str
             variadic: positional
-        returns:
-          type: tuple[ir.Block, Ellipsis]
+            description: Roles.
+        returns: 'Result of this operation: append one canonical sequence
+          of basic blocks.'
         """
         function = self._llvm.ir_builder.function
         return tuple(
@@ -141,10 +135,8 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
         """
         title: Return one stable source label for assertion reporting.
         parameters:
-          node:
-            type: astx.AST
-        returns:
-          type: str
+          node: Syntax node to process.
+        returns: One stable source label for assertion reporting.
         """
         current_display_name = cast(
             str | None,
@@ -178,12 +170,9 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
         """
         title: Return one pointer to one internal constant UTF-8 string.
         parameters:
-          text:
-            type: str
-          name_hint:
-            type: str
-        returns:
-          type: ir.Value
+          text: Text to process.
+          name_hint: Suggested generated name.
+        returns: One pointer to one internal constant UTF-8 string.
         """
         interned_globals = cast(
             dict[tuple[str, str], ir.GlobalVariable],
@@ -240,10 +229,8 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
         """
         title: Lower one assertion message to one runtime C string pointer.
         parameters:
-          node:
-            type: astx.AssertStmt
-        returns:
-          type: ir.Value
+          node: Syntax node to process.
+        returns: Lowered one assertion message to one runtime C string pointer.
         """
         if node.message is None:
             return self._constant_c_string_pointer(
@@ -300,8 +287,7 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
         """
         title: Visit one statement child without leaking stack values.
         parameters:
-          node:
-            type: astx.AST
+          node: Syntax node to process.
         """
         stack_size_before = len(self.result_stack)
         self.visit_child(node)
@@ -317,12 +303,10 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
         """
         title: Push and pop one active loop target pair.
         parameters:
-          break_target:
-            type: ir.Block
-          continue_target:
-            type: ir.Block
-        returns:
-          type: Iterator[None]
+          break_target: Break target.
+          continue_target: Continue target.
+        returns: 'Result of this operation: push and pop one active loop
+          target pair.'
         """
         self.loop_stack.append(
             LoopTargets(
@@ -347,14 +331,11 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
         """
         title: Bind one temporary symbol slot during lowering.
         parameters:
-          key:
-            type: str
-          value:
-            type: ir.Value
-          is_constant:
-            type: bool
-        returns:
-          type: Iterator[None]
+          key: Key selecting the entry.
+          value: Value to process.
+          is_constant: Whether is constant.
+        returns: 'Result of this operation: bind one temporary symbol slot
+          during lowering.'
         """
         had_previous = key in self.named_values
         previous_value = self.named_values.get(key)
@@ -387,14 +368,11 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
         """
         title: Require one concrete LLVM type for lowering.
         parameters:
-          type_:
-            type: astx.DataType | None
-          node:
-            type: astx.AST
-          context:
-            type: str
-        returns:
-          type: ir.Type
+          type_: Type expression to process.
+          node: Syntax node to process.
+          context: Context for the operation.
+        returns: 'Result of this operation: require one concrete LLVM type
+          for lowering.'
         """
         llvm_type = self._llvm_type_for_ast_type(type_)
         if llvm_type is None:
@@ -416,14 +394,10 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
         """
         title: Lower one value and cast it to one target semantic type.
         parameters:
-          node:
-            type: astx.AST
-          context:
-            type: str
-          target_type:
-            type: astx.DataType | None
-        returns:
-          type: ir.Value
+          node: Syntax node to process.
+          context: Context for the operation.
+          target_type: Destination type for the conversion.
+        returns: Lowered one value and cast it to one target semantic type.
         """
         self.visit_child(node)
         lowered = require_lowered_value(
@@ -444,10 +418,8 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
         """
         title: Return one node's resolved iteration sidecar.
         parameters:
-          node:
-            type: astx.AST
-        returns:
-          type: ResolvedIteration | None
+          node: Syntax node to process.
+        returns: One node's resolved iteration sidecar.
         """
         semantic = getattr(node, "semantic", None)
         iteration = getattr(semantic, "resolved_iteration", None)
@@ -461,10 +433,8 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
         """
         title: Lower one for-in loop over a list iterable.
         parameters:
-          node:
-            type: astx.ForInLoopStmt
-          iteration:
-            type: ResolvedIteration
+          node: Syntax node to process.
+          iteration: Iteration.
         """
         target_name = getattr(node.target, "name", "item")
         target_type = (
@@ -605,10 +575,8 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
         """
         title: Return the zero constant for one numeric LLVM type.
         parameters:
-          llvm_type:
-            type: ir.Type
-        returns:
-          type: ir.Constant
+          llvm_type: Type of LLVM.
+        returns: The zero constant for one numeric LLVM type.
         """
         if is_fp_type(llvm_type):
             return ir.Constant(llvm_type, 0.0)
@@ -621,10 +589,8 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
         """
         title: Return one compile-time sign classification when available.
         parameters:
-          value:
-            type: ir.Value
-        returns:
-          type: Literal[positive, negative, zero] | None
+          value: Value to process.
+        returns: One compile-time sign classification when available.
         """
         if not isinstance(value, ir.Constant):
             return None
@@ -646,12 +612,9 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
         """
         title: Compute one runtime step-direction pair for for-range loops.
         parameters:
-          step_value:
-            type: ir.Value
-          unsigned:
-            type: bool
-        returns:
-          type: tuple[ir.Value, ir.Value]
+          step_value: Step value.
+          unsigned: Whether to use unsigned semantics.
+        returns: Computed one runtime step-direction pair for for-range loops.
         """
         zero = self._zero_value(step_value.type)
         if is_fp_type(step_value.type):
@@ -701,15 +664,12 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
         loop_symbol_key: str,
     ) -> bool:
         """
-        title: >-
-          Return whether one for-count update already writes the loop slot.
+        title: Return whether one for-count update already writes the loop
+          slot.
         parameters:
-          update:
-            type: astx.AST
-          loop_symbol_key:
-            type: str
-        returns:
-          type: bool
+          update: Update.
+          loop_symbol_key: Loop symbol key.
+        returns: Whether one for-count update already writes the loop slot.
         """
         if isinstance(update, astx.AugAssign):
             semantic = require_semantic_metadata(
@@ -765,20 +725,13 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
         """
         title: Lower one canonical for-range loop condition.
         parameters:
-          current_value:
-            type: ir.Value
-          end_value:
-            type: ir.Value
-          unsigned:
-            type: bool
-          step_direction:
-            type: Literal[positive, negative, zero] | None
-          step_positive:
-            type: ir.Value | None
-          step_negative:
-            type: ir.Value | None
-        returns:
-          type: ir.Value
+          current_value: Current value.
+          end_value: End value.
+          unsigned: Whether to use unsigned semantics.
+          step_direction: Step direction.
+          step_positive: Step positive.
+          step_negative: Step negative.
+        returns: Lowered one canonical for-range loop condition.
         """
         builder = self._llvm.ir_builder
         before_end = self._emit_numeric_compare(
@@ -834,8 +787,7 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
         """
         title: Visit Block nodes.
         parameters:
-          block:
-            type: astx.Block
+          block: Block of statements.
         """
         self.lower_statement_block(block)
 
@@ -845,10 +797,8 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
         """
         title: Lower statements with optional ownership continuation into else.
         parameters:
-          block:
-            type: astx.Block
-          preserve_scope:
-            type: bool
+          block: Block of statements.
+          preserve_scope: Whether to use preserve scope.
         """
         cleanup_depth = len(self.cleanup_stack)
         try:
@@ -889,8 +839,7 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
         """
         title: Visit AssertStmt nodes.
         parameters:
-          node:
-            type: astx.AssertStmt
+          node: Syntax node to process.
         """
         condition_cleanup_depth = len(self.cleanup_stack)
         self.visit_child(node.condition)
@@ -920,8 +869,7 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
         """
         title: Visit IfStmt nodes.
         parameters:
-          node:
-            type: astx.IfStmt
+          node: Syntax node to process.
         """
         condition_cleanup_depth = len(self.cleanup_stack)
         self.visit_child(node.condition)
@@ -1007,8 +955,7 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
         """
         title: Visit WhileStmt nodes.
         parameters:
-          expr:
-            type: astx.WhileStmt
+          expr: Expression to process.
         """
         cond_bb, body_bb, exit_bb = self._append_basic_blocks(
             "while",
@@ -1045,8 +992,7 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
         """
         title: Visit ForCountLoopStmt nodes.
         parameters:
-          node:
-            type: astx.ForCountLoopStmt
+          node: Syntax node to process.
         """
         initializer_key = semantic_symbol_key(
             node.initializer,
@@ -1129,8 +1075,7 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
         """
         title: Visit ForRangeLoopStmt nodes.
         parameters:
-          node:
-            type: astx.ForRangeLoopStmt
+          node: Syntax node to process.
         """
         loop_type = node.variable.type_
         llvm_loop_type = self._require_llvm_type(
@@ -1247,8 +1192,7 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
         """
         title: Visit ForInLoopStmt nodes.
         parameters:
-          node:
-            type: astx.ForInLoopStmt
+          node: Syntax node to process.
         """
         iteration = self._resolved_iteration(node)
         if iteration is None:
@@ -1275,8 +1219,7 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
         """
         title: Lower analyzed resource bindings with implicit exit precedence.
         parameters:
-          node:
-            type: astx.WithStmt
+          node: Syntax node to process.
         """
         resolution = self._resolved_context_manager(node)
         depth = len(self.cleanup_stack)
@@ -1326,8 +1269,7 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
         """
         title: Visit BreakStmt nodes.
         parameters:
-          node:
-            type: astx.BreakStmt
+          node: Syntax node to process.
         """
         if not self.loop_stack:
             raise_lowering_error(
@@ -1349,8 +1291,7 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
         """
         title: Visit ContinueStmt nodes.
         parameters:
-          node:
-            type: astx.ContinueStmt
+          node: Syntax node to process.
         """
         if not self.loop_stack:
             raise_lowering_error(

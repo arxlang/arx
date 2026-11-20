@@ -39,8 +39,7 @@ def test_execution_result_without_exception_report(stderr: str) -> None:
     """
     title: Ordinary and malformed stderr do not masquerade as exceptions.
     parameters:
-      stderr:
-        type: str
+      stderr: Stderr.
     """
     result = ExecutionResult(7, "", stderr)
     assert result.exit_code == 7
@@ -52,8 +51,7 @@ def test_uncaught_native_exception_is_execution_data(tmp_path: Path) -> None:
     """
     title: The compiler facade returns a failed execution and its typed report.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     compiler = Compiler()
     program = compiler.parse_string(
@@ -89,8 +87,7 @@ def test_imported_exception_identity_is_nominal(tmp_path: Path) -> None:
     """
     title: Equal display names from different modules never match by spelling.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     for name, base in (("left", "ValueError"), ("right", "TypeError")):
         (tmp_path / f"{name}.x").write_text(

@@ -36,10 +36,8 @@ def _datetime_values(const: ir.Constant) -> list[int]:
     """
     title: Extract lowered datetime fields from a literal struct constant.
     parameters:
-      const:
-        type: ir.Constant
-    returns:
-      type: list[int]
+      const: Const.
+    returns: Extracted lowered datetime fields from a literal struct constant.
     """
     items = cast(list[ir.Constant], const.constant)
     return [cast(int, item.constant) for item in items]
@@ -60,15 +58,12 @@ def test_literal_datetime_lowers_expected_struct(
     expected_values: list[int],
 ) -> None:
     """
-    title: >-
-      LiteralDateTime should lower to the expected constant struct payload.
+    title: LiteralDateTime should lower to the expected constant
+      struct payload.
     parameters:
-      llvm_visitor:
-        type: LLVMVisitor
-      datetime_str:
-        type: str
-      expected_values:
-        type: list[int]
+      llvm_visitor: LLVM visitor.
+      datetime_str: Datetime str.
+      expected_values: Expected values.
     """
     llvm_visitor.visit(astx.LiteralDateTime(datetime_str))
     const = llvm_visitor.result_stack.pop()
@@ -85,8 +80,7 @@ def test_literal_datetime_translate_smoke(
     """
     title: LiteralDateTime should survive the translate pipeline.
     parameters:
-      llvm_builder:
-        type: LLVMBuilder
+      llvm_builder: LLVM builder.
     """
     module = make_main_module(
         astx.LiteralDateTime("2025-10-30T12:34:56"),
@@ -106,8 +100,7 @@ def test_literal_datetime_build_smoke(
     """
     title: LiteralDateTime should survive the build pipeline.
     parameters:
-      llvm_builder:
-        type: LLVMBuilder
+      llvm_builder: LLVM builder.
     """
     module = make_main_module(
         astx.LiteralDateTime("2025-10-30T12:34:56"),
@@ -137,12 +130,9 @@ def test_literal_datetime_invalid_inputs_raise_semantic_error(
     """
     title: Invalid LiteralDateTime values should fail during semantic analysis.
     parameters:
-      llvm_builder:
-        type: LLVMBuilder
-      datetime_str:
-        type: str
-      message:
-        type: str
+      llvm_builder: LLVM builder.
+      datetime_str: Datetime str.
+      message: Diagnostic or output message.
     """
     module = make_main_module(
         astx.LiteralDateTime(datetime_str),

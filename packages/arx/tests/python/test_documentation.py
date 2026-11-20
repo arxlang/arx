@@ -32,12 +32,9 @@ def documented_program(page: str, title: str) -> str:
     """
     title: Read one complete quadruple-fenced program from its guide.
     parameters:
-      page:
-        type: str
-      title:
-        type: str
-    returns:
-      type: str
+      page: Page.
+      title: Title.
+    returns: Read one complete quadruple-fenced program from its guide.
     """
     document = (ROOT / "docs" / page).read_text(encoding="utf-8")
     programs: list[str] = re.findall(
@@ -73,14 +70,10 @@ def test_documented_program(
     """
     title: Verify guide semantics, LLVM, linking, and execution.
     parameters:
-      tmp_path:
-        type: Path
-      page:
-        type: str
-      title:
-        type: str
-      stdout:
-        type: str
+      tmp_path: Temporary directory for this test.
+      page: Page.
+      title: Title.
+      stdout: Stdout.
     """
     source = documented_program(page, title)
     ArxIO.string_to_buffer(source)
@@ -156,8 +149,7 @@ def test_declaration_documentation_uses_supported_grammar(page: str) -> None:
     """
     title: Parse relevant Arx fences directly instead of grepping other syntax.
     parameters:
-      page:
-        type: str
+      page: Page.
     """
     document = (ROOT / page).read_text(encoding="utf-8")
     snippets = re.findall(

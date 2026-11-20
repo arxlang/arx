@@ -1,23 +1,23 @@
 #!/usr/bin/env python3
 """
 title: Measure the existing table I/O pilot without changing compiler behavior.
-summary: >-
-  Run from the repository root with python -m
-  scripts.benchmark_modular_baseline --repeats 5. Requires the development
-  environment and native prerequisites checked by
-  scripts/check_native_test_environment.py. Reuse the host CSV fixture rather
-  than maintaining another program. Each phase sample uses fresh AST and
-  compiler state; import samples use fresh interpreters, not cold OS caches.
-  Composition means static analyzer/visitor construction and first-use metadata
-  loading. Lowering includes runtime-state setup and IR serialization, but
-  excludes analysis, construction, and LLVM verification. A public analysis
-  call includes its own analyzer construction. The separate construction probe
-  is not an additional cost to add to that measurement. A scoped analysis stub
-  supplies the already analyzed session to the public translate entry point;
-  revisit this adapter when phase APIs change. Emit and link once, then execute
-  that artifact repeatedly in an isolated directory. Native build/cache cost is
-  reported separately, not amortized into execution. Report samples and
-  variance; do not enforce a timing threshold.
+summary: Run from the repository root. Requires the development environment
+  and native prerequisites checked by scripts/check_native_test_environment.py.
+  Reuse the host CSV fixture rather than maintaining another program. Each
+  phase sample uses fresh AST and compiler state; import samples use fresh
+  interpreters, not cold OS caches. Composition means static analyzer/visitor
+  construction and first-use metadata loading. Lowering includes runtime-state
+  setup and IR serialization, but excludes analysis, construction, and LLVM
+  verification. A public analysis call includes its own analyzer construction.
+  The separate construction probe is not an additional cost to add to that
+  measurement. A scoped analysis stub supplies the already analyzed session
+  to the public translate entry point; revisit this adapter when phase APIs
+  change. Emit and link once, then execute that artifact repeatedly in an
+  isolated directory. Native build/cache cost is reported separately, not
+  amortized into execution. Report samples and variance; do not enforce
+  a timing threshold.
+examples:
+- code: python -m scripts.benchmark_modular_baseline --repeats 5
 """
 
 from __future__ import annotations
@@ -47,10 +47,8 @@ def report(phase: str, samples: list[float]) -> None:
     """
     title: Print reproducible samples in seconds, including first-use cost.
     parameters:
-      phase:
-        type: str
-      samples:
-        type: list[float]
+      phase: Phase.
+      samples: Samples.
     """
     print(
         json.dumps(
@@ -108,10 +106,8 @@ def measure_imports(repeats: int, root: Path) -> None:
     """
     title: Time analysis and backend imports in separate fresh interpreters.
     parameters:
-      repeats:
-        type: int
-      root:
-        type: Path
+      repeats: Repeats.
+      root: Root module or resource.
     """
     for module in ("irx.analysis", "irx.builder"):
         samples: list[float] = []
@@ -137,10 +133,8 @@ def measure_pipeline(repeats: int, work: Path) -> None:
     """
     title: Separate construction, analysis, and lowering on fresh CSV trees.
     parameters:
-      repeats:
-        type: int
-      work:
-        type: Path
+      repeats: Repeats.
+      work: Work.
     """
     from llvmlite import binding as llvm
     from packages.irx.tests.analysis.test_table_io import io_module
@@ -190,14 +184,10 @@ def measure_native(
     """
     title: Build once and validate each isolated execution of that artifact.
     parameters:
-      repeats:
-        type: int
-      work:
-        type: Path
-      visitor:
-        type: Visitor
-      ir_text:
-        type: str
+      repeats: Repeats.
+      work: Work.
+      visitor: Visitor performing the traversal or lowering.
+      ir_text: IR text.
     """
     from llvmlite import binding as llvm
 

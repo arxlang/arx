@@ -33,13 +33,13 @@ if TYPE_CHECKING:
 def generator_header_type() -> ir.LiteralStructType:
     """
     title: Share the generator factory, resume, and cursor prefix layout.
-    summary: >-
-      State is i32, followed by exhausted and acquired Boolean slots. Scalar
-      captures follow this prefix; no owning captures or suspended resources
-      are supported. A closed frame remains allocated until its lexical owner
-      releases it, permitting checked rejection rather than use after free.
-    returns:
-      type: ir.LiteralStructType
+    summary: State is i32, followed by exhausted and acquired Boolean slots.
+      Scalar captures follow this prefix; no owning captures or suspended
+      resources are supported. A closed frame remains allocated until its
+      lexical owner releases it, permitting checked rejection rather than
+      use after free.
+    returns: 'Result of this operation: share the generator factory, resume,
+      and cursor prefix layout.'
     """
     return ir.LiteralStructType([ir.IntType(32), ir.IntType(1), ir.IntType(1)])
 
@@ -48,49 +48,35 @@ def generator_header_type() -> ir.LiteralStructType:
 @typechecked
 class LoweredCursor:
     """
-    title: One acquired position with separate value, exhaustion, and failure.
-    summary: >-
-      All output reads follow successful advancement. Cleanup is registered
-      after acquisition and before any consumer operation can fail. Range
-      positions and indexed views are independent; one-shot frames reject a
-      second acquisition, including nested or previously failed consumption.
+    title: One acquired position with separate value, exhaustion,
+      and failure.
+    summary: All output reads follow successful advancement. Cleanup
+      is registered after acquisition and before any consumer operation
+      can fail. Range positions and indexed views are independent;
+      one-shot frames reject a second acquisition, including nested
+      or previously failed consumption.
     attributes:
-      visitor:
-        type: VisitorCore
-      plan:
-        type: ResolvedIteration
-      protocol:
-        type: CursorProtocol
-      source:
-        type: ir.Value
-      item:
-        type: ir.Value
-      position:
-        type: ir.Value
-      active:
-        type: ir.Value
-      length:
-        type: ir.Value | None
-      view:
-        type: ir.Value | None
-      header:
-        type: ir.Value | None
-      frame:
-        type: ir.Value | None
-      resume:
-        type: ir.Value | None
-      produced:
-        type: ir.Value | None
+      visitor: Visitor performing the traversal or lowering.
+      plan: Resolved semantic execution plan.
+      protocol: Protocol.
+      source: Source input to process.
+      item: Item to process.
+      position: Position.
+      active: Active.
+      length: Number of elements.
+      view: View.
+      header: Header.
+      frame: Frame.
+      resume: Resume.
+      produced: Produced.
     """
 
     def __init__(self, visitor: VisitorCore, plan: ResolvedIteration) -> None:
         """
         title: Evaluate once and acquire only a semantically selected protocol.
         parameters:
-          visitor:
-            type: VisitorCore
-          plan:
-            type: ResolvedIteration
+          visitor: Visitor performing the traversal or lowering.
+          plan: Resolved semantic execution plan.
         """
         self.visitor: VisitorCore = visitor
         self.plan: ResolvedIteration = plan
@@ -185,10 +171,9 @@ class LoweredCursor:
         """
         title: Address one shared generator lifecycle flag.
         parameters:
-          index:
-            type: int
-        returns:
-          type: ir.Value
+          index: Index selecting the item.
+        returns: 'Result of this operation: address one shared generator
+          lifecycle flag.'
         """
         assert self.header is not None
         return self.visitor._llvm.ir_builder.gep(
@@ -203,8 +188,8 @@ class LoweredCursor:
     def advance(self) -> ir.Value:
         """
         title: Produce one item or exhaustion, checking failure before output.
-        returns:
-          type: ir.Value
+        returns: 'Result of this operation: produce one item or exhaustion,
+          checking failure before output.'
         """
         visitor = self.visitor
         builder = visitor._llvm.ir_builder
@@ -250,8 +235,8 @@ class LoweredCursor:
     def require_view(self) -> ir.Value:
         """
         title: Require indexed storage selected during acquisition.
-        returns:
-          type: ir.Value
+        returns: 'Result of this operation: require indexed storage selected
+          during acquisition.'
         """
         assert self.view is not None
         return self.view
@@ -277,12 +262,9 @@ def lower_cursor_loop(
     """
     title: Keep cursor finalization outside continue and on every exiting edge.
     parameters:
-      visitor:
-        type: VisitorCore
-      node:
-        type: astx.ForInLoopStmt
-      plan:
-        type: ResolvedIteration
+      visitor: Visitor performing the traversal or lowering.
+      node: Syntax node to process.
+      plan: Resolved semantic execution plan.
     """
     control: ControlFlowVisitorMixin = cast("ControlFlowVisitorMixin", visitor)
     depth = len(visitor.cleanup_stack)

@@ -1,8 +1,7 @@
 """
 title: Shared semantic-analyzer core.
-summary: >-
-  Hold analyzer state, semantic sidecar helpers, and shared traversal utilities
-  that specialized visitor mixins build on.
+summary: Hold analyzer state, semantic sidecar helpers, and shared traversal
+  utilities that specialized visitor mixins build on.
 """
 
 from __future__ import annotations
@@ -78,16 +77,11 @@ class SemanticVisitorMixinTypingBase:
     """
     title: Type-checking-only base for semantic visitor mixins.
     attributes:
-      context:
-        type: SemanticContext
-      session:
-        type: CompilationSession | None
-      factory:
-        type: SemanticEntityFactory
-      registry:
-        type: SemanticRegistry
-      bindings:
-        type: VisibleBindings
+      context: Context for the operation.
+      session: Compilation session owning the semantic facts.
+      factory: Factory.
+      registry: Registry.
+      bindings: Bindings.
     """
 
     context: SemanticContext
@@ -100,8 +94,7 @@ class SemanticVisitorMixinTypingBase:
         """
         title: Visit AST nodes.
         parameters:
-          node:
-            type: astx.AST
+          node: Syntax node to process.
         """
         raise NotImplementedError
 
@@ -113,10 +106,8 @@ class SemanticVisitorMixinTypingBase:
         """
         title: Resolve a class-valued callable after ordinary symbol lookup.
         parameters:
-          node:
-            type: astx.ClassConstruct | astx.FunctionCall | astx.MethodCall
-          class_:
-            type: SemanticClass
+          node: Syntax node to process.
+          class_: Class being processed.
         """
         del class_
         raise NotImplementedError
@@ -125,10 +116,8 @@ class SemanticVisitorMixinTypingBase:
         """
         title: Return one node's semantic sidecar.
         parameters:
-          node:
-            type: astx.AST
-        returns:
-          type: SemanticInfo
+          node: Syntax node to process.
+        returns: One node's semantic sidecar.
         """
         raise NotImplementedError
 
@@ -140,12 +129,10 @@ class SemanticVisitorMixinTypingBase:
         """
         title: Attach one resolved type to a node.
         parameters:
-          node:
-            type: astx.AST
-          type_:
-            type: astx.DataType | None
-        returns:
-          type: astx.DataType | None
+          node: Syntax node to process.
+          type_: Type expression to process.
+        returns: 'Result of this operation: attach one resolved type to a
+          node.'
         """
         raise NotImplementedError
 
@@ -157,12 +144,10 @@ class SemanticVisitorMixinTypingBase:
         """
         title: Attach one resolved symbol to a node.
         parameters:
-          node:
-            type: astx.AST
-          symbol:
-            type: SemanticSymbol | None
-        returns:
-          type: SemanticSymbol | None
+          node: Syntax node to process.
+          symbol: Resolved symbol for the operation.
+        returns: 'Result of this operation: attach one resolved symbol to
+          a node.'
         """
         raise NotImplementedError
 
@@ -174,12 +159,10 @@ class SemanticVisitorMixinTypingBase:
         """
         title: Attach resource ownership metadata to one node.
         parameters:
-          node:
-            type: astx.AST
-          ownership:
-            type: ResourceOwnership | None
-        returns:
-          type: ResourceOwnership | None
+          node: Syntax node to process.
+          ownership: Resolved resource ownership contract.
+        returns: 'Result of this operation: attach resource ownership metadata
+          to one node.'
         """
         raise NotImplementedError
 
@@ -192,12 +175,9 @@ class SemanticVisitorMixinTypingBase:
         """
         title: Resolve resource borrowing and ownership for one call.
         parameters:
-          node:
-            type: astx.AST
-          args:
-            type: list[astx.AST]
-          result_type:
-            type: astx.DataType | None
+          node: Syntax node to process.
+          args: Arguments supplied to the operation.
+          result_type: Resolved result type.
         """
         del result_type
         raise NotImplementedError
@@ -210,10 +190,8 @@ class SemanticVisitorMixinTypingBase:
         """
         title: Resolve ownership of an already analyzed local initializer.
         parameters:
-          node:
-            type: astx.VariableDeclaration | astx.InlineVariableDeclaration
-          symbol:
-            type: SemanticSymbol
+          node: Syntax node to process.
+          symbol: Resolved symbol for the operation.
         """
         raise NotImplementedError
 
@@ -225,12 +203,10 @@ class SemanticVisitorMixinTypingBase:
         """
         title: Attach one resolved iterable capability.
         parameters:
-          node:
-            type: astx.AST
-          iteration:
-            type: ResolvedIteration | None
-        returns:
-          type: ResolvedIteration | None
+          node: Syntax node to process.
+          iteration: Iteration.
+        returns: 'Result of this operation: attach one resolved iterable
+          capability.'
         """
         raise NotImplementedError
 
@@ -242,10 +218,8 @@ class SemanticVisitorMixinTypingBase:
         """
         title: Attach one resolved collection method.
         parameters:
-          node:
-            type: astx.AST
-          collection_method:
-            type: ResolvedCollectionMethod | None
+          node: Syntax node to process.
+          collection_method: Collection method.
         """
         raise NotImplementedError
 
@@ -260,16 +234,12 @@ class SemanticVisitorMixinTypingBase:
         """
         title: Declare one loop or comprehension target.
         parameters:
-          target:
-            type: astx.AST
-          element_type:
-            type: astx.DataType
-          kind:
-            type: str
-          iteration_kind:
-            type: IterationKind
-        returns:
-          type: SemanticSymbol | None
+          target: Destination of the operation.
+          element_type: Type of each element.
+          kind: Kind of value or operation.
+          iteration_kind: Iteration kind.
+        returns: 'Result of this operation: declare one loop or comprehension
+          target.'
         """
         raise NotImplementedError
 
@@ -281,12 +251,10 @@ class SemanticVisitorMixinTypingBase:
         """
         title: Attach one resolved function to a node.
         parameters:
-          node:
-            type: astx.AST
-          function:
-            type: SemanticFunction | None
-        returns:
-          type: SemanticFunction | None
+          node: Syntax node to process.
+          function: Function to process.
+        returns: 'Result of this operation: attach one resolved function
+          to a node.'
         """
         raise NotImplementedError
 
@@ -298,12 +266,9 @@ class SemanticVisitorMixinTypingBase:
         """
         title: Attach one resolved call site.
         parameters:
-          node:
-            type: astx.AST
-          call:
-            type: CallResolution | None
-        returns:
-          type: CallResolution | None
+          node: Syntax node to process.
+          call: Call being processed.
+        returns: 'Result of this operation: attach one resolved call site.'
         """
         raise NotImplementedError
 
@@ -315,12 +280,9 @@ class SemanticVisitorMixinTypingBase:
         """
         title: Attach one resolved return site.
         parameters:
-          node:
-            type: astx.AST
-          return_resolution:
-            type: ReturnResolution | None
-        returns:
-          type: ReturnResolution | None
+          node: Syntax node to process.
+          return_resolution: Return resolution.
+        returns: 'Result of this operation: attach one resolved return site.'
         """
         raise NotImplementedError
 
@@ -332,12 +294,10 @@ class SemanticVisitorMixinTypingBase:
         """
         title: Attach one resolved generator-function sidecar.
         parameters:
-          node:
-            type: astx.AST
-          generator:
-            type: ResolvedGeneratorFunction | None
-        returns:
-          type: ResolvedGeneratorFunction | None
+          node: Syntax node to process.
+          generator: Generator.
+        returns: 'Result of this operation: attach one resolved
+          generator-function sidecar.'
         """
         raise NotImplementedError
 
@@ -349,12 +309,10 @@ class SemanticVisitorMixinTypingBase:
         """
         title: Attach one resolved yield-site sidecar.
         parameters:
-          node:
-            type: astx.AST
-          yield_resolution:
-            type: ResolvedYield | None
-        returns:
-          type: ResolvedYield | None
+          node: Syntax node to process.
+          yield_resolution: Yield resolution.
+        returns: 'Result of this operation: attach one resolved yield-site
+          sidecar.'
         """
         raise NotImplementedError
 
@@ -366,12 +324,10 @@ class SemanticVisitorMixinTypingBase:
         """
         title: Attach one resolved struct to a node.
         parameters:
-          node:
-            type: astx.AST
-          struct:
-            type: SemanticStruct | None
-        returns:
-          type: SemanticStruct | None
+          node: Syntax node to process.
+          struct: Struct.
+        returns: 'Result of this operation: attach one resolved struct to
+          a node.'
         """
         raise NotImplementedError
 
@@ -383,12 +339,10 @@ class SemanticVisitorMixinTypingBase:
         """
         title: Attach one resolved class to a node.
         parameters:
-          node:
-            type: astx.AST
-          class_:
-            type: SemanticClass | None
-        returns:
-          type: SemanticClass | None
+          node: Syntax node to process.
+          class_: Class being processed.
+        returns: 'Result of this operation: attach one resolved class to
+          a node.'
         """
         raise NotImplementedError
 
@@ -400,12 +354,10 @@ class SemanticVisitorMixinTypingBase:
         """
         title: Attach one resolved module to a node.
         parameters:
-          node:
-            type: astx.AST
-          module:
-            type: SemanticModule | None
-        returns:
-          type: SemanticModule | None
+          node: Syntax node to process.
+          module: Module to process.
+        returns: 'Result of this operation: attach one resolved module to
+          a node.'
         """
         raise NotImplementedError
 
@@ -416,8 +368,7 @@ class SemanticVisitorMixinTypingBase:
         """
         title: Reset per-run template state attached to one module.
         parameters:
-          module:
-            type: astx.Module
+          module: Module to process.
         """
         raise NotImplementedError
 
@@ -430,14 +381,10 @@ class SemanticVisitorMixinTypingBase:
         """
         title: Resolve one template function call target.
         parameters:
-          function:
-            type: SemanticFunction
-          _arg_types:
-            type: list[astx.DataType | None]
-          node:
-            type: astx.AST
-        returns:
-          type: SemanticFunction | None
+          function: Function to process.
+          _arg_types: Types of arg.
+          node: Syntax node to process.
+        returns: Resolved one template function call target.
         """
         raise NotImplementedError
 
@@ -451,16 +398,11 @@ class SemanticVisitorMixinTypingBase:
         """
         title: Resolve one template method call target.
         parameters:
-          function:
-            type: SemanticFunction
-          _visible_function:
-            type: SemanticFunction
-          _arg_types:
-            type: list[astx.DataType | None]
-          node:
-            type: astx.AST
-        returns:
-          type: SemanticFunction | None
+          function: Function to process.
+          _visible_function: Visible function.
+          _arg_types: Types of arg.
+          node: Syntax node to process.
+        returns: Resolved one template method call target.
         """
         raise NotImplementedError
 
@@ -471,10 +413,8 @@ class SemanticVisitorMixinTypingBase:
         """
         title: Return one specialization binding map.
         parameters:
-          function:
-            type: SemanticFunction
-        returns:
-          type: dict[str, astx.DataType]
+          function: Function to process.
+        returns: One specialization binding map.
         """
         raise NotImplementedError
 
@@ -486,12 +426,9 @@ class SemanticVisitorMixinTypingBase:
         """
         title: Return one callable wrapper with substituted types.
         parameters:
-          function:
-            type: SemanticFunction
-          bindings:
-            type: dict[str, astx.DataType]
-        returns:
-          type: SemanticFunction
+          function: Function to process.
+          bindings: Bindings.
+        returns: One callable wrapper with substituted types.
         """
         raise NotImplementedError
 
@@ -502,8 +439,7 @@ class SemanticVisitorMixinTypingBase:
         """
         title: Prepare concrete specializations for one template function.
         parameters:
-          function:
-            type: SemanticFunction
+          function: Function to process.
         """
         raise NotImplementedError
 
@@ -514,8 +450,7 @@ class SemanticVisitorMixinTypingBase:
         """
         title: Analyze prepared specializations for one template function.
         parameters:
-          function:
-            type: SemanticFunction
+          function: Function to process.
         """
         raise NotImplementedError
 
@@ -527,10 +462,8 @@ class SemanticVisitorMixinTypingBase:
         """
         title: Attach resolved imports to a node.
         parameters:
-          node:
-            type: astx.AST
-          imports:
-            type: tuple[ResolvedImportBinding, Ellipsis]
+          node: Syntax node to process.
+          imports: Imports.
         """
         raise NotImplementedError
 
@@ -538,10 +471,8 @@ class SemanticVisitorMixinTypingBase:
         """
         title: Attach semantic flags to a node.
         parameters:
-          node:
-            type: astx.AST
-          flags:
-            type: SemanticFlags
+          node: Syntax node to process.
+          flags: Flags.
         """
         raise NotImplementedError
 
@@ -553,10 +484,8 @@ class SemanticVisitorMixinTypingBase:
         """
         title: Attach one resolved operator to a node.
         parameters:
-          node:
-            type: astx.AST
-          operator:
-            type: ResolvedOperator | None
+          node: Syntax node to process.
+          operator: Operator to apply.
         """
         raise NotImplementedError
 
@@ -568,10 +497,8 @@ class SemanticVisitorMixinTypingBase:
         """
         title: Attach one resolved assignment target to a node.
         parameters:
-          node:
-            type: astx.AST
-          symbol:
-            type: SemanticSymbol | None
+          node: Syntax node to process.
+          symbol: Resolved symbol for the operation.
         """
         raise NotImplementedError
 
@@ -583,10 +510,8 @@ class SemanticVisitorMixinTypingBase:
         """
         title: Attach resolved field access metadata.
         parameters:
-          node:
-            type: astx.AST
-          field_access:
-            type: ResolvedFieldAccess | None
+          node: Syntax node to process.
+          field_access: Field access.
         """
         raise NotImplementedError
 
@@ -598,10 +523,8 @@ class SemanticVisitorMixinTypingBase:
         """
         title: Attach resolved module-member access metadata.
         parameters:
-          node:
-            type: astx.AST
-          field_access:
-            type: ResolvedModuleMemberAccess | None
+          node: Syntax node to process.
+          field_access: Field access.
         """
         raise NotImplementedError
 
@@ -613,10 +536,8 @@ class SemanticVisitorMixinTypingBase:
         """
         title: Attach resolved class-field access metadata.
         parameters:
-          node:
-            type: astx.AST
-          field_access:
-            type: ResolvedClassFieldAccess | None
+          node: Syntax node to process.
+          field_access: Field access.
         """
         raise NotImplementedError
 
@@ -628,10 +549,8 @@ class SemanticVisitorMixinTypingBase:
         """
         title: Attach resolved base-class field access metadata.
         parameters:
-          node:
-            type: astx.AST
-          field_access:
-            type: ResolvedBaseClassFieldAccess | None
+          node: Syntax node to process.
+          field_access: Field access.
         """
         raise NotImplementedError
 
@@ -643,10 +562,8 @@ class SemanticVisitorMixinTypingBase:
         """
         title: Attach resolved static class-field access metadata.
         parameters:
-          node:
-            type: astx.AST
-          field_access:
-            type: ResolvedStaticClassFieldAccess | None
+          node: Syntax node to process.
+          field_access: Field access.
         """
         raise NotImplementedError
 
@@ -658,10 +575,8 @@ class SemanticVisitorMixinTypingBase:
         """
         title: Attach resolved method-call metadata.
         parameters:
-          node:
-            type: astx.AST
-          method_call:
-            type: ResolvedMethodCall | None
+          node: Syntax node to process.
+          method_call: Method call.
         """
         raise NotImplementedError
 
@@ -673,10 +588,8 @@ class SemanticVisitorMixinTypingBase:
         """
         title: Attach resolved context-manager metadata.
         parameters:
-          node:
-            type: astx.AST
-          context_manager:
-            type: ResolvedContextManager | None
+          node: Syntax node to process.
+          context_manager: Context manager.
         """
         raise NotImplementedError
 
@@ -688,10 +601,8 @@ class SemanticVisitorMixinTypingBase:
         """
         title: Attach resolved class-construction metadata.
         parameters:
-          node:
-            type: astx.AST
-          construction:
-            type: ResolvedClassConstruction | None
+          node: Syntax node to process.
+          construction: Construction.
         """
         raise NotImplementedError
 
@@ -705,14 +616,10 @@ class SemanticVisitorMixinTypingBase:
         """
         title: Resolve one struct-valued type reference.
         parameters:
-          type_:
-            type: astx.DataType | None
-          node:
-            type: astx.AST
-          unknown_message:
-            type: str
-        returns:
-          type: SemanticStruct | None
+          type_: Type expression to process.
+          node: Syntax node to process.
+          unknown_message: Unknown message.
+        returns: Resolved one struct-valued type reference.
         """
         raise NotImplementedError
 
@@ -726,14 +633,10 @@ class SemanticVisitorMixinTypingBase:
         """
         title: Resolve one class-valued type reference.
         parameters:
-          type_:
-            type: astx.DataType | None
-          node:
-            type: astx.AST
-          unknown_message:
-            type: str
-        returns:
-          type: SemanticClass | None
+          type_: Type expression to process.
+          node: Syntax node to process.
+          unknown_message: Unknown message.
+        returns: Resolved one class-valued type reference.
         """
         raise NotImplementedError
 
@@ -748,16 +651,11 @@ class SemanticVisitorMixinTypingBase:
         """
         title: Resolve one declared type in place.
         parameters:
-          type_:
-            type: astx.DataType
-          node:
-            type: astx.AST
-          unknown_message:
-            type: str
-          storage_required:
-            type: bool
-        returns:
-          type: astx.DataType
+          type_: Type expression to process.
+          node: Syntax node to process.
+          unknown_message: Unknown message.
+          storage_required: Whether to use storage required.
+        returns: Resolved one declared type in place.
         """
         raise NotImplementedError
 
@@ -768,10 +666,8 @@ class SemanticVisitorMixinTypingBase:
         """
         title: Resolve the root symbol for an assignment target chain.
         parameters:
-          node:
-            type: astx.AST | None
-        returns:
-          type: SemanticSymbol | None
+          node: Syntax node to process.
+        returns: Resolved the root symbol for an assignment target chain.
         """
         raise NotImplementedError
 
@@ -779,16 +675,14 @@ class SemanticVisitorMixinTypingBase:
         """
         title: Predeclare composite definitions in one block.
         parameters:
-          block:
-            type: astx.Block
+          block: Block of statements.
         """
         raise NotImplementedError
 
     def _current_module_key(self) -> ModuleKey:
         """
         title: Return the current module key.
-        returns:
-          type: ModuleKey
+        returns: The current module key.
         """
         raise NotImplementedError
 
@@ -796,10 +690,8 @@ class SemanticVisitorMixinTypingBase:
         """
         title: Return True when imports are allowed here.
         parameters:
-          node:
-            type: astx.AST
-        returns:
-          type: bool
+          node: Syntax node to process.
+        returns: True when imports are allowed here.
         """
         raise NotImplementedError
 
@@ -807,10 +699,8 @@ class SemanticVisitorMixinTypingBase:
         """
         title: Return one node's resolved expression type.
         parameters:
-          node:
-            type: astx.AST | None
-        returns:
-          type: astx.DataType | None
+          node: Syntax node to process.
+        returns: One node's resolved expression type.
         """
         raise NotImplementedError
 
@@ -823,12 +713,10 @@ class SemanticVisitorMixinTypingBase:
         """
         title: Require one expression context to receive a non-void value.
         parameters:
-          node:
-            type: astx.AST | None
-          context:
-            type: str
-        returns:
-          type: bool
+          node: Syntax node to process.
+          context: Context for the operation.
+        returns: 'Result of this operation: require one expression context
+          to receive a non-void value.'
         """
         raise NotImplementedError
 
@@ -839,10 +727,8 @@ class SemanticVisitorMixinTypingBase:
         """
         title: Return whether one parameter declares a default value.
         parameters:
-          argument:
-            type: astx.Argument
-        returns:
-          type: bool
+          argument: Argument.
+        returns: Whether one parameter declares a default value.
         """
         raise NotImplementedError
 
@@ -853,8 +739,7 @@ class SemanticVisitorMixinTypingBase:
         """
         title: Analyze one callable's declared parameter default expressions.
         parameters:
-          function:
-            type: SemanticFunction
+          function: Function to process.
         """
         raise NotImplementedError
 
@@ -867,10 +752,8 @@ class SemanticVisitorMixinTypingBase:
         """
         title: Visit one module with optional predeclaration.
         parameters:
-          module:
-            type: astx.Module
-          predeclared:
-            type: bool
+          module: Module to process.
+          predeclared: Whether to use predeclared.
         """
         raise NotImplementedError
 
@@ -878,10 +761,8 @@ class SemanticVisitorMixinTypingBase:
         """
         title: Return whether a statement subtree has no normal fallthrough.
         parameters:
-          node:
-            type: astx.AST
-        returns:
-          type: bool
+          node: Syntax node to process.
+        returns: Whether a statement subtree has no normal fallthrough.
         """
         raise NotImplementedError
 
@@ -903,22 +784,16 @@ else:
 class SemanticAnalyzerCore(BaseVisitor):
     """
     title: Shared semantic analyzer core.
-    summary: >-
-      Provide shared semantic-analysis state and helper behavior for the
-      specialized visitor mixins that implement node-specific rules.
+    summary: Provide shared semantic-analysis state and helper behavior
+      for the specialized visitor mixins that implement node-specific
+      rules.
     attributes:
-      context:
-        type: SemanticContext
-      call_visitor:
-        type: CallAnalysisVisitor
-      session:
-        type: CompilationSession | None
-      factory:
-        type: SemanticEntityFactory
-      registry:
-        type: SemanticRegistry
-      bindings:
-        type: VisibleBindings
+      context: Context for the operation.
+      call_visitor: Call visitor.
+      session: Compilation session owning the semantic facts.
+      factory: Factory.
+      registry: Registry.
+      bindings: Bindings.
     """
 
     context: SemanticContext
@@ -937,10 +812,8 @@ class SemanticAnalyzerCore(BaseVisitor):
         """
         title: Initialize SemanticAnalyzerCore.
         parameters:
-          context:
-            type: SemanticContext | None
-          session:
-            type: CompilationSession | None
+          context: Context for the operation.
+          session: Compilation session owning the semantic facts.
         """
         from irx.analysis.compute import (  # noqa: PLC0415
             ComputeAnalysisVisitor,
@@ -974,10 +847,8 @@ class SemanticAnalyzerCore(BaseVisitor):
         """
         title: Analyze one AST root.
         parameters:
-          node:
-            type: astx.AST
-        returns:
-          type: astx.AST
+          node: Syntax node to process.
+        returns: 'Result of this operation: analyze one AST root.'
         """
         invalidate_facts(node)
         if self.session is None:
@@ -1012,12 +883,9 @@ class SemanticAnalyzerCore(BaseVisitor):
         """
         title: Analyze one parsed module.
         parameters:
-          parsed_module:
-            type: ParsedModule
-          predeclared:
-            type: bool
-        returns:
-          type: astx.Module
+          parsed_module: Parsed module.
+          predeclared: Whether to use predeclared.
+        returns: 'Result of this operation: analyze one parsed module.'
         """
         if not predeclared:
             reset_templates = getattr(
@@ -1043,10 +911,8 @@ class SemanticAnalyzerCore(BaseVisitor):
         """
         title: Return one node's semantic sidecar.
         parameters:
-          node:
-            type: astx.AST
-        returns:
-          type: SemanticInfo
+          node: Syntax node to process.
+        returns: One node's semantic sidecar.
         """
         info = cast(SemanticInfo | None, getattr(node, "semantic", None))
         if info is None or not isinstance(info, SemanticInfo):
@@ -1060,12 +926,10 @@ class SemanticAnalyzerCore(BaseVisitor):
         """
         title: Attach one resolved type to a node.
         parameters:
-          node:
-            type: astx.AST
-          type_:
-            type: astx.DataType | None
-        returns:
-          type: astx.DataType | None
+          node: Syntax node to process.
+          type_: Type expression to process.
+        returns: 'Result of this operation: attach one resolved type to a
+          node.'
         """
         info = self._semantic(node)
         info.resolved_type = type_
@@ -1087,12 +951,10 @@ class SemanticAnalyzerCore(BaseVisitor):
         """
         title: Attach one resolved symbol to a node.
         parameters:
-          node:
-            type: astx.AST
-          symbol:
-            type: SemanticSymbol | None
-        returns:
-          type: SemanticSymbol | None
+          node: Syntax node to process.
+          symbol: Resolved symbol for the operation.
+        returns: 'Result of this operation: attach one resolved symbol to
+          a node.'
         """
         info = self._semantic(node)
         info.resolved_symbol = symbol
@@ -1108,12 +970,10 @@ class SemanticAnalyzerCore(BaseVisitor):
         """
         title: Attach resource ownership metadata to one node.
         parameters:
-          node:
-            type: astx.AST
-          ownership:
-            type: ResourceOwnership | None
-        returns:
-          type: ResourceOwnership | None
+          node: Syntax node to process.
+          ownership: Resolved resource ownership contract.
+        returns: 'Result of this operation: attach resource ownership metadata
+          to one node.'
         """
         info = self._semantic(node)
         info.resource_ownership = ownership
@@ -1131,12 +991,10 @@ class SemanticAnalyzerCore(BaseVisitor):
         """
         title: Attach one resolved iterable capability.
         parameters:
-          node:
-            type: astx.AST
-          iteration:
-            type: ResolvedIteration | None
-        returns:
-          type: ResolvedIteration | None
+          node: Syntax node to process.
+          iteration: Iteration.
+        returns: 'Result of this operation: attach one resolved iterable
+          capability.'
         """
         self._semantic(node).resolved_iteration = iteration
         return iteration
@@ -1149,10 +1007,8 @@ class SemanticAnalyzerCore(BaseVisitor):
         """
         title: Attach one resolved collection method.
         parameters:
-          node:
-            type: astx.AST
-          collection_method:
-            type: ResolvedCollectionMethod | None
+          node: Syntax node to process.
+          collection_method: Collection method.
         """
         self._semantic(node).resolved_collection_method = collection_method
 
@@ -1166,20 +1022,15 @@ class SemanticAnalyzerCore(BaseVisitor):
     ) -> SemanticSymbol | None:
         """
         title: Declare one loop or comprehension target.
-        summary: >-
-          Normalize identifier and inline-declaration targets into a lexical
-          symbol with the iterable element type.
+        summary: Normalize identifier and inline-declaration targets into
+          a lexical symbol with the iterable element type.
         parameters:
-          target:
-            type: astx.AST
-          element_type:
-            type: astx.DataType
-          kind:
-            type: str
-          iteration_kind:
-            type: IterationKind
-        returns:
-          type: SemanticSymbol | None
+          target: Destination of the operation.
+          element_type: Type of each element.
+          kind: Kind of value or operation.
+          iteration_kind: Iteration kind.
+        returns: 'Result of this operation: declare one loop or comprehension
+          target.'
         """
         self._semantic(target).resource_ownership = None
         copy_string = iteration_kind is IterationKind.LIST and is_string_type(
@@ -1264,12 +1115,10 @@ class SemanticAnalyzerCore(BaseVisitor):
         """
         title: Attach one resolved function to a node.
         parameters:
-          node:
-            type: astx.AST
-          function:
-            type: SemanticFunction | None
-        returns:
-          type: SemanticFunction | None
+          node: Syntax node to process.
+          function: Function to process.
+        returns: 'Result of this operation: attach one resolved function
+          to a node.'
         """
         info = self._semantic(node)
         info.resolved_function = function
@@ -1290,12 +1139,9 @@ class SemanticAnalyzerCore(BaseVisitor):
         """
         title: Attach one resolved call site.
         parameters:
-          node:
-            type: astx.AST
-          call:
-            type: CallResolution | None
-        returns:
-          type: CallResolution | None
+          node: Syntax node to process.
+          call: Call being processed.
+        returns: 'Result of this operation: attach one resolved call site.'
         """
         info = self._semantic(node)
         info.resolved_call = call
@@ -1311,12 +1157,9 @@ class SemanticAnalyzerCore(BaseVisitor):
         """
         title: Attach one resolved return site.
         parameters:
-          node:
-            type: astx.AST
-          return_resolution:
-            type: ReturnResolution | None
-        returns:
-          type: ReturnResolution | None
+          node: Syntax node to process.
+          return_resolution: Return resolution.
+        returns: 'Result of this operation: attach one resolved return site.'
         """
         info = self._semantic(node)
         info.resolved_return = return_resolution
@@ -1330,12 +1173,10 @@ class SemanticAnalyzerCore(BaseVisitor):
         """
         title: Attach one resolved generator-function sidecar.
         parameters:
-          node:
-            type: astx.AST
-          generator:
-            type: ResolvedGeneratorFunction | None
-        returns:
-          type: ResolvedGeneratorFunction | None
+          node: Syntax node to process.
+          generator: Generator.
+        returns: 'Result of this operation: attach one resolved
+          generator-function sidecar.'
         """
         info = self._semantic(node)
         info.resolved_generator_function = generator
@@ -1349,12 +1190,10 @@ class SemanticAnalyzerCore(BaseVisitor):
         """
         title: Attach one resolved yield-site sidecar.
         parameters:
-          node:
-            type: astx.AST
-          yield_resolution:
-            type: ResolvedYield | None
-        returns:
-          type: ResolvedYield | None
+          node: Syntax node to process.
+          yield_resolution: Yield resolution.
+        returns: 'Result of this operation: attach one resolved yield-site
+          sidecar.'
         """
         info = self._semantic(node)
         info.resolved_yield = yield_resolution
@@ -1368,12 +1207,10 @@ class SemanticAnalyzerCore(BaseVisitor):
         """
         title: Attach one resolved struct to a node.
         parameters:
-          node:
-            type: astx.AST
-          struct:
-            type: SemanticStruct | None
-        returns:
-          type: SemanticStruct | None
+          node: Syntax node to process.
+          struct: Struct.
+        returns: 'Result of this operation: attach one resolved struct to
+          a node.'
         """
         info = self._semantic(node)
         info.resolved_struct = struct
@@ -1387,12 +1224,10 @@ class SemanticAnalyzerCore(BaseVisitor):
         """
         title: Attach one resolved class to a node.
         parameters:
-          node:
-            type: astx.AST
-          class_:
-            type: SemanticClass | None
-        returns:
-          type: SemanticClass | None
+          node: Syntax node to process.
+          class_: Class being processed.
+        returns: 'Result of this operation: attach one resolved class to
+          a node.'
         """
         info = self._semantic(node)
         info.resolved_class = class_
@@ -1406,12 +1241,10 @@ class SemanticAnalyzerCore(BaseVisitor):
         """
         title: Attach one resolved module to a node.
         parameters:
-          node:
-            type: astx.AST
-          module:
-            type: SemanticModule | None
-        returns:
-          type: SemanticModule | None
+          node: Syntax node to process.
+          module: Module to process.
+        returns: 'Result of this operation: attach one resolved module to
+          a node.'
         """
         info = self._semantic(node)
         info.resolved_module = module
@@ -1425,10 +1258,8 @@ class SemanticAnalyzerCore(BaseVisitor):
         """
         title: Attach resolved imports to a node.
         parameters:
-          node:
-            type: astx.AST
-          imports:
-            type: tuple[ResolvedImportBinding, Ellipsis]
+          node: Syntax node to process.
+          imports: Imports.
         """
         self._semantic(node).resolved_imports = imports
 
@@ -1436,10 +1267,8 @@ class SemanticAnalyzerCore(BaseVisitor):
         """
         title: Attach semantic flags to a node.
         parameters:
-          node:
-            type: astx.AST
-          flags:
-            type: SemanticFlags
+          node: Syntax node to process.
+          flags: Flags.
         """
         self._semantic(node).semantic_flags = flags
 
@@ -1451,10 +1280,8 @@ class SemanticAnalyzerCore(BaseVisitor):
         """
         title: Attach one resolved operator to a node.
         parameters:
-          node:
-            type: astx.AST
-          operator:
-            type: ResolvedOperator | None
+          node: Syntax node to process.
+          operator: Operator to apply.
         """
         self._semantic(node).resolved_operator = operator
 
@@ -1464,10 +1291,8 @@ class SemanticAnalyzerCore(BaseVisitor):
         """
         title: Attach one resolved assignment target to a node.
         parameters:
-          node:
-            type: astx.AST
-          symbol:
-            type: SemanticSymbol | None
+          node: Syntax node to process.
+          symbol: Resolved symbol for the operation.
         """
         info = self._semantic(node)
         if symbol is None:
@@ -1483,10 +1308,8 @@ class SemanticAnalyzerCore(BaseVisitor):
         """
         title: Attach resolved field access metadata.
         parameters:
-          node:
-            type: astx.AST
-          field_access:
-            type: ResolvedFieldAccess | None
+          node: Syntax node to process.
+          field_access: Field access.
         """
         self._semantic(node).resolved_field_access = field_access
 
@@ -1498,10 +1321,8 @@ class SemanticAnalyzerCore(BaseVisitor):
         """
         title: Attach resolved module-member access metadata.
         parameters:
-          node:
-            type: astx.AST
-          field_access:
-            type: ResolvedModuleMemberAccess | None
+          node: Syntax node to process.
+          field_access: Field access.
         """
         self._semantic(node).resolved_module_member_access = field_access
 
@@ -1513,10 +1334,8 @@ class SemanticAnalyzerCore(BaseVisitor):
         """
         title: Attach resolved class-field access metadata.
         parameters:
-          node:
-            type: astx.AST
-          field_access:
-            type: ResolvedClassFieldAccess | None
+          node: Syntax node to process.
+          field_access: Field access.
         """
         self._semantic(node).resolved_class_field_access = field_access
 
@@ -1528,10 +1347,8 @@ class SemanticAnalyzerCore(BaseVisitor):
         """
         title: Attach resolved base-class field access metadata.
         parameters:
-          node:
-            type: astx.AST
-          field_access:
-            type: ResolvedBaseClassFieldAccess | None
+          node: Syntax node to process.
+          field_access: Field access.
         """
         self._semantic(node).resolved_base_class_field_access = field_access
 
@@ -1543,10 +1360,8 @@ class SemanticAnalyzerCore(BaseVisitor):
         """
         title: Attach resolved static class-field access metadata.
         parameters:
-          node:
-            type: astx.AST
-          field_access:
-            type: ResolvedStaticClassFieldAccess | None
+          node: Syntax node to process.
+          field_access: Field access.
         """
         self._semantic(node).resolved_static_class_field_access = field_access
 
@@ -1558,10 +1373,8 @@ class SemanticAnalyzerCore(BaseVisitor):
         """
         title: Attach resolved method-call metadata.
         parameters:
-          node:
-            type: astx.AST
-          method_call:
-            type: ResolvedMethodCall | None
+          node: Syntax node to process.
+          method_call: Method call.
         """
         self._semantic(node).resolved_method_call = method_call
 
@@ -1573,10 +1386,8 @@ class SemanticAnalyzerCore(BaseVisitor):
         """
         title: Attach resolved context-manager metadata.
         parameters:
-          node:
-            type: astx.AST
-          context_manager:
-            type: ResolvedContextManager | None
+          node: Syntax node to process.
+          context_manager: Context manager.
         """
         self._semantic(node).resolved_context_manager = context_manager
 
@@ -1588,10 +1399,8 @@ class SemanticAnalyzerCore(BaseVisitor):
         """
         title: Attach resolved class-construction metadata.
         parameters:
-          node:
-            type: astx.AST
-          construction:
-            type: ResolvedClassConstruction | None
+          node: Syntax node to process.
+          construction: Construction.
         """
         self._semantic(node).resolved_class_construction = construction
 
@@ -1605,14 +1414,10 @@ class SemanticAnalyzerCore(BaseVisitor):
         """
         title: Resolve one struct-valued type reference.
         parameters:
-          type_:
-            type: astx.DataType | None
-          node:
-            type: astx.AST
-          unknown_message:
-            type: str
-        returns:
-          type: SemanticStruct | None
+          type_: Type expression to process.
+          node: Syntax node to process.
+          unknown_message: Unknown message.
+        returns: Resolved one struct-valued type reference.
         """
         if not isinstance(type_, astx.StructType):
             return None
@@ -1650,14 +1455,10 @@ class SemanticAnalyzerCore(BaseVisitor):
         """
         title: Resolve one class-valued type reference.
         parameters:
-          type_:
-            type: astx.DataType | None
-          node:
-            type: astx.AST
-          unknown_message:
-            type: str
-        returns:
-          type: SemanticClass | None
+          type_: Type expression to process.
+          node: Syntax node to process.
+          unknown_message: Unknown message.
+        returns: Resolved one class-valued type reference.
         """
         if not isinstance(type_, astx.ClassType):
             return None
@@ -1713,16 +1514,11 @@ class SemanticAnalyzerCore(BaseVisitor):
         """
         title: Resolve one declared type in place.
         parameters:
-          type_:
-            type: astx.DataType
-          node:
-            type: astx.AST
-          unknown_message:
-            type: str
-          storage_required:
-            type: bool
-        returns:
-          type: astx.DataType
+          type_: Type expression to process.
+          node: Syntax node to process.
+          unknown_message: Unknown message.
+          storage_required: Whether to use storage required.
+        returns: Resolved one declared type in place.
         """
         from irx.analysis.arrow_conversion import (  # noqa: PLC0415
             contains_arrow,
@@ -1896,10 +1692,8 @@ class SemanticAnalyzerCore(BaseVisitor):
         """
         title: Resolve the root symbol for an assignment target chain.
         parameters:
-          node:
-            type: astx.AST | None
-        returns:
-          type: SemanticSymbol | None
+          node: Syntax node to process.
+        returns: Resolved the root symbol for an assignment target chain.
         """
         if node is None:
             return None
@@ -1916,8 +1710,7 @@ class SemanticAnalyzerCore(BaseVisitor):
         """
         title: Predeclare composite definitions in one block.
         parameters:
-          block:
-            type: astx.Block
+          block: Block of statements.
         """
         for node in block.nodes:
             if isinstance(node, astx.StructDefStmt):
@@ -1934,8 +1727,7 @@ class SemanticAnalyzerCore(BaseVisitor):
     def _current_module_key(self) -> ModuleKey:
         """
         title: Return the current module key.
-        returns:
-          type: ModuleKey
+        returns: The current module key.
         """
         return self.context.current_module_key or "<root>"
 
@@ -1943,10 +1735,8 @@ class SemanticAnalyzerCore(BaseVisitor):
         """
         title: Return True when imports are allowed here.
         parameters:
-          node:
-            type: astx.AST
-        returns:
-          type: bool
+          node: Syntax node to process.
+        returns: True when imports are allowed here.
         """
         if self.session is None:
             self.context.diagnostics.add(
@@ -1969,10 +1759,8 @@ class SemanticAnalyzerCore(BaseVisitor):
         """
         title: Return one node's resolved expression type.
         parameters:
-          node:
-            type: astx.AST | None
-        returns:
-          type: astx.DataType | None
+          node: Syntax node to process.
+        returns: One node's resolved expression type.
         """
         if node is None:
             return None
@@ -1997,10 +1785,8 @@ class SemanticAnalyzerCore(BaseVisitor):
         """
         title: Return whether one parameter declares a default value.
         parameters:
-          argument:
-            type: astx.Argument
-        returns:
-          type: bool
+          argument: Argument.
+        returns: Whether one parameter declares a default value.
         """
         return not isinstance(argument.default, astx.Undefined)
 
@@ -2011,8 +1797,7 @@ class SemanticAnalyzerCore(BaseVisitor):
         """
         title: Analyze one callable's declared parameter default expressions.
         parameters:
-          function:
-            type: SemanticFunction
+          function: Function to process.
         """
         visible_arguments = tuple(function.prototype.args.nodes)
         hidden_parameter_count = len(function.args) - len(visible_arguments)
@@ -2069,12 +1854,10 @@ class SemanticAnalyzerCore(BaseVisitor):
         """
         title: Require one expression context to receive a non-void value.
         parameters:
-          node:
-            type: astx.AST | None
-          context:
-            type: str
-        returns:
-          type: bool
+          node: Syntax node to process.
+          context: Context for the operation.
+        returns: 'Result of this operation: require one expression context
+          to receive a non-void value.'
         """
         if node is None:
             return True
@@ -2098,8 +1881,7 @@ class SemanticAnalyzerCore(BaseVisitor):
         """
         title: Predeclare one module's top-level members.
         parameters:
-          module:
-            type: astx.Module
+          module: Module to process.
         """
         for node in module.nodes:
             if isinstance(node, astx.FunctionPrototype):
@@ -2143,10 +1925,8 @@ class SemanticAnalyzerCore(BaseVisitor):
         """
         title: Visit one module with optional predeclaration.
         parameters:
-          module:
-            type: astx.Module
-          predeclared:
-            type: bool
+          module: Module to process.
+          predeclared: Whether to use predeclared.
         """
         self._set_type(module, None)
         previous_module = getattr(self, "_current_ast_module", None)
@@ -2205,10 +1985,8 @@ class SemanticAnalyzerCore(BaseVisitor):
         """
         title: Return whether a statement subtree has no normal fallthrough.
         parameters:
-          node:
-            type: astx.AST
-        returns:
-          type: bool
+          node: Syntax node to process.
+        returns: Whether a statement subtree has no normal fallthrough.
         """
         from irx.analysis.flow import (  # noqa: PLC0415
             FlowOutcome,
@@ -2224,8 +2002,7 @@ class SemanticAnalyzerCore(BaseVisitor):
         """
         title: Reject unregistered nodes, even when they carry a type.
         parameters:
-          node:
-            type: astx.AST
+          node: Syntax node to process.
         """
         self.context.diagnostics.add(
             f"unsupported syntax node: {type(node).__name__}",

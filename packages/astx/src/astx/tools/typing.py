@@ -1,9 +1,9 @@
 """
 title: Tools for typing support helper.
-summary: >-
-  Runtime checking is disabled by default. Set ARX_RUNTIME_TYPECHECK=1 before
-  importing the compiler stack to instrument functions and classes for tests.
-  Changing the setting after import does not reinstrument existing definitions.
+summary: Runtime checking is disabled by default. Set ARX_RUNTIME_TYPECHECK=1
+  before importing the compiler stack to instrument functions and classes
+  for tests. Changing the setting after import does not reinstrument existing
+  definitions.
 """
 
 import os
@@ -37,11 +37,11 @@ def skip_unused(*args: Any, **kwargs: Any) -> None:
     title: Referencing variables to pacify static analyzers.
     parameters:
       args:
-        type: Any
         variadic: positional
+        description: Positional arguments.
       kwargs:
-        type: Any
         variadic: keyword
+        description: Keyword arguments.
     """
     for arg in args:
         pass
@@ -54,10 +54,9 @@ def copy_type(f: _T) -> Callable[[Any], _T]:
     """
     title: Copy types for args, kwargs from parent class.
     parameters:
-      f:
-        type: _T
-    returns:
-      type: Callable[[Any], _T]
+      f: F.
+    returns: 'Result of this operation: copy types for args, kwargs from
+      parent class.'
     """
     skip_unused(f)
     return lambda x: x
@@ -66,17 +65,16 @@ def copy_type(f: _T) -> Callable[[Any], _T]:
 @public
 def typechecked(target: TypecheckedTarget) -> TypecheckedTarget:
     """
-    title: Instrument a function or class when runtime checking is enabled.
-    summary: >-
-      ARX_RUNTIME_TYPECHECK=1 at import enables argument, return, and all-item
-      collection checks. Otherwise return the original target without runtime
-      instrumentation or a call wrapper. Compiler semantic validation is
-      independent of this developer-only setting.
+    title: Instrument a function or class when runtime checking is
+      enabled.
+    summary: ARX_RUNTIME_TYPECHECK=1 at import enables argument, return,
+      and all-item collection checks. Otherwise return the original
+      target without runtime instrumentation or a call wrapper. Compiler
+      semantic validation is independent of this developer-only setting.
     parameters:
-      target:
-        type: TypecheckedTarget
-    returns:
-      type: TypecheckedTarget
+      target: Destination of the operation.
+    returns: 'Result of this operation: instrument a function or class
+      when runtime checking is enabled.'
     """
     if RUNTIME_TYPECHECK_SETTING == "0":
         return target

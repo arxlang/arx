@@ -29,16 +29,11 @@ class IfStmt(StatementType):
     """
     title: AST class for `if` statement.
     attributes:
-      loc:
-        type: SourceLocation
-      kind:
-        type: ASTKind
-      condition:
-        type: Expr
-      then:
-        type: Block
-      else_:
-        type: Optional[Block]
+      loc: Source coordinates attached to this node.
+      kind: Kind of value or operation.
+      condition: Condition controlling the operation.
+      then: Then.
+      else_: Else.
     """
 
     loc: SourceLocation
@@ -59,16 +54,11 @@ class IfStmt(StatementType):
         """
         title: Initialize the IfStmt instance.
         parameters:
-          condition:
-            type: Expr
-          then:
-            type: Block
-          else_:
-            type: Optional[Block]
-          loc:
-            type: SourceLocation
-          parent:
-            type: Optional[ASTNodes]
+          condition: Condition controlling the operation.
+          then: Then.
+          else_: Else.
+          loc: Source coordinates associated with the node.
+          parent: Parent node or enclosing scope.
         """
         super().__init__(loc=loc, parent=parent)
         self.loc = loc
@@ -80,8 +70,7 @@ class IfStmt(StatementType):
     def __str__(self) -> str:
         """
         title: Return a string representation of the object.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         return f"IfStmt[{self.condition}]"
 
@@ -89,10 +78,8 @@ class IfStmt(StatementType):
         """
         title: Return the AST structure of the object.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         if_condition = {"condition": self.condition.get_struct(simplified)}
         if_then = {"then-block": self.then.get_struct(simplified)}
@@ -117,16 +104,11 @@ class IfExpr(Expr):
     """
     title: AST class for `if` expression.
     attributes:
-      loc:
-        type: SourceLocation
-      kind:
-        type: ASTKind
-      condition:
-        type: Expr
-      then:
-        type: Block
-      else_:
-        type: Optional[Block]
+      loc: Source coordinates attached to this node.
+      kind: Kind of value or operation.
+      condition: Condition controlling the operation.
+      then: Then.
+      else_: Else.
     """
 
     loc: SourceLocation
@@ -147,16 +129,11 @@ class IfExpr(Expr):
         """
         title: Initialize the IfExpr instance.
         parameters:
-          condition:
-            type: Expr
-          then:
-            type: Block
-          else_:
-            type: Optional[Block]
-          loc:
-            type: SourceLocation
-          parent:
-            type: Optional[ASTNodes]
+          condition: Condition controlling the operation.
+          then: Then.
+          else_: Else.
+          loc: Source coordinates associated with the node.
+          parent: Parent node or enclosing scope.
         """
         super().__init__(loc=loc, parent=parent)
         self.loc = loc
@@ -168,8 +145,7 @@ class IfExpr(Expr):
     def __str__(self) -> str:
         """
         title: Return a string representation of the object.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         return f"IfExpr[{self.condition}]"
 
@@ -177,10 +153,8 @@ class IfExpr(Expr):
         """
         title: Return the AST structure of the object.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         if_condition = {"condition": self.condition.get_struct(simplified)}
         if_then = {"then-block": self.then.get_struct(simplified)}
@@ -205,18 +179,12 @@ class ForRangeLoopStmt(StatementType):
     """
     title: AST class for `For` Range Statement.
     attributes:
-      kind:
-        type: ASTKind
-      variable:
-        type: InlineVariableDeclaration
-      start:
-        type: Expr
-      end:
-        type: Expr
-      step:
-        type: Expr
-      body:
-        type: Block
+      kind: Kind of value or operation.
+      variable: Variable.
+      start: Starting position.
+      end: End.
+      step: Iteration stride.
+      body: Statements forming the body.
     """
 
     kind: ASTKind
@@ -240,20 +208,13 @@ class ForRangeLoopStmt(StatementType):
         """
         title: Initialize the ForRangeLoopStmt instance.
         parameters:
-          variable:
-            type: InlineVariableDeclaration
-          start:
-            type: Expr
-          end:
-            type: Expr
-          step:
-            type: Expr
-          body:
-            type: Block
-          loc:
-            type: SourceLocation
-          parent:
-            type: Optional[ASTNodes]
+          variable: Variable.
+          start: Starting position.
+          end: End.
+          step: Iteration stride.
+          body: Statements forming the body.
+          loc: Source coordinates associated with the node.
+          parent: Parent node or enclosing scope.
         """
         super().__init__(loc=loc, parent=parent)
         self.variable = variable
@@ -266,8 +227,7 @@ class ForRangeLoopStmt(StatementType):
     def __str__(self) -> str:
         """
         title: Return a string that represents the object.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         start = self.start
         end = self.end
@@ -279,10 +239,8 @@ class ForRangeLoopStmt(StatementType):
         """
         title: Return the AST structure of the object.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         for_start = {"start": self.start.get_struct(simplified)}
         for_end = {"end": self.end.get_struct(simplified)}
@@ -309,18 +267,12 @@ class ForRangeLoopExpr(Expr):
     """
     title: AST class for `For` Range Expression.
     attributes:
-      kind:
-        type: ASTKind
-      variable:
-        type: InlineVariableDeclaration
-      start:
-        type: Expr
-      end:
-        type: Expr
-      step:
-        type: Expr
-      body:
-        type: Block
+      kind: Kind of value or operation.
+      variable: Variable.
+      start: Starting position.
+      end: End.
+      step: Iteration stride.
+      body: Statements forming the body.
     """
 
     kind: ASTKind
@@ -344,20 +296,13 @@ class ForRangeLoopExpr(Expr):
         """
         title: Initialize the ForRangeLoopExpr instance.
         parameters:
-          variable:
-            type: InlineVariableDeclaration
-          start:
-            type: Expr
-          end:
-            type: Expr
-          step:
-            type: Expr
-          body:
-            type: Block
-          loc:
-            type: SourceLocation
-          parent:
-            type: Optional[ASTNodes]
+          variable: Variable.
+          start: Starting position.
+          end: End.
+          step: Iteration stride.
+          body: Statements forming the body.
+          loc: Source coordinates associated with the node.
+          parent: Parent node or enclosing scope.
         """
         super().__init__(loc=loc, parent=parent)
         self.variable = variable
@@ -371,8 +316,7 @@ class ForRangeLoopExpr(Expr):
     def __str__(self) -> str:
         """
         title: Return a string that represents the object.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         var_name = self.variable.name
         # note: it would be nice to have the following structure
@@ -385,10 +329,8 @@ class ForRangeLoopExpr(Expr):
         """
         title: Return the AST structure of the object.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         for_var = {"var": self.variable.get_struct(simplified)}
         for_start = {"start": self.start.get_struct(simplified)}
@@ -412,20 +354,15 @@ class ForRangeLoopExpr(Expr):
 class ForCountLoopStmt(StatementType):
     """
     title: AST class for a simple Count-Controlled `For` Loop statement.
-    summary: |-
+    summary: >2-
 
       This is a very basic `for` loop, used by languages like C or C++.
     attributes:
-      kind:
-        type: ASTKind
-      initializer:
-        type: InlineVariableDeclaration
-      condition:
-        type: Expr
-      update:
-        type: Expr
-      body:
-        type: Block
+      kind: Kind of value or operation.
+      initializer: Expression providing the initial value.
+      condition: Condition controlling the operation.
+      update: Update.
+      body: Statements forming the body.
     """
 
     kind: ASTKind
@@ -447,18 +384,12 @@ class ForCountLoopStmt(StatementType):
         """
         title: Initialize the ForCountLoopStmt instance.
         parameters:
-          initializer:
-            type: InlineVariableDeclaration
-          condition:
-            type: Expr
-          update:
-            type: Expr
-          body:
-            type: Block
-          loc:
-            type: SourceLocation
-          parent:
-            type: Optional[ASTNodes]
+          initializer: Expression providing the initial value.
+          condition: Condition controlling the operation.
+          update: Update.
+          body: Statements forming the body.
+          loc: Source coordinates associated with the node.
+          parent: Parent node or enclosing scope.
         """
         super().__init__(loc=loc, parent=parent)
         self.initializer = initializer
@@ -470,8 +401,7 @@ class ForCountLoopStmt(StatementType):
     def __str__(self) -> str:
         """
         title: Return a string that represents the object.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         init = self.initializer
         cond = self.condition
@@ -482,10 +412,8 @@ class ForCountLoopStmt(StatementType):
         """
         title: Return the AST structure of the object.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         for_init = {"initialization": self.initializer.get_struct(simplified)}
         for_cond = {"condition": self.condition.get_struct(simplified)}
@@ -508,20 +436,15 @@ class ForCountLoopStmt(StatementType):
 class ForCountLoopExpr(Expr):
     """
     title: AST class for a simple Count-Controlled `For` Loop expression.
-    summary: |-
+    summary: >2-
 
       This is a very basic `for` loop, used by languages like C or C++.
     attributes:
-      kind:
-        type: ASTKind
-      initializer:
-        type: InlineVariableDeclaration
-      condition:
-        type: Expr
-      update:
-        type: Expr
-      body:
-        type: Block
+      kind: Kind of value or operation.
+      initializer: Expression providing the initial value.
+      condition: Condition controlling the operation.
+      update: Update.
+      body: Statements forming the body.
     """
 
     kind: ASTKind
@@ -543,18 +466,12 @@ class ForCountLoopExpr(Expr):
         """
         title: Initialize the ForLoopCountExpr instance.
         parameters:
-          initializer:
-            type: InlineVariableDeclaration
-          condition:
-            type: Expr
-          update:
-            type: Expr
-          body:
-            type: Block
-          loc:
-            type: SourceLocation
-          parent:
-            type: Optional[ASTNodes]
+          initializer: Expression providing the initial value.
+          condition: Condition controlling the operation.
+          update: Update.
+          body: Statements forming the body.
+          loc: Source coordinates associated with the node.
+          parent: Parent node or enclosing scope.
         """
         super().__init__(loc=loc, parent=parent)
         self.initializer = initializer
@@ -566,8 +483,7 @@ class ForCountLoopExpr(Expr):
     def __str__(self) -> str:
         """
         title: Return a string that represents the object.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         init = self.initializer
         cond = self.condition
@@ -578,10 +494,8 @@ class ForCountLoopExpr(Expr):
         """
         title: Return the AST structure of the object.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         for_init = {"initialization": self.initializer.get_struct(simplified)}
         for_cond = {"condition": self.condition.get_struct(simplified)}
@@ -604,18 +518,12 @@ class AsyncForRangeLoopStmt(StatementType):
     """
     title: AST class for asynchronous `For` Range Statement.
     attributes:
-      kind:
-        type: ASTKind
-      variable:
-        type: InlineVariableDeclaration
-      start:
-        type: Optional[Expr]
-      end:
-        type: Expr
-      step:
-        type: Optional[Expr]
-      body:
-        type: Block
+      kind: Kind of value or operation.
+      variable: Variable.
+      start: Starting position.
+      end: End.
+      step: Iteration stride.
+      body: Statements forming the body.
     """
 
     kind: ASTKind
@@ -639,20 +547,13 @@ class AsyncForRangeLoopStmt(StatementType):
         """
         title: Initialize the AsyncForRangeLoopStmt instance.
         parameters:
-          variable:
-            type: InlineVariableDeclaration
-          start:
-            type: Optional[Expr]
-          end:
-            type: Expr
-          step:
-            type: Optional[Expr]
-          body:
-            type: Block
-          loc:
-            type: SourceLocation
-          parent:
-            type: Optional[ASTNodes]
+          variable: Variable.
+          start: Starting position.
+          end: End.
+          step: Iteration stride.
+          body: Statements forming the body.
+          loc: Source coordinates associated with the node.
+          parent: Parent node or enclosing scope.
         """
         super().__init__(loc=loc, parent=parent)
         self.variable = variable
@@ -665,8 +566,7 @@ class AsyncForRangeLoopStmt(StatementType):
     def __str__(self) -> str:
         """
         title: Return a string that represents the object.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         start = self.start
         end = self.end
@@ -678,10 +578,8 @@ class AsyncForRangeLoopStmt(StatementType):
         """
         title: Return the AST structure of the object.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         for_start = {
             "start": {}
@@ -712,18 +610,12 @@ class AsyncForRangeLoopExpr(Expr):
     """
     title: AST class for asynchronous `For` Range Expression.
     attributes:
-      kind:
-        type: ASTKind
-      variable:
-        type: InlineVariableDeclaration
-      start:
-        type: Optional[Expr]
-      end:
-        type: Expr
-      step:
-        type: Optional[Expr]
-      body:
-        type: Block
+      kind: Kind of value or operation.
+      variable: Variable.
+      start: Starting position.
+      end: End.
+      step: Iteration stride.
+      body: Statements forming the body.
     """
 
     kind: ASTKind
@@ -747,20 +639,13 @@ class AsyncForRangeLoopExpr(Expr):
         """
         title: Initialize the AsyncForRangeLoopExpr instance.
         parameters:
-          variable:
-            type: InlineVariableDeclaration
-          start:
-            type: Optional[Expr]
-          end:
-            type: Expr
-          step:
-            type: Optional[Expr]
-          body:
-            type: Block
-          loc:
-            type: SourceLocation
-          parent:
-            type: Optional[ASTNodes]
+          variable: Variable.
+          start: Starting position.
+          end: End.
+          step: Iteration stride.
+          body: Statements forming the body.
+          loc: Source coordinates associated with the node.
+          parent: Parent node or enclosing scope.
         """
         super().__init__(loc=loc, parent=parent)
         self.variable = variable
@@ -773,8 +658,7 @@ class AsyncForRangeLoopExpr(Expr):
     def __str__(self) -> str:
         """
         title: Return a string that represents the object.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         var_name = self.variable.name
         return f"AsyncForRangeLoopExpr[{var_name}]"
@@ -783,10 +667,8 @@ class AsyncForRangeLoopExpr(Expr):
         """
         title: Return the AST structure of the object.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         for_var = {"var": self.variable.get_struct(simplified)}
         for_start = {
@@ -819,8 +701,7 @@ class BreakStmt(StatementType):
     """
     title: AST class for break statement.
     attributes:
-      kind:
-        type: ASTKind
+      kind: Kind of value or operation.
     """
 
     kind: ASTKind
@@ -833,10 +714,8 @@ class BreakStmt(StatementType):
         """
         title: Initialize the BreakStmt instance.
         parameters:
-          loc:
-            type: SourceLocation
-          parent:
-            type: Optional[ASTNodes]
+          loc: Source coordinates associated with the node.
+          parent: Parent node or enclosing scope.
         """
         super().__init__(loc=loc, parent=parent)
         self.kind = ASTKind.BreakStmtKind
@@ -844,8 +723,7 @@ class BreakStmt(StatementType):
     def __str__(self) -> str:
         """
         title: Return a string representation of the object.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         return "BreakStmt"
 
@@ -853,10 +731,8 @@ class BreakStmt(StatementType):
         """
         title: Return the AST structure of the object.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         key = "BREAK-STMT"
         value: DictDataTypesStruct = {}
@@ -869,8 +745,7 @@ class ContinueStmt(StatementType):
     """
     title: AST class for continue statement.
     attributes:
-      kind:
-        type: ASTKind
+      kind: Kind of value or operation.
     """
 
     kind: ASTKind
@@ -883,10 +758,8 @@ class ContinueStmt(StatementType):
         """
         title: Initialize the ContinueStmt instance.
         parameters:
-          loc:
-            type: SourceLocation
-          parent:
-            type: Optional[ASTNodes]
+          loc: Source coordinates associated with the node.
+          parent: Parent node or enclosing scope.
         """
         super().__init__(loc=loc, parent=parent)
         self.kind = ASTKind.ContinueStmtKind
@@ -894,8 +767,7 @@ class ContinueStmt(StatementType):
     def __str__(self) -> str:
         """
         title: Return a string representation of the object.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         return "ContinueStmt"
 
@@ -903,10 +775,8 @@ class ContinueStmt(StatementType):
         """
         title: Return the AST structure of the object.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         key = "CONTINUE-STMT"
         value: DictDataTypesStruct = {}
@@ -919,12 +789,9 @@ class WhileStmt(StatementType):
     """
     title: AST class for `while` statement.
     attributes:
-      kind:
-        type: ASTKind
-      condition:
-        type: Expr
-      body:
-        type: Block
+      kind: Kind of value or operation.
+      condition: Condition controlling the operation.
+      body: Statements forming the body.
     """
 
     kind: ASTKind
@@ -942,14 +809,10 @@ class WhileStmt(StatementType):
         """
         title: Initialize the WhileStmt instance.
         parameters:
-          condition:
-            type: Expr
-          body:
-            type: Block
-          loc:
-            type: SourceLocation
-          parent:
-            type: Optional[ASTNodes]
+          condition: Condition controlling the operation.
+          body: Statements forming the body.
+          loc: Source coordinates associated with the node.
+          parent: Parent node or enclosing scope.
         """
         super().__init__(loc=loc, parent=parent)
         self.condition = condition
@@ -959,8 +822,7 @@ class WhileStmt(StatementType):
     def __str__(self) -> str:
         """
         title: Return a string representation of the object.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         return f"WhileStmt[{self.condition}]"
 
@@ -968,10 +830,8 @@ class WhileStmt(StatementType):
         """
         title: Return the AST structure of the object.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         while_condition = self.condition.get_struct(simplified)
         while_body = self.body.get_struct(simplified)
@@ -991,12 +851,9 @@ class WhileExpr(Expr):
     """
     title: AST class for `while` expression.
     attributes:
-      kind:
-        type: ASTKind
-      condition:
-        type: Expr
-      body:
-        type: Block
+      kind: Kind of value or operation.
+      condition: Condition controlling the operation.
+      body: Statements forming the body.
     """
 
     kind: ASTKind
@@ -1014,14 +871,10 @@ class WhileExpr(Expr):
         """
         title: Initialize the WhileExpr instance.
         parameters:
-          condition:
-            type: Expr
-          body:
-            type: Block
-          loc:
-            type: SourceLocation
-          parent:
-            type: Optional[ASTNodes]
+          condition: Condition controlling the operation.
+          body: Statements forming the body.
+          loc: Source coordinates associated with the node.
+          parent: Parent node or enclosing scope.
         """
         super().__init__(loc=loc, parent=parent)
         self.condition = condition
@@ -1031,8 +884,7 @@ class WhileExpr(Expr):
     def __str__(self) -> str:
         """
         title: Return a string representation of the object.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         return f"WhileExpr[{self.condition}]"
 
@@ -1040,10 +892,8 @@ class WhileExpr(Expr):
         """
         title: Return the AST structure of the object.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         while_condition = self.condition.get_struct(simplified)
         while_body = self.body.get_struct(simplified)
@@ -1063,14 +913,10 @@ class CaseStmt(StatementType):
     """
     title: AST class for a case in a Switch statement.
     attributes:
-      kind:
-        type: ASTKind
-      condition:
-        type: Optional[Expr]
-      body:
-        type: Block
-      default:
-        type: bool
+      kind: Kind of value or operation.
+      condition: Condition controlling the operation.
+      body: Statements forming the body.
+      default: Default used when no value is supplied.
     """
 
     kind: ASTKind
@@ -1090,16 +936,11 @@ class CaseStmt(StatementType):
         """
         title: Initialize the CaseStmt instance.
         parameters:
-          body:
-            type: Block
-          condition:
-            type: Optional[Expr]
-          default:
-            type: bool
-          loc:
-            type: SourceLocation
-          parent:
-            type: Optional[ASTNodes]
+          body: Statements forming the body.
+          condition: Condition controlling the operation.
+          default: Default used when no value is supplied.
+          loc: Source coordinates associated with the node.
+          parent: Parent node or enclosing scope.
         """
         super().__init__(loc=loc, parent=parent)
         self.condition = condition
@@ -1120,8 +961,7 @@ class CaseStmt(StatementType):
     def __str__(self) -> str:
         """
         title: Return a string representation of the object.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         return (
             f"CaseStmt[{self.condition}]"
@@ -1133,10 +973,8 @@ class CaseStmt(StatementType):
         """
         title: Return the AST structure of the object.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         default_case = "default" if self.condition is None else ""
         default_only = "[default]" if self.condition is None else ""
@@ -1168,12 +1006,9 @@ class SwitchStmt(StatementType):
     """
     title: AST class for Switch statements based on Rust's match syntax.
     attributes:
-      kind:
-        type: ASTKind
-      value:
-        type: Expr
-      cases:
-        type: ASTNodes[CaseStmt]
+      kind: Kind of value or operation.
+      value: Stored value.
+      cases: Cases.
     """
 
     kind: ASTKind
@@ -1191,14 +1026,10 @@ class SwitchStmt(StatementType):
         """
         title: Initialize the SwitchStmt instance.
         parameters:
-          value:
-            type: Expr
-          cases:
-            type: list[CaseStmt] | ASTNodes[CaseStmt]
-          loc:
-            type: SourceLocation
-          parent:
-            type: Optional[ASTNodes]
+          value: Value to process.
+          cases: Cases.
+          loc: Source coordinates associated with the node.
+          parent: Parent node or enclosing scope.
         """
         super().__init__(loc=loc, parent=parent)
         self.value = value
@@ -1215,8 +1046,7 @@ class SwitchStmt(StatementType):
     def __str__(self) -> str:
         """
         title: Return a string representation of the object.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         return f"SwitchStmt[{len(self.cases)}]"
 
@@ -1224,10 +1054,8 @@ class SwitchStmt(StatementType):
         """
         title: Return the AST structure of the object.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         key = f"SWITCH-STMT[{id(self)}]" if simplified else "SWITCH-STMT"
         case_dict = {}
@@ -1247,10 +1075,8 @@ class GotoStmt(StatementType):
     """
     title: AST class for function `Goto` statement.
     attributes:
-      kind:
-        type: ASTKind
-      label:
-        type: Identifier
+      kind: Kind of value or operation.
+      label: Label.
     """
 
     kind: ASTKind
@@ -1266,12 +1092,9 @@ class GotoStmt(StatementType):
         """
         title: Initialize the Return instance.
         parameters:
-          label:
-            type: Identifier
-          loc:
-            type: SourceLocation
-          parent:
-            type: Optional[ASTNodes]
+          label: Label.
+          loc: Source coordinates associated with the node.
+          parent: Parent node or enclosing scope.
         """
         super().__init__(loc=loc, parent=parent)
         self.label = label
@@ -1280,8 +1103,7 @@ class GotoStmt(StatementType):
     def __str__(self) -> str:
         """
         title: Return a string representation of the object.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         return f"Goto[{self.label.name}]"
 
@@ -1289,10 +1111,8 @@ class GotoStmt(StatementType):
         """
         title: Return the AST structure of the object.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         key = f"GOTO-STMT[{self.label.name}]"
         value: DictDataTypesStruct = {}
@@ -1305,12 +1125,9 @@ class DoWhileStmt(WhileStmt):
     """
     title: AST class for `do-while` statement.
     attributes:
-      condition:
-        type: Expr
-      body:
-        type: Block
-      kind:
-        type: ASTKind
+      condition: Condition controlling the operation.
+      body: Statements forming the body.
+      kind: Kind of value or operation.
     """
 
     kind: ASTKind
@@ -1325,14 +1142,10 @@ class DoWhileStmt(WhileStmt):
         """
         title: Initialize the DoWhileStmt instance.
         parameters:
-          condition:
-            type: Expr
-          body:
-            type: Block
-          loc:
-            type: SourceLocation
-          parent:
-            type: Optional[ASTNodes]
+          condition: Condition controlling the operation.
+          body: Statements forming the body.
+          loc: Source coordinates associated with the node.
+          parent: Parent node or enclosing scope.
         """
         super().__init__(
             condition=condition, body=body, loc=loc, parent=parent
@@ -1342,8 +1155,7 @@ class DoWhileStmt(WhileStmt):
     def __str__(self) -> str:
         """
         title: Return a string representation of the object.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         return f"DoWhileStmt[{self.condition}]"
 
@@ -1354,12 +1166,9 @@ class DoWhileExpr(WhileExpr):
     """
     title: AST class for `do-while` expression.
     attributes:
-      condition:
-        type: Expr
-      body:
-        type: Block
-      kind:
-        type: ASTKind
+      condition: Condition controlling the operation.
+      body: Statements forming the body.
+      kind: Kind of value or operation.
     """
 
     kind: ASTKind
@@ -1374,14 +1183,10 @@ class DoWhileExpr(WhileExpr):
         """
         title: Initialize the DoWhileExpr instance.
         parameters:
-          condition:
-            type: Expr
-          body:
-            type: Block
-          loc:
-            type: SourceLocation
-          parent:
-            type: Optional[ASTNodes]
+          condition: Condition controlling the operation.
+          body: Statements forming the body.
+          loc: Source coordinates associated with the node.
+          parent: Parent node or enclosing scope.
         """
         super().__init__(
             condition=condition, body=body, loc=loc, parent=parent
@@ -1391,7 +1196,6 @@ class DoWhileExpr(WhileExpr):
     def __str__(self) -> str:
         """
         title: Return a string representation of the object.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         return f"DoWhileExpr[{self.condition}]"

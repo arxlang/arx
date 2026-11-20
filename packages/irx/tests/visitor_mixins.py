@@ -19,8 +19,7 @@ class MixinVisitorCore:
     """
     title: Own one test visit family and independent invocation state.
     attributes:
-      calls:
-        type: list[str]
+      calls: Calls.
     """
 
     calls: list[str]
@@ -36,8 +35,7 @@ class MixinVisitorCore:
         """
         title: Reject unsupported test nodes.
         parameters:
-          node:
-            type: astx.AST
+          node: Syntax node to process.
         """
         raise NotImplementedError(type(node).__name__)
 
@@ -52,8 +50,7 @@ class LiteralProbeMixin(MixinVisitorCore):
     """
     title: Contribute broad literal and narrow integer overloads.
     attributes:
-      calls:
-        type: list[str]
+      calls: Calls.
     """
 
     # Register the narrow handler first: later broad handlers must not win.
@@ -63,8 +60,7 @@ class LiteralProbeMixin(MixinVisitorCore):
         """
         title: Prefer the narrower integer overload.
         parameters:
-          node:
-            type: astx.LiteralInt32
+          node: Syntax node to process.
         """
         del node
         self.calls.append("int32")
@@ -75,8 +71,7 @@ class LiteralProbeMixin(MixinVisitorCore):
         """
         title: Record a literal without a more specific overload.
         parameters:
-          node:
-            type: astx.Literal
+          node: Syntax node to process.
         """
         del node
         self.calls.append("literal")

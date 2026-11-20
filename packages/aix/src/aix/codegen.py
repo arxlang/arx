@@ -31,8 +31,7 @@ class AixBuilder(LLVMBuilder):
     """
     title: AIX backend builder with AIX overrides.
     attributes:
-      translator:
-        type: AixVisitor
+      translator: Translator.
     """
 
     LINK_MODES = {"auto", "pie", "no-pie"}
@@ -47,8 +46,7 @@ class AixBuilder(LLVMBuilder):
     def _new_translator(self) -> AixVisitor:
         """
         title: Create the AIX visitor.
-        returns:
-          type: AixVisitor
+        returns: Created the AIX visitor.
         """
         return AixVisitor(
             active_runtime_features=set(self.runtime_feature_names)
@@ -64,14 +62,10 @@ class AixBuilder(LLVMBuilder):
         """
         title: Materialize LLVM IR into either an object file or executable.
         parameters:
-          result:
-            type: str
-          output_file:
-            type: str
-          link:
-            type: bool
-          link_mode:
-            type: Literal[auto, pie, no-pie]
+          result: Result of the operation.
+          output_file: Destination file for generated output.
+          link: Whether to use link.
+          link_mode: Link mode.
         """
         result_mod = llvm.parse_assembly(result)
         result_object = self.translator.target_machine.emit_object(result_mod)
@@ -120,17 +114,13 @@ class AixBuilder(LLVMBuilder):
         link_mode: Literal["auto", "pie", "no-pie"] = "auto",
     ) -> None:
         """
-        title: >-
-          Transpile the ASTx to LLVM-IR and build it to an executable file.
+        title: Transpile the ASTx to LLVM-IR and build it to an executable
+          file.
         parameters:
-          node:
-            type: astx.AST
-          output_file:
-            type: str
-          link:
-            type: bool
-          link_mode:
-            type: Literal[auto, pie, no-pie]
+          node: Syntax node to process.
+          output_file: Destination file for generated output.
+          link: Whether to use link.
+          link_mode: Link mode.
         """
         result = self.translate(node)
         self._build_from_ir_result(result, output_file, link, link_mode)
@@ -146,16 +136,11 @@ class AixBuilder(LLVMBuilder):
         """
         title: Build a reachable graph of parsed modules.
         parameters:
-          root:
-            type: ParsedModule
-          resolver:
-            type: ImportResolver
-          output_file:
-            type: str
-          link:
-            type: bool
-          link_mode:
-            type: Literal[auto, pie, no-pie]
+          root: Root module or resource.
+          resolver: Host-supplied module resolver.
+          output_file: Destination file for generated output.
+          link: Whether to use link.
+          link_mode: Link mode.
         """
         result = self.translate_modules(root, resolver)
         self._build_from_ir_result(result, output_file, link, link_mode)

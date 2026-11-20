@@ -25,10 +25,9 @@ def block(*nodes: astx.AST) -> astx.Block:
     title: Build a statement block.
     parameters:
       nodes:
-        type: astx.AST
         variadic: positional
-    returns:
-      type: astx.Block
+        description: Syntax nodes in source order.
+    returns: Constructed a statement block.
     """
     result = astx.Block()
     for node in nodes:
@@ -41,10 +40,10 @@ def module(*nodes: astx.AST) -> astx.Module:
     title: Wrap exception statements in an integer-returning function.
     parameters:
       nodes:
-        type: astx.AST
         variadic: positional
-    returns:
-      type: astx.Module
+        description: Syntax nodes in source order.
+    returns: 'Result of this operation: wrap exception statements in an
+      integer-returning function.'
     """
     result = astx.Module("test")
     result.append(
@@ -110,8 +109,7 @@ def test_nonexception_raise_rejected(value: astx.Expr) -> None:
     """
     title: Primitive values cannot impersonate nominal exception instances.
     parameters:
-      value:
-        type: astx.Expr
+      value: Value to process.
     """
     with pytest.raises(SemanticError, match="exception instance"):
         analyze(module(astx.ThrowStmt(value)))
@@ -257,8 +255,8 @@ def test_explicit_cause_requires_an_exception_and_none_suppresses() -> None:
 
 def test_finally_normal_path_does_not_erase_try_fallthrough() -> None:
     """
-    title: >-
-      A possibly falling-through finalizer cannot prove a function returns.
+    title: A possibly falling-through finalizer cannot prove a function
+      returns.
     """
     region = astx.ExceptionHandlerStmt(
         block(),
@@ -361,14 +359,11 @@ def test_host_registered_import_alias_and_qualified_handlers() -> None:
         """
         title: Supply exactly the registered canonical builtin module.
         parameters:
-          requesting_module_key:
-            type: str
-          import_node:
-            type: astx.AST
-          requested_specifier:
-            type: str
-        returns:
-          type: ParsedModule
+          requesting_module_key: Requesting module key.
+          import_node: Import node.
+          requested_specifier: Import specifier requested by the source module.
+        returns: 'Result of this operation: supply exactly the registered
+          canonical builtin module.'
         """
         assert requested_specifier == builtin.key
         return builtin
@@ -502,8 +497,7 @@ def test_else_requires_normally_initialized_try_local(
     """
     title: Else sees direct try owners but not nested statement-body locals.
     parameters:
-      conditional:
-        type: bool
+      conditional: Whether to use conditional.
     """
     declaration = astx.VariableDeclaration(
         "error",
@@ -533,8 +527,7 @@ def test_finalizer_cannot_reuse_pending_list_return(access: str) -> None:
     """
     title: An affine return cannot be read twice while fresh replacement works.
     parameters:
-      access:
-        type: str
+      access: Access.
     """
     result = (
         astx.Identifier("values")
@@ -609,14 +602,10 @@ def test_handler_only_custom_type_is_a_lowering_dependency() -> None:
         """
         title: Resolve a lazy custom exception module and its builtin base.
         parameters:
-          requesting_module_key:
-            type: str
-          import_node:
-            type: astx.AST
-          requested_specifier:
-            type: str
-        returns:
-          type: ParsedModule
+          requesting_module_key: Requesting module key.
+          import_node: Import node.
+          requested_specifier: Import specifier requested by the source module.
+        returns: Resolved a lazy custom exception module and its builtin base.
         """
         return modules[requested_specifier]
 

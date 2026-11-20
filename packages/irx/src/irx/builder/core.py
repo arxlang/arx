@@ -105,10 +105,8 @@ def is_unsigned_node(node: astx.AST) -> bool:
     """
     title: Is unsigned node.
     parameters:
-      node:
-        type: astx.AST
-    returns:
-      type: bool
+      node: Syntax node to process.
+    returns: 'Result of this operation: is unsigned node.'
     """
     type_ = getattr(node, "type_", None)
     return isinstance(type_, astx.UnsignedInteger)
@@ -120,10 +118,8 @@ def uses_unsigned_semantics(node: astx.AST) -> bool:
     """
     title: Uses unsigned semantics.
     parameters:
-      node:
-        type: astx.AST
-    returns:
-      type: bool
+      node: Syntax node to process.
+    returns: 'Result of this operation: uses unsigned semantics.'
     """
     semantic = getattr(node, "semantic", None)
     semantic_flags = getattr(semantic, "semantic_flags", None)
@@ -143,12 +139,9 @@ def semantic_symbol_key(node: astx.AST, fallback: str) -> str:
     """
     title: Semantic symbol key.
     parameters:
-      node:
-        type: astx.AST
-      fallback:
-        type: str
-    returns:
-      type: str
+      node: Syntax node to process.
+      fallback: Fallback.
+    returns: 'Result of this operation: semantic symbol key.'
     """
     semantic = getattr(node, "semantic", None)
     symbol = getattr(semantic, "resolved_symbol", None)
@@ -164,12 +157,9 @@ def semantic_assignment_key(node: astx.AST, fallback: str) -> str:
     """
     title: Semantic assignment key.
     parameters:
-      node:
-        type: astx.AST
-      fallback:
-        type: str
-    returns:
-      type: str
+      node: Syntax node to process.
+      fallback: Fallback.
+    returns: 'Result of this operation: semantic assignment key.'
     """
     semantic = getattr(node, "semantic", None)
     assignment = getattr(semantic, "resolved_assignment", None)
@@ -186,12 +176,9 @@ def semantic_function_key(node: astx.AST, fallback: str) -> str:
     """
     title: Semantic function key.
     parameters:
-      node:
-        type: astx.AST
-      fallback:
-        type: str
-    returns:
-      type: str
+      node: Syntax node to process.
+      fallback: Fallback.
+    returns: 'Result of this operation: semantic function key.'
     """
     semantic = getattr(node, "semantic", None)
     function = getattr(semantic, "resolved_function", None)
@@ -207,12 +194,9 @@ def semantic_function_name(node: astx.AST, fallback: str) -> str:
     """
     title: Semantic LLVM function name.
     parameters:
-      node:
-        type: astx.AST
-      fallback:
-        type: str
-    returns:
-      type: str
+      node: Syntax node to process.
+      fallback: Fallback.
+    returns: 'Result of this operation: semantic LLVM function name.'
     """
     semantic = getattr(node, "semantic", None)
     function = getattr(semantic, "resolved_function", None)
@@ -239,12 +223,9 @@ def semantic_struct_key(node: astx.AST, fallback: str) -> str:
     """
     title: Semantic struct key.
     parameters:
-      node:
-        type: astx.AST
-      fallback:
-        type: str
-    returns:
-      type: str
+      node: Syntax node to process.
+      fallback: Fallback.
+    returns: 'Result of this operation: semantic struct key.'
     """
     semantic = getattr(node, "semantic", None)
     struct = getattr(semantic, "resolved_struct", None)
@@ -260,12 +241,9 @@ def semantic_struct_name(node: astx.AST, fallback: str) -> str:
     """
     title: Semantic LLVM struct name.
     parameters:
-      node:
-        type: astx.AST
-      fallback:
-        type: str
-    returns:
-      type: str
+      node: Syntax node to process.
+      fallback: Fallback.
+    returns: 'Result of this operation: semantic LLVM struct name.'
     """
     semantic = getattr(node, "semantic", None)
     struct = getattr(semantic, "resolved_struct", None)
@@ -282,12 +260,9 @@ def semantic_class_key(node: astx.AST, fallback: str) -> str:
     """
     title: Semantic class key.
     parameters:
-      node:
-        type: astx.AST
-      fallback:
-        type: str
-    returns:
-      type: str
+      node: Syntax node to process.
+      fallback: Fallback.
+    returns: 'Result of this operation: semantic class key.'
     """
     semantic = getattr(node, "semantic", None)
     class_ = getattr(semantic, "resolved_class", None)
@@ -303,12 +278,9 @@ def semantic_class_name(node: astx.AST, fallback: str) -> str:
     """
     title: Semantic LLVM class-object name.
     parameters:
-      node:
-        type: astx.AST
-      fallback:
-        type: str
-    returns:
-      type: str
+      node: Syntax node to process.
+      fallback: Fallback.
+    returns: 'Result of this operation: semantic LLVM class-object name.'
     """
     semantic = getattr(node, "semantic", None)
     class_ = getattr(semantic, "resolved_class", None)
@@ -329,14 +301,10 @@ def semantic_flag(node: astx.AST, name: str, default: bool = False) -> bool:
     """
     title: Semantic flag.
     parameters:
-      node:
-        type: astx.AST
-      name:
-        type: str
-      default:
-        type: bool
-    returns:
-      type: bool
+      node: Syntax node to process.
+      name: Name identifying the declaration or operation.
+      default: Default used when no value is supplied.
+    returns: 'Result of this operation: semantic flag.'
     """
     semantic = getattr(node, "semantic", None)
     semantic_flags = getattr(semantic, "semantic_flags", None)
@@ -351,10 +319,8 @@ def semantic_fma_rhs(node: astx.AST) -> astx.AST | None:
     """
     title: Semantic fma rhs.
     parameters:
-      node:
-        type: astx.AST
-    returns:
-      type: astx.AST | None
+      node: Syntax node to process.
+    returns: 'Result of this operation: semantic fma rhs.'
     """
     semantic = getattr(node, "semantic", None)
     semantic_flags = getattr(semantic, "semantic_flags", None)
@@ -370,88 +336,48 @@ class VisitorCore(StringIRMixin, BuilderVisitor):
     """
     title: Maintain shared LLVM visitor state.
     attributes:
-      named_values:
-        type: NamedValueMap
-      call_visitor:
-        type: CallLoweringVisitor
-      _llvm:
-        type: VariablesLLVM
-      function_protos:
-        type: dict[str, astx.FunctionPrototype]
-      llvm_functions_by_symbol_id:
-        type: dict[str, ir.Function]
-      result_stack:
-        type: list[ResultStackValue]
-      runtime_features:
-        type: RuntimeFeatureState
-      const_vars:
-        type: set[str]
-      loop_stack:
-        type: list[LoopTargets]
-      cleanup_stack:
-        type: list[CleanupAction]
-      class_construction_stack:
-        type: list[ir.Value]
-      emitting_failure_cleanup:
-        type: bool
-      _set_value_ids:
-        type: dict[int, ir.Value]
-      _buffer_view_global_counter:
-        type: int
-      struct_types:
-        type: dict[str, ir.Type]
-      llvm_structs_by_qualified_name:
-        type: dict[str, ir.IdentifiedStructType]
-      _emitted_function_bodies:
-        type: set[str]
-      _module_display_names:
-        type: dict[int, str]
-      _current_module_display_name:
-        type: str | None
-      _interned_c_strings:
-        type: dict[tuple[str, str], ir.GlobalVariable]
-      _c_string_global_counter:
-        type: int
-      _namespace_globals:
-        type: dict[tuple[str, str], ir.GlobalVariable]
-      entry_function_symbol_id:
-        type: str | None
-      _fast_math_enabled:
-        type: bool
-      _current_function_return_type:
-        type: astx.DataType | None
-      _current_function_signature:
-        type: FunctionSignature | None
-      _generator_frame_types:
-        type: dict[str, ir.IdentifiedStructType]
-      _generator_frame_slots_by_symbol_id:
-        type: dict[str, dict[str, int]]
-      _generator_resume_functions:
-        type: dict[str, ir.Function]
-      _current_generator_frame_ptr:
-        type: ir.Value | None
-      _current_generator_frame_slots:
-        type: dict[str, int]
-      _current_generator_out_ptr:
-        type: ir.Value | None
-      _current_generator_next_state:
-        type: int | None
-      target:
-        type: llvm.TargetRef
-      target_machine:
-        type: llvm.TargetMachine
-      runtime_exception_types:
-        type: dict[str, ResolvedExceptionType]
-      exception_context:
-        type: ir.Value | None
-      exception_result_slot:
-        type: ir.Value | None
-      exception_targets:
-        type: list[ExceptionTarget]
-      pending_returns:
-        type: list[PendingReturn]
-      llvm_function_signatures:
-        type: dict[str, FunctionSignature]
+      named_values: Named values.
+      call_visitor: Call visitor.
+      _llvm: LLVM.
+      function_protos: Function protos.
+      llvm_functions_by_symbol_id: Identifier for LLVM functions by symbol.
+      result_stack: Stack of lowered expression results.
+      runtime_features: Runtime features.
+      const_vars: Const vars.
+      loop_stack: Loop stack.
+      cleanup_stack: Cleanup stack.
+      class_construction_stack: Class construction stack.
+      emitting_failure_cleanup: Whether to use emitting failure cleanup.
+      _set_value_ids: Identifiers for set value.
+      _buffer_view_global_counter: Buffer view global counter.
+      struct_types: Types of struct.
+      llvm_structs_by_qualified_name: Name of LLVM structs by qualified.
+      _emitted_function_bodies: Emitted function bodies.
+      _module_display_names: Module display names.
+      _current_module_display_name: Name of current module display.
+      _interned_c_strings: Interned c strings.
+      _c_string_global_counter: C string global counter.
+      _namespace_globals: Namespace globals.
+      entry_function_symbol_id: Identifier for entry function symbol.
+      _fast_math_enabled: Whether to use fast math enabled.
+      _current_function_return_type: Type of current function return.
+      _current_function_signature: Current function signature.
+      _generator_frame_types: Types of generator frame.
+      _generator_frame_slots_by_symbol_id: Identifier for generator frame
+        slots by symbol.
+      _generator_resume_functions: Generator resume functions.
+      _current_generator_frame_ptr: Current generator frame ptr.
+      _current_generator_frame_slots: Current generator frame slots.
+      _current_generator_out_ptr: Current generator out ptr.
+      _current_generator_next_state: Current generator next state.
+      target: Destination of the operation.
+      target_machine: Target machine.
+      runtime_exception_types: Types of runtime exception.
+      exception_context: Exception context.
+      exception_result_slot: Exception result slot.
+      exception_targets: Exception targets.
+      pending_returns: Pending returns.
+      llvm_function_signatures: LLVM function signatures.
     """
 
     named_values: NamedValueMap
@@ -503,8 +429,7 @@ class VisitorCore(StringIRMixin, BuilderVisitor):
         """
         title: Initialize VisitorCore.
         parameters:
-          active_runtime_features:
-            type: set[str] | None
+          active_runtime_features: Active runtime features.
         """
         super().__init__()
         from irx.builder.lowering.table_io import (  # noqa: PLC0415
@@ -579,8 +504,7 @@ class VisitorCore(StringIRMixin, BuilderVisitor):
         """
         title: Fail explicitly when analyzed input has no lowering handler.
         parameters:
-          node:
-            type: astx.AST
+          node: Syntax node to process.
         """
         raise_lowering_internal_error(
             f"no lowering handler for {type(node).__name__}",
@@ -596,10 +520,8 @@ class VisitorCore(StringIRMixin, BuilderVisitor):
         """
         title: Emit all active cleanup actions in innermost-first order.
         parameters:
-          start_depth:
-            type: int
-          excluded_owner_symbol_ids:
-            type: frozenset[str]
+          start_depth: Start depth.
+          excluded_owner_symbol_ids: Identifiers for excluded owner symbol.
         """
         original = self.cleanup_stack
         try:
@@ -674,8 +596,7 @@ class VisitorCore(StringIRMixin, BuilderVisitor):
         """
         title: Emit and remove temporary cleanups created after one depth.
         parameters:
-          start_depth:
-            type: int
+          start_depth: Start depth.
         """
         new_actions = self.cleanup_stack[start_depth:]
         retained = [
@@ -696,10 +617,8 @@ class VisitorCore(StringIRMixin, BuilderVisitor):
         """
         title: Register cleanup for one non-transferred owned list temporary.
         parameters:
-          node:
-            type: astx.AST
-          list_ptr:
-            type: ir.Value
+          node: Syntax node to process.
+          list_ptr: List ptr.
         """
         ownership = resource_ownership(node)
         if (
@@ -741,10 +660,8 @@ class VisitorCore(StringIRMixin, BuilderVisitor):
         """
         title: Register cleanup for one non-transferred owned string pointer.
         parameters:
-          node:
-            type: astx.AST
-          pointer:
-            type: ir.Value
+          node: Syntax node to process.
+          pointer: Pointer to the native storage.
         """
         ownership = resource_ownership(node)
         if (
@@ -788,21 +705,15 @@ class VisitorCore(StringIRMixin, BuilderVisitor):
         exception_role: str = "RuntimeError",
     ) -> None:
         """
-        title: >-
-          Fail with one structured runtime record unless a condition holds.
+        title: Fail with one structured runtime record unless a condition
+          holds.
         parameters:
-          node:
-            type: astx.AST
-          condition:
-            type: ir.Value
-          code:
-            type: str
-          message:
-            type: str
-          block_name:
-            type: str
-          exception_role:
-            type: str
+          node: Syntax node to process.
+          condition: Condition controlling the operation.
+          code: Source code or diagnostic identifier.
+          message: Diagnostic or output message.
+          block_name: Name of block.
+          exception_role: Exception role.
         """
         function = self._llvm.ir_builder.function
         fail_block = function.append_basic_block(f"{block_name}.fail")
@@ -828,12 +739,9 @@ class VisitorCore(StringIRMixin, BuilderVisitor):
         """
         title: Require one heap allocation to return a non-null pointer.
         parameters:
-          node:
-            type: astx.AST
-          pointer:
-            type: ir.Value
-          message:
-            type: str
+          node: Syntax node to process.
+          pointer: Pointer to the native storage.
+          message: Diagnostic or output message.
         """
         non_null = self._llvm.ir_builder.icmp_unsigned(
             "!=",
@@ -853,10 +761,8 @@ class VisitorCore(StringIRMixin, BuilderVisitor):
         """
         title: Translate.
         parameters:
-          node:
-            type: astx.AST
-        returns:
-          type: str
+          node: Syntax node to process.
+        returns: 'Result of this operation: translate.'
         """
         analyzed = analyze(node)
         self._module_display_names = {}
@@ -901,12 +807,10 @@ class VisitorCore(StringIRMixin, BuilderVisitor):
         """
         title: Translate a reachable graph of parsed modules to LLVM IR.
         parameters:
-          root:
-            type: ParsedModule
-          resolver:
-            type: ImportResolver
-        returns:
-          type: str
+          root: Root module or resource.
+          resolver: Host-supplied module resolver.
+        returns: 'Result of this operation: translate a reachable graph of
+          parsed modules to LLVM IR.'
         """
         session = analyze_modules(root, resolver)
         registry = get_default_runtime_feature_registry().with_native_features(
@@ -935,11 +839,10 @@ class VisitorCore(StringIRMixin, BuilderVisitor):
 
     def _set_entry_function_from_module(self, module: astx.Module) -> None:
         """
-        title: >-
-          Record the root entrypoint semantic id when a main function exists.
+        title: Record the root entrypoint semantic id when a main function
+          exists.
         parameters:
-          module:
-            type: astx.Module
+          module: Module to process.
         """
         self.entry_function_symbol_id = None
         for node in module.nodes:
@@ -967,12 +870,9 @@ class VisitorCore(StringIRMixin, BuilderVisitor):
         """
         title: Return the LLVM symbol name for a function node.
         parameters:
-          node:
-            type: astx.AST
-          fallback:
-            type: str
-        returns:
-          type: str
+          node: Syntax node to process.
+          fallback: Fallback.
+        returns: The LLVM symbol name for a function node.
         """
         function_key = semantic_function_key(node, fallback)
         if (
@@ -989,10 +889,8 @@ class VisitorCore(StringIRMixin, BuilderVisitor):
         """
         title: Return one stable LLVM global backing a namespace handle.
         parameters:
-          namespace_type:
-            type: astx.NamespaceType
-        returns:
-          type: ir.GlobalVariable
+          namespace_type: Type of namespace.
+        returns: One stable LLVM global backing a namespace handle.
         """
         cache_key = (
             namespace_type.namespace_key,
@@ -1031,10 +929,8 @@ class VisitorCore(StringIRMixin, BuilderVisitor):
         """
         title: Return one lowered value for a namespace type.
         parameters:
-          namespace_type:
-            type: astx.NamespaceType
-        returns:
-          type: ir.Value
+          namespace_type: Type of namespace.
+        returns: One lowered value for a namespace type.
         """
         namespace_global = self._namespace_global(namespace_type)
         return namespace_global.bitcast(self._llvm.OPAQUE_POINTER_TYPE)
@@ -1046,10 +942,8 @@ class VisitorCore(StringIRMixin, BuilderVisitor):
         """
         title: Return one lowered namespace value for an analyzed node.
         parameters:
-          node:
-            type: astx.AST
-        returns:
-          type: ir.Value | None
+          node: Syntax node to process.
+        returns: One lowered namespace value for an analyzed node.
         """
         semantic = getattr(node, "semantic", None)
         resolved_module = getattr(semantic, "resolved_module", None)
@@ -1074,10 +968,8 @@ class VisitorCore(StringIRMixin, BuilderVisitor):
         """
         title: Translate a list of already-analyzed modules.
         parameters:
-          modules:
-            type: list[astx.Module]
-          declarations:
-            type: frozenset[int] | None
+          modules: Modules.
+          declarations: Declarations.
         """
         module_nodes = [
             (
@@ -1238,8 +1130,7 @@ class VisitorCore(StringIRMixin, BuilderVisitor):
         """
         title: Activate runtime feature.
         parameters:
-          feature_name:
-            type: str
+          feature_name: Name of feature.
         """
         self.runtime_features.activate(feature_name)
 
@@ -1249,12 +1140,9 @@ class VisitorCore(StringIRMixin, BuilderVisitor):
         """
         title: Require runtime symbol.
         parameters:
-          feature_name:
-            type: str
-          symbol_name:
-            type: str
-        returns:
-          type: ir.Function
+          feature_name: Name of feature.
+          symbol_name: Name of symbol.
+        returns: 'Result of this operation: require runtime symbol.'
         """
         return self.runtime_features.require_symbol(feature_name, symbol_name)
 
@@ -1268,8 +1156,7 @@ class VisitorCore(StringIRMixin, BuilderVisitor):
     def _get_size_t_type_from_triple(self) -> ir.IntType:
         """
         title: Get size t type from triple.
-        returns:
-          type: ir.IntType
+        returns: Size t type from triple.
         """
         triple = self.target_machine.triple.lower()
 
@@ -1421,10 +1308,8 @@ class VisitorCore(StringIRMixin, BuilderVisitor):
         """
         title: Get function.
         parameters:
-          name:
-            type: str
-        returns:
-          type: ir.Function | None
+          name: Name identifying the declaration or operation.
+        returns: Function.
         """
         if name in self.llvm_functions_by_symbol_id:
             return self.llvm_functions_by_symbol_id[name]
@@ -1446,12 +1331,9 @@ class VisitorCore(StringIRMixin, BuilderVisitor):
         """
         title: Create entry block alloca.
         parameters:
-          var_name:
-            type: str
-          type_name:
-            type: str | ir.Type
-        returns:
-          type: Any
+          var_name: Name of var.
+          type_name: Name of type.
+        returns: Created entry block alloca.
         """
         llvm_type = (
             self._llvm.get_data_type(type_name)
@@ -1471,10 +1353,8 @@ class VisitorCore(StringIRMixin, BuilderVisitor):
         """
         title: Get fma function.
         parameters:
-          ty:
-            type: ir.Type
-        returns:
-          type: ir.Function
+          ty: Ty.
+        returns: Fma function.
         """
         if isinstance(ty, ir.VectorType):
             elem_ty = ty.element
@@ -1513,14 +1393,10 @@ class VisitorCore(StringIRMixin, BuilderVisitor):
         """
         title: Emit fma.
         parameters:
-          lhs:
-            type: ir.Value
-          rhs:
-            type: ir.Value
-          addend:
-            type: ir.Value
-        returns:
-          type: ir.Value
+          lhs: Left operand.
+          rhs: Right operand.
+          addend: Addend.
+        returns: 'Result of this operation: emit fma.'
         """
         builder = self._llvm.ir_builder
         if not isinstance(lhs.type, ir.VectorType) and hasattr(builder, "fma"):
@@ -1536,8 +1412,7 @@ class VisitorCore(StringIRMixin, BuilderVisitor):
         """
         title: Set fast math.
         parameters:
-          enabled:
-            type: bool
+          enabled: Whether to use enabled.
         """
         self._fast_math_enabled = enabled
 
@@ -1545,8 +1420,7 @@ class VisitorCore(StringIRMixin, BuilderVisitor):
         """
         title: Apply fast math.
         parameters:
-          inst:
-            type: ir.Instruction
+          inst: Inst.
         """
         if not self._fast_math_enabled:
             return
@@ -1571,10 +1445,8 @@ class VisitorCore(StringIRMixin, BuilderVisitor):
         """
         title: Is numeric value.
         parameters:
-          value:
-            type: ir.Value
-        returns:
-          type: bool
+          value: Value to process.
+        returns: 'Result of this operation: is numeric value.'
         """
         if is_vector(value):
             elem_ty = value.type.element
@@ -1587,10 +1459,8 @@ class VisitorCore(StringIRMixin, BuilderVisitor):
         """
         title: Resolved ast type.
         parameters:
-          node:
-            type: astx.AST | None
-        returns:
-          type: astx.DataType | None
+          node: Syntax node to process.
+        returns: 'Result of this operation: resolved ast type.'
         """
         if node is None:
             return None
@@ -1607,10 +1477,8 @@ class VisitorCore(StringIRMixin, BuilderVisitor):
         """
         title: Llvm type for ast type.
         parameters:
-          type_:
-            type: astx.DataType | None
-        returns:
-          type: ir.Type | None
+          type_: Type expression to process.
+        returns: 'Result of this operation: llvm type for ast type.'
         """
         if type_ is None:
             return None
@@ -1701,10 +1569,8 @@ class VisitorCore(StringIRMixin, BuilderVisitor):
         """
         title: Return one scalar storage type for a finite union.
         parameters:
-          type_:
-            type: astx.UnionType
-        returns:
-          type: astx.DataType | None
+          type_: Type expression to process.
+        returns: One scalar storage type for a finite union.
         """
         info = require_semantic_metadata(
             getattr(type_, "semantic", None),
@@ -1733,16 +1599,11 @@ class VisitorCore(StringIRMixin, BuilderVisitor):
         """
         title: Lower one resolved class-instance field slot to an address.
         parameters:
-          receiver:
-            type: astx.AST
-          member_name:
-            type: str
-          layout:
-            type: SemanticClassLayout
-          field:
-            type: SemanticClassLayoutField
-        returns:
-          type: ir.Value
+          receiver: Receiver.
+          member_name: Name of member.
+          layout: Layout.
+          field: Field to process.
+        returns: Lowered one resolved class-instance field slot to an address.
         """
         self.visit(receiver)
         base_value = safe_pop(self.result_stack)
@@ -1794,10 +1655,8 @@ class VisitorCore(StringIRMixin, BuilderVisitor):
         """
         title: Lower one field-access expression to an address.
         parameters:
-          node:
-            type: astx.FieldAccess
-        returns:
-          type: ir.Value
+          node: Syntax node to process.
+        returns: Lowered one field-access expression to an address.
         """
         semantic = getattr(node, "semantic", None)
         resolved_class_field_access = getattr(
@@ -1883,10 +1742,8 @@ class VisitorCore(StringIRMixin, BuilderVisitor):
         """
         title: Lower one base-qualified class field access to an address.
         parameters:
-          node:
-            type: astx.BaseFieldAccess
-        returns:
-          type: ir.Value
+          node: Syntax node to process.
+        returns: Lowered one base-qualified class field access to an address.
         """
         semantic = getattr(node, "semantic", None)
         resolved_base_field_access = getattr(
@@ -1910,10 +1767,8 @@ class VisitorCore(StringIRMixin, BuilderVisitor):
         """
         title: Lower one static class field access to a global address.
         parameters:
-          node:
-            type: astx.StaticFieldAccess
-        returns:
-          type: ir.Value
+          node: Syntax node to process.
+        returns: Lowered one static class field access to a global address.
         """
         semantic = getattr(node, "semantic", None)
         resolved_static_field_access = getattr(
@@ -1938,10 +1793,8 @@ class VisitorCore(StringIRMixin, BuilderVisitor):
         """
         title: Lower one mutable lvalue target to an address.
         parameters:
-          node:
-            type: astx.AST
-        returns:
-          type: ir.Value
+          node: Syntax node to process.
+        returns: Lowered one mutable lvalue target to an address.
         """
         if isinstance(node, astx.Identifier):
             symbol_key = semantic_symbol_key(node, node.name)
@@ -1967,14 +1820,10 @@ class VisitorCore(StringIRMixin, BuilderVisitor):
         """
         title: Convert one numeric value to boolean truthiness.
         parameters:
-          value:
-            type: ir.Value
-          source_type:
-            type: astx.DataType | None
-          name:
-            type: str
-        returns:
-          type: ir.Value
+          value: Value to process.
+          source_type: Type of the source value.
+          name: Name identifying the declaration or operation.
+        returns: Converted one numeric value to boolean truthiness.
         """
         if is_boolean_type(source_type):
             return value
@@ -2010,18 +1859,13 @@ class VisitorCore(StringIRMixin, BuilderVisitor):
         """
         title: Emit one numeric compare using shared signedness policy.
         parameters:
-          op_code:
-            type: str
-          lhs:
-            type: ir.Value
-          rhs:
-            type: ir.Value
-          unsigned:
-            type: bool
-          name:
-            type: str
-        returns:
-          type: ir.Value
+          op_code: Operator spelling.
+          lhs: Left operand.
+          rhs: Right operand.
+          unsigned: Whether to use unsigned semantics.
+          name: Name identifying the declaration or operation.
+        returns: 'Result of this operation: emit one numeric compare using
+          shared signedness policy.'
         """
         if is_fp_type(lhs.type):
             return self._llvm.ir_builder.fcmp_ordered(op_code, lhs, rhs, name)
@@ -2044,14 +1888,11 @@ class VisitorCore(StringIRMixin, BuilderVisitor):
         """
         title: Cast one lowered value using semantic scalar types.
         parameters:
-          value:
-            type: ir.Value
-          source_type:
-            type: astx.DataType | None
-          target_type:
-            type: astx.DataType | None
-        returns:
-          type: ir.Value
+          value: Value to process.
+          source_type: Type of the source value.
+          target_type: Destination type for the conversion.
+        returns: 'Result of this operation: cast one lowered value using
+          semantic scalar types.'
         """
         if source_type is None or target_type is None:
             return value
@@ -2147,19 +1988,15 @@ class VisitorCore(StringIRMixin, BuilderVisitor):
     ) -> tuple[ir.Value, ir.Value]:
         """
         title: Unify numeric operands for raw LLVM values.
-        summary: >-
-          Raw LLVM fixture/storage adaptation only, not a language conversion
-          policy. Analyzed AST lowering must use resolved operand plans and
-          must never call this helper as a missing-metadata fallback.
+        summary: Raw LLVM fixture/storage adaptation only, not a language
+          conversion policy. Analyzed AST lowering must use resolved operand
+          plans and must never call this helper as a missing-metadata fallback.
         parameters:
-          lhs:
-            type: ir.Value
-          rhs:
-            type: ir.Value
-          unsigned:
-            type: bool
-        returns:
-          type: tuple[ir.Value, ir.Value]
+          lhs: Left operand.
+          rhs: Right operand.
+          unsigned: Whether to use unsigned semantics.
+        returns: 'Result of this operation: unify numeric operands for raw
+          LLVM values.'
         """
         lhs_is_vec = is_vector(lhs)
         rhs_is_vec = is_vector(rhs)
@@ -2238,10 +2075,8 @@ class VisitorCore(StringIRMixin, BuilderVisitor):
         """
         title: Select float type.
         parameters:
-          candidates:
-            type: list[ir.Type]
-        returns:
-          type: ir.Type
+          candidates: Candidates.
+        returns: 'Result of this operation: select float type.'
         """
         if not candidates:
             return self._llvm.FLOAT_TYPE
@@ -2253,10 +2088,8 @@ class VisitorCore(StringIRMixin, BuilderVisitor):
         """
         title: Float type from width.
         parameters:
-          width:
-            type: int
-        returns:
-          type: ir.Type
+          width: Bit width or display width.
+        returns: 'Result of this operation: float type from width.'
         """
         if width <= FLOAT16_BITS and hasattr(self._llvm, "FLOAT16_TYPE"):
             return self._llvm.FLOAT16_TYPE
@@ -2272,10 +2105,8 @@ class VisitorCore(StringIRMixin, BuilderVisitor):
         """
         title: Float bit width.
         parameters:
-          type_:
-            type: ir.Type
-        returns:
-          type: int
+          type_: Type expression to process.
+        returns: 'Result of this operation: float bit width.'
         """
         if isinstance(type_, DoubleType):
             return FLOAT64_BITS
@@ -2296,14 +2127,10 @@ class VisitorCore(StringIRMixin, BuilderVisitor):
         """
         title: Cast value to type.
         parameters:
-          value:
-            type: ir.Value
-          target_scalar_ty:
-            type: ir.Type
-          unsigned:
-            type: bool
-        returns:
-          type: ir.Value
+          value: Value to process.
+          target_scalar_ty: Target scalar ty.
+          unsigned: Whether to use unsigned semantics.
+        returns: 'Result of this operation: cast value to type.'
         """
         builder = self._llvm.ir_builder
         value_is_vec = is_vector(value)
@@ -2362,12 +2189,9 @@ class VisitorCore(StringIRMixin, BuilderVisitor):
         """
         title: Common list element type.
         parameters:
-          lhs_ty:
-            type: ir.Type
-          rhs_ty:
-            type: ir.Type
-        returns:
-          type: ir.Type
+          lhs_ty: Left operand ty.
+          rhs_ty: Right operand ty.
+        returns: 'Result of this operation: common list element type.'
         """
         if lhs_ty == rhs_ty:
             return lhs_ty
@@ -2403,12 +2227,9 @@ class VisitorCore(StringIRMixin, BuilderVisitor):
         """
         title: Coerce to.
         parameters:
-          value:
-            type: ir.Value
-          target_ty:
-            type: ir.Type
-        returns:
-          type: ir.Value
+          value: Value to process.
+          target_ty: Target ty.
+        returns: 'Result of this operation: coerce to.'
         """
         if value.type == target_ty:
             return value
@@ -2451,10 +2272,8 @@ class VisitorCore(StringIRMixin, BuilderVisitor):
         """
         title: Mark set value.
         parameters:
-          value:
-            type: ir.Value
-        returns:
-          type: ir.Value
+          value: Value to process.
+        returns: 'Result of this operation: mark set value.'
         """
         self._set_value_ids[id(value)] = value
         return value
@@ -2463,10 +2282,8 @@ class VisitorCore(StringIRMixin, BuilderVisitor):
         """
         title: Is set value.
         parameters:
-          value:
-            type: ir.Value | None
-        returns:
-          type: bool
+          value: Value to process.
+        returns: 'Result of this operation: is set value.'
         """
         if value is None:
             return False
@@ -2481,14 +2298,10 @@ class VisitorCore(StringIRMixin, BuilderVisitor):
         """
         title: Try set binary op.
         parameters:
-          lhs:
-            type: ir.Value | None
-          rhs:
-            type: ir.Value | None
-          op_code:
-            type: str
-        returns:
-          type: bool
+          lhs: Left operand.
+          rhs: Right operand.
+          op_code: Operator spelling.
+        returns: 'Result of this operation: try set binary op.'
         """
         if op_code not in ("|", "&", "-", "^"):
             return False
@@ -2533,10 +2346,8 @@ class VisitorCore(StringIRMixin, BuilderVisitor):
         """
         title: Subscript uses unsigned semantics.
         parameters:
-          node:
-            type: astx.SubscriptExpr
-        returns:
-          type: bool
+          node: Syntax node to process.
+        returns: 'Result of this operation: subscript uses unsigned semantics.'
         """
         if uses_unsigned_semantics(node.index):
             return True
@@ -2553,12 +2364,9 @@ class VisitorCore(StringIRMixin, BuilderVisitor):
         """
         title: Subscript compare type.
         parameters:
-          lhs_ty:
-            type: ir.Type
-          rhs_ty:
-            type: ir.Type
-        returns:
-          type: ir.Type
+          lhs_ty: Left operand ty.
+          rhs_ty: Right operand ty.
+        returns: 'Result of this operation: subscript compare type.'
         """
         if lhs_ty == rhs_ty:
             if is_int_type(lhs_ty) or is_fp_type(lhs_ty):
@@ -2589,14 +2397,10 @@ class VisitorCore(StringIRMixin, BuilderVisitor):
         """
         title: Coerce subscript key for compare.
         parameters:
-          key_val:
-            type: ir.Value
-          compare_ty:
-            type: ir.Type
-          unsigned:
-            type: bool
-        returns:
-          type: ir.Value
+          key_val: Key val.
+          compare_ty: Compare ty.
+          unsigned: Whether to use unsigned semantics.
+        returns: 'Result of this operation: coerce subscript key for compare.'
         """
         if key_val.type == compare_ty:
             return key_val
@@ -2627,12 +2431,9 @@ class VisitorCore(StringIRMixin, BuilderVisitor):
         """
         title: Constant subscript key matches.
         parameters:
-          entry_key:
-            type: ir.Constant
-          key_val:
-            type: ir.Constant
-        returns:
-          type: bool
+          entry_key: Entry key.
+          key_val: Key val.
+        returns: 'Result of this operation: constant subscript key matches.'
         """
         compare_ty = self._subscript_compare_type(entry_key.type, key_val.type)
         lhs = cast(
@@ -2668,12 +2469,9 @@ class VisitorCore(StringIRMixin, BuilderVisitor):
         """
         title: Emit runtime subscript lookup.
         parameters:
-          dict_val:
-            type: ir.Constant
-          key_val:
-            type: ir.Value
-          unsigned:
-            type: bool
+          dict_val: Dict val.
+          key_val: Key val.
+          unsigned: Whether to use unsigned semantics.
         """
         key_type = dict_val.type.element.elements[0]
         compare_ty = self._subscript_compare_type(key_type, key_val.type)
@@ -2703,12 +2501,9 @@ class VisitorCore(StringIRMixin, BuilderVisitor):
         """
         title: Emit integer subscript switch.
         parameters:
-          dict_val:
-            type: ir.Constant
-          key_val:
-            type: ir.Value
-          compare_ty:
-            type: ir.Type
+          dict_val: Dict val.
+          key_val: Key val.
+          compare_ty: Compare ty.
         """
         builder = self._llvm.ir_builder
         function = builder.function
@@ -2756,12 +2551,9 @@ class VisitorCore(StringIRMixin, BuilderVisitor):
         """
         title: Emit float subscript select.
         parameters:
-          dict_val:
-            type: ir.Constant
-          key_val:
-            type: ir.Value
-          compare_ty:
-            type: ir.Type
+          dict_val: Dict val.
+          key_val: Key val.
+          compare_ty: Compare ty.
         """
         builder = self._llvm.ir_builder
         count = dict_val.type.count
@@ -2825,8 +2617,7 @@ class VisitorCore(StringIRMixin, BuilderVisitor):
     def _create_string_concat_function(self) -> ir.Function:
         """
         title: Create string concat function.
-        returns:
-          type: ir.Function
+        returns: Created string concat function.
         """
         func_name = "string_concat"
         if func_name in self._llvm.module.globals:
@@ -2843,8 +2634,7 @@ class VisitorCore(StringIRMixin, BuilderVisitor):
     def _create_string_length_function(self) -> ir.Function:
         """
         title: Create string length function.
-        returns:
-          type: ir.Function
+        returns: Created string length function.
         """
         func_name = "string_length"
         if func_name in self._llvm.module.globals:
@@ -2865,8 +2655,7 @@ class VisitorCore(StringIRMixin, BuilderVisitor):
     def _create_string_equals_function(self) -> ir.Function:
         """
         title: Create string equals function.
-        returns:
-          type: ir.Function
+        returns: Created string equals function.
         """
         func_name = "string_equals"
         if func_name in self._llvm.module.globals:
@@ -2887,8 +2676,7 @@ class VisitorCore(StringIRMixin, BuilderVisitor):
     def _create_string_substring_function(self) -> ir.Function:
         """
         title: Create string substring function.
-        returns:
-          type: ir.Function
+        returns: Created string substring function.
         """
         func_name = "string_substring"
         if func_name in self._llvm.module.globals:
@@ -2915,14 +2703,10 @@ class VisitorCore(StringIRMixin, BuilderVisitor):
         """
         title: Handle string concatenation.
         parameters:
-          node:
-            type: astx.AST
-          lhs:
-            type: ir.Value
-          rhs:
-            type: ir.Value
-        returns:
-          type: ir.Value
+          node: Syntax node to process.
+          lhs: Left operand.
+          rhs: Right operand.
+        returns: 'Result of this operation: handle string concatenation.'
         """
         strcat_func = self._create_strcat_inline()
         result = self._llvm.ir_builder.call(
@@ -2943,12 +2727,10 @@ class VisitorCore(StringIRMixin, BuilderVisitor):
         """
         title: Copy one static string into caller-owned heap storage.
         parameters:
-          node:
-            type: astx.AST
-          pointer:
-            type: ir.Value
-        returns:
-          type: ir.Value
+          node: Syntax node to process.
+          pointer: Pointer to the native storage.
+        returns: 'Result of this operation: copy one static string
+          into caller-owned heap storage.'
         """
         empty = cast(Any, self)._constant_c_string_pointer(
             "",
@@ -2959,8 +2741,7 @@ class VisitorCore(StringIRMixin, BuilderVisitor):
     def _create_strcat_inline(self) -> ir.Function:
         """
         title: Create strcat inline.
-        returns:
-          type: ir.Function
+        returns: Created strcat inline.
         """
         func_name = "strcat_inline"
         if func_name in self._llvm.module.globals:
@@ -3032,14 +2813,10 @@ class VisitorCore(StringIRMixin, BuilderVisitor):
         """
         title: Handle string comparison.
         parameters:
-          lhs:
-            type: ir.Value
-          rhs:
-            type: ir.Value
-          op:
-            type: str
-        returns:
-          type: ir.Value
+          lhs: Left operand.
+          rhs: Right operand.
+          op: Op.
+        returns: 'Result of this operation: handle string comparison.'
         """
         if op == "==":
             equals_func = self._create_string_equals_function()
@@ -3067,12 +2844,9 @@ class VisitorCore(StringIRMixin, BuilderVisitor):
         """
         title: Normalize int for printf.
         parameters:
-          value:
-            type: ir.Value
-          unsigned:
-            type: bool
-        returns:
-          type: tuple[ir.Value, str]
+          value: Value to process.
+          unsigned: Whether to use unsigned semantics.
+        returns: Normalized int for printf.
         """
         int64_width = 64
         if not is_int_type(value.type):
@@ -3095,8 +2869,7 @@ class VisitorCore(StringIRMixin, BuilderVisitor):
     def _create_malloc_decl(self) -> ir.Function:
         """
         title: Create malloc decl.
-        returns:
-          type: ir.Function
+        returns: Created malloc decl.
         """
         return self.require_runtime_symbol("libc", "malloc")
 
@@ -3109,14 +2882,10 @@ class VisitorCore(StringIRMixin, BuilderVisitor):
         """
         title: Snprintf heap.
         parameters:
-          node:
-            type: astx.AST
-          fmt_gv:
-            type: ir.GlobalVariable
-          args:
-            type: list[ir.Value]
-        returns:
-          type: ir.Value
+          node: Syntax node to process.
+          fmt_gv: Fmt gv.
+          args: Arguments supplied to the operation.
+        returns: 'Result of this operation: snprintf heap.'
         """
         snprintf = self._create_snprintf_decl()
         malloc = self._create_malloc_decl()
@@ -3187,8 +2956,7 @@ class VisitorCore(StringIRMixin, BuilderVisitor):
     def _create_snprintf_decl(self) -> ir.Function:
         """
         title: Create snprintf decl.
-        returns:
-          type: ir.Function
+        returns: Created snprintf decl.
         """
         return self.require_runtime_symbol("libc", "snprintf")
 
@@ -3196,10 +2964,8 @@ class VisitorCore(StringIRMixin, BuilderVisitor):
         """
         title: Get or create format global.
         parameters:
-          fmt:
-            type: str
-        returns:
-          type: ir.GlobalVariable
+          fmt: Fmt.
+        returns: Or create format global.
         """
         name = f"fmt_{abs(hash(fmt))}"
         if name in self._llvm.module.globals:

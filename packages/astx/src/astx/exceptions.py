@@ -29,16 +29,13 @@ from astx.tools.typing import typechecked
 class ThrowStmt(StatementType):
     """
     title: AST class for throw statements.
-    summary: >-
-      An absent exception models re-raising. An absent cause differs from an
-      explicit LiteralNone, which suppresses implicit diagnostic context.
+    summary: An absent exception models re-raising. An absent cause differs
+      from an explicit LiteralNone, which suppresses implicit diagnostic
+      context.
     attributes:
-      kind:
-        type: ASTKind
-      exception:
-        type: Optional[Expr]
-      cause:
-        type: Optional[Expr]
+      kind: Kind of value or operation.
+      exception: Exception being handled.
+      cause: Cause.
     """
 
     kind: ASTKind
@@ -57,14 +54,10 @@ class ThrowStmt(StatementType):
         """
         title: Initialize the instance.
         parameters:
-          exception:
-            type: Optional[Expr]
-          parent:
-            type: Optional[ASTNodes]
-          loc:
-            type: SourceLocation
-          cause:
-            type: Optional[Expr]
+          exception: Exception being handled.
+          parent: Parent node or enclosing scope.
+          loc: Source coordinates associated with the node.
+          cause: Cause.
         """
         super().__init__(loc=loc, parent=parent)
         self.exception = exception
@@ -74,8 +67,7 @@ class ThrowStmt(StatementType):
     def __str__(self) -> str:
         """
         title: Return a string that represents the object.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         throw_str = (
             f"ThrowStmt[{self.exception}]" if self.exception else "ThrowStmt"
@@ -86,10 +78,8 @@ class ThrowStmt(StatementType):
         """
         title: Return the AST structure of the object.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         key = f"THROW-STMT[{id(self)}]" if simplified else "THROW-STMT"
         value: DictDataTypesStruct = {}
@@ -105,19 +95,14 @@ class ThrowStmt(StatementType):
 class CatchHandlerStmt(StatementType):
     """
     title: AST class for catch statements.
-    summary: >-
-      None means an untyped handler; an empty collection stays empty for
-      semantic validation. Expressions allow qualified nominal references.
+    summary: None means an untyped handler; an empty collection stays empty
+      for semantic validation. Expressions allow qualified nominal references.
       Every supplied collection item is validated, including lazy iterables.
     attributes:
-      kind:
-        type: ASTKind
-      body:
-        type: Block[AST]
-      name:
-        type: Optional[Identifier]
-      types:
-        type: Optional[ASTNodes[Expr]]
+      kind: Kind of value or operation.
+      body: Statements forming the body.
+      name: Name identifying this declaration.
+      types: Types.
     """
 
     kind: ASTKind
@@ -137,16 +122,11 @@ class CatchHandlerStmt(StatementType):
         """
         title: Initialize the instance.
         parameters:
-          body:
-            type: Block[AST]
-          name:
-            type: Optional[Identifier]
-          types:
-            type: Optional[Iterable[Expr] | ASTNodes[Expr]]
-          parent:
-            type: Optional[ASTNodes]
-          loc:
-            type: SourceLocation
+          body: Statements forming the body.
+          name: Name identifying the declaration or operation.
+          types: Types.
+          parent: Parent node or enclosing scope.
+          loc: Source coordinates associated with the node.
         """
         super().__init__(loc=loc, parent=parent)
         self.body = body
@@ -172,8 +152,7 @@ class CatchHandlerStmt(StatementType):
     def __str__(self) -> str:
         """
         title: Return a string that represents the object.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         return f"CatchHandlerStmt[{self.name}]"
 
@@ -181,10 +160,8 @@ class CatchHandlerStmt(StatementType):
         """
         title: Return the AST structure of the object.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         key = (
             f"CATCH-HANDLER-STMT[{id(self)}]"
@@ -214,21 +191,15 @@ class CatchHandlerStmt(StatementType):
 class ExceptionHandlerStmt(StatementType):
     """
     title: AST class for try statements.
-    summary: >-
-      Preserve protected, handler, normal-completion, and finalization suites
-      as separate children. An absent else suite differs from an empty block.
-      Clause validity and execution support belong to semantic analysis.
+    summary: Preserve protected, handler, normal-completion, and finalization
+      suites as separate children. An absent else suite differs from an empty
+      block. Clause validity and execution support belong to semantic analysis.
     attributes:
-      kind:
-        type: ASTKind
-      body:
-        type: Block[AST]
-      handlers:
-        type: ASTNodes[CatchHandlerStmt]
-      finally_handler:
-        type: Optional[FinallyHandlerStmt]
-      else_body:
-        type: Optional[Block[AST]]
+      kind: Kind of value or operation.
+      body: Statements forming the body.
+      handlers: Handlers.
+      finally_handler: Finally handler.
+      else_body: Else body.
     """
 
     kind: ASTKind
@@ -251,18 +222,12 @@ class ExceptionHandlerStmt(StatementType):
         """
         title: Initialize the instance.
         parameters:
-          body:
-            type: Block[AST]
-          handlers:
-            type: Iterable[CatchHandlerStmt] | ASTNodes[CatchHandlerStmt]
-          finally_handler:
-            type: Optional[FinallyHandlerStmt]
-          parent:
-            type: Optional[ASTNodes]
-          loc:
-            type: SourceLocation
-          else_body:
-            type: Optional[Block[AST]]
+          body: Statements forming the body.
+          handlers: Handlers.
+          finally_handler: Finally handler.
+          parent: Parent node or enclosing scope.
+          loc: Source coordinates associated with the node.
+          else_body: Else body.
         """
         super().__init__(loc=loc, parent=parent)
         self.body = body
@@ -287,8 +252,7 @@ class ExceptionHandlerStmt(StatementType):
     def __str__(self) -> str:
         """
         title: Return a string that represents the object.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         return "ExceptionHandlerStmt"
 
@@ -296,10 +260,8 @@ class ExceptionHandlerStmt(StatementType):
         """
         title: Return the AST structure of the object.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         key = (
             f"EXCEPTION-HANDLER-STMT[{id(self)}]"
@@ -335,10 +297,8 @@ class FinallyHandlerStmt(StatementType):
     """
     title: AST class for finally statements.
     attributes:
-      kind:
-        type: ASTKind
-      body:
-        type: Block[AST]
+      kind: Kind of value or operation.
+      body: Statements forming the body.
     """
 
     kind: ASTKind
@@ -354,12 +314,9 @@ class FinallyHandlerStmt(StatementType):
         """
         title: Initialize the instance.
         parameters:
-          body:
-            type: Block[AST]
-          parent:
-            type: Optional[ASTNodes]
-          loc:
-            type: SourceLocation
+          body: Statements forming the body.
+          parent: Parent node or enclosing scope.
+          loc: Source coordinates associated with the node.
         """
         super().__init__(loc=loc, parent=parent)
         self.body = body
@@ -368,8 +325,7 @@ class FinallyHandlerStmt(StatementType):
     def __str__(self) -> str:
         """
         title: Return a string that represents the object.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         return "FinallyStmt"
 
@@ -377,10 +333,8 @@ class FinallyHandlerStmt(StatementType):
         """
         title: Return the AST structure of the object.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         key = f"FINALLY-STMT[{id(self)}]" if simplified else "FINALLY-STMT"
         value: DictDataTypesStruct = {"body": self.body.get_struct(simplified)}

@@ -1,6 +1,11 @@
 # ruff: noqa: RUF001
 """
 title: AIX Unicode lexer.
+attributes:
+  EOF_VALUE: Eof value.
+  PRIMITIVE_TYPES: Primitive types.
+  _RESERVED_OPERATORS: Reserved operators.
+  _SYMBOL_TOKENS: Symbol tokens.
 """
 
 from __future__ import annotations
@@ -94,12 +99,9 @@ class Token:
     """
     title: Store one token kind, value, and source location.
     attributes:
-      kind:
-        type: TokenKind
-      value:
-        type: Any
-      location:
-        type: SourceLocation
+      kind: Kind of value or operation.
+      value: Stored value.
+      location: Source location attached to this record.
     """
 
     kind: TokenKind
@@ -117,24 +119,21 @@ class Token:
     def __hash__(self) -> int:
         """
         title: Return a hash for this token.
-        returns:
-          type: int
+        returns: Hash of this instance.
         """
         return hash((self.kind, self.value))
 
     def get_name(self) -> str:
         """
         title: Return one user-facing token name.
-        returns:
-          type: str
+        returns: One user-facing token name.
         """
         return self.kind.name.removesuffix("_")
 
     def get_display_value(self) -> str:
         """
         title: Return a compact display value for token printing.
-        returns:
-          type: str
+        returns: A compact display value for token printing.
         """
         if self.kind in {
             TokenKind.identifier,
@@ -156,10 +155,8 @@ class Token:
         """
         title: Compare tokens by kind and value.
         parameters:
-          other:
-            type: object
-        returns:
-          type: bool
+          other: Other value participating in the operation.
+        returns: Whether the values are equal.
         """
         if not isinstance(other, Token):
             return False
@@ -168,8 +165,7 @@ class Token:
     def __str__(self) -> str:
         """
         title: Return one human-readable token representation.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         return f"{self.get_name()}{self.get_display_value()}"
 
@@ -178,12 +174,9 @@ class TokenList:
     """
     title: Simple token stream consumed by the parser.
     attributes:
-      tokens:
-        type: list[Token]
-      position:
-        type: int
-      cur_tok:
-        type: Token
+      tokens: Tokens in source order.
+      position: Position.
+      cur_tok: Cur tok.
     """
 
     tokens: list[Token]
@@ -194,8 +187,7 @@ class TokenList:
         """
         title: Initialize the token stream.
         parameters:
-          tokens:
-            type: list[Token]
+          tokens: Tokens in source order.
         """
         self.tokens = tokens
         self.position = 0
@@ -204,8 +196,7 @@ class TokenList:
     def __iter__(self) -> TokenList:
         """
         title: Reset iteration and return this stream.
-        returns:
-          type: TokenList
+        returns: Iterator over the contained items.
         """
         self.position = 0
         return self
@@ -213,8 +204,7 @@ class TokenList:
     def __next__(self) -> Token:
         """
         title: Return the next token for iteration.
-        returns:
-          type: Token
+        returns: Next item from the iterator.
         """
         if self.position == len(self.tokens):
             raise StopIteration
@@ -223,8 +213,7 @@ class TokenList:
     def get_token(self) -> Token:
         """
         title: Return the next token and advance.
-        returns:
-          type: Token
+        returns: The next token and advance.
         """
         token = self.tokens[self.position]
         self.position += 1
@@ -233,8 +222,8 @@ class TokenList:
     def get_next_token(self) -> Token:
         """
         title: Advance parser cursor and return the current token.
-        returns:
-          type: Token
+        returns: 'Result of this operation: advance parser cursor and return
+          the current token.'
         """
         self.cur_tok = self.get_token()
         return self.cur_tok
@@ -244,20 +233,17 @@ class LexerError(Exception):
     """
     title: AIX-specific lexer error with source location.
     attributes:
-      location:
-        type: SourceLocation
+      location: Source location attached to this record.
     """
 
     location: SourceLocation
 
-    def __init__(self, message: str, location: SourceLocation):
+    def __init__(self, message: str, location: SourceLocation) -> None:
         """
         title: Initialize a lexer error.
         parameters:
-          message:
-            type: str
-          location:
-            type: SourceLocation
+          message: Diagnostic or output message.
+          location: Source coordinates associated with the operation.
         """
         super().__init__(
             "AIX lexer error at line "
@@ -347,8 +333,7 @@ class Lexer:
     """
     title: Tokenize AIX source text.
     attributes:
-      source:
-        type: str | None
+      source: Source input to process.
     """
 
     source: str | None
@@ -357,8 +342,7 @@ class Lexer:
         """
         title: Initialize the lexer.
         parameters:
-          source:
-            type: str | None
+          source: Source input to process.
         """
         self.source = source
 
@@ -370,8 +354,8 @@ class Lexer:
     def lex(self) -> TokenList:
         """
         title: Tokenize configured source and return a token stream.
-        returns:
-          type: TokenList
+        returns: 'Result of this operation: tokenize configured source and
+          return a token stream.'
         """
         source = (
             self.source if self.source is not None else AixIO.buffer.buffer
@@ -381,8 +365,8 @@ class Lexer:
     def tokenize(self) -> TokenList:
         """
         title: Alias for lex used by tests and callers.
-        returns:
-          type: TokenList
+        returns: 'Result of this operation: alias for lex used by tests and
+          callers.'
         """
         return self.lex()
 
@@ -391,10 +375,9 @@ class Lexer:
         title: Tokenize the complete source buffer.
         visibility: internal
         parameters:
-          source:
-            type: str
-        returns:
-          type: TokenList
+          source: Source input to process.
+        returns: 'Result of this operation: tokenize the complete source
+          buffer.'
         """
         tokens: list[Token] = []
         index = 0
@@ -405,8 +388,7 @@ class Lexer:
             """
             title: Return the current source coordinates.
             visibility: internal
-            returns:
-              type: SourceLocation
+            returns: The current source coordinates.
             """
             return SourceLocation(line, col)
 
@@ -414,8 +396,8 @@ class Lexer:
             """
             title: Advance source coordinates across consumed text.
             visibility: internal
-            returns:
-              type: str
+            returns: 'Result of this operation: advance source coordinates
+              across consumed text.'
             """
             nonlocal index, line, col
             char = source[index]
@@ -530,12 +512,10 @@ class Lexer:
         title: Match a reserved symbol at the current source offset.
         visibility: internal
         parameters:
-          source:
-            type: str
-          index:
-            type: int
-        returns:
-          type: tuple[str, TokenKind] | None
+          source: Source input to process.
+          index: Index selecting the item.
+        returns: 'Result of this operation: match a reserved symbol at the
+          current source offset.'
         """
         for symbol, kind in sorted(
             _SYMBOL_TOKENS.items(), key=lambda item: len(item[0]), reverse=True
@@ -557,12 +537,9 @@ class Lexer:
         title: Read a numeric literal from the source buffer.
         visibility: internal
         parameters:
-          source:
-            type: str
-          start:
-            type: int
-        returns:
-          type: tuple[int | float, TokenKind, int]
+          source: Source input to process.
+          start: Starting position.
+        returns: Read a numeric literal from the source buffer.
         """
         index = start
         dots = 0
@@ -593,14 +570,10 @@ class Lexer:
         title: Read a quoted string and reject unterminated input.
         visibility: internal
         parameters:
-          source:
-            type: str
-          start:
-            type: int
-          loc:
-            type: SourceLocation
-        returns:
-          type: tuple[Token, int]
+          source: Source input to process.
+          start: Starting position.
+          loc: Source coordinates associated with the node.
+        returns: Read a quoted string and reject unterminated input.
         """
         quote = source[start]
         index = start + 1
@@ -634,10 +607,8 @@ class Lexer:
         title: Check whether a character can start an identifier.
         visibility: internal
         parameters:
-          char:
-            type: str
-        returns:
-          type: bool
+          char: Char.
+        returns: Whether a character can start an identifier.
         """
         return char == "_" or char.isalpha()
 
@@ -646,9 +617,7 @@ class Lexer:
         title: Check whether a character can continue an identifier.
         visibility: internal
         parameters:
-          char:
-            type: str
-        returns:
-          type: bool
+          char: Char.
+        returns: Whether a character can continue an identifier.
         """
         return char == "_" or char.isalpha() or char.isdigit()

@@ -49,16 +49,11 @@ def test_unary_op_increment_decrement(
     """
     title: Test ASTx UnaryOp for increment and decrement operations.
     parameters:
-      action:
-        type: str
-      expected_file:
-        type: str
-      builder_class:
-        type: type[Builder]
-      int_type:
-        type: type
-      literal_type:
-        type: type
+      action: Action.
+      expected_file: File containing expected.
+      builder_class: Builder implementation under test.
+      int_type: Type of int.
+      literal_type: Literal type used by this case.
     """
     builder = builder_class()
     module = builder.module()
@@ -122,12 +117,9 @@ def test_unary_op_increment_decrement_float(
     """
     title: Test ASTx UnaryOp increment and decrement for float types.
     parameters:
-      builder_class:
-        type: type[Builder]
-      float_type:
-        type: type
-      literal_type:
-        type: type
+      builder_class: Builder implementation under test.
+      float_type: Type of float.
+      literal_type: Literal type used by this case.
     """
     builder = builder_class()
     module = builder.module()
@@ -188,12 +180,9 @@ def test_unary_op_logical_not_int_rejected(
     """
     title: Logical NOT should reject integer operands.
     parameters:
-      int_type:
-        type: type
-      literal_type:
-        type: type
-      value:
-        type: int
+      int_type: Type of int.
+      literal_type: Literal type used by this case.
+      value: Value to process.
     """
     del int_type
     expr = astx.UnaryOp(op_code="!", operand=literal_type(value))
@@ -226,12 +215,9 @@ def test_unary_op_logical_not_boolean(
     """
     title: Test logical NOT (!) for boolean type.
     parameters:
-      builder_class:
-        type: type[Builder]
-      value:
-        type: bool
-      expected_output:
-        type: str
+      builder_class: Builder implementation under test.
+      value: Value to process.
+      expected_output: Expected output.
     """
     builder = builder_class()
     module = builder.module()

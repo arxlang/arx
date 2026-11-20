@@ -1,5 +1,9 @@
 """
 title: Top-level package for ArxPy.
+attributes:
+  __author__: Package author attribution.
+  __email__: Package author contact address.
+  __version__: Installed package version.
 """
 
 from importlib import metadata as importlib_metadata
@@ -31,8 +35,7 @@ DISTRIBUTION_NAME = "arxpy"
 def get_version() -> str:
     """
     title: Return the program version.
-    returns:
-      type: str
+    returns: The program version.
     """
     try:
         return importlib_metadata.version(DISTRIBUTION_NAME)

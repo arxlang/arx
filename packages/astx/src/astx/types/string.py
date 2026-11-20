@@ -39,7 +39,7 @@ class UTF8Char(String):
 class Bytes(AnyType):
     """
     title: Immutable octets, distinct from Unicode and Arrow binary.
-    summary: >-
-      Elements are UInt8 and lengths count bytes, including embedded NUL.
-      Storage, checked construction, and ownership are semantic-host contracts.
+    summary: Elements are UInt8 and lengths count bytes, including embedded
+      NUL. Storage, checked construction, and ownership are semantic-host
+      contracts.
     """

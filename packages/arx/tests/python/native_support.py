@@ -20,33 +20,27 @@ from public import private
 class NativeObjectCache:
     """
     title: Reuse immutable runtime objects within one test process.
-    summary: >-
-      Only sources under source_root with simple runtime flags are cached. Each
-      lookup preprocesses all headers and keys the result by compiler identity,
-      flags, working directory and environment. The installed toolchain must
-      remain unchanged during a session. Unusual flags and preprocessing
-      failures take the original compiler path. Fresh build directories prevent
-      failed or concurrent builds from publishing partial objects; no entries
-      survive into another test session.
+    summary: Only sources under source_root with simple runtime flags
+      are cached. Each lookup preprocesses all headers and keys the
+      result by compiler identity, flags, working directory and environment.
+      The installed toolchain must remain unchanged during a session.
+      Unusual flags and preprocessing failures take the original
+      compiler path. Fresh build directories prevent failed or concurrent
+      builds from publishing partial objects; no entries survive
+      into another test session.
     attributes:
-      directory:
-        type: Path
-      source_root:
-        type: Path
-      compile_source:
-        type: Callable[[NativeArtifact, Path, str], Path]
-      objects:
-        type: dict[str, Path]
+      directory: Directory.
+      source_root: Source root.
+      compile_source: Compile source.
+      objects: Objects.
     """
 
     def __init__(self, directory: Path, source_root: Path) -> None:
         """
         title: Capture the original compiler and an isolated cache directory.
         parameters:
-          directory:
-            type: Path
-          source_root:
-            type: Path
+          directory: Directory.
+          source_root: Source root.
         """
         self.directory: Path = directory
         self.source_root: Path = source_root.resolve()
@@ -61,14 +55,11 @@ class NativeObjectCache:
         """
         title: Compile once for each complete preprocessed runtime input.
         parameters:
-          artifact:
-            type: NativeArtifact
-          build_dir:
-            type: Path
-          compiler_binary:
-            type: str
-        returns:
-          type: Path
+          artifact: Artifact.
+          build_dir: Build dir.
+          compiler_binary: Compiler binary.
+        returns: 'Result of this operation: compile once for each complete
+          preprocessed runtime input.'
         """
         compiler = shutil.which(compiler_binary)
         if (

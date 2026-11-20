@@ -1,8 +1,7 @@
 """
 title: ASTx public FFI AST types.
-summary: >-
-  Provide the minimal pointer and opaque-handle type nodes that hosts can use
-  when targeting a stable public FFI layer.
+summary: Provide the minimal pointer and opaque-handle type nodes that hosts
+  can use when targeting a stable public FFI layer.
 """
 
 from __future__ import annotations
@@ -20,8 +19,7 @@ class PointerType(AnyType):
     """
     title: Stable public FFI pointer type.
     attributes:
-      pointee_type:
-        type: astx.DataType | None
+      pointee_type: Type of pointee.
     """
 
     pointee_type: astx.DataType | None
@@ -30,8 +28,7 @@ class PointerType(AnyType):
         """
         title: Initialize one pointer type.
         parameters:
-          pointee_type:
-            type: astx.DataType | None
+          pointee_type: Type of pointee.
         """
         super().__init__()
         self.pointee_type = pointee_type
@@ -39,8 +36,7 @@ class PointerType(AnyType):
     def __str__(self) -> str:
         """
         title: Render one pointer type.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         if self.pointee_type is None:
             return "PointerType"
@@ -50,10 +46,8 @@ class PointerType(AnyType):
         """
         title: Build one repr structure for a pointer type.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: astx.base.ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         key = "POINTER-TYPE"
         value = (
@@ -73,8 +67,7 @@ class OpaqueHandleType(AnyType):
     """
     title: Stable public FFI opaque-handle type.
     attributes:
-      handle_name:
-        type: str
+      handle_name: Name of handle.
     """
 
     handle_name: str
@@ -83,8 +76,7 @@ class OpaqueHandleType(AnyType):
         """
         title: Initialize one opaque-handle type.
         parameters:
-          handle_name:
-            type: str
+          handle_name: Name of handle.
         """
         super().__init__()
         self.handle_name = handle_name
@@ -92,8 +84,7 @@ class OpaqueHandleType(AnyType):
     def __str__(self) -> str:
         """
         title: Render one opaque-handle type.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         return f"OpaqueHandleType[{self.handle_name}]"
 
@@ -101,10 +92,8 @@ class OpaqueHandleType(AnyType):
         """
         title: Build one repr structure for an opaque-handle type.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: astx.base.ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         return self._prepare_struct(
             f"OPAQUE-HANDLE[{self.handle_name}]",

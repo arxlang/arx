@@ -60,7 +60,7 @@ makim = "1.25.0"
 jupyterlab = ">=4.0.7"
 nbmake = ">=1.5.3"
 pytest-xdist = "^3.8.0"
-douki = "0.14.0"
+douki = ">=0.14.0"
 
 [tool.pytest.ini_options]
 testpaths = [

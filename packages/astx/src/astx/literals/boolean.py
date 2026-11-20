@@ -21,12 +21,9 @@ class LiteralBoolean(Literal):
     """
     title: LiteralBoolean data type class.
     attributes:
-      type_:
-        type: Boolean
-      loc:
-        type: SourceLocation
-      value:
-        type: bool
+      type_: Type associated with this expression.
+      loc: Source coordinates attached to this node.
+      value: Stored value.
     """
 
     type_: Boolean
@@ -40,10 +37,8 @@ class LiteralBoolean(Literal):
         """
         title: Initialize LiteralBoolean.
         parameters:
-          value:
-            type: bool
-          loc:
-            type: SourceLocation
+          value: Value to process.
+          loc: Source coordinates associated with the node.
         """
         super().__init__(loc)
         self.value = value

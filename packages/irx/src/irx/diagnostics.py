@@ -1,8 +1,8 @@
 """
 title: Shared diagnostics and source-location helpers.
-summary: >-
-  Provide one small diagnostics foundation that semantic analysis, lowering,
-  native compilation, linking, and runtime feature resolution can all share.
+summary: Provide one small diagnostics foundation that semantic analysis,
+  lowering, native compilation, linking, and runtime feature resolution can
+  all share.
 """
 
 from __future__ import annotations
@@ -29,8 +29,7 @@ class DiagnosticCodeFormatter:
     """
     title: Render logical diagnostic identifiers with one configurable prefix.
     attributes:
-      prefix:
-        type: str
+      prefix: Prefix.
     """
 
     prefix: str = DEFAULT_DIAGNOSTIC_CODE_PREFIX
@@ -48,10 +47,8 @@ class DiagnosticCodeFormatter:
         """
         title: Format one logical diagnostic identifier.
         parameters:
-          code:
-            type: str | None
-        returns:
-          type: str | None
+          code: Source code or diagnostic identifier.
+        returns: Formatted one logical diagnostic identifier.
         """
         if code is None:
             return None
@@ -71,8 +68,7 @@ _DIAGNOSTIC_CODE_FORMATTER = DiagnosticCodeFormatter()
 def get_diagnostic_code_formatter() -> DiagnosticCodeFormatter:
     """
     title: Return the active diagnostic-code formatter.
-    returns:
-      type: DiagnosticCodeFormatter
+    returns: The active diagnostic-code formatter.
     """
     return _DIAGNOSTIC_CODE_FORMATTER
 
@@ -85,10 +81,9 @@ def set_diagnostic_code_formatter(
     """
     title: Replace the process-wide diagnostic-code formatter.
     parameters:
-      formatter:
-        type: DiagnosticCodeFormatter
-    returns:
-      type: DiagnosticCodeFormatter
+      formatter: Formatter.
+    returns: 'Result of this operation: replace the process-wide
+      diagnostic-code formatter.'
     """
     globals()["_DIAGNOSTIC_CODE_FORMATTER"] = formatter
     return formatter
@@ -100,10 +95,9 @@ def set_diagnostic_code_prefix(prefix: str) -> DiagnosticCodeFormatter:
     """
     title: Configure the process-wide diagnostic-code prefix.
     parameters:
-      prefix:
-        type: str
-    returns:
-      type: DiagnosticCodeFormatter
+      prefix: Prefix.
+    returns: 'Result of this operation: configure the process-wide
+      diagnostic-code prefix.'
     """
     return set_diagnostic_code_formatter(DiagnosticCodeFormatter(prefix))
 
@@ -118,12 +112,10 @@ def format_diagnostic_code(
     """
     title: Render one logical diagnostic identifier.
     parameters:
-      code:
-        type: str | None
-      code_formatter:
-        type: DiagnosticCodeFormatter | None
-    returns:
-      type: str | None
+      code: Source code or diagnostic identifier.
+      code_formatter: Code formatter.
+    returns: 'Result of this operation: render one logical diagnostic
+      identifier.'
     """
     formatter = code_formatter or get_diagnostic_code_formatter()
     return formatter.format(code)
@@ -136,14 +128,10 @@ class SourceLocation:
     """
     title: One best-effort source location.
     attributes:
-      line:
-        type: int | None
-      col:
-        type: int | None
-      end_line:
-        type: int | None
-      end_col:
-        type: int | None
+      line: Source line coordinate.
+      col: Source column coordinate.
+      end_line: End line.
+      end_col: End col.
     """
 
     line: int | None = None
@@ -154,16 +142,15 @@ class SourceLocation:
     def is_known(self) -> bool:
         """
         title: Return whether any source position is known.
-        returns:
-          type: bool
+        returns: Whether any source position is known.
         """
         return self.line is not None or self.col is not None
 
     def format(self) -> str:
         """
         title: Render one location without module identity.
-        returns:
-          type: str
+        returns: 'Result of this operation: render one location without
+          module identity.'
         """
         if self.line is None:
             return ""
@@ -177,10 +164,8 @@ def _non_negative_int(value: object) -> int | None:
     """
     title: Return one non-negative integer when present.
     parameters:
-      value:
-        type: object
-    returns:
-      type: int | None
+      value: Value to process.
+    returns: One non-negative integer when present.
     """
     if isinstance(value, int) and value >= 0:
         return value
@@ -193,10 +178,8 @@ def source_location_from_loc(loc: object | None) -> SourceLocation | None:
     """
     title: Convert one arbitrary location-like object to SourceLocation.
     parameters:
-      loc:
-        type: object | None
-    returns:
-      type: SourceLocation | None
+      loc: Source coordinates associated with the node.
+    returns: Converted one arbitrary location-like object to SourceLocation.
     """
     if loc is None:
         return None
@@ -223,10 +206,8 @@ def get_node_source_location(node: astx.AST | None) -> SourceLocation | None:
     """
     title: Return one AST node's best-effort source location.
     parameters:
-      node:
-        type: astx.AST | None
-    returns:
-      type: SourceLocation | None
+      node: Syntax node to process.
+    returns: One AST node's best-effort source location.
     """
     if node is None:
         return None
@@ -238,10 +219,8 @@ def _string_or_none(value: object) -> str | None:
     """
     title: Return one non-empty string when present.
     parameters:
-      value:
-        type: object
-    returns:
-      type: str | None
+      value: Value to process.
+    returns: One non-empty string when present.
     """
     if isinstance(value, str) and value:
         return value
@@ -254,10 +233,8 @@ def get_node_module_key(node: astx.AST | None) -> str | None:
     """
     title: Return one AST node's best-effort module attribution.
     parameters:
-      node:
-        type: astx.AST | None
-    returns:
-      type: str | None
+      node: Syntax node to process.
+    returns: One AST node's best-effort module attribution.
     """
     if node is None:
         return None
@@ -311,12 +288,9 @@ def format_source_location(
     """
     title: Format one module-aware source location.
     parameters:
-      module_key:
-        type: str | None
-      source:
-        type: SourceLocation | None
-    returns:
-      type: str
+      module_key: Canonical module identity.
+      source: Source input to process.
+    returns: Formatted one module-aware source location.
     """
     location_text = source.format() if source is not None else ""
     if module_key and location_text:
@@ -333,14 +307,10 @@ class DiagnosticRelatedInformation:
     """
     title: One secondary diagnostic location or note.
     attributes:
-      message:
-        type: str
-      node:
-        type: astx.AST | None
-      module_key:
-        type: str | None
-      source:
-        type: SourceLocation | None
+      message: Diagnostic message.
+      node: Syntax node to process.
+      module_key: Canonical module identity.
+      source: Source input to process.
     """
 
     message: str
@@ -351,16 +321,14 @@ class DiagnosticRelatedInformation:
     def resolved_source(self) -> SourceLocation | None:
         """
         title: Return the related entry's source location.
-        returns:
-          type: SourceLocation | None
+        returns: The related entry's source location.
         """
         return self.source or get_node_source_location(self.node)
 
     def resolved_module_key(self) -> str | None:
         """
         title: Return the related entry's module attribution.
-        returns:
-          type: str | None
+        returns: The related entry's module attribution.
         """
         return self.module_key or get_node_module_key(self.node)
 
@@ -372,28 +340,17 @@ class Diagnostic:
     """
     title: One structured diagnostic record.
     attributes:
-      message:
-        type: str
-      node:
-        type: astx.AST | None
-      code:
-        type: str | None
-      severity:
-        type: str
-      module_key:
-        type: str | None
-      phase:
-        type: str
-      source:
-        type: SourceLocation | None
-      notes:
-        type: tuple[str, Ellipsis]
-      hint:
-        type: str | None
-      cause:
-        type: Exception | None
-      related:
-        type: tuple[DiagnosticRelatedInformation, Ellipsis]
+      message: Diagnostic message.
+      node: Syntax node to process.
+      code: Stable diagnostic identifier.
+      severity: Severity.
+      module_key: Canonical module identity.
+      phase: Phase.
+      source: Source input to process.
+      notes: Notes.
+      hint: Hint.
+      cause: Cause.
+      related: Related.
     """
 
     message: str
@@ -411,16 +368,14 @@ class Diagnostic:
     def resolved_source(self) -> SourceLocation | None:
         """
         title: Return the diagnostic's best-effort source location.
-        returns:
-          type: SourceLocation | None
+        returns: The diagnostic's best-effort source location.
         """
         return self.source or get_node_source_location(self.node)
 
     def resolved_module_key(self) -> str | None:
         """
         title: Return the diagnostic's best-effort module attribution.
-        returns:
-          type: str | None
+        returns: The diagnostic's best-effort module attribution.
         """
         return self.module_key or get_node_module_key(self.node)
 
@@ -432,10 +387,8 @@ class Diagnostic:
         """
         title: Return the final rendered diagnostic code.
         parameters:
-          code_formatter:
-            type: DiagnosticCodeFormatter | None
-        returns:
-          type: str | None
+          code_formatter: Code formatter.
+        returns: The final rendered diagnostic code.
         """
         return format_diagnostic_code(
             self.code,
@@ -450,10 +403,8 @@ class Diagnostic:
         """
         title: Format the diagnostic for human display.
         parameters:
-          code_formatter:
-            type: DiagnosticCodeFormatter | None
-        returns:
-          type: str
+          code_formatter: Code formatter.
+        returns: Formatted the diagnostic for human display.
         """
         prefix = format_source_location(
             self.resolved_module_key(),
@@ -499,10 +450,8 @@ class DiagnosticBag:
     """
     title: Collect diagnostics across one semantic-analysis attempt.
     attributes:
-      diagnostics:
-        type: list[Diagnostic]
-      default_module_key:
-        type: str | None
+      diagnostics: Collected structured diagnostics.
+      default_module_key: Default module key.
     """
 
     diagnostics: list[Diagnostic]
@@ -533,28 +482,17 @@ class DiagnosticBag:
         """
         title: Add one diagnostic to the bag.
         parameters:
-          message:
-            type: str
-          node:
-            type: astx.AST | None
-          code:
-            type: str | None
-          severity:
-            type: str
-          module_key:
-            type: str | None
-          phase:
-            type: str
-          source:
-            type: SourceLocation | None
-          notes:
-            type: Iterable[str]
-          hint:
-            type: str | None
-          cause:
-            type: Exception | None
-          related:
-            type: Iterable[DiagnosticRelatedInformation]
+          message: Diagnostic or output message.
+          node: Syntax node to process.
+          code: Source code or diagnostic identifier.
+          severity: Severity.
+          module_key: Canonical module identity.
+          phase: Phase.
+          source: Source input to process.
+          notes: Notes.
+          hint: Hint.
+          cause: Cause.
+          related: Related.
         """
         self.diagnostics.append(
             Diagnostic(
@@ -576,16 +514,14 @@ class DiagnosticBag:
         """
         title: Extend the bag with additional diagnostics.
         parameters:
-          diagnostics:
-            type: Iterable[Diagnostic]
+          diagnostics: Collected structured diagnostics.
         """
         self.diagnostics.extend(diagnostics)
 
     def has_errors(self) -> bool:
         """
         title: Return True when the bag contains diagnostics.
-        returns:
-          type: bool
+        returns: True when the bag contains diagnostics.
         """
         return bool(self.diagnostics)
 
@@ -597,10 +533,8 @@ class DiagnosticBag:
         """
         title: Format the whole bag.
         parameters:
-          code_formatter:
-            type: DiagnosticCodeFormatter | None
-        returns:
-          type: str
+          code_formatter: Code formatter.
+        returns: Formatted the whole bag.
         """
         return "\n".join(
             diagnostic.format(code_formatter=code_formatter)
@@ -621,10 +555,8 @@ class IRxDiagnosticError(Exception):
     """
     title: Raised when one non-semantic compiler phase emits a diagnostic.
     attributes:
-      diagnostic:
-        type: Diagnostic
-      code_formatter:
-        type: DiagnosticCodeFormatter
+      diagnostic: Structured diagnostic to inspect or report.
+      code_formatter: Code formatter.
     """
 
     diagnostic: Diagnostic
@@ -639,10 +571,8 @@ class IRxDiagnosticError(Exception):
         """
         title: Initialize IRxDiagnosticError.
         parameters:
-          diagnostic:
-            type: Diagnostic
-          code_formatter:
-            type: DiagnosticCodeFormatter | None
+          diagnostic: Structured diagnostic to inspect or report.
+          code_formatter: Code formatter.
         """
         self.diagnostic = diagnostic
         self.code_formatter = code_formatter or get_diagnostic_code_formatter()
@@ -651,8 +581,7 @@ class IRxDiagnosticError(Exception):
     def format(self) -> str:
         """
         title: Return the formatted diagnostic message.
-        returns:
-          type: str
+        returns: The formatted diagnostic message.
         """
         return self.diagnostic.format(code_formatter=self.code_formatter)
 
@@ -663,10 +592,8 @@ class LoweringError(IRxDiagnosticError):
     """
     title: Raised when lowering fails with one structured diagnostic.
     attributes:
-      diagnostic:
-        type: Diagnostic
-      code_formatter:
-        type: DiagnosticCodeFormatter
+      diagnostic: Structured diagnostic to inspect or report.
+      code_formatter: Code formatter.
     """
 
 
@@ -676,10 +603,8 @@ class NativeCompileError(IRxDiagnosticError):
     """
     title: Raised when native artifact compilation fails.
     attributes:
-      diagnostic:
-        type: Diagnostic
-      code_formatter:
-        type: DiagnosticCodeFormatter
+      diagnostic: Structured diagnostic to inspect or report.
+      code_formatter: Code formatter.
     """
 
 
@@ -689,10 +614,8 @@ class LinkingError(IRxDiagnosticError):
     """
     title: Raised when final executable linking fails.
     attributes:
-      diagnostic:
-        type: Diagnostic
-      code_formatter:
-        type: DiagnosticCodeFormatter
+      diagnostic: Structured diagnostic to inspect or report.
+      code_formatter: Code formatter.
     """
 
 
@@ -702,10 +625,8 @@ class RuntimeFeatureError(IRxDiagnosticError):
     """
     title: Raised when runtime feature activation or symbol resolution fails.
     attributes:
-      diagnostic:
-        type: Diagnostic
-      code_formatter:
-        type: DiagnosticCodeFormatter
+      diagnostic: Structured diagnostic to inspect or report.
+      code_formatter: Code formatter.
     """
 
 
@@ -715,10 +636,8 @@ class SemanticError(Exception):
     """
     title: Raised when semantic analysis fails.
     attributes:
-      diagnostics:
-        type: DiagnosticBag
-      code_formatter:
-        type: DiagnosticCodeFormatter
+      diagnostics: Collected structured diagnostics.
+      code_formatter: Code formatter.
     """
 
     diagnostics: DiagnosticBag
@@ -733,10 +652,8 @@ class SemanticError(Exception):
         """
         title: Initialize SemanticError.
         parameters:
-          diagnostics:
-            type: DiagnosticBag
-          code_formatter:
-            type: DiagnosticCodeFormatter | None
+          diagnostics: Collected structured diagnostics.
+          code_formatter: Code formatter.
         """
         self.diagnostics = diagnostics
         self.code_formatter = code_formatter or get_diagnostic_code_formatter()
@@ -747,8 +664,7 @@ class SemanticError(Exception):
     def format(self) -> str:
         """
         title: Return the formatted diagnostic bag.
-        returns:
-          type: str
+        returns: The formatted diagnostic bag.
         """
         return self.diagnostics.format(code_formatter=self.code_formatter)
 
@@ -758,10 +674,10 @@ class SemanticError(Exception):
 class DiagnosticCodes:
     """
     title: Stable logical diagnostic identifiers.
-    summary: >-
-      Group the most important semantic, lowering, FFI, runtime, compile, and
-      link families under short stable identifiers. These identifiers are
-      rendered through one shared DiagnosticCodeFormatter.
+    summary: Group the most important semantic, lowering,
+      FFI, runtime, compile, and link families under short
+      stable identifiers. These identifiers are rendered
+      through one shared DiagnosticCodeFormatter.
     """
 
     SEMANTIC_UNRESOLVED_NAME = "S001"

@@ -1,8 +1,7 @@
 """
 title: Semantic analysis package.
-summary: >-
-  Re-export the semantic-analysis APIs, semantic-contract types, and sidecar
-  metadata used by hosts, tests, and backend lowering.
+summary: Re-export the semantic-analysis APIs, semantic-contract types, and
+  sidecar metadata used by hosts, tests, and backend lowering.
 """
 
 from irx.analysis.api import (

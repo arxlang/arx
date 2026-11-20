@@ -1,8 +1,7 @@
 """
 title: Declaration class-method helpers.
-summary: >-
-  Normalize class-method signatures and build the lowered callable metadata
-  used during declaration analysis.
+summary: Normalize class-method signatures and build the lowered callable
+  metadata used during declaration analysis.
 """
 
 from __future__ import annotations
@@ -51,12 +50,9 @@ class DeclarationClassMethodVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Normalize one class-method signature.
         parameters:
-          class_:
-            type: SemanticClass
-          declaration:
-            type: astx.FunctionDef
-        returns:
-          type: FunctionSignature
+          class_: Class being processed.
+          declaration: Declaration being processed.
+        returns: Normalized one class-method signature.
         """
         signature = self.registry.normalize_function_signature(
             declaration.prototype,
@@ -91,10 +87,8 @@ class DeclarationClassMethodVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Return the canonical implicit receiver type for one class.
         parameters:
-          class_:
-            type: SemanticClass
-        returns:
-          type: astx.ClassType
+          class_: Class being processed.
+        returns: The canonical implicit receiver type for one class.
         """
         return astx.ClassType(
             class_.name,
@@ -114,12 +108,10 @@ class DeclarationClassMethodVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Build one visible-signature callable wrapper for a class method.
         parameters:
-          class_:
-            type: SemanticClass
-          member:
-            type: SemanticClassMember
-        returns:
-          type: SemanticFunction
+          class_: Class being processed.
+          member: Member.
+        returns: Constructed one visible-signature callable wrapper for a
+          class method.
         """
         declaration = member.declaration
         if (
@@ -157,18 +149,13 @@ class DeclarationClassMethodVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Build one lowered semantic function for a class method.
         parameters:
-          class_:
-            type: SemanticClass
-          declaration:
-            type: astx.FunctionDef
-          signature:
-            type: FunctionSignature
-          is_static:
-            type: bool
-          signature_key:
-            type: str
-        returns:
-          type: SemanticFunction
+          class_: Class being processed.
+          declaration: Declaration being processed.
+          signature: Resolved callable signature.
+          is_static: Whether the member belongs to the class rather than
+            an instance.
+          signature_key: Signature key.
+        returns: Constructed one lowered semantic function for a class method.
         """
         lowered_signature = signature
         user_args = tuple(
@@ -250,10 +237,8 @@ class DeclarationClassMethodVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Analyze one lowered class method body.
         parameters:
-          class_:
-            type: SemanticClass
-          member:
-            type: SemanticClassMember
+          class_: Class being processed.
+          member: Member.
         """
         declaration = member.declaration
         function = member.lowered_function

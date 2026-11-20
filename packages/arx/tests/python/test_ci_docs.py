@@ -58,16 +58,11 @@ def test_ci_docs_only_skip_known_reexports(
     """
     title: Execute the real workflow shell with controlled build outcomes.
     parameters:
-      tmp_path:
-        type: Path
-      workflow:
-        type: str
-      message:
-        type: str
-      exit_code:
-        type: int
-      skipped:
-        type: bool
+      tmp_path: Temporary directory for this test.
+      workflow: Workflow.
+      message: Diagnostic or output message.
+      exit_code: Exit code.
+      skipped: Whether to use skipped.
     """
     config = yaml.safe_load(
         (ROOT / ".github" / "workflows" / workflow).read_text(encoding="utf-8")

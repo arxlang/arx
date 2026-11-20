@@ -31,8 +31,7 @@ class DataTypeOps(DataType):
     def __hash__(self) -> int:
         """
         title: Ensure that the hash method is not None.
-        returns:
-          type: int
+        returns: Hash of this instance.
         """
         return super().__hash__()
 
@@ -40,10 +39,8 @@ class DataTypeOps(DataType):
         """
         title: Overload the magic `add` method.
         parameters:
-          other:
-            type: DataType
-        returns:
-          type: BinaryOp
+          other: Other value participating in the operation.
+        returns: 'Result of this operation: overload the magic `add` method.'
         """
         return BinaryOp("+", self, other)
 
@@ -51,10 +48,8 @@ class DataTypeOps(DataType):
         """
         title: Overload the magic `eq` method.
         parameters:
-          other:
-            type: DataType
-        returns:
-          type: BinaryOp
+          other: Other value participating in the operation.
+        returns: Whether the values are equal.
         """
         return BinaryOp("==", self, other)
 
@@ -62,10 +57,9 @@ class DataTypeOps(DataType):
         """
         title: Overload the magic `floordiv` method.
         parameters:
-          other:
-            type: DataType
-        returns:
-          type: BinaryOp
+          other: Other value participating in the operation.
+        returns: 'Result of this operation: overload the magic `floordiv`
+          method.'
         """
         return BinaryOp("//", self, other)
 
@@ -73,10 +67,8 @@ class DataTypeOps(DataType):
         """
         title: Overload the magic `ge` method.
         parameters:
-          other:
-            type: DataType
-        returns:
-          type: BinaryOp
+          other: Other value participating in the operation.
+        returns: 'Result of this operation: overload the magic `ge` method.'
         """
         return BinaryOp(">=", self, other)
 
@@ -84,10 +76,8 @@ class DataTypeOps(DataType):
         """
         title: Overload the magic `gt` method.
         parameters:
-          other:
-            type: DataType
-        returns:
-          type: BinaryOp
+          other: Other value participating in the operation.
+        returns: 'Result of this operation: overload the magic `gt` method.'
         """
         return BinaryOp(">", self, other)
 
@@ -95,10 +85,8 @@ class DataTypeOps(DataType):
         """
         title: Overload the magic `le` method.
         parameters:
-          other:
-            type: DataType
-        returns:
-          type: BinaryOp
+          other: Other value participating in the operation.
+        returns: 'Result of this operation: overload the magic `le` method.'
         """
         return BinaryOp("<=", self, other)
 
@@ -106,10 +94,8 @@ class DataTypeOps(DataType):
         """
         title: Overload the magic `lt` method.
         parameters:
-          other:
-            type: DataType
-        returns:
-          type: BinaryOp
+          other: Other value participating in the operation.
+        returns: 'Result of this operation: overload the magic `lt` method.'
         """
         return BinaryOp("<", self, other)
 
@@ -117,10 +103,8 @@ class DataTypeOps(DataType):
         """
         title: Overload the magic `mod` method.
         parameters:
-          other:
-            type: DataType
-        returns:
-          type: BinaryOp
+          other: Other value participating in the operation.
+        returns: 'Result of this operation: overload the magic `mod` method.'
         """
         return BinaryOp("%", self, other)
 
@@ -128,10 +112,8 @@ class DataTypeOps(DataType):
         """
         title: Overload the magic `mul` method.
         parameters:
-          other:
-            type: DataType
-        returns:
-          type: BinaryOp
+          other: Other value participating in the operation.
+        returns: 'Result of this operation: overload the magic `mul` method.'
         """
         return BinaryOp("*", self, other)
 
@@ -139,26 +121,22 @@ class DataTypeOps(DataType):
         """
         title: Overload the magic `ne` method.
         parameters:
-          other:
-            type: DataType
-        returns:
-          type: BinaryOp
+          other: Other value participating in the operation.
+        returns: Whether the values differ.
         """
         return BinaryOp("!=", self, other)
 
     def __neg__(self) -> UnaryOp:
         """
         title: Overload the magic `neg` method.
-        returns:
-          type: UnaryOp
+        returns: 'Result of this operation: overload the magic `neg` method.'
         """
         return UnaryOp("-", self)
 
     def __pos__(self) -> UnaryOp:
         """
         title: Overload the magic `pos` method.
-        returns:
-          type: UnaryOp
+        returns: 'Result of this operation: overload the magic `pos` method.'
         """
         return UnaryOp("+", self)
 
@@ -166,10 +144,8 @@ class DataTypeOps(DataType):
         """
         title: Overload the magic `pow` method.
         parameters:
-          other:
-            type: DataType
-        returns:
-          type: BinaryOp
+          other: Other value participating in the operation.
+        returns: 'Result of this operation: overload the magic `pow` method.'
         """
         return BinaryOp("^", self, other)
 
@@ -177,10 +153,8 @@ class DataTypeOps(DataType):
         """
         title: Overload the magic `sub` method.
         parameters:
-          other:
-            type: DataType
-        returns:
-          type: BinaryOp
+          other: Other value participating in the operation.
+        returns: 'Result of this operation: overload the magic `sub` method.'
         """
         return BinaryOp("-", self, other)
 
@@ -188,10 +162,9 @@ class DataTypeOps(DataType):
         """
         title: Overload the magic `truediv` method.
         parameters:
-          other:
-            type: DataType
-        returns:
-          type: BinaryOp
+          other: Other value participating in the operation.
+        returns: 'Result of this operation: overload the magic `truediv`
+          method.'
         """
         return BinaryOp("/", self, other)
 
@@ -199,10 +172,8 @@ class DataTypeOps(DataType):
         """
         title: Overload the magic 'and' method.
         parameters:
-          other:
-            type: DataType
-        returns:
-          type: AndOp
+          other: Other value participating in the operation.
+        returns: 'Result of this operation: overload the magic ''and'' method.'
         """
         return AndOp(self, other)
 
@@ -210,10 +181,8 @@ class DataTypeOps(DataType):
         """
         title: Overload the magic 'or' method.
         parameters:
-          other:
-            type: DataType
-        returns:
-          type: OrOp
+          other: Other value participating in the operation.
+        returns: 'Result of this operation: overload the magic ''or'' method.'
         """
         return OrOp(self, other)
 
@@ -221,18 +190,15 @@ class DataTypeOps(DataType):
         """
         title: Overload the magic 'xor' method.
         parameters:
-          other:
-            type: DataType
-        returns:
-          type: XorOp
+          other: Other value participating in the operation.
+        returns: 'Result of this operation: overload the magic ''xor'' method.'
         """
         return XorOp(self, other)
 
     def __invert__(self) -> NotOp:
         """
         title: Overload the magic 'not' method.
-        returns:
-          type: NotOp
+        returns: 'Result of this operation: overload the magic ''not'' method.'
         """
         return NotOp(self)
 
@@ -243,12 +209,9 @@ class UnaryOp(DataTypeOps):
     """
     title: AST class for the unary operator.
     attributes:
-      kind:
-        type: ASTKind
-      op_code:
-        type: str
-      operand:
-        type: DataType
+      kind: Kind of value or operation.
+      op_code: Operator spelling.
+      operand: Operand.
     """
 
     kind: ASTKind
@@ -266,14 +229,10 @@ class UnaryOp(DataTypeOps):
         """
         title: Initialize the UnaryOp instance.
         parameters:
-          op_code:
-            type: str
-          operand:
-            type: DataType
-          loc:
-            type: SourceLocation
-          parent:
-            type: Optional[ASTNodes]
+          op_code: Operator spelling.
+          operand: Operand.
+          loc: Source coordinates associated with the node.
+          parent: Parent node or enclosing scope.
         """
         super().__init__(loc=loc, parent=parent)
         self.op_code = op_code
@@ -283,8 +242,7 @@ class UnaryOp(DataTypeOps):
     def __str__(self) -> str:
         """
         title: Return a string that represents the object.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         return f"UnaryOp[{self.op_code}]({self.operand})"
 
@@ -292,10 +250,8 @@ class UnaryOp(DataTypeOps):
         """
         title: Return the AST structure of the object.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         key = f"UNARY[{self.op_code}]"
         value = self.operand.get_struct(simplified)
@@ -308,18 +264,12 @@ class BinaryOp(DataTypeOps):
     """
     title: AST class for the binary operator.
     attributes:
-      kind:
-        type: ASTKind
-      type_:
-        type: ExprType
-      lhs:
-        type: DataType
-      rhs:
-        type: DataType
-      op_code:
-        type: str
-      mode:
-        type: NumericMode
+      kind: Kind of value or operation.
+      type_: Type associated with this expression.
+      lhs: Left operand.
+      rhs: Right operand.
+      op_code: Operator spelling.
+      mode: Selected processing mode.
     """
 
     kind: ASTKind
@@ -343,18 +293,12 @@ class BinaryOp(DataTypeOps):
         """
         title: Initialize the BinaryOp instance.
         parameters:
-          op_code:
-            type: str
-          lhs:
-            type: DataType
-          rhs:
-            type: DataType
-          loc:
-            type: SourceLocation
-          parent:
-            type: Optional[ASTNodes]
-          mode:
-            type: NumericMode
+          op_code: Operator spelling.
+          lhs: Left operand.
+          rhs: Right operand.
+          loc: Source coordinates associated with the node.
+          parent: Parent node or enclosing scope.
+          mode: Selected processing mode.
         """
         super().__init__(loc=loc, parent=parent)
 
@@ -381,8 +325,7 @@ class BinaryOp(DataTypeOps):
     def __str__(self) -> str:
         """
         title: Return a string that represents the object.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         return f"BinaryOp[{self.op_code}]({self.lhs},{self.rhs})"
 
@@ -390,10 +333,8 @@ class BinaryOp(DataTypeOps):
         """
         title: Return the AST structure that represents the object.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         prefix = (
             "WRAPPING_BINARY"
@@ -414,18 +355,12 @@ class BoolBinaryOp(BinaryOp):
     """
     title: Base AST class for boolean binary operations.
     attributes:
-      type_:
-        type: ExprType
-      lhs:
-        type: DataType
-      rhs:
-        type: DataType
-      op_code:
-        type: str
-      mode:
-        type: NumericMode
-      kind:
-        type: ASTKind
+      type_: Type associated with this expression.
+      lhs: Left operand.
+      rhs: Right operand.
+      op_code: Operator spelling.
+      mode: Selected processing mode.
+      kind: Kind of value or operation.
     """
 
     kind: ASTKind
@@ -441,16 +376,11 @@ class BoolBinaryOp(BinaryOp):
         """
         title: Initialize the boolean binary operation.
         parameters:
-          op_code:
-            type: str
-          lhs:
-            type: DataType
-          rhs:
-            type: DataType
-          loc:
-            type: SourceLocation
-          parent:
-            type: Optional[ASTNodes]
+          op_code: Operator spelling.
+          lhs: Left operand.
+          rhs: Right operand.
+          loc: Source coordinates associated with the node.
+          parent: Parent node or enclosing scope.
         """
         super().__init__(
             op_code=op_code,
@@ -463,8 +393,7 @@ class BoolBinaryOp(BinaryOp):
     def __str__(self) -> str:
         """
         title: Return a string that represents the object.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         return f"({self.lhs} {self.op_code} {self.rhs})"
 
@@ -472,10 +401,8 @@ class BoolBinaryOp(BinaryOp):
         """
         title: Return the AST structure that represents the object.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         key = f"BOOL_BINARY_OP[{self.__class__.__name__}]"
         value: ReprStruct = {
@@ -491,12 +418,9 @@ class BoolUnaryOp(UnaryOp):
     """
     title: Base AST class for boolean unary operations.
     attributes:
-      op_code:
-        type: str
-      operand:
-        type: DataType
-      kind:
-        type: ASTKind
+      op_code: Operator spelling.
+      operand: Operand.
+      kind: Kind of value or operation.
     """
 
     kind: ASTKind
@@ -511,14 +435,10 @@ class BoolUnaryOp(UnaryOp):
         """
         title: Initialize the boolean unary operation.
         parameters:
-          op_code:
-            type: str
-          operand:
-            type: DataType
-          loc:
-            type: SourceLocation
-          parent:
-            type: Optional[ASTNodes]
+          op_code: Operator spelling.
+          operand: Operand.
+          loc: Source coordinates associated with the node.
+          parent: Parent node or enclosing scope.
         """
         super().__init__(
             op_code=op_code,
@@ -530,8 +450,7 @@ class BoolUnaryOp(UnaryOp):
     def __str__(self) -> str:
         """
         title: Return a string that represents the object.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         return f"({self.op_code} {self.operand})"
 
@@ -539,10 +458,8 @@ class BoolUnaryOp(UnaryOp):
         """
         title: Return the AST structure that represents the object.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         key = f"BOOL_UNARY_OP[{self.__class__.__name__}]"
         value: ReprStruct = {"operand": self.operand.get_struct(simplified)}
@@ -555,18 +472,12 @@ class AndOp(BoolBinaryOp):
     """
     title: AST class for logical AND operation.
     attributes:
-      type_:
-        type: ExprType
-      lhs:
-        type: DataType
-      rhs:
-        type: DataType
-      op_code:
-        type: str
-      mode:
-        type: NumericMode
-      kind:
-        type: ASTKind
+      type_: Type associated with this expression.
+      lhs: Left operand.
+      rhs: Right operand.
+      op_code: Operator spelling.
+      mode: Selected processing mode.
+      kind: Kind of value or operation.
     """
 
     kind: ASTKind
@@ -584,14 +495,10 @@ class AndOp(BoolBinaryOp):
         """
         title: Instantiate AST class for logical AND operation.
         parameters:
-          lhs:
-            type: DataType
-          rhs:
-            type: DataType
-          loc:
-            type: SourceLocation
-          parent:
-            type: Optional[ASTNodes]
+          lhs: Left operand.
+          rhs: Right operand.
+          loc: Source coordinates associated with the node.
+          parent: Parent node or enclosing scope.
         """
         super().__init__(
             op_code=self.op_code,
@@ -608,18 +515,12 @@ class OrOp(BoolBinaryOp):
     """
     title: AST class for logical OR operation.
     attributes:
-      type_:
-        type: ExprType
-      lhs:
-        type: DataType
-      rhs:
-        type: DataType
-      op_code:
-        type: str
-      mode:
-        type: NumericMode
-      kind:
-        type: ASTKind
+      type_: Type associated with this expression.
+      lhs: Left operand.
+      rhs: Right operand.
+      op_code: Operator spelling.
+      mode: Selected processing mode.
+      kind: Kind of value or operation.
     """
 
     kind: ASTKind
@@ -637,14 +538,10 @@ class OrOp(BoolBinaryOp):
         """
         title: Instantiate AST class for logical OR operation.
         parameters:
-          lhs:
-            type: DataType
-          rhs:
-            type: DataType
-          loc:
-            type: SourceLocation
-          parent:
-            type: Optional[ASTNodes]
+          lhs: Left operand.
+          rhs: Right operand.
+          loc: Source coordinates associated with the node.
+          parent: Parent node or enclosing scope.
         """
         super().__init__(
             op_code=self.op_code,
@@ -661,18 +558,12 @@ class XorOp(BoolBinaryOp):
     """
     title: AST class for logical XOR operation.
     attributes:
-      type_:
-        type: ExprType
-      lhs:
-        type: DataType
-      rhs:
-        type: DataType
-      op_code:
-        type: str
-      mode:
-        type: NumericMode
-      kind:
-        type: ASTKind
+      type_: Type associated with this expression.
+      lhs: Left operand.
+      rhs: Right operand.
+      op_code: Operator spelling.
+      mode: Selected processing mode.
+      kind: Kind of value or operation.
     """
 
     kind: ASTKind
@@ -690,14 +581,10 @@ class XorOp(BoolBinaryOp):
         """
         title: Instantiate AST class for logical XOR operation.
         parameters:
-          lhs:
-            type: DataType
-          rhs:
-            type: DataType
-          loc:
-            type: SourceLocation
-          parent:
-            type: Optional[ASTNodes]
+          lhs: Left operand.
+          rhs: Right operand.
+          loc: Source coordinates associated with the node.
+          parent: Parent node or enclosing scope.
         """
         super().__init__(
             op_code=self.op_code,
@@ -714,18 +601,12 @@ class NandOp(BoolBinaryOp):
     """
     title: AST class for logical NAND operation.
     attributes:
-      type_:
-        type: ExprType
-      lhs:
-        type: DataType
-      rhs:
-        type: DataType
-      op_code:
-        type: str
-      mode:
-        type: NumericMode
-      kind:
-        type: ASTKind
+      type_: Type associated with this expression.
+      lhs: Left operand.
+      rhs: Right operand.
+      op_code: Operator spelling.
+      mode: Selected processing mode.
+      kind: Kind of value or operation.
     """
 
     kind: ASTKind
@@ -743,14 +624,10 @@ class NandOp(BoolBinaryOp):
         """
         title: Instantiate AST class for logical NAND operation.
         parameters:
-          lhs:
-            type: DataType
-          rhs:
-            type: DataType
-          loc:
-            type: SourceLocation
-          parent:
-            type: Optional[ASTNodes]
+          lhs: Left operand.
+          rhs: Right operand.
+          loc: Source coordinates associated with the node.
+          parent: Parent node or enclosing scope.
         """
         super().__init__(
             op_code=self.op_code,
@@ -767,18 +644,12 @@ class NorOp(BoolBinaryOp):
     """
     title: AST class for logical NOR operation.
     attributes:
-      type_:
-        type: ExprType
-      lhs:
-        type: DataType
-      rhs:
-        type: DataType
-      op_code:
-        type: str
-      mode:
-        type: NumericMode
-      kind:
-        type: ASTKind
+      type_: Type associated with this expression.
+      lhs: Left operand.
+      rhs: Right operand.
+      op_code: Operator spelling.
+      mode: Selected processing mode.
+      kind: Kind of value or operation.
     """
 
     kind: ASTKind
@@ -796,14 +667,10 @@ class NorOp(BoolBinaryOp):
         """
         title: Instantiate AST class for logical NOR operation.
         parameters:
-          lhs:
-            type: DataType
-          rhs:
-            type: DataType
-          loc:
-            type: SourceLocation
-          parent:
-            type: Optional[ASTNodes]
+          lhs: Left operand.
+          rhs: Right operand.
+          loc: Source coordinates associated with the node.
+          parent: Parent node or enclosing scope.
         """
         super().__init__(
             op_code=self.op_code,
@@ -820,18 +687,12 @@ class XnorOp(BoolBinaryOp):
     """
     title: AST class for logical XNOR operation.
     attributes:
-      type_:
-        type: ExprType
-      lhs:
-        type: DataType
-      rhs:
-        type: DataType
-      op_code:
-        type: str
-      mode:
-        type: NumericMode
-      kind:
-        type: ASTKind
+      type_: Type associated with this expression.
+      lhs: Left operand.
+      rhs: Right operand.
+      op_code: Operator spelling.
+      mode: Selected processing mode.
+      kind: Kind of value or operation.
     """
 
     kind: ASTKind
@@ -849,14 +710,10 @@ class XnorOp(BoolBinaryOp):
         """
         title: Instantiate AST class for logical XNOR operation.
         parameters:
-          lhs:
-            type: DataType
-          rhs:
-            type: DataType
-          loc:
-            type: SourceLocation
-          parent:
-            type: Optional[ASTNodes]
+          lhs: Left operand.
+          rhs: Right operand.
+          loc: Source coordinates associated with the node.
+          parent: Parent node or enclosing scope.
         """
         super().__init__(
             op_code=self.op_code,
@@ -873,12 +730,9 @@ class NotOp(BoolUnaryOp):
     """
     title: AST class for logical NOT operation.
     attributes:
-      op_code:
-        type: str
-      operand:
-        type: DataType
-      kind:
-        type: ASTKind
+      op_code: Operator spelling.
+      operand: Operand.
+      kind: Kind of value or operation.
     """
 
     kind: ASTKind
@@ -895,12 +749,9 @@ class NotOp(BoolUnaryOp):
         """
         title: Instantiate AST class for logical NOT operation.
         parameters:
-          operand:
-            type: DataType
-          loc:
-            type: SourceLocation
-          parent:
-            type: Optional[ASTNodes]
+          operand: Operand.
+          loc: Source coordinates associated with the node.
+          parent: Parent node or enclosing scope.
         """
         super().__init__(
             op_code=self.op_code,

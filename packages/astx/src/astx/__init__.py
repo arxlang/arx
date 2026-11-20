@@ -1,6 +1,9 @@
 # mypy: disable-error-code="attr-defined"
 """
 title: ASTx.
+attributes:
+  version: Package version metadata.
+  __version__: Installed package version.
 """
 
 from importlib import metadata as importlib_metadata
@@ -357,8 +360,7 @@ from astx.types import (
 def get_version() -> str:
     """
     title: Return the program version.
-    returns:
-      type: str
+    returns: The program version.
     """
     try:
         return importlib_metadata.version(__name__)

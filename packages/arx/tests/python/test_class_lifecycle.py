@@ -35,12 +35,9 @@ def parsed(declarations: str, body: str) -> astx.Module:
     """
     title: Parse a documented lifecycle regression.
     parameters:
-      declarations:
-        type: str
-      body:
-        type: str
-    returns:
-      type: astx.Module
+      declarations: Declarations.
+      body: Statements forming the body.
+    returns: Parsed a documented lifecycle regression.
     """
     ArxIO.string_to_buffer(
         "```\ntitle: Class lifecycle regression\n```\n"
@@ -58,14 +55,11 @@ def run_class(
     """
     title: Verify LLVM and run native lifecycle behavior.
     parameters:
-      tmp_path:
-        type: Path
-      declarations:
-        type: str
-      body:
-        type: str
-    returns:
-      type: subprocess.CompletedProcess[str]
+      tmp_path: Temporary directory for this test.
+      declarations: Declarations.
+      body: Statements forming the body.
+    returns: 'Result of this operation: verify LLVM and run native lifecycle
+      behavior.'
     """
     if shutil.which("clang") is None:
         pytest.skip("native lifecycle execution requires clang")
@@ -90,10 +84,8 @@ def test_constructor_forms(tmp_path: Path, arguments: str) -> None:
     """
     title: Constructor defaults and positional/named arguments share one hook.
     parameters:
-      tmp_path:
-        type: Path
-      arguments:
-        type: str
+      tmp_path: Temporary directory for this test.
+      arguments: Arguments supplied to the call.
     """
     result = run_class(
         tmp_path, COUNTER, f"value: Counter = Counter({arguments})"
@@ -117,8 +109,7 @@ def test_constructor_binding_errors(arguments: str) -> None:
     """
     title: Invalid constructor bindings fail before execution.
     parameters:
-      arguments:
-        type: str
+      arguments: Arguments supplied to the call.
     """
     with pytest.raises(SemanticError, match="constructor"):
         analyze(parsed(COUNTER, f"Counter({arguments})"))
@@ -137,8 +128,7 @@ def test_alias_replacement_and_borrowed_return(tmp_path: Path) -> None:
     """
     title: Aliases and identity returns preserve lifetime and identity.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     declarations = (
         COUNTER
@@ -167,8 +157,7 @@ def test_keyword_evaluation_order(tmp_path: Path) -> None:
     """
     title: Constructor keyword order is evaluation order, not parameter order.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     declarations = """class Pair:
   sum: i32 = 0
@@ -192,8 +181,7 @@ def test_inheritance_drop_order(tmp_path: Path) -> None:
     """
     title: Shared ancestors initialize once and drop in reverse storage order.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     declarations = """class Root:
   fn __init__(self) -> none:
@@ -229,8 +217,7 @@ def test_receiver_pin_before_later_argument_effects(tmp_path: Path) -> None:
     """
     title: Evaluated receivers survive later argument effects.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     declarations = (
         COUNTER.replace(
@@ -285,8 +272,7 @@ def test_owned_file_and_string_fields(tmp_path: Path) -> None:
     """
     title: Final class release closes files before the caller's next operation.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     result = run_class(
         tmp_path,
@@ -314,14 +300,11 @@ def test_public_file_fields_use_class_initialization(
     tmp_path: Path, constructor: str
 ) -> None:
     """
-    title: >-
-      Public file references may be empty or replaced, but not dereferenced
-      empty.
+    title: Public file references may be empty or replaced, but not
+      dereferenced empty.
     parameters:
-      tmp_path:
-        type: Path
-      constructor:
-        type: str
+      tmp_path: Temporary directory for this test.
+      constructor: Constructor.
     """
     declarations = (
         "class Log:\n  handle: file\n  fn __init__(self) -> none:\n"
@@ -341,8 +324,7 @@ def test_hooks_cannot_be_called_explicitly(body: str) -> None:
     """
     title: Source cannot reinitialize or manually destroy class objects.
     parameters:
-      body:
-        type: str
+      body: Statements forming the body.
     """
     with pytest.raises(SemanticError, match="explicitly"):
         analyze(parsed(COUNTER, "value: Counter = Counter()\n" + body))
@@ -353,8 +335,7 @@ def test_unsupported_dunder_methods_fail_in_analysis(name: str) -> None:
     """
     title: Parse ordinary identifiers but reject unsupported class protocols.
     parameters:
-      name:
-        type: str
+      name: Name identifying the declaration or operation.
     """
     declarations = (
         f"class Value:\n  fn {name}(self) -> none:\n    return none\n"
@@ -374,10 +355,8 @@ def test_non_protocol_method_names_remain_ordinary(
     """
     title: Old hook names and partial underscore prefixes are ordinary APIs.
     parameters:
-      tmp_path:
-        type: Path
-      name:
-        type: str
+      tmp_path: Temporary directory for this test.
+      name: Name identifying the declaration or operation.
     """
     declarations = f"""class Value:
   value: i32 = 0
@@ -408,8 +387,7 @@ def test_ownership_cycles_are_rejected(declarations: str) -> None:
     """
     title: Ownership graphs reject recursive and subtype cycles.
     parameters:
-      declarations:
-        type: str
+      declarations: Declarations.
     """
     with pytest.raises(SemanticError, match="cyclic"):
         analyze(parsed(declarations, "return 0"))
@@ -419,8 +397,7 @@ def test_null_class_reference_is_checked(tmp_path: Path) -> None:
     """
     title: Empty class slots fail diagnostically instead of dereferencing null.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     declarations = COUNTER + "class Holder:\n  child: Counter\n"
     result = run_class(
@@ -448,8 +425,7 @@ def test_nonprefix_base_fields_in_hooks(tmp_path: Path) -> None:
     """
     title: Base hooks and base views address the concrete object's own fields.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     declarations = """class Left:
   left: i32 = 11
@@ -479,8 +455,7 @@ def test_owned_field_initializers(tmp_path: Path) -> None:
     """
     title: Declaration initializers bind self and independently own resources.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     declarations = (
         COUNTER
@@ -512,8 +487,7 @@ def test_partial_constructor_drops_only_completed_hooks(
     """
     title: Checked failure rolls back resources but skips incomplete hooks.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     declarations = """class Base:
   name: str = "base"
@@ -546,8 +520,7 @@ def test_lifecycle_self_cannot_escape(body: str) -> None:
     """
     title: Hook receivers cannot be aliased or invoke ordinary self methods.
     parameters:
-      body:
-        type: str
+      body: Statements forming the body.
     """
     declaration = (
         """class Counter:
@@ -576,8 +549,7 @@ def test_parameter_rebinding_keeps_caller_reference(tmp_path: Path) -> None:
     """
     title: Rebinding a parameter replaces only its independent local reference.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     declarations = (
         COUNTER
@@ -601,8 +573,7 @@ def test_lexical_loop_and_early_return_cleanup(tmp_path: Path) -> None:
     """
     title: Loop-body and early-return owners release on their actual exits.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     declarations = (
         COUNTER
@@ -627,11 +598,10 @@ fn early(flag: bool) -> none:
 
 def test_public_file_fields_can_share_one_object(tmp_path: Path) -> None:
     """
-    title: >-
-      Public class fields alias one stream without copying its native handle.
+    title: Public class fields alias one stream without copying its native
+      handle.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     declarations = """class Log:
   first: file = open("log.txt", "w")
@@ -650,8 +620,7 @@ def test_field_drop_failure_continues_other_fields(tmp_path: Path) -> None:
     """
     title: Native drop failure preserves its error and consumes later fields.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     if not Path("/dev/full").exists():
         pytest.skip("requires the POSIX failing-write device")
@@ -679,8 +648,7 @@ def test_base_defaults_use_abi_conversions(tmp_path: Path) -> None:
     """
     title: Default base-hook arguments use the declared ABI width.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     declarations = """class Base:
   value: i64 = 0
@@ -713,8 +681,7 @@ def test_invalid_hook_declarations(declaration: str) -> None:
     """
     title: Lifecycle hooks cannot acquire unsafe ordinary-method shapes.
     parameters:
-      declaration:
-        type: str
+      declaration: Declaration being processed.
     """
     with pytest.raises(SemanticError, match="lifecycle hook"):
         analyze(parsed(declaration, ""))
@@ -726,8 +693,7 @@ def test_constructor_allocation_failure_releases_argument(
     """
     title: Constructor allocation failure consumes its evaluated temporaries.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     from irx.builder.runtime.features import (  # noqa: PLC0415
         NativeArtifact,
@@ -806,8 +772,7 @@ def test_failed_replacement_rolls_back_current_field(tmp_path: Path) -> None:
     """
     title: A consuming release error cannot revisit the stale field generation.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     if not Path("/dev/full").exists():
         pytest.skip("requires the POSIX failing-write device")
@@ -847,8 +812,7 @@ def test_constructor_in_hook_can_use_later_class(tmp_path: Path) -> None:
     """
     title: Hook construction uses predeclared layouts and dispatch tables.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     declarations = """class Holder:
   child: Leaf
@@ -875,8 +839,7 @@ def test_scalar_union_field_is_preserved(tmp_path: Path) -> None:
     """
     title: Resource exclusions do not reject existing scalar-union storage.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     declarations = """type Number = i32 | i64
 class Value:
@@ -891,8 +854,7 @@ def test_string_field_reads_survive_later_replacement(tmp_path: Path) -> None:
     """
     title: Evaluated string fields snapshot their allocation generation.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     declarations = """class Log:
   path: str = "old"

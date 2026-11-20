@@ -27,13 +27,14 @@ from irx.typecheck import typechecked
 @typechecked
 def validate_arrowcpp_versions() -> None:
     """
-    title: Reject mixed Arrow sources, packaged headers and linked versions.
-    summary: >-
-      This validates a single installed build, not cross-version compatibility.
-      It does not establish the ABI revision of an arbitrary loaded IRx handle.
-      The source bundle remains required. Check its actual CMake version and
-      public header, not only its Python version constant. Missing sources or
-      disagreement fail before compilation without choosing another provider.
+    title: Reject mixed Arrow sources, packaged headers and linked
+      versions.
+    summary: This validates a single installed build, not cross-version
+      compatibility. It does not establish the ABI revision of an
+      arbitrary loaded IRx handle. The source bundle remains required.
+      Check its actual CMake version and public header, not only
+      its Python version constant. Missing sources or disagreement
+      fail before compilation without choosing another provider.
     """
     try:
         source_include = get_arrowcpp_source_include_dir()
@@ -110,8 +111,7 @@ def validate_arrowcpp_versions() -> None:
 def arrowcpp_include_dirs() -> tuple[Path, ...]:
     """
     title: Return Arrow C++ include directories for native runtime builds.
-    returns:
-      type: tuple[Path, Ellipsis]
+    returns: Arrow C++ include directories for native runtime builds.
     """
     validate_arrowcpp_versions()
     return (
@@ -124,8 +124,7 @@ def arrowcpp_include_dirs() -> tuple[Path, ...]:
 def arrowcpp_compile_flags() -> tuple[str, ...]:
     """
     title: Return compiler flags required by Arrow C++ headers.
-    returns:
-      type: tuple[str, Ellipsis]
+    returns: Compiler flags required by Arrow C++ headers.
     """
     return ("-std=c++20",)
 
@@ -134,8 +133,7 @@ def arrowcpp_compile_flags() -> tuple[str, ...]:
 def arrowcpp_linker_flags() -> tuple[str, ...]:
     """
     title: Return linker flags for the bundled Arrow C++ runtime.
-    returns:
-      type: tuple[str, Ellipsis]
+    returns: Linker flags for the bundled Arrow C++ runtime.
     """
     validate_arrowcpp_versions()
     library = _find_pyarrow_library("arrow")
@@ -151,9 +149,10 @@ def arrowcpp_linker_flags() -> tuple[str, ...]:
 @typechecked
 def parquet_linker_flags() -> tuple[str, ...]:
     """
-    title: Link RecordBatch artifacts to PyArrow's matching Parquet library.
-    returns:
-      type: tuple[str, Ellipsis]
+    title: Link RecordBatch artifacts to PyArrow's matching Parquet
+      library.
+    returns: 'Result of this operation: link RecordBatch artifacts
+      to PyArrow''s matching Parquet library.'
     """
     library = _find_pyarrow_library("parquet")
     flags = (
@@ -172,8 +171,7 @@ def parquet_linker_flags() -> tuple[str, ...]:
 def arrowcpp_runtime_metadata() -> dict[str, object]:
     """
     title: Return Arrow C++ runtime implementation metadata.
-    returns:
-      type: dict[str, object]
+    returns: Arrow C++ runtime implementation metadata.
     """
     return {
         "implementation": "arrow-cpp",
@@ -190,10 +188,9 @@ def _find_pyarrow_library(name: str) -> Path:
     """
     title: Find one PyArrow-shipped Arrow C++ shared library.
     parameters:
-      name:
-        type: str
-    returns:
-      type: Path
+      name: Name identifying the declaration or operation.
+    returns: 'Result of this operation: find one PyArrow-shipped Arrow C++
+      shared library.'
     """
     prefixes = _library_prefixes(name)
     suffixes = _library_suffixes()
@@ -222,10 +219,8 @@ def _library_prefixes(name: str) -> tuple[str, ...]:
     """
     title: Return platform-specific library name prefixes.
     parameters:
-      name:
-        type: str
-    returns:
-      type: tuple[str, Ellipsis]
+      name: Name identifying the declaration or operation.
+    returns: Platform-specific library name prefixes.
     """
     if sys.platform == "win32":
         return (name, f"lib{name}")
@@ -236,8 +231,7 @@ def _library_prefixes(name: str) -> tuple[str, ...]:
 def _library_suffixes() -> tuple[str, ...]:
     """
     title: Return platform-specific exact shared library suffixes.
-    returns:
-      type: tuple[str, Ellipsis]
+    returns: Platform-specific exact shared library suffixes.
     """
     if sys.platform == "darwin":
         return (".dylib",)
@@ -250,8 +244,7 @@ def _library_suffixes() -> tuple[str, ...]:
 def _versioned_library_glob() -> str:
     """
     title: Return platform-specific versioned shared library glob.
-    returns:
-      type: str
+    returns: Platform-specific versioned shared library glob.
     """
     if sys.platform == "darwin":
         return "*.dylib"

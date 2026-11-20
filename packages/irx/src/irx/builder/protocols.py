@@ -53,10 +53,9 @@ class DispatchRegistrar(Protocol):
         title: Register one typed overload in the open dispatch family.
         summary: Plum exposes a dynamic multimethod, not this single signature.
         parameters:
-          method:
-            type: Callable[DispatchParameters, None]
-        returns:
-          type: Any
+          method: Method.
+        returns: 'Result of this operation: register one typed overload in
+          the open dispatch family.'
         """
         del method
         raise NotImplementedError
@@ -67,18 +66,12 @@ class ExceptionLoweringTypingBase:
     """
     title: Explicit execution-context and status-ABI lowering services.
     attributes:
-      runtime_exception_types:
-        type: dict[str, ResolvedExceptionType]
-      exception_context:
-        type: ir.Value | None
-      exception_result_slot:
-        type: ir.Value | None
-      exception_targets:
-        type: list[ExceptionTarget]
-      pending_returns:
-        type: list[PendingReturn]
-      llvm_function_signatures:
-        type: dict[str, FunctionSignature]
+      runtime_exception_types: Types of runtime exception.
+      exception_context: Exception context.
+      exception_result_slot: Exception result slot.
+      exception_targets: Exception targets.
+      pending_returns: Pending returns.
+      llvm_function_signatures: LLVM function signatures.
     """
 
     runtime_exception_types: dict[str, ResolvedExceptionType]
@@ -92,12 +85,10 @@ class ExceptionLoweringTypingBase:
         """
         title: Call an opaque runtime exception operation.
         parameters:
-          operation:
-            type: str
-          args:
-            type: list[ir.Value]
-        returns:
-          type: ir.Value
+          operation: Operation to resolve or execute.
+          args: Arguments supplied to the operation.
+        returns: 'Result of this operation: call an opaque runtime exception
+          operation.'
         """
         del operation, args
         raise NotImplementedError
@@ -105,8 +96,8 @@ class ExceptionLoweringTypingBase:
     def context_value(self) -> ir.Value:
         """
         title: Require the current frame execution context.
-        returns:
-          type: ir.Value
+        returns: 'Result of this operation: require the current frame execution
+          context.'
         """
         raise NotImplementedError
 
@@ -120,16 +111,12 @@ class ExceptionLoweringTypingBase:
         """
         title: Emit a resolved call and consume success-only output storage.
         parameters:
-          node:
-            type: astx.AST
-          callee:
-            type: ir.Value
-          signature:
-            type: FunctionSignature
-          args:
-            type: list[ir.Value]
-        returns:
-          type: ir.Value | None
+          node: Syntax node to process.
+          callee: Callee.
+          signature: Resolved callable signature.
+          args: Arguments supplied to the operation.
+        returns: 'Result of this operation: emit a resolved call and consume
+          success-only output storage.'
         """
         del node, callee, signature, args
         raise NotImplementedError
@@ -138,10 +125,8 @@ class ExceptionLoweringTypingBase:
         """
         title: Route failed call status through lexical cleanup regions.
         parameters:
-          node:
-            type: astx.AST
-          status:
-            type: ir.Value
+          node: Syntax node to process.
+          status: Native operation status.
         """
         del node, status
         raise NotImplementedError
@@ -150,8 +135,7 @@ class ExceptionLoweringTypingBase:
         """
         title: Exit the current region with the context pending exception.
         parameters:
-          node:
-            type: astx.AST | None
+          node: Syntax node to process.
         """
         del node
         raise NotImplementedError
@@ -160,8 +144,7 @@ class ExceptionLoweringTypingBase:
         """
         title: Publish successful output after all cleanups.
         parameters:
-          value:
-            type: ir.Value | None
+          value: Value to process.
         """
         del value
         raise NotImplementedError
@@ -175,10 +158,8 @@ class ExceptionLoweringTypingBase:
         """
         title: Release values whose pending return was replaced.
         parameters:
-          completions:
-            type: tuple[PendingReturn, Ellipsis] | None
-          preserved_depth:
-            type: int | None
+          completions: Completions.
+          preserved_depth: Preserved depth.
         """
         del completions
         del preserved_depth
@@ -190,14 +171,10 @@ class ExceptionLoweringTypingBase:
         """
         title: Materialize a builtin nominal exception from native failure.
         parameters:
-          node:
-            type: astx.AST
-          role:
-            type: str
-          message:
-            type: ir.Value
-          code:
-            type: str
+          node: Syntax node to process.
+          role: Role.
+          message: Diagnostic or output message.
+          code: Source code or diagnostic identifier.
         """
         del node, role, message, code
         raise NotImplementedError
@@ -206,10 +183,8 @@ class ExceptionLoweringTypingBase:
         """
         title: Fail without allocation on bookkeeping allocation failure.
         parameters:
-          node:
-            type: astx.AST
-          status:
-            type: ir.Value
+          node: Syntax node to process.
+          status: Native operation status.
         """
         del node, status
         raise NotImplementedError
@@ -218,16 +193,14 @@ class ExceptionLoweringTypingBase:
         self, node: astx.AST, function: ir.Function, args: list[ir.Value]
     ) -> ir.Value:
         """
-        title: Invoke a checked native facade with success-only output slots.
+        title: Invoke a checked native facade with success-only output
+          slots.
         parameters:
-          node:
-            type: astx.AST
-          function:
-            type: ir.Function
-          args:
-            type: list[ir.Value]
-        returns:
-          type: ir.Value
+          node: Syntax node to process.
+          function: Function to process.
+          args: Arguments supplied to the operation.
+        returns: 'Result of this operation: invoke a checked native
+          facade with success-only output slots.'
         """
         del node, function, args
         raise NotImplementedError
@@ -244,16 +217,11 @@ class ExceptionLoweringTypingBase:
         """
         title: Convert a native Arrow failure category into an exception.
         parameters:
-          node:
-            type: astx.AST
-          status:
-            type: ir.Value
-          operation:
-            type: str
-          message:
-            type: ir.Value | None
-          feature:
-            type: str
+          node: Syntax node to process.
+          status: Native operation status.
+          operation: Operation to resolve or execute.
+          message: Diagnostic or output message.
+          feature: Feature.
         """
         del node, status, operation, message, feature
         raise NotImplementedError
@@ -264,16 +232,12 @@ class ExceptionLoweringTypingBase:
         """
         title: Register rollback for a partially assembled native handle.
         parameters:
-          node:
-            type: astx.AST
-          feature:
-            type: str
-          destroy:
-            type: str
-          value:
-            type: ir.Value
-        returns:
-          type: CleanupAction
+          node: Syntax node to process.
+          feature: Feature.
+          destroy: Destroy.
+          value: Value to process.
+        returns: 'Result of this operation: register rollback for a partially
+          assembled native handle.'
         """
         del node, feature, destroy, value
         raise NotImplementedError
@@ -282,8 +246,7 @@ class ExceptionLoweringTypingBase:
         """
         title: Release a native temporary after successful ownership transfer.
         parameters:
-          action:
-            type: CleanupAction
+          action: Action.
         """
         del action
         raise NotImplementedError
@@ -301,18 +264,12 @@ class ExceptionLoweringTypingBase:
         """
         title: Raise the requested builtin if a native condition fails.
         parameters:
-          node:
-            type: astx.AST
-          condition:
-            type: ir.Value
-          code:
-            type: str
-          message:
-            type: str
-          block_name:
-            type: str
-          exception_role:
-            type: str
+          node: Syntax node to process.
+          condition: Condition controlling the operation.
+          code: Source code or diagnostic identifier.
+          message: Diagnostic or output message.
+          block_name: Name of block.
+          exception_role: Exception role.
         """
         del node, condition, code, message, block_name, exception_role
         raise NotImplementedError
@@ -322,66 +279,36 @@ class VisitorProtocol(BaseVisitorProtocol, Protocol):
     """
     title: Stable interface used by visitor mixins and runtime features.
     attributes:
-      runtime_exception_types:
-        type: dict[str, ResolvedExceptionType]
-      exception_context:
-        type: ir.Value | None
-      exception_result_slot:
-        type: ir.Value | None
-      exception_targets:
-        type: list[ExceptionTarget]
-      pending_returns:
-        type: list[PendingReturn]
-      llvm_function_signatures:
-        type: dict[str, FunctionSignature]
-      _llvm:
-        type: VariablesLLVM
-      named_values:
-        type: NamedValueMap
-      const_vars:
-        type: set[str]
-      function_protos:
-        type: dict[str, astx.FunctionPrototype]
-      llvm_functions_by_symbol_id:
-        type: dict[str, ir.Function]
-      result_stack:
-        type: list[ResultStackValue]
-      _buffer_view_global_counter:
-        type: int
-      loop_stack:
-        type: list[LoopTargets]
-      cleanup_stack:
-        type: list[CleanupAction]
-      class_construction_stack:
-        type: list[ir.Value]
-      emitting_failure_cleanup:
-        type: bool
-      struct_types:
-        type: dict[str, ir.Type]
-      llvm_structs_by_qualified_name:
-        type: dict[str, ir.IdentifiedStructType]
-      runtime_features:
-        type: RuntimeFeatureState
-      entry_function_symbol_id:
-        type: str | None
-      _fast_math_enabled:
-        type: bool
-      _current_function_return_type:
-        type: astx.DataType | None
-      _current_function_signature:
-        type: FunctionSignature | None
-      _current_generator_frame_ptr:
-        type: ir.Value | None
-      _current_generator_frame_slots:
-        type: dict[str, int]
-      _current_generator_out_ptr:
-        type: ir.Value | None
-      _current_generator_next_state:
-        type: int | None
-      target:
-        type: llvm.TargetRef
-      target_machine:
-        type: llvm.TargetMachine
+      runtime_exception_types: Types of runtime exception.
+      exception_context: Exception context.
+      exception_result_slot: Exception result slot.
+      exception_targets: Exception targets.
+      pending_returns: Pending returns.
+      llvm_function_signatures: LLVM function signatures.
+      _llvm: LLVM.
+      named_values: Named values.
+      const_vars: Const vars.
+      function_protos: Function protos.
+      llvm_functions_by_symbol_id: Identifier for LLVM functions by symbol.
+      result_stack: Stack of lowered expression results.
+      _buffer_view_global_counter: Buffer view global counter.
+      loop_stack: Loop stack.
+      cleanup_stack: Cleanup stack.
+      class_construction_stack: Class construction stack.
+      emitting_failure_cleanup: Whether to use emitting failure cleanup.
+      struct_types: Types of struct.
+      llvm_structs_by_qualified_name: Name of LLVM structs by qualified.
+      runtime_features: Runtime features.
+      entry_function_symbol_id: Identifier for entry function symbol.
+      _fast_math_enabled: Whether to use fast math enabled.
+      _current_function_return_type: Type of current function return.
+      _current_function_signature: Current function signature.
+      _current_generator_frame_ptr: Current generator frame ptr.
+      _current_generator_frame_slots: Current generator frame slots.
+      _current_generator_out_ptr: Current generator out ptr.
+      _current_generator_next_state: Current generator next state.
+      target: Destination of the operation.
+      target_machine: Target machine.
     """
 
     runtime_exception_types: dict[str, ResolvedExceptionType]
@@ -420,8 +347,7 @@ class VisitorProtocol(BaseVisitorProtocol, Protocol):
         """
         title: Declare a resolved class layout before lowering method bodies.
         parameters:
-          node:
-            type: astx.ClassDefStmt
+          node: Syntax node to process.
         """
         del node
         raise NotImplementedError
@@ -430,10 +356,8 @@ class VisitorProtocol(BaseVisitorProtocol, Protocol):
         """
         title: Get function.
         parameters:
-          _name:
-            type: str
-        returns:
-          type: ir.Function | None
+          _name: Name of .
+        returns: Function.
         """
         ...
 
@@ -445,12 +369,9 @@ class VisitorProtocol(BaseVisitorProtocol, Protocol):
         """
         title: Return the LLVM symbol name for a function node.
         parameters:
-          _node:
-            type: astx.AST
-          _fallback:
-            type: str
-        returns:
-          type: str
+          _node: Syntax node to process.
+          _fallback: Fallback.
+        returns: The LLVM symbol name for a function node.
         """
         ...
 
@@ -460,12 +381,9 @@ class VisitorProtocol(BaseVisitorProtocol, Protocol):
         """
         title: Create entry block alloca.
         parameters:
-          _var_name:
-            type: str
-          _type_name:
-            type: str | ir.Type
-        returns:
-          type: Any
+          _var_name: Name of var.
+          _type_name: Name of type.
+        returns: Created entry block alloca.
         """
         ...
 
@@ -479,14 +397,10 @@ class VisitorProtocol(BaseVisitorProtocol, Protocol):
         """
         title: Lower one tuple of i64 values to a stable global pointer.
         parameters:
-          _values:
-            type: tuple[int, Ellipsis]
-          purpose:
-            type: str
-          symbol_namespace:
-            type: str
-        returns:
-          type: ir.Value
+          _values: Values.
+          purpose: Purpose.
+          symbol_namespace: Symbol namespace.
+        returns: Lowered one tuple of i64 values to a stable global pointer.
         """
         ...
 
@@ -494,10 +408,8 @@ class VisitorProtocol(BaseVisitorProtocol, Protocol):
         """
         title: Lower one field access to an address.
         parameters:
-          _node:
-            type: astx.FieldAccess
-        returns:
-          type: ir.Value
+          _node: Syntax node to process.
+        returns: Lowered one field access to an address.
         """
         ...
 
@@ -508,10 +420,8 @@ class VisitorProtocol(BaseVisitorProtocol, Protocol):
         """
         title: Lower one base-qualified class field access to an address.
         parameters:
-          _node:
-            type: astx.BaseFieldAccess
-        returns:
-          type: ir.Value
+          _node: Syntax node to process.
+        returns: Lowered one base-qualified class field access to an address.
         """
         ...
 
@@ -522,10 +432,8 @@ class VisitorProtocol(BaseVisitorProtocol, Protocol):
         """
         title: Lower one static class field access to a global address.
         parameters:
-          _node:
-            type: astx.StaticFieldAccess
-        returns:
-          type: ir.Value
+          _node: Syntax node to process.
+        returns: Lowered one static class field access to a global address.
         """
         ...
 
@@ -536,10 +444,8 @@ class VisitorProtocol(BaseVisitorProtocol, Protocol):
         """
         title: Lower one mutable lvalue target to an address.
         parameters:
-          _node:
-            type: astx.AST
-        returns:
-          type: ir.Value
+          _node: Syntax node to process.
+        returns: Lowered one mutable lvalue target to an address.
         """
         ...
 
@@ -553,12 +459,9 @@ class VisitorProtocol(BaseVisitorProtocol, Protocol):
         """
         title: Destroy owned list storage before a validated replacement.
         parameters:
-          _node:
-            type: astx.AST
-          _list_ptr:
-            type: ir.Value
-          target_name:
-            type: str
+          _node: Syntax node to process.
+          _list_ptr: List ptr.
+          target_name: Name of target.
         """
         ...
 
@@ -572,12 +475,9 @@ class VisitorProtocol(BaseVisitorProtocol, Protocol):
         """
         title: Destroy owned string storage before a validated replacement.
         parameters:
-          _node:
-            type: astx.AST
-          _string_ptr:
-            type: ir.Value
-          target_name:
-            type: str
+          _node: Syntax node to process.
+          _string_ptr: String ptr.
+          target_name: Name of target.
         """
         ...
 
@@ -588,10 +488,8 @@ class VisitorProtocol(BaseVisitorProtocol, Protocol):
         """
         title: Return one LLVM function type for semantic signature metadata.
         parameters:
-          _signature:
-            type: FunctionSignature
-        returns:
-          type: ir.FunctionType
+          _signature: Signature.
+        returns: One LLVM function type for semantic signature metadata.
         """
         ...
 
@@ -602,10 +500,9 @@ class VisitorProtocol(BaseVisitorProtocol, Protocol):
         """
         title: Declare or reuse one semantic function.
         parameters:
-          _function:
-            type: Any
-        returns:
-          type: ir.Function
+          _function: Function.
+        returns: 'Result of this operation: declare or reuse one semantic
+          function.'
         """
         ...
 
@@ -617,10 +514,8 @@ class VisitorProtocol(BaseVisitorProtocol, Protocol):
         """
         title: Emit all active cleanup actions.
         parameters:
-          _start_depth:
-            type: int
-          _excluded_owner_symbol_ids:
-            type: frozenset[str]
+          _start_depth: Start depth.
+          _excluded_owner_symbol_ids: Identifiers for excluded owner symbol.
         """
         ...
 
@@ -632,10 +527,8 @@ class VisitorProtocol(BaseVisitorProtocol, Protocol):
         """
         title: Register cleanup for one non-transferred owned list temporary.
         parameters:
-          _node:
-            type: astx.AST
-          _list_ptr:
-            type: ir.Value
+          _node: Syntax node to process.
+          _list_ptr: List ptr.
         """
         ...
 
@@ -647,10 +540,8 @@ class VisitorProtocol(BaseVisitorProtocol, Protocol):
         """
         title: Register cleanup for one non-transferred owned string.
         parameters:
-          _node:
-            type: astx.AST
-          _pointer:
-            type: ir.Value
+          _node: Syntax node to process.
+          _pointer: Pointer.
         """
         ...
 
@@ -658,8 +549,7 @@ class VisitorProtocol(BaseVisitorProtocol, Protocol):
         """
         title: Emit and remove temporary cleanups after one stack depth.
         parameters:
-          _start_depth:
-            type: int
+          _start_depth: Start depth.
         """
         ...
 
@@ -669,12 +559,9 @@ class VisitorProtocol(BaseVisitorProtocol, Protocol):
         """
         title: Require runtime symbol.
         parameters:
-          _feature_name:
-            type: str
-          _symbol_name:
-            type: str
-        returns:
-          type: ir.Function
+          _feature_name: Name of feature.
+          _symbol_name: Name of symbol.
+        returns: 'Result of this operation: require runtime symbol.'
         """
         ...
 
@@ -682,8 +569,7 @@ class VisitorProtocol(BaseVisitorProtocol, Protocol):
         """
         title: Activate runtime feature.
         parameters:
-          _feature_name:
-            type: str
+          _feature_name: Name of feature.
         """
         ...
 
@@ -691,8 +577,7 @@ class VisitorProtocol(BaseVisitorProtocol, Protocol):
         """
         title: Set fast math.
         parameters:
-          _enabled:
-            type: bool
+          _enabled: Whether to use enabled.
         """
         ...
 
@@ -700,8 +585,7 @@ class VisitorProtocol(BaseVisitorProtocol, Protocol):
         """
         title: Apply fast math.
         parameters:
-          _inst:
-            type: ir.Instruction
+          _inst: Inst.
         """
         ...
 
@@ -711,14 +595,10 @@ class VisitorProtocol(BaseVisitorProtocol, Protocol):
         """
         title: Emit fma.
         parameters:
-          _lhs:
-            type: ir.Value
-          _rhs:
-            type: ir.Value
-          _addend:
-            type: ir.Value
-        returns:
-          type: ir.Value
+          _lhs: Left operand.
+          _rhs: Right operand.
+          _addend: Addend.
+        returns: 'Result of this operation: emit fma.'
         """
         ...
 
@@ -726,10 +606,8 @@ class VisitorProtocol(BaseVisitorProtocol, Protocol):
         """
         title: Is numeric value.
         parameters:
-          _value:
-            type: ir.Value
-        returns:
-          type: bool
+          _value: Value.
+        returns: 'Result of this operation: is numeric value.'
         """
         ...
 
@@ -742,14 +620,10 @@ class VisitorProtocol(BaseVisitorProtocol, Protocol):
         """
         title: Unify numeric operands.
         parameters:
-          _lhs:
-            type: ir.Value
-          _rhs:
-            type: ir.Value
-          unsigned:
-            type: bool
-        returns:
-          type: tuple[ir.Value, ir.Value]
+          _lhs: Left operand.
+          _rhs: Right operand.
+          unsigned: Whether to use unsigned semantics.
+        returns: 'Result of this operation: unify numeric operands.'
         """
         _ = unsigned
         raise NotImplementedError
@@ -763,14 +637,10 @@ class VisitorProtocol(BaseVisitorProtocol, Protocol):
         """
         title: Try set binary op.
         parameters:
-          _lhs:
-            type: ir.Value | None
-          _rhs:
-            type: ir.Value | None
-          _op_code:
-            type: str
-        returns:
-          type: bool
+          _lhs: Left operand.
+          _rhs: Right operand.
+          _op_code: Op code.
+        returns: 'Result of this operation: try set binary op.'
         """
         ...
 
@@ -783,14 +653,10 @@ class VisitorProtocol(BaseVisitorProtocol, Protocol):
         """
         title: Handle string concatenation.
         parameters:
-          _node:
-            type: astx.AST
-          _lhs:
-            type: ir.Value
-          _rhs:
-            type: ir.Value
-        returns:
-          type: ir.Value
+          _node: Syntax node to process.
+          _lhs: Left operand.
+          _rhs: Right operand.
+        returns: 'Result of this operation: handle string concatenation.'
         """
         ...
 
@@ -802,12 +668,10 @@ class VisitorProtocol(BaseVisitorProtocol, Protocol):
         """
         title: Copy one static string into owned heap storage.
         parameters:
-          _node:
-            type: astx.AST
-          _pointer:
-            type: ir.Value
-        returns:
-          type: ir.Value
+          _node: Syntax node to process.
+          _pointer: Pointer.
+        returns: 'Result of this operation: copy one static string into owned
+          heap storage.'
         """
         ...
 
@@ -817,14 +681,10 @@ class VisitorProtocol(BaseVisitorProtocol, Protocol):
         """
         title: Handle string comparison.
         parameters:
-          _lhs:
-            type: ir.Value
-          _rhs:
-            type: ir.Value
-          _op:
-            type: str
-        returns:
-          type: ir.Value
+          _lhs: Left operand.
+          _rhs: Right operand.
+          _op: Op.
+        returns: 'Result of this operation: handle string comparison.'
         """
         ...
 
@@ -834,12 +694,9 @@ class VisitorProtocol(BaseVisitorProtocol, Protocol):
         """
         title: Common list element type.
         parameters:
-          _lhs_ty:
-            type: ir.Type
-          _rhs_ty:
-            type: ir.Type
-        returns:
-          type: ir.Type
+          _lhs_ty: Left operand ty.
+          _rhs_ty: Right operand ty.
+        returns: 'Result of this operation: common list element type.'
         """
         ...
 
@@ -847,12 +704,9 @@ class VisitorProtocol(BaseVisitorProtocol, Protocol):
         """
         title: Coerce to.
         parameters:
-          _value:
-            type: ir.Value
-          _target_ty:
-            type: ir.Type
-        returns:
-          type: ir.Value
+          _value: Value.
+          _target_ty: Target ty.
+        returns: 'Result of this operation: coerce to.'
         """
         ...
 
@@ -860,10 +714,8 @@ class VisitorProtocol(BaseVisitorProtocol, Protocol):
         """
         title: Mark set value.
         parameters:
-          _value:
-            type: ir.Value
-        returns:
-          type: ir.Value
+          _value: Value.
+        returns: 'Result of this operation: mark set value.'
         """
         ...
 
@@ -873,10 +725,8 @@ class VisitorProtocol(BaseVisitorProtocol, Protocol):
         """
         title: Subscript uses unsigned semantics.
         parameters:
-          _node:
-            type: astx.SubscriptExpr
-        returns:
-          type: bool
+          _node: Syntax node to process.
+        returns: 'Result of this operation: subscript uses unsigned semantics.'
         """
         ...
 
@@ -886,12 +736,9 @@ class VisitorProtocol(BaseVisitorProtocol, Protocol):
         """
         title: Constant subscript key matches.
         parameters:
-          _entry_key:
-            type: ir.Constant
-          _key_val:
-            type: ir.Constant
-        returns:
-          type: bool
+          _entry_key: Entry key.
+          _key_val: Key val.
+        returns: 'Result of this operation: constant subscript key matches.'
         """
         ...
 
@@ -905,12 +752,9 @@ class VisitorProtocol(BaseVisitorProtocol, Protocol):
         """
         title: Emit runtime subscript lookup.
         parameters:
-          _dict_val:
-            type: ir.Constant
-          _key_val:
-            type: ir.Value
-          unsigned:
-            type: bool
+          _dict_val: Dict val.
+          _key_val: Key val.
+          unsigned: Whether to use unsigned semantics.
         """
         _ = unsigned
         raise NotImplementedError
@@ -924,12 +768,9 @@ class VisitorProtocol(BaseVisitorProtocol, Protocol):
         """
         title: Normalize int for printf.
         parameters:
-          _value:
-            type: ir.Value
-          unsigned:
-            type: bool
-        returns:
-          type: tuple[ir.Value, str]
+          _value: Value.
+          unsigned: Whether to use unsigned semantics.
+        returns: Normalized int for printf.
         """
         _ = unsigned
         return cast(tuple[ir.Value, str], (None, ""))
@@ -943,14 +784,10 @@ class VisitorProtocol(BaseVisitorProtocol, Protocol):
         """
         title: Snprintf heap.
         parameters:
-          _node:
-            type: astx.AST
-          _fmt_gv:
-            type: ir.GlobalVariable
-          _args:
-            type: list[ir.Value]
-        returns:
-          type: ir.Value
+          _node: Syntax node to process.
+          _fmt_gv: Fmt gv.
+          _args: Args.
+        returns: 'Result of this operation: snprintf heap.'
         """
         ...
 
@@ -958,10 +795,8 @@ class VisitorProtocol(BaseVisitorProtocol, Protocol):
         """
         title: Get or create format global.
         parameters:
-          _fmt:
-            type: str
-        returns:
-          type: ir.GlobalVariable
+          _fmt: Fmt.
+        returns: Or create format global.
         """
         ...
 
@@ -971,66 +806,36 @@ class VisitorMixinTypingBase(ExceptionLoweringTypingBase):
     """
     title: Type-checking-only annotation carrier for llvmliteir visitor mixins.
     attributes:
-      runtime_exception_types:
-        type: dict[str, ResolvedExceptionType]
-      exception_context:
-        type: ir.Value | None
-      exception_result_slot:
-        type: ir.Value | None
-      exception_targets:
-        type: list[ExceptionTarget]
-      pending_returns:
-        type: list[PendingReturn]
-      llvm_function_signatures:
-        type: dict[str, FunctionSignature]
-      _llvm:
-        type: VariablesLLVM
-      named_values:
-        type: NamedValueMap
-      const_vars:
-        type: set[str]
-      function_protos:
-        type: dict[str, astx.FunctionPrototype]
-      llvm_functions_by_symbol_id:
-        type: dict[str, ir.Function]
-      result_stack:
-        type: list[ResultStackValue]
-      _buffer_view_global_counter:
-        type: int
-      loop_stack:
-        type: list[LoopTargets]
-      cleanup_stack:
-        type: list[CleanupAction]
-      class_construction_stack:
-        type: list[ir.Value]
-      emitting_failure_cleanup:
-        type: bool
-      struct_types:
-        type: dict[str, ir.Type]
-      llvm_structs_by_qualified_name:
-        type: dict[str, ir.IdentifiedStructType]
-      runtime_features:
-        type: RuntimeFeatureState
-      entry_function_symbol_id:
-        type: str | None
-      _fast_math_enabled:
-        type: bool
-      _current_function_return_type:
-        type: astx.DataType | None
-      _current_function_signature:
-        type: FunctionSignature | None
-      _current_generator_frame_ptr:
-        type: ir.Value | None
-      _current_generator_frame_slots:
-        type: dict[str, int]
-      _current_generator_out_ptr:
-        type: ir.Value | None
-      _current_generator_next_state:
-        type: int | None
-      target:
-        type: llvm.TargetRef
-      target_machine:
-        type: llvm.TargetMachine
+      runtime_exception_types: Types of runtime exception.
+      exception_context: Exception context.
+      exception_result_slot: Exception result slot.
+      exception_targets: Exception targets.
+      pending_returns: Pending returns.
+      llvm_function_signatures: LLVM function signatures.
+      _llvm: LLVM.
+      named_values: Named values.
+      const_vars: Const vars.
+      function_protos: Function protos.
+      llvm_functions_by_symbol_id: Identifier for LLVM functions by symbol.
+      result_stack: Stack of lowered expression results.
+      _buffer_view_global_counter: Buffer view global counter.
+      loop_stack: Loop stack.
+      cleanup_stack: Cleanup stack.
+      class_construction_stack: Class construction stack.
+      emitting_failure_cleanup: Whether to use emitting failure cleanup.
+      struct_types: Types of struct.
+      llvm_structs_by_qualified_name: Name of LLVM structs by qualified.
+      runtime_features: Runtime features.
+      entry_function_symbol_id: Identifier for entry function symbol.
+      _fast_math_enabled: Whether to use fast math enabled.
+      _current_function_return_type: Type of current function return.
+      _current_function_signature: Current function signature.
+      _current_generator_frame_ptr: Current generator frame ptr.
+      _current_generator_frame_slots: Current generator frame slots.
+      _current_generator_out_ptr: Current generator out ptr.
+      _current_generator_next_state: Current generator next state.
+      target: Destination of the operation.
+      target_machine: Target machine.
     """
 
     runtime_exception_types: dict[str, ResolvedExceptionType]
@@ -1068,8 +873,7 @@ class VisitorMixinTypingBase(ExceptionLoweringTypingBase):
         """
         title: Visit AST nodes.
         parameters:
-          _node:
-            type: astx.AST
+          _node: Syntax node to process.
         """
         raise NotImplementedError
 
@@ -1077,8 +881,7 @@ class VisitorMixinTypingBase(ExceptionLoweringTypingBase):
         """
         title: Visit one child AST node.
         parameters:
-          _node:
-            type: astx.AST
+          _node: Syntax node to process.
         """
         raise NotImplementedError
 
@@ -1086,10 +889,8 @@ class VisitorMixinTypingBase(ExceptionLoweringTypingBase):
         """
         title: Get function.
         parameters:
-          _name:
-            type: str
-        returns:
-          type: ir.Function | None
+          _name: Name of .
+        returns: Function.
         """
         return cast(ir.Function | None, None)
 
@@ -1101,12 +902,9 @@ class VisitorMixinTypingBase(ExceptionLoweringTypingBase):
         """
         title: Return the LLVM symbol name for a function node.
         parameters:
-          _node:
-            type: astx.AST
-          _fallback:
-            type: str
-        returns:
-          type: str
+          _node: Syntax node to process.
+          _fallback: Fallback.
+        returns: The LLVM symbol name for a function node.
         """
         return _fallback
 
@@ -1116,12 +914,9 @@ class VisitorMixinTypingBase(ExceptionLoweringTypingBase):
         """
         title: Create entry block alloca.
         parameters:
-          _var_name:
-            type: str
-          _type_name:
-            type: str | ir.Type
-        returns:
-          type: Any
+          _var_name: Name of var.
+          _type_name: Name of type.
+        returns: Created entry block alloca.
         """
         return cast(Any, None)
 
@@ -1135,14 +930,10 @@ class VisitorMixinTypingBase(ExceptionLoweringTypingBase):
         """
         title: Lower one tuple of i64 values to a stable global pointer.
         parameters:
-          _values:
-            type: tuple[int, Ellipsis]
-          purpose:
-            type: str
-          symbol_namespace:
-            type: str
-        returns:
-          type: ir.Value
+          _values: Values.
+          purpose: Purpose.
+          symbol_namespace: Symbol namespace.
+        returns: Lowered one tuple of i64 values to a stable global pointer.
         """
         _ = purpose, symbol_namespace
         return cast(ir.Value, None)
@@ -1151,10 +942,8 @@ class VisitorMixinTypingBase(ExceptionLoweringTypingBase):
         """
         title: Lower one field access to an address.
         parameters:
-          _node:
-            type: astx.FieldAccess
-        returns:
-          type: ir.Value
+          _node: Syntax node to process.
+        returns: Lowered one field access to an address.
         """
         return cast(ir.Value, None)
 
@@ -1165,10 +954,8 @@ class VisitorMixinTypingBase(ExceptionLoweringTypingBase):
         """
         title: Lower one static class field access to a global address.
         parameters:
-          _node:
-            type: astx.StaticFieldAccess
-        returns:
-          type: ir.Value
+          _node: Syntax node to process.
+        returns: Lowered one static class field access to a global address.
         """
         return cast(ir.Value, None)
 
@@ -1179,10 +966,8 @@ class VisitorMixinTypingBase(ExceptionLoweringTypingBase):
         """
         title: Lower one mutable lvalue target to an address.
         parameters:
-          _node:
-            type: astx.AST
-        returns:
-          type: ir.Value
+          _node: Syntax node to process.
+        returns: Lowered one mutable lvalue target to an address.
         """
         return cast(ir.Value, None)
 
@@ -1196,12 +981,9 @@ class VisitorMixinTypingBase(ExceptionLoweringTypingBase):
         """
         title: Destroy owned list storage before a validated replacement.
         parameters:
-          _node:
-            type: astx.AST
-          _list_ptr:
-            type: ir.Value
-          target_name:
-            type: str
+          _node: Syntax node to process.
+          _list_ptr: List ptr.
+          target_name: Name of target.
         """
         _ = (_node, _list_ptr, target_name)
 
@@ -1215,12 +997,9 @@ class VisitorMixinTypingBase(ExceptionLoweringTypingBase):
         """
         title: Destroy owned string storage before a validated replacement.
         parameters:
-          _node:
-            type: astx.AST
-          _string_ptr:
-            type: ir.Value
-          target_name:
-            type: str
+          _node: Syntax node to process.
+          _string_ptr: String ptr.
+          target_name: Name of target.
         """
         _ = (_node, _string_ptr, target_name)
 
@@ -1231,10 +1010,8 @@ class VisitorMixinTypingBase(ExceptionLoweringTypingBase):
         """
         title: Return one LLVM function type for semantic signature metadata.
         parameters:
-          _signature:
-            type: FunctionSignature
-        returns:
-          type: ir.FunctionType
+          _signature: Signature.
+        returns: One LLVM function type for semantic signature metadata.
         """
         return cast(ir.FunctionType, None)
 
@@ -1245,10 +1022,9 @@ class VisitorMixinTypingBase(ExceptionLoweringTypingBase):
         """
         title: Declare or reuse one semantic function.
         parameters:
-          _function:
-            type: Any
-        returns:
-          type: ir.Function
+          _function: Function.
+        returns: 'Result of this operation: declare or reuse one semantic
+          function.'
         """
         return cast(ir.Function, None)
 
@@ -1260,10 +1036,8 @@ class VisitorMixinTypingBase(ExceptionLoweringTypingBase):
         """
         title: Emit all active cleanup actions.
         parameters:
-          _start_depth:
-            type: int
-          _excluded_owner_symbol_ids:
-            type: frozenset[str]
+          _start_depth: Start depth.
+          _excluded_owner_symbol_ids: Identifiers for excluded owner symbol.
         """
         _ = _start_depth
 
@@ -1275,10 +1049,8 @@ class VisitorMixinTypingBase(ExceptionLoweringTypingBase):
         """
         title: Register cleanup for one non-transferred owned list temporary.
         parameters:
-          _node:
-            type: astx.AST
-          _list_ptr:
-            type: ir.Value
+          _node: Syntax node to process.
+          _list_ptr: List ptr.
         """
         _ = (_node, _list_ptr)
 
@@ -1290,10 +1062,8 @@ class VisitorMixinTypingBase(ExceptionLoweringTypingBase):
         """
         title: Register cleanup for one non-transferred owned string.
         parameters:
-          _node:
-            type: astx.AST
-          _pointer:
-            type: ir.Value
+          _node: Syntax node to process.
+          _pointer: Pointer.
         """
         _ = (_node, _pointer)
 
@@ -1301,8 +1071,7 @@ class VisitorMixinTypingBase(ExceptionLoweringTypingBase):
         """
         title: Emit and remove temporary cleanups after one stack depth.
         parameters:
-          _start_depth:
-            type: int
+          _start_depth: Start depth.
         """
         _ = _start_depth
 
@@ -1312,12 +1081,9 @@ class VisitorMixinTypingBase(ExceptionLoweringTypingBase):
         """
         title: Require runtime symbol.
         parameters:
-          _feature_name:
-            type: str
-          _symbol_name:
-            type: str
-        returns:
-          type: ir.Function
+          _feature_name: Name of feature.
+          _symbol_name: Name of symbol.
+        returns: 'Result of this operation: require runtime symbol.'
         """
         return cast(ir.Function, None)
 
@@ -1325,8 +1091,7 @@ class VisitorMixinTypingBase(ExceptionLoweringTypingBase):
         """
         title: Activate runtime feature.
         parameters:
-          _feature_name:
-            type: str
+          _feature_name: Name of feature.
         """
         return None
 
@@ -1334,8 +1099,7 @@ class VisitorMixinTypingBase(ExceptionLoweringTypingBase):
         """
         title: Set fast math.
         parameters:
-          _enabled:
-            type: bool
+          _enabled: Whether to use enabled.
         """
         return None
 
@@ -1343,8 +1107,7 @@ class VisitorMixinTypingBase(ExceptionLoweringTypingBase):
         """
         title: Apply fast math.
         parameters:
-          _inst:
-            type: ir.Instruction
+          _inst: Inst.
         """
         return None
 
@@ -1354,14 +1117,10 @@ class VisitorMixinTypingBase(ExceptionLoweringTypingBase):
         """
         title: Emit fma.
         parameters:
-          _lhs:
-            type: ir.Value
-          _rhs:
-            type: ir.Value
-          _addend:
-            type: ir.Value
-        returns:
-          type: ir.Value
+          _lhs: Left operand.
+          _rhs: Right operand.
+          _addend: Addend.
+        returns: 'Result of this operation: emit fma.'
         """
         return cast(ir.Value, None)
 
@@ -1369,10 +1128,8 @@ class VisitorMixinTypingBase(ExceptionLoweringTypingBase):
         """
         title: Is numeric value.
         parameters:
-          _value:
-            type: ir.Value
-        returns:
-          type: bool
+          _value: Value.
+        returns: 'Result of this operation: is numeric value.'
         """
         return False
 
@@ -1383,10 +1140,8 @@ class VisitorMixinTypingBase(ExceptionLoweringTypingBase):
         """
         title: Return one lowered namespace value for an analyzed node.
         parameters:
-          _node:
-            type: astx.AST
-        returns:
-          type: ir.Value | None
+          _node: Syntax node to process.
+        returns: One lowered namespace value for an analyzed node.
         """
         return cast(ir.Value | None, None)
 
@@ -1397,10 +1152,8 @@ class VisitorMixinTypingBase(ExceptionLoweringTypingBase):
         """
         title: LLVM type for AST type.
         parameters:
-          _type:
-            type: astx.DataType | None
-        returns:
-          type: ir.Type | None
+          _type: Type of .
+        returns: 'Result of this operation: lLVM type for AST type.'
         """
         return cast(ir.Type | None, None)
 
@@ -1410,10 +1163,8 @@ class VisitorMixinTypingBase(ExceptionLoweringTypingBase):
         """
         title: Resolved ast type.
         parameters:
-          _node:
-            type: astx.AST | None
-        returns:
-          type: astx.DataType | None
+          _node: Syntax node to process.
+        returns: 'Result of this operation: resolved ast type.'
         """
         return cast(astx.DataType | None, None)
 
@@ -1427,14 +1178,10 @@ class VisitorMixinTypingBase(ExceptionLoweringTypingBase):
         """
         title: Cast ast value.
         parameters:
-          _value:
-            type: ir.Value
-          source_type:
-            type: astx.DataType | None
-          target_type:
-            type: astx.DataType | None
-        returns:
-          type: ir.Value
+          _value: Value.
+          source_type: Type of the source value.
+          target_type: Destination type for the conversion.
+        returns: 'Result of this operation: cast ast value.'
         """
         _ = source_type
         _ = target_type
@@ -1452,18 +1199,12 @@ class VisitorMixinTypingBase(ExceptionLoweringTypingBase):
         """
         title: Emit numeric compare.
         parameters:
-          _op_code:
-            type: str
-          _lhs:
-            type: ir.Value
-          _rhs:
-            type: ir.Value
-          unsigned:
-            type: bool
-          name:
-            type: str
-        returns:
-          type: ir.Value
+          _op_code: Op code.
+          _lhs: Left operand.
+          _rhs: Right operand.
+          unsigned: Whether to use unsigned semantics.
+          name: Name identifying the declaration or operation.
+        returns: 'Result of this operation: emit numeric compare.'
         """
         _ = unsigned
         _ = name
@@ -1478,14 +1219,10 @@ class VisitorMixinTypingBase(ExceptionLoweringTypingBase):
         """
         title: Unify numeric operands.
         parameters:
-          _lhs:
-            type: ir.Value
-          _rhs:
-            type: ir.Value
-          unsigned:
-            type: bool
-        returns:
-          type: tuple[ir.Value, ir.Value]
+          _lhs: Left operand.
+          _rhs: Right operand.
+          unsigned: Whether to use unsigned semantics.
+        returns: 'Result of this operation: unify numeric operands.'
         """
         _ = unsigned
         return cast(tuple[ir.Value, ir.Value], (None, None))
@@ -1499,14 +1236,10 @@ class VisitorMixinTypingBase(ExceptionLoweringTypingBase):
         """
         title: Try set binary op.
         parameters:
-          _lhs:
-            type: ir.Value | None
-          _rhs:
-            type: ir.Value | None
-          _op_code:
-            type: str
-        returns:
-          type: bool
+          _lhs: Left operand.
+          _rhs: Right operand.
+          _op_code: Op code.
+        returns: 'Result of this operation: try set binary op.'
         """
         return False
 
@@ -1519,14 +1252,10 @@ class VisitorMixinTypingBase(ExceptionLoweringTypingBase):
         """
         title: Handle string concatenation.
         parameters:
-          _node:
-            type: astx.AST
-          _lhs:
-            type: ir.Value
-          _rhs:
-            type: ir.Value
-        returns:
-          type: ir.Value
+          _node: Syntax node to process.
+          _lhs: Left operand.
+          _rhs: Right operand.
+        returns: 'Result of this operation: handle string concatenation.'
         """
         return cast(ir.Value, None)
 
@@ -1538,12 +1267,10 @@ class VisitorMixinTypingBase(ExceptionLoweringTypingBase):
         """
         title: Copy one static string into owned heap storage.
         parameters:
-          _node:
-            type: astx.AST
-          _pointer:
-            type: ir.Value
-        returns:
-          type: ir.Value
+          _node: Syntax node to process.
+          _pointer: Pointer.
+        returns: 'Result of this operation: copy one static string into owned
+          heap storage.'
         """
         return cast(ir.Value, None)
 
@@ -1553,14 +1280,10 @@ class VisitorMixinTypingBase(ExceptionLoweringTypingBase):
         """
         title: Handle string comparison.
         parameters:
-          _lhs:
-            type: ir.Value
-          _rhs:
-            type: ir.Value
-          _op:
-            type: str
-        returns:
-          type: ir.Value
+          _lhs: Left operand.
+          _rhs: Right operand.
+          _op: Op.
+        returns: 'Result of this operation: handle string comparison.'
         """
         return cast(ir.Value, None)
 
@@ -1570,12 +1293,9 @@ class VisitorMixinTypingBase(ExceptionLoweringTypingBase):
         """
         title: Common list element type.
         parameters:
-          _lhs_ty:
-            type: ir.Type
-          _rhs_ty:
-            type: ir.Type
-        returns:
-          type: ir.Type
+          _lhs_ty: Left operand ty.
+          _rhs_ty: Right operand ty.
+        returns: 'Result of this operation: common list element type.'
         """
         return cast(ir.Type, None)
 
@@ -1583,12 +1303,9 @@ class VisitorMixinTypingBase(ExceptionLoweringTypingBase):
         """
         title: Coerce to.
         parameters:
-          _value:
-            type: ir.Value
-          _target_ty:
-            type: ir.Type
-        returns:
-          type: ir.Value
+          _value: Value.
+          _target_ty: Target ty.
+        returns: 'Result of this operation: coerce to.'
         """
         return cast(ir.Value, None)
 
@@ -1596,10 +1313,8 @@ class VisitorMixinTypingBase(ExceptionLoweringTypingBase):
         """
         title: Mark set value.
         parameters:
-          _value:
-            type: ir.Value
-        returns:
-          type: ir.Value
+          _value: Value.
+        returns: 'Result of this operation: mark set value.'
         """
         return cast(ir.Value, None)
 
@@ -1609,10 +1324,8 @@ class VisitorMixinTypingBase(ExceptionLoweringTypingBase):
         """
         title: Subscript uses unsigned semantics.
         parameters:
-          _node:
-            type: astx.SubscriptExpr
-        returns:
-          type: bool
+          _node: Syntax node to process.
+        returns: 'Result of this operation: subscript uses unsigned semantics.'
         """
         return False
 
@@ -1622,12 +1335,9 @@ class VisitorMixinTypingBase(ExceptionLoweringTypingBase):
         """
         title: Constant subscript key matches.
         parameters:
-          _entry_key:
-            type: ir.Constant
-          _key_val:
-            type: ir.Constant
-        returns:
-          type: bool
+          _entry_key: Entry key.
+          _key_val: Key val.
+        returns: 'Result of this operation: constant subscript key matches.'
         """
         return False
 
@@ -1641,12 +1351,9 @@ class VisitorMixinTypingBase(ExceptionLoweringTypingBase):
         """
         title: Emit runtime subscript lookup.
         parameters:
-          _dict_val:
-            type: ir.Constant
-          _key_val:
-            type: ir.Value
-          unsigned:
-            type: bool
+          _dict_val: Dict val.
+          _key_val: Key val.
+          unsigned: Whether to use unsigned semantics.
         """
         _ = unsigned
 
@@ -1659,12 +1366,9 @@ class VisitorMixinTypingBase(ExceptionLoweringTypingBase):
         """
         title: Normalize int for printf.
         parameters:
-          _value:
-            type: ir.Value
-          unsigned:
-            type: bool
-        returns:
-          type: tuple[ir.Value, str]
+          _value: Value.
+          unsigned: Whether to use unsigned semantics.
+        returns: Normalized int for printf.
         """
         _ = unsigned
         return cast(tuple[ir.Value, str], (None, ""))
@@ -1678,14 +1382,10 @@ class VisitorMixinTypingBase(ExceptionLoweringTypingBase):
         """
         title: Snprintf heap.
         parameters:
-          _node:
-            type: astx.AST
-          _fmt_gv:
-            type: ir.GlobalVariable
-          _args:
-            type: list[ir.Value]
-        returns:
-          type: ir.Value
+          _node: Syntax node to process.
+          _fmt_gv: Fmt gv.
+          _args: Args.
+        returns: 'Result of this operation: snprintf heap.'
         """
         return cast(ir.Value, None)
 
@@ -1693,10 +1393,8 @@ class VisitorMixinTypingBase(ExceptionLoweringTypingBase):
         """
         title: Get or create format global.
         parameters:
-          _fmt:
-            type: str
-        returns:
-          type: ir.GlobalVariable
+          _fmt: Fmt.
+        returns: Or create format global.
         """
         return cast(ir.GlobalVariable, None)
 

@@ -11,13 +11,12 @@ from arx.builtins import BUILTIN_FILE, BUILTIN_FILE_MODULE, BUILTIN_OPEN
 
 def source_children(node: astx.AST) -> Iterator[astx.AST]:
     """
-    title: >-
-      Traverse source nodes and types without revisiting semantic sidecars.
+    title: Traverse source nodes and types without revisiting semantic
+      sidecars.
     parameters:
-      node:
-        type: astx.AST
-    returns:
-      type: Iterator[astx.AST]
+      node: Syntax node to process.
+    returns: 'Result of this operation: traverse source nodes and types
+      without revisiting semantic sidecars.'
     """
     pending = [node]
     seen: set[int] = set()
@@ -42,10 +41,9 @@ def needs_file_builtin(module: astx.Module) -> bool:
     """
     title: Request File lazily, without adding native dependencies to scalars.
     parameters:
-      module:
-        type: astx.Module
-    returns:
-      type: bool
+      module: Module to process.
+    returns: 'Result of this operation: request File lazily, without adding
+      native dependencies to scalars.'
     """
     if module.name == BUILTIN_FILE_MODULE:
         return False

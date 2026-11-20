@@ -27,10 +27,8 @@ class Block(ASTNodes[ASTType]):
         """
         title: Return the AST structure of the object.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         block_nodes = []
 

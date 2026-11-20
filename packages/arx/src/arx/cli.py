@@ -1,5 +1,9 @@
 """
 title: Functions and classes for handling the CLI call.
+attributes:
+  KNOWN_SUBCOMMANDS: Known subcommands.
+  DIAGNOSTIC_FORMATS: Diagnostic formats.
+  ArxMain: Arx main.
 """
 
 import argparse
@@ -31,8 +35,8 @@ class ArxApplication(Protocol):
         title: Run one normal compiler command.
         parameters:
           kwargs:
-            type: Any
             variadic: keyword
+            description: Keyword arguments.
         """
         ...
 
@@ -41,10 +45,10 @@ class ArxApplication(Protocol):
         title: Run one compiled-language test command.
         parameters:
           kwargs:
-            type: Any
             variadic: keyword
-        returns:
-          type: int
+            description: Keyword arguments.
+        returns: 'Result of this operation: run one compiled-language test
+          command.'
         """
         ...
 
@@ -54,9 +58,10 @@ ArxMain: Callable[[], ArxApplication] | None = None
 
 def create_arx_application() -> ArxApplication:
     """
-    title: Create the compiler application without loading it for metadata CLI.
-    returns:
-      type: ArxApplication
+    title: Create the compiler application without loading it for metadata
+      CLI.
+    returns: Created the compiler application without loading it for metadata
+      CLI.
     """
     if ArxMain is not None:
         return ArxMain()
@@ -71,10 +76,9 @@ def _arx_error_record(error: ArxError) -> dict[str, Any]:
     """
     title: Convert one expected frontend error to the CLI diagnostic schema.
     parameters:
-      error:
-        type: ArxError
-    returns:
-      type: dict[str, Any]
+      error: Error being reported or inspected.
+    returns: Converted one expected frontend error to the CLI diagnostic
+      schema.
     """
     location = error.location
     return {
@@ -96,10 +100,8 @@ def _irx_diagnostic_record(diagnostic: object) -> dict[str, Any]:
     """
     title: Convert one structured IRx diagnostic to the CLI schema.
     parameters:
-      diagnostic:
-        type: object
-    returns:
-      type: dict[str, Any]
+      diagnostic: Structured diagnostic to inspect or report.
+    returns: Converted one structured IRx diagnostic to the CLI schema.
     """
     source_resolver = getattr(diagnostic, "resolved_source", None)
     source = source_resolver() if callable(source_resolver) else None
@@ -126,10 +128,8 @@ def _compiler_error_records(error: Exception) -> list[dict[str, Any]] | None:
     """
     title: Return machine records for a known compiler failure.
     parameters:
-      error:
-        type: Exception
-    returns:
-      type: list[dict[str, Any]] | None
+      error: Error being reported or inspected.
+    returns: Machine records for a known compiler failure.
     """
     if isinstance(error, ArxError):
         return [_arx_error_record(error)]
@@ -158,12 +158,10 @@ def report_compiler_error(
     """
     title: Render one known compiler failure without hiding internal errors.
     parameters:
-      error:
-        type: Exception
-      diagnostic_format:
-        type: str
-    returns:
-      type: bool
+      error: Error being reported or inspected.
+      diagnostic_format: Diagnostic format.
+    returns: 'Result of this operation: render one known compiler failure
+      without hiding internal errors.'
     """
     records = _compiler_error_records(error)
     if records is None:
@@ -193,8 +191,7 @@ def report_internal_error(diagnostic_format: str = "human") -> None:
     """
     title: Render a non-source internal compiler failure safely.
     parameters:
-      diagnostic_format:
-        type: str
+      diagnostic_format: Diagnostic format.
     """
     message = "internal compiler error; rerun with --traceback to debug"
     if diagnostic_format == "json":
@@ -232,9 +229,9 @@ def report_internal_error(diagnostic_format: str = "human") -> None:
 class CustomHelpFormatter(argparse.RawTextHelpFormatter):
     """
     title: Formatter for generating usage messages and argument help strings.
-    summary: >-
-      Only the name of this class is considered a public API. All the methods
-      provided by the class are considered an implementation detail.
+    summary: Only the name of this class is considered a public API. All
+      the methods provided by the class are considered an implementation
+      detail.
     """
 
     def __init__(
@@ -248,17 +245,13 @@ class CustomHelpFormatter(argparse.RawTextHelpFormatter):
         """
         title: Initialize CustomHelpFormatter.
         parameters:
-          prog:
-            type: str
-          indent_increment:
-            type: int
-          max_help_position:
-            type: int
-          width:
-            type: Optional[int]
+          prog: Prog.
+          indent_increment: Indent increment.
+          max_help_position: Max help position.
+          width: Bit width or display width.
           kwargs:
-            type: Any
             variadic: keyword
+            description: Keyword arguments.
         """
         super().__init__(
             prog,
@@ -272,8 +265,7 @@ class CustomHelpFormatter(argparse.RawTextHelpFormatter):
 def get_args() -> argparse.ArgumentParser:
     """
     title: Get the CLI arguments.
-    returns:
-      type: argparse.ArgumentParser
+    returns: The CLI arguments.
     """
     parser = argparse.ArgumentParser(
         prog="arx",
@@ -364,8 +356,7 @@ def get_args() -> argparse.ArgumentParser:
 def get_test_args() -> argparse.ArgumentParser:
     """
     title: Get the CLI arguments for `arx test`.
-    returns:
-      type: argparse.ArgumentParser
+    returns: The CLI arguments for `arx test`.
     """
     parser = argparse.ArgumentParser(
         prog="arx test",
@@ -468,10 +459,8 @@ def _looks_like_subcommand_attempt(token: str) -> bool:
     """
     title: Return whether a leading token appears to be a subcommand attempt.
     parameters:
-      token:
-        type: str
-    returns:
-      type: bool
+      token: Token being processed.
+    returns: Whether a leading token appears to be a subcommand attempt.
     """
     if not token:
         return False
@@ -491,13 +480,12 @@ def _looks_like_subcommand_attempt(token: str) -> bool:
 def app(argv: Sequence[str] | None = None) -> None:
     """
     title: Run the application.
-    summary: >-
-      The test subcommand enables runtime Typeguard instrumentation before the
-      lazy compiler import. Normal builds leave the default-off policy intact.
-      Already imported compiler definitions retain their import-time policy.
+    summary: The test subcommand enables runtime Typeguard instrumentation
+      before the lazy compiler import. Normal builds leave the default-off
+      policy intact. Already imported compiler definitions retain
+      their import-time policy.
     parameters:
-      argv:
-        type: Sequence[str] | None
+      argv: Argv.
     """
     raw_args = list(sys.argv[1:] if argv is None else argv)
 

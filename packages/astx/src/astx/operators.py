@@ -1,5 +1,7 @@
 """
 title: ASTx classes for the operators.
+attributes:
+  OpCodeAugAssign: Op code aug assign.
 """
 
 from __future__ import annotations
@@ -30,12 +32,9 @@ class WalrusOp(DataType):
     """
     title: AST class for the Walrus (assignment expression) operator.
     attributes:
-      lhs:
-        type: Variable
-      rhs:
-        type: DataType
-      kind:
-        type: ASTKind
+      lhs: Left operand.
+      rhs: Right operand.
+      kind: Kind of value or operation.
     """
 
     lhs: Variable
@@ -51,12 +50,9 @@ class WalrusOp(DataType):
         """
         title: Initialize the WalrusOp instance.
         parameters:
-          lhs:
-            type: Variable
-          rhs:
-            type: DataType
-          loc:
-            type: SourceLocation
+          lhs: Left operand.
+          rhs: Right operand.
+          loc: Source coordinates associated with the node.
         """
         super().__init__(loc=loc)
         self.lhs = lhs
@@ -66,8 +62,7 @@ class WalrusOp(DataType):
     def __str__(self) -> str:
         """
         title: Return a string that represents the object.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         return f"WalrusOp[:=]({self.lhs} := {self.rhs})"
 
@@ -75,10 +70,8 @@ class WalrusOp(DataType):
         """
         title: Return the AST structure that represents the object.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         key = "WALRUS[:=]"
         lhs = {"lhs": self.lhs.get_struct(simplified)}
@@ -94,12 +87,9 @@ class AssignmentExpr(Expr):
     """
     title: AST class for assignment expressions.
     attributes:
-      kind:
-        type: ASTKind
-      targets:
-        type: ASTNodes[Expr]
-      value:
-        type: Expr
+      kind: Kind of value or operation.
+      targets: Targets.
+      value: Stored value.
     """
 
     kind: ASTKind
@@ -117,14 +107,10 @@ class AssignmentExpr(Expr):
         """
         title: Initialize the assignment expression.
         parameters:
-          targets:
-            type: Iterable[Expr] | ASTNodes[Expr]
-          value:
-            type: Expr
-          loc:
-            type: SourceLocation
-          parent:
-            type: Optional[ASTNodes]
+          targets: Targets.
+          value: Value to process.
+          loc: Source coordinates associated with the node.
+          parent: Parent node or enclosing scope.
         """
         super().__init__(loc=loc, parent=parent)
 
@@ -141,8 +127,7 @@ class AssignmentExpr(Expr):
     def __str__(self) -> str:
         """
         title: Return a string that represents the object.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         return f"AssignmentExpr[{self.value}]"
 
@@ -150,10 +135,8 @@ class AssignmentExpr(Expr):
         """
         title: Return the AST structure of the object.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         key = "ASSIGNMENT-EXPR"
         targets_dict = {"targets": self.targets.get_struct(simplified)}
@@ -173,14 +156,10 @@ class VariableAssignment(StatementType):
     """
     title: AST class for variable declaration.
     attributes:
-      loc:
-        type: SourceLocation
-      kind:
-        type: ASTKind
-      name:
-        type: str
-      value:
-        type: Expr
+      loc: Source coordinates attached to this node.
+      kind: Kind of value or operation.
+      name: Name identifying this declaration.
+      value: Stored value.
     """
 
     loc: SourceLocation
@@ -199,14 +178,10 @@ class VariableAssignment(StatementType):
         """
         title: Initialize the VarExprAST instance.
         parameters:
-          name:
-            type: str
-          value:
-            type: Expr
-          loc:
-            type: SourceLocation
-          parent:
-            type: Optional[ASTNodes]
+          name: Name identifying the declaration or operation.
+          value: Value to process.
+          loc: Source coordinates associated with the node.
+          parent: Parent node or enclosing scope.
         """
         super().__init__(loc=loc, parent=parent)
         self.loc = loc
@@ -217,8 +192,7 @@ class VariableAssignment(StatementType):
     def __str__(self) -> str:
         """
         title: Return a string that represents the object.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         return f"VariableAssignment[{self.name}]"
 
@@ -226,10 +200,8 @@ class VariableAssignment(StatementType):
         """
         title: Return the AST structure of the object.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         key = str(self)
         value = self.value.get_struct(simplified)
@@ -257,20 +229,16 @@ OpCodeAugAssign: TypeAlias = Literal[
 class AugAssign(DataType):
     """
     title: AST class for augmented assignment.
-    summary: >-
-      Model a single identifier target and RHS value. The operation yields the
-      stored value internally; frontends may restrict it to statement contexts.
-      Operator modeling does not imply backend support. Numeric, mutability,
-      conversion, and failure rules belong to semantic analysis and lowering.
+    summary: Model a single identifier target and RHS value. The
+      operation yields the stored value internally; frontends may
+      restrict it to statement contexts. Operator modeling does
+      not imply backend support. Numeric, mutability, conversion,
+      and failure rules belong to semantic analysis and lowering.
     attributes:
-      kind:
-        type: ASTKind
-      target:
-        type: Identifier
-      op_code:
-        type: OpCodeAugAssign
-      value:
-        type: DataType
+      kind: Kind of value or operation.
+      target: Destination of the operation.
+      op_code: Operator spelling.
+      value: Stored value.
     """
 
     kind: ASTKind
@@ -289,14 +257,10 @@ class AugAssign(DataType):
         """
         title: Initialize the augmented assignment.
         parameters:
-          target:
-            type: Identifier
-          op_code:
-            type: OpCodeAugAssign
-          value:
-            type: DataType
-          loc:
-            type: SourceLocation
+          target: Destination of the operation.
+          op_code: Operator spelling.
+          value: Value to process.
+          loc: Source coordinates associated with the node.
         """
         super().__init__(loc=loc)
         self.target = target
@@ -307,8 +271,7 @@ class AugAssign(DataType):
     def __str__(self) -> str:
         """
         title: Return a string that represents the augmented assignment object.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         return f"AugAssign[{self.op_code}]"
 
@@ -316,10 +279,8 @@ class AugAssign(DataType):
         """
         title: Return the AST structure of the object.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         key = str(self)
         value: ReprStruct = {
@@ -335,14 +296,10 @@ class CompareOp(DataType):
     """
     title: AST class for comparison operators acting as properties.
     attributes:
-      ops:
-        type: list[Literal[==, !=, <, >, <=, >=]]
-      comparators:
-        type: list[DataType]
-      left:
-        type: DataType
-      kind:
-        type: ASTKind
+      ops: Ops.
+      comparators: Comparators.
+      left: Left operand.
+      kind: Kind of value or operation.
     """
 
     ops: list[Literal["==", "!=", "<", ">", "<=", ">="]]
@@ -360,14 +317,10 @@ class CompareOp(DataType):
         """
         title: Initialize the CompareOp instance.
         parameters:
-          left:
-            type: DataType
-          ops:
-            type: Iterable[Literal[==, !=, <, >, <=, >=]]
-          comparators:
-            type: Iterable[DataType]
-          loc:
-            type: SourceLocation
+          left: Left operand.
+          ops: Ops.
+          comparators: Comparators.
+          loc: Source coordinates associated with the node.
         """
         super().__init__(loc=loc)
         self.ops = list(ops)
@@ -385,8 +338,7 @@ class CompareOp(DataType):
     def __str__(self) -> str:
         """
         title: Return a string that represents the object.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         ops_str = ", ".join(self.ops)
         return f"Compare[{ops_str}]"
@@ -395,10 +347,8 @@ class CompareOp(DataType):
         """
         title: Return the AST structure that represents the object.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         ops_str = ", ".join(self.ops)
         key = f"COMPARE[{ops_str}]"
@@ -417,10 +367,8 @@ class Starred(Expr):
     """
     title: AST class for starred expressions (*expr).
     attributes:
-      kind:
-        type: ASTKind
-      value:
-        type: Expr
+      kind: Kind of value or operation.
+      value: Stored value.
     """
 
     kind: ASTKind
@@ -436,12 +384,9 @@ class Starred(Expr):
         """
         title: Initialize the starred expression.
         parameters:
-          value:
-            type: Expr
-          loc:
-            type: SourceLocation
-          parent:
-            type: Optional[ASTNodes]
+          value: Value to process.
+          loc: Source coordinates associated with the node.
+          parent: Parent node or enclosing scope.
         """
         super().__init__(loc=loc, parent=parent)
         self.value = value
@@ -450,8 +395,7 @@ class Starred(Expr):
     def __str__(self) -> str:
         """
         title: Return a string that represents the object.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         return f"Starred[*]({self.value})"
 
@@ -459,10 +403,8 @@ class Starred(Expr):
         """
         title: Return the AST structure that represents the object.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         key = "STARRED[*]"
         content: ReprStruct = {"value": self.value.get_struct(simplified)}

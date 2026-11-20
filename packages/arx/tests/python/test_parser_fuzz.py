@@ -1,8 +1,8 @@
 """
 title: Deterministic lexer and parser fuzz regressions.
-summary: >-
-  Exercise a fixed mutation budget in the normal unit-test matrix so malformed
-  source can only succeed or fail through a structured frontend exception.
+summary: Exercise a fixed mutation budget in the normal unit-test matrix
+  so malformed source can only succeed or fail through a structured frontend
+  exception.
 """
 
 from __future__ import annotations
@@ -43,8 +43,8 @@ FUZZ_SEEDS = (
 def generate_fuzz_cases() -> Iterator[str]:
     """
     title: Yield a deterministic mixture of random and mutated source text.
-    returns:
-      type: Iterator[str]
+    returns: Iterator yielding a deterministic mixture of random and mutated
+      source text.
     """
     generator = random.Random(FUZZ_SEED)
     for index in range(FUZZ_CASE_COUNT):
@@ -77,8 +77,7 @@ def test_frontend_fuzz_seed_is_valid(source: str) -> None:
     """
     title: Baseline seeds parse before any deterministic mutation is applied.
     parameters:
-      source:
-        type: str
+      source: Source input to process.
     """
     ArxIO.string_to_buffer(source)
     Parser().parse(Lexer().lex(), "fuzz_seed")
@@ -89,8 +88,7 @@ def test_frontend_fuzz_case_fails_closed(source: str) -> None:
     """
     title: Random malformed source never escapes as an internal exception.
     parameters:
-      source:
-        type: str
+      source: Source input to process.
     """
     ArxIO.string_to_buffer(source)
     try:

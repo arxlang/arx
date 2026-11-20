@@ -1,8 +1,7 @@
 """
 title: Shared primitive array storage metadata.
-summary: >-
-  Define stable primitive type metadata shared by the builtin Arrow C++ backed
-  array runtime and higher-level Tensor helpers.
+summary: Define stable primitive type metadata shared by the builtin Arrow
+  C++ backed array runtime and higher-level Tensor helpers.
 """
 
 from __future__ import annotations
@@ -44,16 +43,11 @@ class ArrayPrimitiveTypeSpec:
     """
     title: Supported builtin array primitive storage type metadata.
     attributes:
-      name:
-        type: str
-      type_id:
-        type: int
-      dtype_token:
-        type: int
-      element_size_bytes:
-        type: int | None
-      buffer_view_compatible:
-        type: bool
+      name: Name identifying this declaration.
+      type_id: Identifier for type.
+      dtype_token: Dtype token.
+      element_size_bytes: Element size bytes.
+      buffer_view_compatible: Whether to use buffer view compatible.
     """
 
     name: str

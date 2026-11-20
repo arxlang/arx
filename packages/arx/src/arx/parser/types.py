@@ -1,7 +1,9 @@
 """
 title: Type parser mixin.
-summary: >-
-  Parse type annotations and synthesize default values for typed declarations.
+summary: Parse type annotations and synthesize default values for
+  typed declarations.
+attributes:
+  _BUILTIN_TYPE_MAP: Builtin type map.
 """
 
 from __future__ import annotations
@@ -106,13 +108,11 @@ class TypeParserMixin(ParserMixinBase):
     def validate_type_declaration_name(self, target: str) -> None:
         """
         title: Reject inference markers as names of declared types.
-        summary: >-
-          Auto remains a contextual value identifier, but cannot name a class,
-          type alias, or template parameter because type positions interpret it
-          as an inference request.
+        summary: Auto remains a contextual value identifier, but cannot name
+          a class, type alias, or template parameter because type positions
+          interpret it as an inference request.
         parameters:
-          target:
-            type: str
+          target: Destination of the operation.
         """
         if self.tokens.cur_tok.value == "auto":
             raise ParserException(
@@ -125,8 +125,7 @@ class TypeParserMixin(ParserMixinBase):
     def is_type_alias_decl_start(self) -> bool:
         """
         title: Return whether the current token starts a type alias.
-        returns:
-          type: bool
+        returns: Whether the current token starts a type alias.
         """
         return (
             self._is_identifier_value(builtins.BUILTIN_TYPE)
@@ -137,10 +136,8 @@ class TypeParserMixin(ParserMixinBase):
         """
         title: Return a cloned target type for one alias reference.
         parameters:
-          alias_name:
-            type: str
-        returns:
-          type: astx.DataType
+          alias_name: Name of alias.
+        returns: A cloned target type for one alias reference.
         """
         type_ = copy.deepcopy(self.type_aliases[alias_name])
         if isinstance(type_, astx.UnionType):
@@ -153,8 +150,7 @@ class TypeParserMixin(ParserMixinBase):
         """
         title: Validate one type alias declaration name.
         parameters:
-          alias_name:
-            type: str
+          alias_name: Name of alias.
         """
         if alias_name in self.type_aliases:
             raise ParserException(
@@ -215,10 +211,8 @@ class TypeParserMixin(ParserMixinBase):
         """
         title: Validate that one runtime-layout type is allowed here.
         parameters:
-          type_name:
-            type: str
-          type_context:
-            type: TypeUseContext
+          type_name: Name of type.
+          type_context: Type context.
         """
         if type_context.allows_runtime_layout or type_name == "dataframe":
             return
@@ -231,10 +225,8 @@ class TypeParserMixin(ParserMixinBase):
         """
         title: Build a default initializer for typed declarations.
         parameters:
-          data_type:
-            type: astx.DataType
-        returns:
-          type: astx.Expr
+          data_type: Declared data type.
+        returns: Constructed a default initializer for typed declarations.
         """
         if isinstance(data_type, astx.NullableType):
             return astx.Cast(astx.LiteralNone(), data_type)
@@ -304,14 +296,10 @@ class TypeParserMixin(ParserMixinBase):
         """
         title: Parse a type annotation.
         parameters:
-          allow_template_vars:
-            type: bool
-          allow_union:
-            type: bool
-          type_context:
-            type: TypeUseContext
-        returns:
-          type: astx.DataType
+          allow_template_vars: Whether to use allow template vars.
+          allow_union: Whether to use allow union.
+          type_context: Type context.
+        returns: Parsed a type annotation.
         """
         if self.tokens.cur_tok.kind == TokenKind.none_literal:
             self.tokens.get_next_token()  # eat none

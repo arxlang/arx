@@ -57,24 +57,15 @@ class ColumnOperation:
     """
     title: Closed compute identity, conversions and result storage contract.
     attributes:
-      kernel:
-        type: str
-      type_id:
-        type: int
-      result:
-        type: astx.DataType
-      input_type:
-        type: astx.DataType | None
-      operation_id:
-        type: int
-      arrow_type_id:
-        type: int
-      result_arrow_type_id:
-        type: int
-      arguments:
-        type: tuple[astx.AST, Ellipsis]
-      operand_arrow_type_ids:
-        type: tuple[int, Ellipsis]
+      kernel: Kernel.
+      type_id: Identifier for type.
+      result: Result of the operation.
+      input_type: Type of input.
+      operation_id: Approved operation identifier.
+      arrow_type_id: Identifier for arrow type.
+      result_arrow_type_id: Identifier for result arrow type.
+      arguments: Arguments supplied to the call.
+      operand_arrow_type_ids: Identifiers for operand arrow type.
     """
 
     kernel: str
@@ -113,10 +104,9 @@ def scalar_type(type_: astx.DataType | None) -> astx.DataType | None:
     """
     title: Unwrap one column or nullable scalar type.
     parameters:
-      type_:
-        type: astx.DataType | None
-    returns:
-      type: astx.DataType | None
+      type_: Type expression to process.
+    returns: 'Result of this operation: unwrap one column or nullable scalar
+      type.'
     """
     if isinstance(type_, astx.SeriesType):
         return type_.element_type
@@ -133,12 +123,9 @@ def nullable_error(
     """
     title: Report unsupported nullable operations at the semantic boundary.
     parameters:
-      analyzer:
-        type: SemanticAnalyzerCore
-      node:
-        type: astx.AST
-      message:
-        type: str
+      analyzer: Semantic analyzer resolving the operation.
+      node: Syntax node to process.
+      message: Diagnostic or output message.
     """
     analyzer.context.diagnostics.add(
         message, node=node, code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH
@@ -158,18 +145,12 @@ def set_operation(
     """
     title: Record one checked operation and its owned Series result.
     parameters:
-      analyzer:
-        type: SemanticAnalyzerCore
-      node:
-        type: astx.AST
-      kernel:
-        type: str
-      input_type:
-        type: astx.DataType | None
-      result:
-        type: astx.DataType
-      arguments:
-        type: tuple[astx.AST, Ellipsis]
+      analyzer: Semantic analyzer resolving the operation.
+      node: Syntax node to process.
+      kernel: Kernel.
+      input_type: Type of input.
+      result: Result of the operation.
+      arguments: Arguments supplied to the call.
     """
     type_id = dataframe_type_id(input_type)
     if type_id is None and kernel not in {"slice", "is_null", "count"}:
@@ -231,14 +212,13 @@ def resolve_column_binary(
     analyzer: SemanticAnalyzerCore, node: astx.BinaryOp
 ) -> bool:
     """
-    title: Resolve exact-type, null-propagating scalar and Series operations.
+    title: Resolve exact-type, null-propagating scalar and Series
+      operations.
     parameters:
-      analyzer:
-        type: SemanticAnalyzerCore
-      node:
-        type: astx.BinaryOp
-    returns:
-      type: bool
+      analyzer: Semantic analyzer resolving the operation.
+      node: Syntax node to process.
+    returns: Resolved exact-type, null-propagating scalar and Series
+      operations.
     """
     left = analyzer._expr_type(node.lhs)
     right = analyzer._expr_type(node.rhs)
@@ -296,12 +276,9 @@ def resolve_column_index(
     """
     title: Resolve checked scalar access without borrowing Arrow storage.
     parameters:
-      analyzer:
-        type: SemanticAnalyzerCore
-      node:
-        type: astx.SubscriptExpr
-    returns:
-      type: bool
+      analyzer: Semantic analyzer resolving the operation.
+      node: Syntax node to process.
+    returns: Resolved checked scalar access without borrowing Arrow storage.
     """
     source = analyzer._expr_type(node.value)
     if not isinstance(source, astx.SeriesType):
@@ -364,12 +341,9 @@ def validate_column_declaration(
     """
     title: Reject unsupported scalar storage and malformed rich declarations.
     parameters:
-      analyzer:
-        type: SemanticAnalyzerCore
-      type_:
-        type: astx.DataType
-      node:
-        type: astx.AST
+      analyzer: Semantic analyzer resolving the operation.
+      type_: Type expression to process.
+      node: Syntax node to process.
     """
     if contains_template_variables(type_):
         return
@@ -424,12 +398,9 @@ def resolve_column_unary(
     """
     title: Resolve checked, null-propagating unary column operations.
     parameters:
-      analyzer:
-        type: SemanticAnalyzerCore
-      node:
-        type: astx.UnaryOp
-    returns:
-      type: bool
+      analyzer: Semantic analyzer resolving the operation.
+      node: Syntax node to process.
+    returns: Resolved checked, null-propagating unary column operations.
     """
     source = analyzer._expr_type(node.operand)
     if not isinstance(source, (astx.NullableType, astx.SeriesType)):
@@ -473,10 +444,8 @@ def resolve_series_reduction(
     """
     title: Resolve null-skipping reductions with explicit accumulator types.
     parameters:
-      analyzer:
-        type: SemanticAnalyzerCore
-      node:
-        type: astx.SeriesReduction
+      analyzer: Semantic analyzer resolving the operation.
+      node: Syntax node to process.
     """
     analyzer.visit(node.value)
     source = analyzer._expr_type(node.value)
@@ -523,12 +492,9 @@ def resolve_series_store(
     """
     title: Resolve checked element updates on a mutable Series binding.
     parameters:
-      analyzer:
-        type: SemanticAnalyzerCore
-      node:
-        type: astx.BinaryOp
-    returns:
-      type: bool
+      analyzer: Semantic analyzer resolving the operation.
+      node: Syntax node to process.
+    returns: Resolved checked element updates on a mutable Series binding.
     """
     assert isinstance(node.lhs, astx.SubscriptExpr)
     source = analyzer._expr_type(node.lhs.value)

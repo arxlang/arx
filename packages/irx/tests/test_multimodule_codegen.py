@@ -28,8 +28,7 @@ def test_module_globals_have_independent_storage(tmp_path: Path) -> None:
     """
     title: Same-named private globals in imported modules keep separate state.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     dependencies = {}
     for name, initial in (("left", 4), ("right", 40)):
@@ -116,13 +115,11 @@ def _int_function(
     """
     title: Build a small int32-returning function.
     parameters:
-      name:
-        type: str
+      name: Name identifying the declaration or operation.
       body_nodes:
-        type: astx.AST
         variadic: positional
-    returns:
-      type: astx.FunctionDef
+        description: Body nodes.
+    returns: Constructed a small int32-returning function.
     """
     body = astx.Block()
     for node in body_nodes:
@@ -141,10 +138,8 @@ def _point_struct(name: str = "Point") -> astx.StructDefStmt:
     """
     title: Build a simple struct definition.
     parameters:
-      name:
-        type: str
-    returns:
-      type: astx.StructDefStmt
+      name: Name identifying the declaration or operation.
+    returns: Constructed a simple struct definition.
     """
     return astx.StructDefStmt(
         name=name,
@@ -159,10 +154,8 @@ def _sum2_function(name: str = "sum2") -> astx.FunctionDef:
     """
     title: Build a small float64 helper with two parameters.
     parameters:
-      name:
-        type: str
-    returns:
-      type: astx.FunctionDef
+      name: Name identifying the declaration or operation.
+    returns: Constructed a small float64 helper with two parameters.
     """
     body = astx.Block()
     body.append(astx.FunctionReturn(astx.Identifier("lhs")))
@@ -321,8 +314,8 @@ def test_translate_modules_lowers_child_module_from_import() -> None:
 
 def test_translate_modules_lowers_grouped_child_module_from_imports() -> None:
     """
-    title: >-
-      Grouped child-module import-from bindings lower to each module symbol.
+    title: Grouped child-module import-from bindings lower to each module
+      symbol.
     """
     stats_call = astx.MethodCall(
         astx.Identifier("stats"),

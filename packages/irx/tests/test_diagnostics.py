@@ -26,14 +26,11 @@ def _with_loc(node: astx.AST, line: int, col: int) -> astx.AST:
     """
     title: Attach a simple source location to one AST node.
     parameters:
-      node:
-        type: astx.AST
-      line:
-        type: int
-      col:
-        type: int
-    returns:
-      type: astx.AST
+      node: Syntax node to process.
+      line: Source line coordinate.
+      col: Source column or column selector.
+    returns: 'Result of this operation: attach a simple source location to
+      one AST node.'
     """
     node.loc = SimpleNamespace(line=line, col=col)
     return node

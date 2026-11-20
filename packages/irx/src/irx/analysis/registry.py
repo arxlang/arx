@@ -1,8 +1,8 @@
 """
 title: Semantic registration helpers.
-summary: >-
-  Centralize semantic declaration and top-level registration policy so the
-  analyzer delegates identity and duplicate handling to a smaller subsystem.
+summary: Centralize semantic declaration and top-level registration policy
+  so the analyzer delegates identity and duplicate handling to a smaller
+  subsystem.
 """
 
 from __future__ import annotations
@@ -49,14 +49,11 @@ MAIN_FUNCTION_NAME = "main"
 class SemanticRegistry:
     """
     title: Semantic entity registration policy.
-    summary: >-
-      Register locals, functions, and structs while enforcing the duplicate
-      declaration rules that semantic analysis currently exposes.
+    summary: Register locals, functions, and structs while enforcing the
+      duplicate declaration rules that semantic analysis currently exposes.
     attributes:
-      context:
-        type: SemanticContext
-      factory:
-        type: SemanticEntityFactory
+      context: Context for the operation.
+      factory: Factory.
     """
 
     context: SemanticContext
@@ -70,10 +67,8 @@ class SemanticRegistry:
         """
         title: Initialize SemanticRegistry.
         parameters:
-          context:
-            type: SemanticContext
-          factory:
-            type: SemanticEntityFactory
+          context: Context for the operation.
+          factory: Factory.
         """
         self.context = context
         self.factory = factory
@@ -81,8 +76,7 @@ class SemanticRegistry:
     def _current_module_key(self) -> ModuleKey:
         """
         title: Return the active module key.
-        returns:
-          type: ModuleKey
+        returns: The active module key.
         """
         return self.context.current_module_key or "<root>"
 
@@ -93,10 +87,8 @@ class SemanticRegistry:
         """
         title: Return whether one prototype is an explicit extern declaration.
         parameters:
-          prototype:
-            type: astx.FunctionPrototype
-        returns:
-          type: bool
+          prototype: Prototype.
+        returns: Whether one prototype is an explicit extern declaration.
         """
         return bool(getattr(prototype, "is_extern", False))
 
@@ -107,10 +99,8 @@ class SemanticRegistry:
         """
         title: Return whether one prototype is marked variadic.
         parameters:
-          prototype:
-            type: astx.FunctionPrototype
-        returns:
-          type: bool
+          prototype: Prototype.
+        returns: Whether one prototype is marked variadic.
         """
         return bool(getattr(prototype, "is_variadic", False))
 
@@ -121,10 +111,8 @@ class SemanticRegistry:
         """
         title: Return the normalized semantic symbol name for one prototype.
         parameters:
-          prototype:
-            type: astx.FunctionPrototype
-        returns:
-          type: str
+          prototype: Prototype.
+        returns: The normalized semantic symbol name for one prototype.
         """
         prototype_name = prototype.name
         raw_symbol_name = getattr(prototype, "symbol_name", prototype_name)
@@ -146,10 +134,8 @@ class SemanticRegistry:
         """
         title: Return whether one parameter declares a default value.
         parameters:
-          argument:
-            type: astx.Argument
-        returns:
-          type: bool
+          argument: Argument.
+        returns: Whether one parameter declares a default value.
         """
         return not isinstance(argument.default, astx.Undefined)
 
@@ -162,12 +148,9 @@ class SemanticRegistry:
         """
         title: Return the normalized calling convention for one prototype.
         parameters:
-          prototype:
-            type: astx.FunctionPrototype
-          is_extern:
-            type: bool
-        returns:
-          type: CallingConvention
+          prototype: Prototype.
+          is_extern: Whether is extern.
+        returns: The normalized calling convention for one prototype.
         """
         default = (
             CallingConvention.C if is_extern else CallingConvention.IRX_DEFAULT
@@ -196,12 +179,9 @@ class SemanticRegistry:
         """
         title: Return whether two parameter specs match exactly.
         parameters:
-          lhs:
-            type: ParameterSpec
-          rhs:
-            type: ParameterSpec
-        returns:
-          type: bool
+          lhs: Left operand.
+          rhs: Right operand.
+        returns: Whether two parameter specs match exactly.
         """
         return (
             lhs.name == rhs.name
@@ -214,10 +194,8 @@ class SemanticRegistry:
         """
         title: Return whether one normalized parameter has a default.
         parameters:
-          parameter:
-            type: ParameterSpec
-        returns:
-          type: bool
+          parameter: Parameter.
+        returns: Whether one normalized parameter has a default.
         """
         return bool(parameter.metadata.get(PARAMETER_HAS_DEFAULT_METADATA))
 
@@ -228,10 +206,8 @@ class SemanticRegistry:
         """
         title: Return one normalized parameter default fingerprint.
         parameters:
-          parameter:
-            type: ParameterSpec
-        returns:
-          type: object
+          parameter: Parameter.
+        returns: One normalized parameter default fingerprint.
         """
         return parameter.metadata.get(
             PARAMETER_DEFAULT_FINGERPRINT_METADATA,
@@ -245,12 +221,9 @@ class SemanticRegistry:
         """
         title: Return whether two parameter default contracts match.
         parameters:
-          lhs:
-            type: ParameterSpec
-          rhs:
-            type: ParameterSpec
-        returns:
-          type: bool
+          lhs: Left operand.
+          rhs: Right operand.
+        returns: Whether two parameter default contracts match.
         """
         if self._parameter_has_default(lhs) != self._parameter_has_default(
             rhs
@@ -268,16 +241,14 @@ class SemanticRegistry:
         abi_only: bool,
     ) -> str:
         """
-        title: Describe the first incompatible function-signature field.
+        title: Describe the first incompatible function-signature
+          field.
         parameters:
-          lhs:
-            type: FunctionSignature
-          rhs:
-            type: FunctionSignature
-          abi_only:
-            type: bool
-        returns:
-          type: str
+          lhs: Left operand.
+          rhs: Right operand.
+          abi_only: Whether to use ABI only.
+        returns: 'Result of this operation: describe the first incompatible
+          function-signature field.'
         """
         if not abi_only and lhs.name != rhs.name:
             return f"name differs ('{lhs.name}' vs '{rhs.name}')"
@@ -354,12 +325,10 @@ class SemanticRegistry:
         """
         title: Compare external ABI contracts independently of source aliases.
         parameters:
-          lhs:
-            type: FunctionSignature
-          rhs:
-            type: FunctionSignature
-        returns:
-          type: bool
+          lhs: Left operand.
+          rhs: Right operand.
+        returns: 'Result of this operation: compare external ABI contracts
+          independently of source aliases.'
         """
         return (
             lhs.calling_convention is rhs.calling_convention
@@ -382,12 +351,9 @@ class SemanticRegistry:
         """
         title: Return whether two canonical function signatures match.
         parameters:
-          lhs:
-            type: FunctionSignature
-          rhs:
-            type: FunctionSignature
-        returns:
-          type: bool
+          lhs: Left operand.
+          rhs: Right operand.
+        returns: Whether two canonical function signatures match.
         """
         if lhs.name != rhs.name:
             return False
@@ -425,16 +391,11 @@ class SemanticRegistry:
         """
         title: Normalize and validate one semantic function signature.
         parameters:
-          prototype:
-            type: astx.FunctionPrototype
-          definition:
-            type: astx.FunctionDef | None
-          validate_ffi:
-            type: bool
-          validate_main:
-            type: bool
-        returns:
-          type: FunctionSignature
+          prototype: Prototype.
+          definition: Definition.
+          validate_ffi: Whether to use validate FFI.
+          validate_main: Whether to use validate main.
+        returns: Normalized and validate one semantic function signature.
         """
         seen_parameter_names: set[str] = set()
         seen_default_parameter = False
@@ -609,18 +570,12 @@ class SemanticRegistry:
         """
         title: Declare one lexical symbol.
         parameters:
-          name:
-            type: str
-          type_:
-            type: astx.DataType
-          is_mutable:
-            type: bool
-          declaration:
-            type: astx.AST
-          kind:
-            type: str
-        returns:
-          type: SemanticSymbol
+          name: Name identifying the declaration or operation.
+          type_: Type expression to process.
+          is_mutable: Whether is mutable.
+          declaration: Declaration being processed.
+          kind: Kind of value or operation.
+        returns: 'Result of this operation: declare one lexical symbol.'
         """
         symbol = self.factory.make_variable_symbol(
             self._current_module_key(),
@@ -665,14 +620,10 @@ class SemanticRegistry:
         """
         title: Register one top-level function.
         parameters:
-          prototype:
-            type: astx.FunctionPrototype
-          definition:
-            type: astx.FunctionDef | None
-          validate_ffi:
-            type: bool
-        returns:
-          type: SemanticFunction
+          prototype: Prototype.
+          definition: Definition.
+          validate_ffi: Whether to use validate FFI.
+        returns: 'Result of this operation: register one top-level function.'
         """
         signature = self.normalize_function_signature(
             prototype,
@@ -787,10 +738,8 @@ class SemanticRegistry:
         """
         title: Register one top-level struct.
         parameters:
-          node:
-            type: astx.StructDefStmt
-        returns:
-          type: SemanticStruct
+          node: Syntax node to process.
+        returns: 'Result of this operation: register one top-level struct.'
         """
         module_key = self._current_module_key()
         existing = self.context.get_struct(module_key, node.name)
@@ -821,10 +770,8 @@ class SemanticRegistry:
         """
         title: Register one top-level class.
         parameters:
-          node:
-            type: astx.ClassDefStmt
-        returns:
-          type: SemanticClass
+          node: Syntax node to process.
+        returns: 'Result of this operation: register one top-level class.'
         """
         module_key = self._current_module_key()
         existing = self.context.get_class(module_key, node.name)
@@ -857,12 +804,9 @@ class SemanticRegistry:
         """
         title: Resolve one registered function.
         parameters:
-          name:
-            type: str
-          module_key:
-            type: ModuleKey | None
-        returns:
-          type: SemanticFunction | None
+          name: Name identifying the declaration or operation.
+          module_key: Canonical module identity.
+        returns: Resolved one registered function.
         """
         lookup_module_key = module_key or self._current_module_key()
         return self.context.get_function(lookup_module_key, name)
@@ -876,12 +820,9 @@ class SemanticRegistry:
         """
         title: Resolve one registered class.
         parameters:
-          name:
-            type: str
-          module_key:
-            type: ModuleKey | None
-        returns:
-          type: SemanticClass | None
+          name: Name identifying the declaration or operation.
+          module_key: Canonical module identity.
+        returns: Resolved one registered class.
         """
         lookup_module_key = module_key or self._current_module_key()
         return self.context.get_class(lookup_module_key, name)
@@ -895,12 +836,9 @@ class SemanticRegistry:
         """
         title: Resolve one registered struct.
         parameters:
-          name:
-            type: str
-          module_key:
-            type: ModuleKey | None
-        returns:
-          type: SemanticStruct | None
+          name: Name identifying the declaration or operation.
+          module_key: Canonical module identity.
+        returns: Resolved one registered struct.
         """
         lookup_module_key = module_key or self._current_module_key()
         return self.context.get_struct(lookup_module_key, name)

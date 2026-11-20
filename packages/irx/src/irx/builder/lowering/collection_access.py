@@ -17,12 +17,10 @@ def lower_collection_access(visitor: VisitorCore, node: astx.AST) -> bool:
     """
     title: Emit an analyzed collection operation without type rediscovery.
     parameters:
-      visitor:
-        type: VisitorCore
-      node:
-        type: astx.AST
-    returns:
-      type: bool
+      visitor: Visitor performing the traversal or lowering.
+      node: Syntax node to process.
+    returns: 'Result of this operation: emit an analyzed collection operation
+      without type rediscovery.'
     """
     info = getattr(node, "semantic", None)
     if (

@@ -1,8 +1,7 @@
 """
 title: Bridge existing LLVM services to the narrow call-plan interface.
-summary: >-
-  This adapter contains no operation selection or algorithms. It is constructed
-  by the concrete visitor and never imported by semantic analysis.
+summary: This adapter contains no operation selection or algorithms. It is
+  constructed by the concrete visitor and never imported by semantic analysis.
 """
 
 import astx
@@ -25,8 +24,8 @@ class VisitorCallServices:
     """
     title: Per-visitor service bindings with explicit compilation lifetime.
     attributes:
-      owner:
-        type: Visitor
+      owner: Owner keeping the resource alive.
+      builder: Builder generating the intermediate representation.
     """
 
     owner: Visitor
@@ -35,8 +34,7 @@ class VisitorCallServices:
         """
         title: Bind one compiler instance for resolved call emission.
         parameters:
-          owner:
-            type: Visitor
+          owner: Owner keeping the resource alive.
         """
         self.owner = owner
 
@@ -44,8 +42,7 @@ class VisitorCallServices:
     def builder(self) -> ir.IRBuilder:
         """
         title: Return the active instruction builder.
-        returns:
-          type: ir.IRBuilder
+        returns: The active instruction builder.
         """
         return self.owner._llvm.ir_builder
 
@@ -53,10 +50,9 @@ class VisitorCallServices:
         """
         title: Reuse module-local string interning.
         parameters:
-          value:
-            type: str
-        returns:
-          type: ir.Value
+          value: Value to process.
+        returns: 'Result of this operation: reuse module-local string
+          interning.'
         """
         return self.owner._constant_c_string_pointer(
             value, name_hint="table_io"
@@ -66,10 +62,9 @@ class VisitorCallServices:
         """
         title: Evaluate and pin one argument without leaking stack entries.
         parameters:
-          node:
-            type: astx.AST
-        returns:
-          type: ir.Value
+          node: Syntax node to process.
+        returns: 'Result of this operation: evaluate and pin one argument
+          without leaking stack entries.'
         """
         self.owner.visit_child(node)
         value = require_lowered_value(
@@ -84,14 +79,10 @@ class VisitorCallServices:
         """
         title: Load a resolved opaque-handle field after a lifetime check.
         parameters:
-          node:
-            type: astx.AST
-          value:
-            type: ir.Value
-          index:
-            type: int
-        returns:
-          type: ir.Value
+          node: Syntax node to process.
+          value: Value to process.
+          index: Index selecting the item.
+        returns: Loaded a resolved opaque-handle field after a lifetime check.
         """
         self.owner.class_operation(node, "require", value)
         integer = ir.IntType(32)
@@ -107,14 +98,11 @@ class VisitorCallServices:
         """
         title: Reuse conversion emission with the operand's resolved type.
         parameters:
-          node:
-            type: astx.AST
-          value:
-            type: ir.Value
-          target:
-            type: astx.DataType
-        returns:
-          type: ir.Value
+          node: Syntax node to process.
+          value: Value to process.
+          target: Destination of the operation.
+        returns: 'Result of this operation: reuse conversion emission with
+          the operand''s resolved type.'
         """
         return self.owner._cast_ast_value(
             value,
@@ -126,19 +114,15 @@ class VisitorCallServices:
         self, node: astx.AST, feature: str, name: str, args: list[ir.Value]
     ) -> ir.Value:
         """
-        title: >-
-          Reuse checked status/output ABI and registered runtime activation.
+        title: Reuse checked status/output ABI and registered runtime
+          activation.
         parameters:
-          node:
-            type: astx.AST
-          feature:
-            type: str
-          name:
-            type: str
-          args:
-            type: list[ir.Value]
-        returns:
-          type: ir.Value
+          node: Syntax node to process.
+          feature: Feature.
+          name: Name identifying the declaration or operation.
+          args: Arguments supplied to the operation.
+        returns: 'Result of this operation: reuse checked status/output
+          ABI and registered runtime activation.'
         """
         return self.owner.checked_native_call(
             node, self.owner.require_runtime_symbol(feature, name), args
@@ -148,10 +132,8 @@ class VisitorCallServices:
         """
         title: Reuse typed scalar transport and Arrow ownership emission.
         parameters:
-          node:
-            type: astx.AST
-          plan:
-            type: ComputePlan
+          node: Syntax node to process.
+          plan: Resolved semantic execution plan.
         """
         self.owner.lower_compute(node, plan)
 
@@ -161,16 +143,12 @@ class VisitorCallServices:
         """
         title: Register existing native cleanup behavior.
         parameters:
-          node:
-            type: astx.AST
-          feature:
-            type: str
-          destroy:
-            type: str
-          value:
-            type: ir.Value
-        returns:
-          type: CleanupAction
+          node: Syntax node to process.
+          feature: Feature.
+          destroy: Destroy.
+          value: Value to process.
+        returns: 'Result of this operation: register existing native cleanup
+          behavior.'
         """
         return self.owner.track_native_handle(node, feature, destroy, value)
 
@@ -178,8 +156,7 @@ class VisitorCallServices:
         """
         title: Discharge a native temporary on the success path.
         parameters:
-          cleanup:
-            type: CleanupAction
+          cleanup: Cleanup.
         """
         self.owner.release_native_handle(cleanup)
 
@@ -187,10 +164,8 @@ class VisitorCallServices:
         """
         title: Produce one owned Arrow result.
         parameters:
-          node:
-            type: astx.AST
-          value:
-            type: ir.Value
+          node: Syntax node to process.
+          value: Value to process.
         """
         self.owner.arrow_temporary(node, value)
         self.owner.result_stack.append(value)
@@ -199,14 +174,13 @@ class VisitorCallServices:
         self, node: astx.AST, resolution: ResolvedClassConstruction
     ) -> ir.Value:
         """
-        title: Produce one resolved class construction and return its value.
+        title: Produce one resolved class construction and return
+          its value.
         parameters:
-          node:
-            type: astx.AST
-          resolution:
-            type: ResolvedClassConstruction
-        returns:
-          type: ir.Value
+          node: Syntax node to process.
+          resolution: Resolution.
+        returns: 'Result of this operation: produce one resolved
+          class construction and return its value.'
         """
         self.owner.lower_class_construct(node, resolution)
         return require_lowered_value(

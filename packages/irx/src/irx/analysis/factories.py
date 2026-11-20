@@ -1,8 +1,7 @@
 """
 title: Semantic entity factories.
-summary: >-
-  Build semantic sidecar entities and visible binding wrappers in one place so
-  analyzer visitors can focus on traversal and rule orchestration.
+summary: Build semantic sidecar entities and visible binding wrappers in
+  one place so analyzer visitors can focus on traversal and rule orchestration.
 """
 
 from __future__ import annotations
@@ -64,12 +63,10 @@ _TRANSIENT_AST_FIELDS = frozenset(
 class SemanticEntityFactory:
     """
     title: Central semantic entity construction.
-    summary: >-
-      Create semantic symbols, functions, structs, modules, and visible
+    summary: Create semantic symbols, functions, structs, modules, and visible
       bindings with consistent ids and qualified names.
     attributes:
-      context:
-        type: SemanticContext
+      context: Context for the operation.
     """
 
     context: SemanticContext
@@ -78,8 +75,7 @@ class SemanticEntityFactory:
         """
         title: Initialize SemanticEntityFactory.
         parameters:
-          context:
-            type: SemanticContext
+          context: Context for the operation.
         """
         self.context = context
 
@@ -96,20 +92,13 @@ class SemanticEntityFactory:
         """
         title: Create a variable-like semantic symbol.
         parameters:
-          module_key:
-            type: ModuleKey
-          name:
-            type: str
-          type_:
-            type: astx.DataType
-          is_mutable:
-            type: bool
-          declaration:
-            type: astx.AST | None
-          kind:
-            type: str
-        returns:
-          type: SemanticSymbol
+          module_key: Canonical module identity.
+          name: Name identifying the declaration or operation.
+          type_: Type expression to process.
+          is_mutable: Whether is mutable.
+          declaration: Declaration being processed.
+          kind: Kind of value or operation.
+        returns: Created a variable-like semantic symbol.
         """
         return variable_symbol(
             self.context.next_symbol_id(kind),
@@ -128,16 +117,12 @@ class SemanticEntityFactory:
     ) -> SemanticSymbol:
         """
         title: Create one function-parameter semantic symbol.
-        summary: >-
-          Rebinding follows Argument.mutability independently of parameter
-          passing and resource-ownership policy.
+        summary: Rebinding follows Argument.mutability independently
+          of parameter passing and resource-ownership policy.
         parameters:
-          module_key:
-            type: ModuleKey
-          argument:
-            type: astx.Argument
-        returns:
-          type: SemanticSymbol
+          module_key: Canonical module identity.
+          argument: Argument.
+        returns: Created one function-parameter semantic symbol.
         """
         return self.make_variable_symbol(
             module_key,
@@ -155,10 +140,8 @@ class SemanticEntityFactory:
         """
         title: Return whether one parameter declares a default value.
         parameters:
-          argument:
-            type: astx.Argument
-        returns:
-          type: bool
+          argument: Argument.
+        returns: Whether one parameter declares a default value.
         """
         return not isinstance(argument.default, astx.Undefined)
 
@@ -170,12 +153,9 @@ class SemanticEntityFactory:
         """
         title: Return whether an AST name is an implementation-generated name.
         parameters:
-          node:
-            type: object
-          value:
-            type: object
-        returns:
-          type: bool
+          node: Syntax node to process.
+          value: Value to process.
+        returns: Whether an AST name is an implementation-generated name.
         """
         if isinstance(node, astx.Identifier):
             return False
@@ -188,14 +168,13 @@ class SemanticEntityFactory:
     def _default_fingerprint(self, value: object) -> object:
         """
         title: Build one structural fingerprint for a parameter default.
-        summary: >-
-          Compare AST default expressions without relying on ASTx equality,
-          which lowers equality into expression nodes instead of booleans.
+        summary: Compare AST default expressions without relying
+          on ASTx equality, which lowers equality into expression
+          nodes instead of booleans.
         parameters:
-          value:
-            type: object
-        returns:
-          type: object
+          value: Value to process.
+        returns: Constructed one structural fingerprint for a parameter
+          default.
         """
         if value is None or isinstance(value, (bool, int, float, str)):
             return value
@@ -257,12 +236,10 @@ class SemanticEntityFactory:
         """
         title: Build one structural fingerprint for an object's data fields.
         parameters:
-          tag:
-            type: str
-          value:
-            type: object
-        returns:
-          type: object
+          tag: Tag.
+          value: Value to process.
+        returns: Constructed one structural fingerprint for an object's data
+          fields.
         """
         fields: list[tuple[str, object]] = []
         for field_name, field_value in sorted(vars(value).items()):
@@ -293,10 +270,8 @@ class SemanticEntityFactory:
         """
         title: Return normalized default metadata for one parameter.
         parameters:
-          argument:
-            type: astx.Argument
-        returns:
-          type: dict[str, Any]
+          argument: Argument.
+        returns: Normalized default metadata for one parameter.
         """
         if not self._argument_has_default(argument):
             return {
@@ -317,10 +292,8 @@ class SemanticEntityFactory:
         """
         title: Create one canonical semantic parameter specification.
         parameters:
-          argument:
-            type: astx.Argument
-        returns:
-          type: ParameterSpec
+          argument: Argument.
+        returns: Created one canonical semantic parameter specification.
         """
         return ParameterSpec(
             name=argument.name,
@@ -343,22 +316,14 @@ class SemanticEntityFactory:
         """
         title: Create one canonical semantic function signature.
         parameters:
-          prototype:
-            type: astx.FunctionPrototype
-          calling_convention:
-            type: CallingConvention
-          is_variadic:
-            type: bool
-          is_extern:
-            type: bool
-          symbol_name:
-            type: str
-          required_runtime_features:
-            type: tuple[str, Ellipsis]
-          ffi:
-            type: FFICallableInfo | None
-        returns:
-          type: FunctionSignature
+          prototype: Prototype.
+          calling_convention: Calling convention.
+          is_variadic: Whether is variadic.
+          is_extern: Whether is extern.
+          symbol_name: Name of symbol.
+          required_runtime_features: Required runtime features.
+          ffi: FFI.
+        returns: Created one canonical semantic function signature.
         """
         return FunctionSignature(
             name=prototype.name,
@@ -388,18 +353,12 @@ class SemanticEntityFactory:
         """
         title: Create one semantic function entity.
         parameters:
-          module_key:
-            type: ModuleKey
-          prototype:
-            type: astx.FunctionPrototype
-          signature:
-            type: FunctionSignature
-          definition:
-            type: astx.FunctionDef | None
-          args:
-            type: tuple[SemanticSymbol, Ellipsis] | None
-        returns:
-          type: SemanticFunction
+          module_key: Canonical module identity.
+          prototype: Prototype.
+          signature: Resolved callable signature.
+          definition: Definition.
+          args: Arguments supplied to the operation.
+        returns: Created one semantic function entity.
         """
         semantic_args = args
         if semantic_args is None:
@@ -439,10 +398,8 @@ class SemanticEntityFactory:
         """
         title: Create one resolved callable wrapper.
         parameters:
-          function:
-            type: SemanticFunction
-        returns:
-          type: CallableResolution
+          function: Function to process.
+        returns: Created one resolved callable wrapper.
         """
         return CallableResolution(
             function=function,
@@ -457,12 +414,9 @@ class SemanticEntityFactory:
         """
         title: Create one semantic struct entity.
         parameters:
-          module_key:
-            type: ModuleKey
-          node:
-            type: astx.StructDefStmt
-        returns:
-          type: SemanticStruct
+          module_key: Canonical module identity.
+          node: Syntax node to process.
+        returns: Created one semantic struct entity.
         """
         return SemanticStruct(
             symbol_id=self.context.next_symbol_id("struct"),
@@ -480,12 +434,9 @@ class SemanticEntityFactory:
         """
         title: Create one semantic class entity.
         parameters:
-          module_key:
-            type: ModuleKey
-          node:
-            type: astx.ClassDefStmt
-        returns:
-          type: SemanticClass
+          module_key: Canonical module identity.
+          node: Syntax node to process.
+        returns: Created one semantic class entity.
         """
         return SemanticClass(
             symbol_id=self.context.next_symbol_id("class"),
@@ -518,38 +469,23 @@ class SemanticEntityFactory:
         """
         title: Create one semantic class-member record.
         parameters:
-          class_:
-            type: SemanticClass
-          name:
-            type: str
-          kind:
-            type: ClassMemberKind
-          declaration:
-            type: astx.AST
-          visibility:
-            type: astx.VisibilityKind
-          is_static:
-            type: bool
-          is_constant:
-            type: bool
-          is_mutable:
-            type: bool
-          is_abstract:
-            type: bool
-          type_:
-            type: astx.DataType | None
-          signature:
-            type: FunctionSignature | None
-          signature_key:
-            type: str | None
-          overrides:
-            type: str | None
-          dispatch_slot:
-            type: int | None
-          lowered_function:
-            type: SemanticFunction | None
-        returns:
-          type: SemanticClassMember
+          class_: Class being processed.
+          name: Name identifying the declaration or operation.
+          kind: Kind of value or operation.
+          declaration: Declaration being processed.
+          visibility: Visibility.
+          is_static: Whether the member belongs to the class rather than
+            an instance.
+          is_constant: Whether is constant.
+          is_mutable: Whether is mutable.
+          is_abstract: Whether is abstract.
+          type_: Type expression to process.
+          signature: Resolved callable signature.
+          signature_key: Signature key.
+          overrides: Overrides.
+          dispatch_slot: Dispatch slot.
+          lowered_function: Lowered function.
+        returns: Created one semantic class-member record.
         """
         prefix = (
             "class_attr"
@@ -591,12 +527,9 @@ class SemanticEntityFactory:
         """
         title: Create one semantic module entity.
         parameters:
-          module_key:
-            type: ModuleKey
-          display_name:
-            type: str | None
-        returns:
-          type: SemanticModule
+          module_key: Canonical module identity.
+          display_name: Name of display.
+        returns: Created one semantic module entity.
         """
         return SemanticModule(
             module_key=module_key,
@@ -610,10 +543,8 @@ class SemanticEntityFactory:
         """
         title: Create a visible binding for a function.
         parameters:
-          function:
-            type: SemanticFunction
-        returns:
-          type: SemanticBinding
+          function: Function to process.
+        returns: Created a visible binding for a function.
         """
         return SemanticBinding(
             kind="function",
@@ -629,10 +560,8 @@ class SemanticEntityFactory:
         """
         title: Create a visible binding for a struct.
         parameters:
-          struct:
-            type: SemanticStruct
-        returns:
-          type: SemanticBinding
+          struct: Struct.
+        returns: Created a visible binding for a struct.
         """
         return SemanticBinding(
             kind="struct",
@@ -648,10 +577,8 @@ class SemanticEntityFactory:
         """
         title: Create a visible binding for a class.
         parameters:
-          class_:
-            type: SemanticClass
-        returns:
-          type: SemanticBinding
+          class_: Class being processed.
+        returns: Created a visible binding for a class.
         """
         return SemanticBinding(
             kind="class",
@@ -667,10 +594,8 @@ class SemanticEntityFactory:
         """
         title: Create a visible binding for a module.
         parameters:
-          module:
-            type: SemanticModule
-        returns:
-          type: SemanticBinding
+          module: Module to process.
+        returns: Created a visible binding for a module.
         """
         return SemanticBinding(
             kind="module",
@@ -690,16 +615,11 @@ class SemanticEntityFactory:
         """
         title: Create one resolved import binding record.
         parameters:
-          local_name:
-            type: str
-          requested_name:
-            type: str
-          source_module_key:
-            type: ModuleKey
-          binding:
-            type: SemanticBinding
-        returns:
-          type: ResolvedImportBinding
+          local_name: Name of local.
+          requested_name: Name of requested.
+          source_module_key: Source module key.
+          binding: Resolved binding for the operation.
+        returns: Created one resolved import binding record.
         """
         return ResolvedImportBinding(
             local_name=local_name,

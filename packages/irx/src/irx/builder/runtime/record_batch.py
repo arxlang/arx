@@ -1,5 +1,9 @@
 """
 title: Record batch streaming API.
+attributes:
+  _SIGNATURES: Signatures.
+  PARQUET_SYMBOLS: Parquet symbols.
+  RECORD_BATCH_SYMBOLS: Record batch symbols.
 """
 
 from __future__ import annotations
@@ -49,8 +53,7 @@ from irx.typecheck import typechecked
 def _native_source_dir() -> Path:
     """
     title: _native_source_dir.
-    returns:
-      type: Path
+    returns: 'Result of this operation: _native_source_dir.'
     """
     return (Path(__file__).resolve().parent / "arrow" / "native").resolve()
 
@@ -59,8 +62,7 @@ def _native_source_dir() -> Path:
 def _native_source() -> Path:
     """
     title: _native_source.
-    returns:
-      type: Path
+    returns: 'Result of this operation: _native_source.'
     """
     return _native_source_dir() / "irx_record_batch.cpp"
 
@@ -230,12 +232,9 @@ def _resolve_type(visitor: object, code: str) -> ir.Type:
     """
     title: _resolve_type.
     parameters:
-      visitor:
-        type: object
-      code:
-        type: str
-    returns:
-      type: ir.Type
+      visitor: Visitor performing the traversal or lowering.
+      code: Source code or diagnostic identifier.
+    returns: 'Result of this operation: _resolve_type.'
     """
     llvm = visitor._llvm  # type: ignore[attr-defined]
     if code == "p":
@@ -259,24 +258,19 @@ def _make_declarer(
     """
     title: _make_declarer.
     parameters:
-      name:
-        type: str
-      ret_code:
-        type: str
-      arg_codes:
-        type: tuple[str, Ellipsis]
-    returns:
-      type: Callable[[object], ir.Function]
+      name: Name identifying the declaration or operation.
+      ret_code: Ret code.
+      arg_codes: Arg codes.
+    returns: 'Result of this operation: _make_declarer.'
     """
 
     def declare(visitor: object) -> ir.Function:
         """
         title: Declare a native record-batch symbol for the current visitor.
         parameters:
-          visitor:
-            type: object
-        returns:
-          type: ir.Function
+          visitor: Visitor performing the traversal or lowering.
+        returns: 'Result of this operation: declare a native record-batch
+          symbol for the current visitor.'
         """
         result = _resolve_type(visitor, ret_code)
         arguments = [_resolve_type(visitor, code) for code in arg_codes]
@@ -302,8 +296,8 @@ def _make_declarer(
 def build_record_batch_runtime_feature() -> RuntimeFeature:
     """
     title: Build the RecordBatch streaming runtime feature specification.
-    returns:
-      type: RuntimeFeature
+    returns: Constructed the RecordBatch streaming runtime feature
+      specification.
     """
     native_dir = _native_source_dir()
     compile_flags = arrowcpp_compile_flags()
@@ -361,8 +355,8 @@ def build_record_batch_runtime_feature() -> RuntimeFeature:
 def build_parquet_runtime_feature() -> RuntimeFeature:
     """
     title: Register optional Parquet, Dataset and compute dependencies.
-    returns:
-      type: RuntimeFeature
+    returns: 'Result of this operation: register optional Parquet, Dataset
+      and compute dependencies.'
     """
     native_dir = _native_source_dir()
     artifacts = tuple(
@@ -408,8 +402,8 @@ def build_parquet_runtime_feature() -> RuntimeFeature:
 def shared_record_batch_runtime_feature() -> RuntimeFeature:
     """
     title: Build the base ctypes library without optional Parquet dependencies.
-    returns:
-      type: RuntimeFeature
+    returns: Constructed the base ctypes library without optional Parquet
+      dependencies.
     """
     return build_record_batch_runtime_feature()
 
@@ -421,8 +415,7 @@ def shared_record_batch_runtime_feature() -> RuntimeFeature:
 def shared_library_path() -> Path:
     """
     title: shared_library_path.
-    returns:
-      type: Path
+    returns: 'Result of this operation: shared_library_path.'
     """
     return record_batch_library_path()
 
@@ -432,10 +425,8 @@ def shared_library_fingerprint_path(output_path: Path | None = None) -> Path:
     """
     title: Return the fingerprint sidecar path for a shared library.
     parameters:
-      output_path:
-        type: Path | None
-    returns:
-      type: Path
+      output_path: Destination path for generated output.
+    returns: The fingerprint sidecar path for a shared library.
     """
     output = output_path or shared_library_path()
     return output.with_name(f"{output.name}.fingerprint")
@@ -446,10 +437,9 @@ def record_batch_build_fingerprint(cxx_binary: str = "c++") -> str:
     """
     title: Hash native sources, build inputs, and compiler identity.
     parameters:
-      cxx_binary:
-        type: str
-    returns:
-      type: str
+      cxx_binary: Cxx binary.
+    returns: 'Result of this operation: hash native sources, build inputs,
+      and compiler identity.'
     """
     compiler = shutil.which(cxx_binary) or cxx_binary
     try:
@@ -514,12 +504,9 @@ def record_batch_shared_library_is_current(
     """
     title: Return whether a shared library matches all current build inputs.
     parameters:
-      output_path:
-        type: Path | None
-      cxx_binary:
-        type: str
-    returns:
-      type: bool
+      output_path: Destination path for generated output.
+      cxx_binary: Cxx binary.
+    returns: Whether a shared library matches all current build inputs.
     """
     output = output_path or shared_library_path()
     fingerprint_path = shared_library_fingerprint_path(output)
@@ -540,17 +527,15 @@ def record_batch_build_lock(
 ) -> Iterator[None]:
     """
     title: Serialize native library builds with an OS-managed file lock.
-    summary: >-
-      The lock file is a persistent rendezvous point, while ownership is held
-      by the operating system. Process termination therefore releases the lock
-      without trusting file contents, process identifiers, or cleanup code.
+    summary: The lock file is a persistent rendezvous point, while ownership
+      is held by the operating system. Process termination therefore releases
+      the lock without trusting file contents, process identifiers, or
+      cleanup code.
     parameters:
-      output_path:
-        type: Path
-      timeout_seconds:
-        type: float
-    returns:
-      type: Iterator[None]
+      output_path: Destination path for generated output.
+      timeout_seconds: Timeout seconds.
+    returns: 'Result of this operation: serialize native library builds
+      with an OS-managed file lock.'
     """
     output_path.parent.mkdir(parents=True, exist_ok=True)
     lock_path = output_path.with_name(f"{output_path.name}.lock")
@@ -573,19 +558,15 @@ def build_record_batch_shared_library(
 ) -> Path:
     """
     title: Compile irx_record_batch.cpp into a standalone shared library.
-    summary: >-
-      Used by the ctypes-based Python API (``irx.record_batch``) and its test
-      suite, which load the library directly rather than going through LLVM
-      codegen.
+    summary: Used by the ctypes-based Python API (``irx.record_batch``) and
+      its test suite, which load the library directly rather than going through
+      LLVM codegen.
     parameters:
-      output_path:
-        type: Path | None
-      build_dir:
-        type: Path | None
-      cxx_binary:
-        type: str
-    returns:
-      type: Path
+      output_path: Destination path for generated output.
+      build_dir: Build dir.
+      cxx_binary: Cxx binary.
+    returns: 'Result of this operation: compile irx_record_batch.cpp into
+      a standalone shared library.'
     """
     output = output_path or shared_library_path()
     work_dir = build_dir or (output.parent / "build")
@@ -638,14 +619,10 @@ def ensure_record_batch_shared_library(
     """
     title: Return a current native library, rebuilding stale artifacts.
     parameters:
-      output_path:
-        type: Path | None
-      build_dir:
-        type: Path | None
-      cxx_binary:
-        type: str
-    returns:
-      type: Path
+      output_path: Destination path for generated output.
+      build_dir: Build dir.
+      cxx_binary: Cxx binary.
+    returns: A current native library, rebuilding stale artifacts.
     """
     output = output_path or shared_library_path()
     if record_batch_shared_library_is_current(output, cxx_binary):

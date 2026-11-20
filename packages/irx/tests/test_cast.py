@@ -33,18 +33,12 @@ def test_cast_basic(
     """
     title: Test casting int types between different widths.
     parameters:
-      builder_class:
-        type: type[Builder]
-      int_type_from:
-        type: type
-      literal_type_from:
-        type: type
-      value:
-        type: int
-      int_type_to:
-        type: type
-      expected_output:
-        type: str
+      builder_class: Builder implementation under test.
+      int_type_from: Int type from.
+      literal_type_from: Literal type from.
+      value: Value to process.
+      int_type_to: Int type to.
+      expected_output: Expected output.
     """
     builder = builder_class()
     module = builder.module()
@@ -92,16 +86,11 @@ def test_cast_to_string(
     """
     title: Cast various types to string and verify printed output.
     parameters:
-      builder_class:
-        type: type[Builder]
-      astx_type:
-        type: type
-      literal_type:
-        type: type
-      value:
-        type: object
-      expected_output:
-        type: str
+      builder_class: Builder implementation under test.
+      astx_type: Type of ASTx.
+      literal_type: Literal type used by this case.
+      value: Value to process.
+      expected_output: Expected output.
     """
     builder = builder_class()
     module = builder.module()
@@ -149,14 +138,10 @@ def test_cast_int_to_float(
     """
     title: Cast int to float.
     parameters:
-      builder_class:
-        type: type[Builder]
-      int_type:
-        type: type
-      literal_type:
-        type: type
-      expected_str:
-        type: str
+      builder_class: Builder implementation under test.
+      int_type: Type of int.
+      literal_type: Literal type used by this case.
+      expected_str: Expected str.
     """
     builder = builder_class()
     module = builder.module()
@@ -211,18 +196,12 @@ def test_cast_float_to_int(
     """
     title: Test float -> int cast truncates toward zero.
     parameters:
-      builder_class:
-        type: type[Builder]
-      float_type:
-        type: type
-      literal_type:
-        type: type
-      value:
-        type: float
-      int_type:
-        type: type
-      expected_output:
-        type: str
+      builder_class: Builder implementation under test.
+      float_type: Type of float.
+      literal_type: Literal type used by this case.
+      value: Value to process.
+      int_type: Type of int.
+      expected_output: Expected output.
     """
     builder = builder_class()
     module = builder.module()
@@ -257,8 +236,7 @@ def test_cast_same_type_noop(builder_class: type[Builder]) -> None:
     """
     title: Cast a value to its own type should be a no-op.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     module = builder.module()

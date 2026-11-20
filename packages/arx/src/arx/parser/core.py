@@ -1,7 +1,6 @@
 """
 title: Shared parser core.
-summary: >-
-  Hold parser state, scope bookkeeping, token helpers, and module-level
+summary: Hold parser state, scope bookkeeping, token helpers, and module-level
   orchestration for the concern-grouped parser mixins.
 """
 
@@ -25,34 +24,20 @@ class ParserCore(ParserMixinBase):
     """
     title: Shared parser state and orchestration.
     attributes:
-      bin_op_precedence:
-        type: dict[str, int]
-      indent_level:
-        type: int
-      list_scopes:
-        type: list[set[str]]
-      known_class_names:
-        type: set[str]
-      imported_type_names:
-        type: set[str]
-      namespace_roots:
-        type: set[str]
-      builtin_type_bindings:
-        type: dict[str, astx.DataType]
-      tensor_scopes:
-        type: list[dict[str, TensorBinding | None]]
-      dataframe_scopes:
-        type: list[dict[str, DataFrameBinding | None]]
-      return_type_scopes:
-        type: list[astx.DataType]
-      template_type_scopes:
-        type: list[dict[str, astx.DataType]]
-      type_aliases:
-        type: dict[str, astx.DataType]
-      value_scopes:
-        type: list[set[str]]
-      tokens:
-        type: TokenList
+      bin_op_precedence: Bin op precedence.
+      indent_level: Indent level.
+      list_scopes: List scopes.
+      known_class_names: Known class names.
+      imported_type_names: Imported type names.
+      namespace_roots: Namespace roots.
+      builtin_type_bindings: Builtin type bindings.
+      tensor_scopes: Tensor scopes.
+      dataframe_scopes: Dataframe scopes.
+      return_type_scopes: Return type scopes.
+      template_type_scopes: Template type scopes.
+      type_aliases: Type aliases.
+      value_scopes: Value scopes.
+      tokens: Tokens in source order.
     """
 
     bin_op_precedence: dict[str, int] = {}
@@ -74,8 +59,7 @@ class ParserCore(ParserMixinBase):
         """
         title: Instantiate the Parser object.
         parameters:
-          tokens:
-            type: TokenList
+          tokens: Tokens in source order.
         """
         self.bin_op_precedence = {
             "=": 2,
@@ -137,14 +121,10 @@ class ParserCore(ParserMixinBase):
         """
         title: Parse the input code.
         parameters:
-          tokens:
-            type: TokenList
-          module_name:
-            type: str
-          builtin_types:
-            type: dict[str, astx.DataType] | None
-        returns:
-          type: astx.Module
+          tokens: Tokens in source order.
+          module_name: Module name to resolve.
+          builtin_types: Types of builtin.
+        returns: Parsed the input code.
         """
         self.clean()
         self.builtin_type_bindings = dict(builtin_types or {})
@@ -275,12 +255,10 @@ class ParserCore(ParserMixinBase):
         """
         title: Consume line markers only when a same-level clause follows.
         parameters:
-          kind:
-            type: TokenKind
-          indentation:
-            type: int
-        returns:
-          type: bool
+          kind: Kind of value or operation.
+          indentation: Indentation.
+        returns: 'Result of this operation: consume line markers only when
+          a same-level clause follows.'
         """
         token = self.tokens.cur_tok
         position = self.tokens.position
@@ -309,14 +287,10 @@ class ParserCore(ParserMixinBase):
         """
         title: Push one visible-name scope for expression disambiguation.
         parameters:
-          declared_names:
-            type: tuple[str, Ellipsis]
-          declared_lists:
-            type: tuple[str, Ellipsis]
-          declared_tensors:
-            type: dict[str, TensorBinding | None] | None
-          declared_dataframes:
-            type: dict[str, DataFrameBinding | None] | None
+          declared_names: Declared names.
+          declared_lists: Declared lists.
+          declared_tensors: Declared tensors.
+          declared_dataframes: Declared dataframes.
         """
         self.value_scopes.append(set(declared_names))
         self.list_scopes.append(set(declared_lists))
@@ -336,8 +310,7 @@ class ParserCore(ParserMixinBase):
         """
         title: Record one visible value name in the current scope.
         parameters:
-          name:
-            type: str
+          name: Name identifying the declaration or operation.
         """
         self.value_scopes[-1].add(name)
 
@@ -345,10 +318,8 @@ class ParserCore(ParserMixinBase):
         """
         title: Return whether a visible value binding shadows a class name.
         parameters:
-          name:
-            type: str
-        returns:
-          type: bool
+          name: Name identifying the declaration or operation.
+        returns: Whether a visible value binding shadows a class name.
         """
         for value_scope in reversed(self.value_scopes):
             if name in value_scope:
@@ -363,10 +334,8 @@ class ParserCore(ParserMixinBase):
         """
         title: Record one visible tensor binding in the current scope.
         parameters:
-          name:
-            type: str
-          binding:
-            type: TensorBinding | None
+          name: Name identifying the declaration or operation.
+          binding: Resolved binding for the operation.
         """
         self.tensor_scopes[-1][name] = binding
 
@@ -374,10 +343,8 @@ class ParserCore(ParserMixinBase):
         """
         title: Return whether one visible name is declared as a tensor.
         parameters:
-          name:
-            type: str
-        returns:
-          type: bool
+          name: Name identifying the declaration or operation.
+        returns: Whether one visible name is declared as a tensor.
         """
         for value_scope, tensor_scope in zip(
             reversed(self.value_scopes),
@@ -398,10 +365,8 @@ class ParserCore(ParserMixinBase):
         """
         title: Record one visible DataFrame binding in the current scope.
         parameters:
-          name:
-            type: str
-          binding:
-            type: DataFrameBinding | None
+          name: Name identifying the declaration or operation.
+          binding: Resolved binding for the operation.
         """
         self.dataframe_scopes[-1][name] = binding
 
@@ -409,10 +374,8 @@ class ParserCore(ParserMixinBase):
         """
         title: Return whether one visible name is declared as a DataFrame.
         parameters:
-          name:
-            type: str
-        returns:
-          type: bool
+          name: Name identifying the declaration or operation.
+        returns: Whether one visible name is declared as a DataFrame.
         """
         for value_scope, dataframe_scope in zip(
             reversed(self.value_scopes),
@@ -429,8 +392,7 @@ class ParserCore(ParserMixinBase):
         """
         title: Record one visible list binding in the current scope.
         parameters:
-          name:
-            type: str
+          name: Name identifying the declaration or operation.
         """
         self.list_scopes[-1].add(name)
 
@@ -438,10 +400,8 @@ class ParserCore(ParserMixinBase):
         """
         title: Return whether one visible name is declared as a list.
         parameters:
-          name:
-            type: str
-        returns:
-          type: bool
+          name: Name identifying the declaration or operation.
+        returns: Whether one visible name is declared as a list.
         """
         for value_scope, list_scope in zip(
             reversed(self.value_scopes),
@@ -458,10 +418,8 @@ class ParserCore(ParserMixinBase):
         """
         title: Return one visible tensor binding by name.
         parameters:
-          name:
-            type: str
-        returns:
-          type: TensorBinding | None
+          name: Name identifying the declaration or operation.
+        returns: One visible tensor binding by name.
         """
         for value_scope, tensor_scope in zip(
             reversed(self.value_scopes),
@@ -481,10 +439,8 @@ class ParserCore(ParserMixinBase):
         """
         title: Return one visible DataFrame binding by name.
         parameters:
-          name:
-            type: str
-        returns:
-          type: DataFrameBinding | None
+          name: Name identifying the declaration or operation.
+        returns: One visible DataFrame binding by name.
         """
         for value_scope, dataframe_scope in zip(
             reversed(self.value_scopes),
@@ -504,8 +460,7 @@ class ParserCore(ParserMixinBase):
         """
         title: Push one template-type scope.
         parameters:
-          template_params:
-            type: tuple[astx.TemplateParam, Ellipsis]
+          template_params: Template parameters declared by the callable.
         """
         self.template_type_scopes.append(
             {
@@ -524,10 +479,9 @@ class ParserCore(ParserMixinBase):
         """
         title: Look up one visible template-type bound by name.
         parameters:
-          name:
-            type: str
-        returns:
-          type: astx.DataType | None
+          name: Name identifying the declaration or operation.
+        returns: 'Result of this operation: look up one visible template-type
+          bound by name.'
         """
         for scope in reversed(self.template_type_scopes):
             bound = scope.get(name)
@@ -539,8 +493,7 @@ class ParserCore(ParserMixinBase):
         """
         title: Push one active function return type.
         parameters:
-          return_type:
-            type: astx.DataType
+          return_type: Declared result type.
         """
         self.return_type_scopes.append(return_type)
 
@@ -553,8 +506,7 @@ class ParserCore(ParserMixinBase):
     def _current_return_type(self) -> astx.DataType | None:
         """
         title: Return the active function return type when one exists.
-        returns:
-          type: astx.DataType | None
+        returns: The active function return type when one exists.
         """
         if not self.return_type_scopes:
             return None
@@ -564,10 +516,8 @@ class ParserCore(ParserMixinBase):
         """
         title: Collect declared class names from the token stream.
         parameters:
-          tokens:
-            type: TokenList
-        returns:
-          type: set[str]
+          tokens: Tokens in source order.
+        returns: Collected declared class names from the token stream.
         """
         class_names: set[str] = set()
         for index, token in enumerate(tokens.tokens[:-1]):
@@ -582,10 +532,8 @@ class ParserCore(ParserMixinBase):
         """
         title: Return the referenced class name for static access candidates.
         parameters:
-          expr:
-            type: astx.AST
-        returns:
-          type: str | None
+          expr: Expression to process.
+        returns: The referenced class name for static access candidates.
         """
         if not isinstance(expr, astx.Identifier):
             return None
@@ -599,10 +547,8 @@ class ParserCore(ParserMixinBase):
         """
         title: Check whether the current token matches an operator.
         parameters:
-          value:
-            type: str
-        returns:
-          type: bool
+          value: Value to process.
+        returns: Whether the current token matches an operator.
         """
         return self.tokens.cur_tok == Token(
             kind=TokenKind.operator, value=value
@@ -612,8 +558,7 @@ class ParserCore(ParserMixinBase):
         """
         title: Consume the expected operator token.
         parameters:
-          value:
-            type: str
+          value: Value to process.
         """
         if not self._is_operator(value):
             raise ParserException(
@@ -625,10 +570,8 @@ class ParserCore(ParserMixinBase):
         """
         title: Return whether the current token matches one identifier value.
         parameters:
-          value:
-            type: str
-        returns:
-          type: bool
+          value: Value to process.
+        returns: Whether the current token matches one identifier value.
         """
         return (
             self.tokens.cur_tok.kind == TokenKind.identifier
@@ -639,8 +582,7 @@ class ParserCore(ParserMixinBase):
         """
         title: Consume one contextual identifier token.
         parameters:
-          value:
-            type: str
+          value: Value to process.
         """
         if not self._is_identifier_value(value):
             raise ParserException(
@@ -666,10 +608,9 @@ class ParserCore(ParserMixinBase):
         """
         title: Peek one token ahead without consuming it.
         parameters:
-          offset:
-            type: int
-        returns:
-          type: Token
+          offset: Offset within the data.
+        returns: 'Result of this operation: peek one token ahead without
+          consuming it.'
         """
         index = self.tokens.position + offset
         if index >= len(self.tokens.tokens):
@@ -680,10 +621,8 @@ class ParserCore(ParserMixinBase):
         """
         title: Return whether one token can start an expression.
         parameters:
-          token:
-            type: Token
-        returns:
-          type: bool
+          token: Token being processed.
+        returns: Whether one token can start an expression.
         """
         if token.kind in {
             TokenKind.identifier,
@@ -717,9 +656,10 @@ class ParserCore(ParserMixinBase):
         self,
     ) -> tuple[tuple[astx.DataType, ...], Token] | None:
         """
-        title: Speculatively parse one explicit template-argument list.
-        returns:
-          type: tuple[tuple[astx.DataType, Ellipsis], Token] | None
+        title: Speculatively parse one explicit template-argument
+          list.
+        returns: 'Result of this operation: speculatively parse one
+          explicit template-argument list.'
         """
         if not self._is_operator("<"):
             return None
@@ -740,8 +680,7 @@ class ParserCore(ParserMixinBase):
     ) -> tuple[astx.DataType, ...] | None:
         """
         title: Parse explicit template arguments only for call syntax.
-        returns:
-          type: tuple[astx.DataType, Ellipsis] | None
+        returns: Parsed explicit template arguments only for call syntax.
         """
         lookahead = self._lookahead_template_argument_call()
         if lookahead is None:
@@ -760,7 +699,6 @@ class ParserCore(ParserMixinBase):
     def get_tok_precedence(self) -> int:
         """
         title: Get the precedence of the pending binary operator token.
-        returns:
-          type: int
+        returns: The precedence of the pending binary operator token.
         """
         return self.bin_op_precedence.get(self.tokens.cur_tok.value, -1)

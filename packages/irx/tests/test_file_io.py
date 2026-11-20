@@ -32,10 +32,10 @@ def module_for(*nodes: astx.AST) -> astx.Module:
     title: Put test nodes in a non-generator main function.
     parameters:
       nodes:
-        type: astx.AST
         variadic: positional
-    returns:
-      type: astx.Module
+        description: Syntax nodes in source order.
+    returns: 'Result of this operation: put test nodes in a non-generator
+      main function.'
     """
     body = astx.Block()
     for node in nodes:
@@ -93,8 +93,7 @@ def test_file_signatures_are_rejected(type_: astx.DataType) -> None:
     """
     title: Opaque file storage never leaks into a general callable ABI.
     parameters:
-      type_:
-        type: astx.DataType
+      type_: Type expression to process.
     """
     prototype = astx.FunctionPrototype(
         "unsupported",
@@ -110,10 +109,9 @@ def native(tmp_path_factory: pytest.TempPathFactory) -> ctypes.CDLL:
     """
     title: Build the actual C runtime with small controllable libc test stubs.
     parameters:
-      tmp_path_factory:
-        type: pytest.TempPathFactory
-    returns:
-      type: ctypes.CDLL
+      tmp_path_factory: Factory for shared temporary test directories.
+    returns: Constructed the actual C runtime with small controllable libc
+      test stubs.
     """
     clang = shutil.which("clang")
     if clang is None:
@@ -263,12 +261,9 @@ def read_native(native: ctypes.CDLL, handle: ctypes.c_void_p) -> bytes:
     """
     title: Read native output and release its independent allocation.
     parameters:
-      native:
-        type: ctypes.CDLL
-      handle:
-        type: ctypes.c_void_p
-    returns:
-      type: bytes
+      native: Loaded native runtime used by the ABI test.
+      handle: Opaque native handle.
+    returns: Read native output and release its independent allocation.
     """
     error = ctypes.create_string_buffer(FILE_ERROR_CAPACITY)
     value = ctypes.c_void_p()
@@ -296,12 +291,9 @@ def test_native_read_and_eof(
     """
     title: Chunked UTF-8 reads normalize newlines and distinguish empty EOF.
     parameters:
-      native:
-        type: ctypes.CDLL
-      tmp_path:
-        type: Path
-      content:
-        type: bytes
+      native: Loaded native runtime used by the ABI test.
+      tmp_path: Temporary directory for this test.
+      content: Content to process.
     """
     path = tmp_path / "source"
     path.write_bytes(content)
@@ -355,12 +347,9 @@ def test_native_rejects_bad_text(
     """
     title: Unrepresentable text fails without publishing partial buffers.
     parameters:
-      native:
-        type: ctypes.CDLL
-      tmp_path:
-        type: Path
-      content:
-        type: bytes
+      native: Loaded native runtime used by the ABI test.
+      tmp_path: Temporary directory for this test.
+      content: Content to process.
     """
     path = tmp_path / "bad"
     path.write_bytes(content)
@@ -387,12 +376,9 @@ def test_native_mode_failure_is_non_destructive(
     """
     title: Unsupported dynamic modes are rejected before fopen side effects.
     parameters:
-      native:
-        type: ctypes.CDLL
-      tmp_path:
-        type: Path
-      mode:
-        type: bytes
+      native: Loaded native runtime used by the ABI test.
+      tmp_path: Temporary directory for this test.
+      mode: Selected processing mode.
     """
     path = tmp_path / "existing"
     path.write_bytes(b"keep")
@@ -413,12 +399,9 @@ def test_native_write_rejects_bad_utf8(
     """
     title: Invalid write text and mode mismatches publish no successful output.
     parameters:
-      native:
-        type: ctypes.CDLL
-      tmp_path:
-        type: Path
-      content:
-        type: bytes
+      native: Loaded native runtime used by the ABI test.
+      tmp_path: Temporary directory for this test.
+      content: Content to process.
     """
     path = tmp_path / "output"
     handle = ctypes.c_void_p()
@@ -452,12 +435,9 @@ def test_native_failure_slots_and_release(
     """
     title: Allocation, I/O, flush, and consuming-close failures are safe.
     parameters:
-      native:
-        type: ctypes.CDLL
-      tmp_path:
-        type: Path
-      fault:
-        type: int
+      native: Loaded native runtime used by the ABI test.
+      tmp_path: Temporary directory for this test.
+      fault: Fault.
     """
     path = tmp_path / "fault"
     path.write_bytes(b"a" * 10000)
@@ -502,10 +482,8 @@ def test_native_open_allocation_and_nulls(
     """
     title: Null inputs and initial allocation failure never create a file.
     parameters:
-      native:
-        type: ctypes.CDLL
-      tmp_path:
-        type: Path
+      native: Loaded native runtime used by the ABI test.
+      tmp_path: Temporary directory for this test.
     """
     path = tmp_path / "uncreated"
     error = ctypes.create_string_buffer(FILE_ERROR_CAPACITY)
@@ -560,10 +538,8 @@ def test_native_repeated_release_does_not_leak_descriptors(
     """
     title: Repeated owned-wrapper lifetimes keep descriptor growth bounded.
     parameters:
-      native:
-        type: ctypes.CDLL
-      tmp_path:
-        type: Path
+      native: Loaded native runtime used by the ABI test.
+      tmp_path: Temporary directory for this test.
     """
     descriptors = Path("/proc/self/fd")
     if not descriptors.is_dir():
@@ -595,8 +571,7 @@ def test_file_cleanup_in_terminating_branch(tmp_path: Path) -> None:
     """
     title: Direct ASTx control flow releases only successfully acquired files.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     if shutil.which("clang") is None:
         pytest.skip("clang is required for branch cleanup execution")
@@ -648,8 +623,7 @@ def test_open_accepts_signed_constant_default_widths(
     """
     title: Default buffering is a constant value, not a specific integer width.
     parameters:
-      buffering:
-        type: astx.DataType
+      buffering: Buffering.
     """
     call = astx.FunctionCall(
         "open",
@@ -710,10 +684,8 @@ def test_native_error_categories_preserve_errno(
     """
     title: File categories and captured errno do not depend on message text.
     parameters:
-      native:
-        type: ctypes.CDLL
-      tmp_path:
-        type: Path
+      native: Loaded native runtime used by the ABI test.
+      tmp_path: Temporary directory for this test.
     """
     import errno  # noqa: PLC0415
 
@@ -750,16 +722,11 @@ def test_binary_transfer_faults(
     """
     title: Retry short progress, gate outputs, and free partial read storage.
     parameters:
-      native:
-        type: ctypes.CDLL
-      tmp_path:
-        type: Path
-      write:
-        type: bool
-      fault:
-        type: int
-      expected:
-        type: int
+      native: Loaded native runtime used by the ABI test.
+      tmp_path: Temporary directory for this test.
+      write: Whether to use write.
+      fault: Fault.
+      expected: Expected result for this case.
     """
     data = bytes(range(256))
     path = tmp_path / "bytes"
@@ -824,12 +791,9 @@ def test_binary_zero_and_closed_contracts(
     """
     title: Empty payloads still validate direction, binary mode, and state.
     parameters:
-      native:
-        type: ctypes.CDLL
-      tmp_path:
-        type: Path
-      mode:
-        type: bytes
+      native: Loaded native runtime used by the ABI test.
+      tmp_path: Temporary directory for this test.
+      mode: Selected processing mode.
     """
     path = tmp_path / "empty"
     path.write_bytes(b"\x00\xff\r\n")
@@ -892,12 +856,9 @@ def test_binary_options_precede_open(
     """
     title: Dynamic binary text options cannot create or truncate a path.
     parameters:
-      native:
-        type: ctypes.CDLL
-      tmp_path:
-        type: Path
-      mode:
-        type: bytes
+      native: Loaded native runtime used by the ABI test.
+      tmp_path: Temporary directory for this test.
+      mode: Selected processing mode.
     """
     error = ctypes.create_string_buffer(FILE_ERROR_CAPACITY)
     handle = ctypes.c_void_p(123)

@@ -23,8 +23,8 @@ from irx.typecheck import typechecked
 def build_text_runtime_feature() -> RuntimeFeature:
     """
     title: Register text operations and their owned-list ABI dependency.
-    returns:
-      type: RuntimeFeature
+    returns: 'Result of this operation: register text operations and their
+      owned-list ABI dependency.'
     """
     native = Path(__file__).resolve().parent / "native"
     symbols: dict[str, ExternalSymbolSpec] = {}
@@ -46,12 +46,10 @@ def build_text_runtime_feature() -> RuntimeFeature:
             """
             title: Declare one status-returning text operation.
             parameters:
-              visitor:
-                type: VisitorProtocol
-              operation:
-                type: str
-            returns:
-              type: ir.Function
+              visitor: Visitor performing the traversal or lowering.
+              operation: Operation to resolve or execute.
+            returns: 'Result of this operation: declare one status-returning
+              text operation.'
             """
             string = visitor._llvm.INT8_TYPE.as_pointer()
             integer = visitor._llvm.INT64_TYPE

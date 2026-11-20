@@ -1,8 +1,7 @@
 """
 title: Semantic normalization helpers.
-summary: >-
-  Normalize raw AST operator and flag information into the structured semantic
-  records used by later analysis and codegen.
+summary: Normalize raw AST operator and flag information into the structured
+  semantic records used by later analysis and codegen.
 """
 
 from __future__ import annotations
@@ -32,17 +31,16 @@ def numeric_operand_storage(
     type_: astx.DataType | None,
 ) -> astx.DataType | None:
     """
-    title: >-
-      Resolve the current scalar representation of a numeric union operand.
-    summary: >-
-      Numeric union comparisons already use a shared untagged storage type.
-      Record that type during analysis rather than asking LLVM operand widths
-      to choose the comparison domain. This does not enable union arithmetic.
+    title: Resolve the current scalar representation of a numeric
+      union operand.
+    summary: Numeric union comparisons already use a shared untagged
+      storage type. Record that type during analysis rather than
+      asking LLVM operand widths to choose the comparison domain.
+      This does not enable union arithmetic.
     parameters:
-      type_:
-        type: astx.DataType | None
-    returns:
-      type: astx.DataType | None
+      type_: Type expression to process.
+    returns: Resolved the current scalar representation of a numeric
+      union operand.
     """
     if not isinstance(type_, astx.UnionType):
         return type_
@@ -59,14 +57,10 @@ def normalize_flags(
     """
     title: Normalize semantic flags from the raw AST node.
     parameters:
-      node:
-        type: astx.AST
-      lhs_type:
-        type: astx.DataType | None
-      rhs_type:
-        type: astx.DataType | None
-    returns:
-      type: SemanticFlags
+      node: Syntax node to process.
+      lhs_type: Type of left operand.
+      rhs_type: Type of right operand.
+    returns: Normalized semantic flags from the raw AST node.
     """
     promoted_type = common_numeric_type(
         numeric_operand_storage(lhs_type), numeric_operand_storage(rhs_type)
@@ -93,20 +87,13 @@ def normalize_operator(
     """
     title: Create a normalized operator record.
     parameters:
-      op_code:
-        type: str
-      result_type:
-        type: astx.DataType | None
-      lhs_type:
-        type: astx.DataType | None
-      rhs_type:
-        type: astx.DataType | None
-      flags:
-        type: SemanticFlags | None
-      mode:
-        type: astx.NumericMode
-    returns:
-      type: ResolvedOperator
+      op_code: Operator spelling.
+      result_type: Resolved result type.
+      lhs_type: Type of left operand.
+      rhs_type: Type of right operand.
+      flags: Flags.
+      mode: Selected processing mode.
+    returns: Created a normalized operator record.
     """
     lhs_storage = numeric_operand_storage(lhs_type)
     rhs_storage = numeric_operand_storage(rhs_type)

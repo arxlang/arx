@@ -66,8 +66,7 @@ class Visitor(
     """
     title: Compose AST handlers for LLVM lowering.
     attributes:
-      call_services:
-        type: CallLoweringServices
+      call_services: Call services.
     """
 
     call_services: CallLoweringServices
@@ -79,8 +78,7 @@ class Visitor(
         """
         title: Bind static call visitors and per-compilation lowering services.
         parameters:
-          active_runtime_features:
-            type: set[str] | None
+          active_runtime_features: Active runtime features.
         """
         super().__init__(active_runtime_features)
         from irx.builder.extensions.adapters import (  # noqa: PLC0415
@@ -96,8 +94,7 @@ class Builder(BaseBuilder):
     """
     title: Build LLVM modules from semantically analyzed AST nodes.
     attributes:
-      translator:
-        type: Visitor
+      translator: Translator.
     """
 
     translator: Visitor
@@ -112,8 +109,7 @@ class Builder(BaseBuilder):
     def _new_translator(self) -> Visitor:
         """
         title: New translator.
-        returns:
-          type: Visitor
+        returns: 'Result of this operation: new translator.'
         """
         return Visitor(
             active_runtime_features=set(self.runtime_feature_names),
@@ -123,10 +119,8 @@ class Builder(BaseBuilder):
         """
         title: Translate.
         parameters:
-          expr:
-            type: astx.AST
-        returns:
-          type: str
+          expr: Expression to process.
+        returns: 'Result of this operation: translate.'
         """
         self.translator = self._new_translator()
         return self.translator.translate(expr)
@@ -139,12 +133,10 @@ class Builder(BaseBuilder):
         """
         title: Translate a reachable graph of parsed modules.
         parameters:
-          root:
-            type: ParsedModule
-          resolver:
-            type: ImportResolver
-        returns:
-          type: str
+          root: Root module or resource.
+          resolver: Host-supplied module resolver.
+        returns: 'Result of this operation: translate a reachable graph of
+          parsed modules.'
         """
         self.translator = self._new_translator()
         return self.translator.translate_modules(root, resolver)
@@ -153,10 +145,8 @@ class Builder(BaseBuilder):
         """
         title: Build.
         parameters:
-          node:
-            type: astx.AST
-          output_file:
-            type: str
+          node: Syntax node to process.
+          output_file: Destination file for generated output.
         """
         result = self.translate(node)
         self._build_from_ir(result, output_file)
@@ -170,12 +160,9 @@ class Builder(BaseBuilder):
         """
         title: Build a reachable graph of parsed modules.
         parameters:
-          root:
-            type: ParsedModule
-          resolver:
-            type: ImportResolver
-          output_file:
-            type: str
+          root: Root module or resource.
+          resolver: Host-supplied module resolver.
+          output_file: Destination file for generated output.
         """
         result = self.translate_modules(root, resolver)
         self._build_from_ir(result, output_file)
@@ -184,10 +171,8 @@ class Builder(BaseBuilder):
         """
         title: Build an executable from LLVM IR text.
         parameters:
-          result:
-            type: str
-          output_file:
-            type: str
+          result: Result of the operation.
+          output_file: Destination file for generated output.
         """
         result_mod = llvm.parse_assembly(result)
         result_object = self.translator.target_machine.emit_object(result_mod)

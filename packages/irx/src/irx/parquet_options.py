@@ -23,12 +23,9 @@ class ParquetPredicate:
     """
     title: One typed comparison; multiple predicates are combined with AND.
     attributes:
-      column:
-        type: str
-      operation:
-        type: Literal[eq, ne, lt, le, gt, ge, is_null, is_valid]
-      value:
-        type: str | int | float | bool
+      column: Column to process.
+      operation: Operation to resolve or execute.
+      value: Stored value.
     """
 
     column: str
@@ -39,8 +36,8 @@ class ParquetPredicate:
 
     def __post_init__(self) -> None:
         """
-        title: >-
-          Reject invalid comparisons rather than stringifying arbitrary values.
+        title: Reject invalid comparisons rather than stringifying arbitrary
+          values.
         """
         validate_predicate(self.column, self.operation, self.value)
 
@@ -51,10 +48,9 @@ def option_text(value: str) -> bytes:
     """
     title: Reject NUL before passing option text across a C-string boundary.
     parameters:
-      value:
-        type: str
-    returns:
-      type: bytes
+      value: Value to process.
+    returns: 'Result of this operation: reject NUL before passing option
+      text across a C-string boundary.'
     """
     if "\0" in value:
         raise ValueError("Parquet option text must not contain NUL")
@@ -67,54 +63,33 @@ def option_text(value: str) -> bytes:
 class ParquetOptions:
     """
     title: Options copied into a native Parquet session at open time.
-    summary: >-
-      Empty columns/row_groups select all. Dataset evolution unions same-typed
-      fields only. Atomic replacement and rewrite append are POSIX-local
-      operations with advisory writer exclusion and optional fsync durability.
-      Reconstruct preserves supported logical types over explicit physical
-      storage for single files. Raw AES keys are excluded from repr; callers
-      own key distribution and lifetime.
+    summary: Empty columns/row_groups select all. Dataset evolution unions
+      same-typed fields only. Atomic replacement and rewrite append are
+      POSIX-local operations with advisory writer exclusion and optional
+      fsync durability. Reconstruct preserves supported logical types over
+      explicit physical storage for single files. Raw AES keys are excluded
+      from repr; callers own key distribution and lifetime.
     attributes:
-      batch_size:
-        type: int
-      row_group_size:
-        type: int
-      data_page_size:
-        type: int
-      compression:
-        type: str
-      compression_level:
-        type: int | None
-      columns:
-        type: tuple[str, Ellipsis]
-      partition_columns:
-        type: tuple[str, Ellipsis]
-      row_groups:
-        type: tuple[int, Ellipsis]
-      predicates:
-        type: tuple[ParquetPredicate, Ellipsis]
-      use_threads:
-        type: bool
-      pre_buffer:
-        type: bool
-      dataset:
-        type: bool
-      hive:
-        type: bool
-      unify:
-        type: bool
-      normalize:
-        type: bool
-      atomic:
-        type: bool
-      durable:
-        type: bool
-      reconstruct:
-        type: bool
-      append:
-        type: bool
-      encryption_key:
-        type: bytes | None
+      batch_size: Size of batch.
+      row_group_size: Size of row group.
+      data_page_size: Size of data page.
+      compression: Compression.
+      compression_level: Compression level.
+      columns: Column declarations or values.
+      partition_columns: Partition columns.
+      row_groups: Row groups.
+      predicates: Predicates.
+      use_threads: Whether to use use threads.
+      pre_buffer: Whether to use pre buffer.
+      dataset: Whether to use dataset.
+      hive: Whether to use hive.
+      unify: Whether to use unify.
+      normalize: Whether to use normalize.
+      atomic: Whether to use atomic.
+      durable: Whether to use durable.
+      reconstruct: Whether to use reconstruct.
+      append: Whether to use append.
+      encryption_key: Encryption key.
     """
 
     batch_size: int = 65536
@@ -140,8 +115,8 @@ class ParquetOptions:
 
     def __post_init__(self) -> None:
         """
-        title: >-
-          Validate collection items and secrets before any native side effect.
+        title: Validate collection items and secrets before any native side
+          effect.
         """
         validate_option_items(
             self.columns,
@@ -156,10 +131,8 @@ class ParquetOptions:
         """
         title: Create and release a temporary checked native options owner.
         parameters:
-          lib:
-            type: ctypes.CDLL
-        returns:
-          type: Iterator[ctypes.c_void_p]
+          lib: Lib.
+        returns: Created and release a temporary checked native options owner.
         """
         from irx.record_batch import _check  # noqa: PLC0415
 
@@ -296,8 +269,7 @@ def option_integer(value: int) -> None:
     """
     title: Reject bool and integer truncation at the native ABI boundary.
     parameters:
-      value:
-        type: int
+      value: Value to process.
     """
     if isinstance(value, bool) or not -(1 << 63) <= value < (1 << 63):
         raise ValueError(
@@ -317,16 +289,11 @@ def validate_option_items(
     """
     title: Runtime-check every item of options collections via the IRx wrapper.
     parameters:
-      columns:
-        type: tuple[str, Ellipsis]
-      partition_columns:
-        type: tuple[str, Ellipsis]
-      row_groups:
-        type: tuple[int, Ellipsis]
-      predicates:
-        type: tuple[ParquetPredicate, Ellipsis]
-      encryption_key:
-        type: bytes | None
+      columns: Column declarations or values.
+      partition_columns: Partition columns.
+      row_groups: Row groups.
+      predicates: Predicates.
+      encryption_key: Encryption key.
     """
     skip_unused(
         columns, partition_columns, row_groups, predicates, encryption_key
@@ -345,11 +312,8 @@ def validate_predicate(
     """
     title: Runtime-check all predicate fields with the owning package wrapper.
     parameters:
-      column:
-        type: str
-      operation:
-        type: Literal[eq, ne, lt, le, gt, ge, is_null, is_valid]
-      value:
-        type: str | int | float | bool
+      column: Column to process.
+      operation: Operation to resolve or execute.
+      value: Value to process.
     """
     skip_unused(column, operation, value)

@@ -72,10 +72,8 @@ def _project_toml(extra: str = "") -> str:
     """
     title: Build a minimal project TOML snippet for settings tests.
     parameters:
-      extra:
-        type: str
-    returns:
-      type: str
+      extra: Extra.
+    returns: Constructed a minimal project TOML snippet for settings tests.
     """
     return f'[project]\nname = "demo"\nversion = "0.1.0"\n{extra}'
 
@@ -167,8 +165,7 @@ def test_project_requires_arx_rejects_invalid_specifier(
     """
     title: Reject invalid ``project.requires-arx`` version requirements.
     parameters:
-      specifier:
-        type: str
+      specifier: Specifier.
     """
     content = _project_toml(f'requires-arx = "{specifier}"\n')
 
@@ -294,8 +291,7 @@ def test_project_dependencies_support_canonical_strings(
     """
     title: Parse supported dependency strings from ``project.dependencies``.
     parameters:
-      dependency:
-        type: str
+      dependency: Dependency.
     """
     content = _project_toml(f'dependencies = ["{dependency}"]\n')
 
@@ -706,8 +702,7 @@ def test_dump_and_write_settings_round_trip(tmp_path: Path) -> None:
     """
     title: Serialize and reload the canonical manifest structure.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     path = tmp_path / DEFAULT_CONFIG_FILENAME
     settings = ArxProject(
@@ -792,10 +787,8 @@ def test_load_settings_discovers_file_in_parent(
     """
     title: Test find_config_file walks upward from cwd.
     parameters:
-      tmp_path:
-        type: Path
-      monkeypatch:
-        type: pytest.MonkeyPatch
+      tmp_path: Temporary directory for this test.
+      monkeypatch: Fixture for temporarily replacing dependencies and settings.
     """
     config = tmp_path / DEFAULT_CONFIG_FILENAME
     config.write_text(EXAMPLE_TOML, encoding="utf-8")
@@ -818,10 +811,8 @@ def test_find_config_file_returns_none_when_absent(
     """
     title: Test find_config_file returns None when no file is present.
     parameters:
-      tmp_path:
-        type: Path
-      monkeypatch:
-        type: pytest.MonkeyPatch
+      tmp_path: Temporary directory for this test.
+      monkeypatch: Fixture for temporarily replacing dependencies and settings.
     """
     monkeypatch.chdir(tmp_path)
     monkeypatch.setattr(
@@ -838,10 +829,8 @@ def test_load_settings_without_file_raises(
     """
     title: Test load_settings raises when no config file can be found.
     parameters:
-      tmp_path:
-        type: Path
-      monkeypatch:
-        type: pytest.MonkeyPatch
+      tmp_path: Temporary directory for this test.
+      monkeypatch: Fixture for temporarily replacing dependencies and settings.
     """
     monkeypatch.chdir(tmp_path)
     monkeypatch.setattr(
@@ -857,8 +846,7 @@ def test_load_settings_with_explicit_missing_path_raises(
     """
     title: Explicit path that does not exist raises ``ArxProjectError``.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     with pytest.raises(ArxProjectError, match="not found"):
         load_settings(tmp_path / "does-not-exist.toml")

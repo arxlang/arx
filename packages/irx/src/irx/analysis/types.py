@@ -2,9 +2,10 @@
 
 """
 title: Type helpers for semantic analysis.
-summary: >-
-  Provide the small AST-type predicates and promotion helpers that the semantic
-  analyzer reuses across many node visitors.
+summary: Provide the small AST-type predicates and promotion helpers that
+  the semantic analyzer reuses across many node visitors.
+attributes:
+  _BIT_WIDTHS: Bit widths.
 """
 
 from __future__ import annotations
@@ -58,10 +59,8 @@ def sequence_element_type(type_: astx.DataType | None) -> astx.DataType | None:
     """
     title: Return the exact element contract for a supported sized source.
     parameters:
-      type_:
-        type: astx.DataType | None
-    returns:
-      type: astx.DataType | None
+      type_: Type expression to process.
+    returns: The exact element contract for a supported sized source.
     """
     del type_
     return None
@@ -73,10 +72,8 @@ def sequence_element_type(type_: astx.Bytes) -> astx.DataType:
     """
     title: Resolve immutable octets without mutable-list coercion.
     parameters:
-      type_:
-        type: astx.Bytes
-    returns:
-      type: astx.DataType
+      type_: Type expression to process.
+    returns: Resolved immutable octets without mutable-list coercion.
     """
     del type_
     return astx.UInt8()
@@ -88,10 +85,8 @@ def sequence_element_type(type_: astx.ListType) -> astx.DataType | None:
     """
     title: Resolve a homogeneous list element without widening it.
     parameters:
-      type_:
-        type: astx.ListType
-    returns:
-      type: astx.DataType | None
+      type_: Type expression to process.
+    returns: Resolved a homogeneous list element without widening it.
     """
     if len(type_.element_types) == 1 and isinstance(
         type_.element_types[0], astx.DataType
@@ -104,13 +99,12 @@ def sequence_element_type(type_: astx.ListType) -> astx.DataType | None:
 @typechecked
 def sequence_element_type(type_: astx.TensorType) -> astx.DataType | None:
     """
-    title: >-
-      Resolve rank-one tensors, deferring unknown rank to a checked adapter.
+    title: Resolve rank-one tensors, deferring unknown rank to a checked
+      adapter.
     parameters:
-      type_:
-        type: astx.TensorType
-    returns:
-      type: astx.DataType | None
+      type_: Type expression to process.
+    returns: Resolved rank-one tensors, deferring unknown rank to a checked
+      adapter.
     """
     if type_.shape is not None and len(type_.shape) != 1:
         return None
@@ -123,10 +117,9 @@ def sequence_element_type(type_: astx.SeriesType) -> astx.DataType | None:
     """
     title: Preserve a Series element's scalar width and validity.
     parameters:
-      type_:
-        type: astx.SeriesType
-    returns:
-      type: astx.DataType | None
+      type_: Type expression to process.
+    returns: 'Result of this operation: preserve a Series element''s scalar
+      width and validity.'
     """
     if type_.element_type is None:
         return None
@@ -143,10 +136,9 @@ def sequence_element_type(type_: astx.SequenceType) -> astx.DataType:
     """
     title: Forward an existing sequence's exact element contract.
     parameters:
-      type_:
-        type: astx.SequenceType
-    returns:
-      type: astx.DataType
+      type_: Type expression to process.
+    returns: 'Result of this operation: forward an existing sequence''s exact
+      element contract.'
     """
     return type_.element_type
 
@@ -155,12 +147,12 @@ def sequence_element_type(type_: astx.SequenceType) -> astx.DataType:
 @typechecked
 def contains_template_variables(type_: astx.DataType | None) -> bool:
     """
-    title: Discover unresolved variables recursively in supported annotations.
+    title: Discover unresolved variables recursively in supported
+      annotations.
     parameters:
-      type_:
-        type: astx.DataType | None
-    returns:
-      type: bool
+      type_: Type expression to process.
+    returns: 'Result of this operation: discover unresolved variables
+      recursively in supported annotations.'
     """
     if isinstance(type_, astx.TemplateTypeVar):
         return True
@@ -194,13 +186,12 @@ def contains_template_variables(type_: astx.DataType | None) -> bool:
 @typechecked
 def is_sequence_element(type_: astx.DataType | None) -> bool:
     """
-    title: >-
-      Accept fixed-width numeric scalars, optionally nullable, not Boolean.
+    title: Accept fixed-width numeric scalars, optionally nullable,
+      not Boolean.
     parameters:
-      type_:
-        type: astx.DataType | None
-    returns:
-      type: bool
+      type_: Type expression to process.
+    returns: 'Result of this operation: accept fixed-width numeric
+      scalars, optionally nullable, not Boolean.'
     """
     inner = type_.value_type if isinstance(type_, astx.NullableType) else type_
     return isinstance(
@@ -222,12 +213,9 @@ def _same_optional_size(lhs: int | None, rhs: int | None) -> bool:
     """
     title: Return whether optional collection sizes are compatible.
     parameters:
-      lhs:
-        type: int | None
-      rhs:
-        type: int | None
-    returns:
-      type: bool
+      lhs: Left operand.
+      rhs: Right operand.
+    returns: Whether optional collection sizes are compatible.
     """
     return lhs is None or rhs is None or lhs == rhs
 
@@ -240,12 +228,9 @@ def _same_optional_shape(
     """
     title: Return whether optional tensor shapes are compatible.
     parameters:
-      lhs:
-        type: tuple[int, Ellipsis] | None
-      rhs:
-        type: tuple[int, Ellipsis] | None
-    returns:
-      type: bool
+      lhs: Left operand.
+      rhs: Right operand.
+    returns: Whether optional tensor shapes are compatible.
     """
     return lhs is None or rhs is None or lhs == rhs
 
@@ -258,12 +243,9 @@ def _target_accepts_known_size(
     """
     title: Return whether a target size accepts a value size.
     parameters:
-      target_size:
-        type: int | None
-      value_size:
-        type: int | None
-    returns:
-      type: bool
+      target_size: Size of target.
+      value_size: Size of value.
+    returns: Whether a target size accepts a value size.
     """
     return target_size is None or (
         value_size is not None and target_size == value_size
@@ -278,12 +260,9 @@ def _target_accepts_known_shape(
     """
     title: Return whether a target shape accepts a value shape.
     parameters:
-      target_shape:
-        type: tuple[int, Ellipsis] | None
-      value_shape:
-        type: tuple[int, Ellipsis] | None
-    returns:
-      type: bool
+      target_shape: Target shape.
+      value_shape: Value shape.
+    returns: Whether a target shape accepts a value shape.
     """
     return target_shape is None or (
         value_shape is not None and target_shape == value_shape
@@ -298,12 +277,9 @@ def _metadata_assignment_compatible(
     """
     title: Return whether assignment metadata is statically compatible.
     parameters:
-      target:
-        type: astx.DataType
-      value:
-        type: astx.DataType
-    returns:
-      type: bool
+      target: Destination of the operation.
+      value: Value to process.
+    returns: Whether assignment metadata is statically compatible.
     """
     if isinstance(target, astx.ListType) and isinstance(value, astx.ListType):
         return _target_accepts_known_size(target.size, value.size)
@@ -334,12 +310,9 @@ def requires_size_check(
     """
     title: Return whether assignment requires a runtime size check.
     parameters:
-      target_size:
-        type: int | None
-      value_size:
-        type: int | None
-    returns:
-      type: bool
+      target_size: Size of target.
+      value_size: Size of value.
+    returns: Whether assignment requires a runtime size check.
     """
     return target_size is not None and value_size is None
 
@@ -353,12 +326,9 @@ def requires_shape_check(
     """
     title: Return whether assignment requires a runtime shape check.
     parameters:
-      target_shape:
-        type: tuple[int, Ellipsis] | None
-      value_shape:
-        type: tuple[int, Ellipsis] | None
-    returns:
-      type: bool
+      target_shape: Target shape.
+      value_shape: Value shape.
+    returns: Whether assignment requires a runtime shape check.
     """
     return target_shape is not None and value_shape is None
 
@@ -369,20 +339,17 @@ def clone_type(type_: astx.DataType) -> astx.DataType:
     """
     title: Clone an AST type by class.
     parameters:
-      type_:
-        type: astx.DataType
-    returns:
-      type: astx.DataType
+      type_: Type expression to process.
+    returns: 'Result of this operation: clone an AST type by class.'
     """
 
     def with_alias(cloned: astx.DataType) -> astx.DataType:
         """
         title: Preserve alias metadata on a cloned type.
         parameters:
-          cloned:
-            type: astx.DataType
-        returns:
-          type: astx.DataType
+          cloned: Cloned.
+        returns: 'Result of this operation: preserve alias metadata on a
+          cloned type.'
         """
         alias_name = getattr(type_, "alias_name", None)
         if isinstance(alias_name, str):
@@ -545,10 +512,8 @@ def display_type_name(type_: astx.DataType | None) -> str:
     """
     title: Return one stable human-facing type name.
     parameters:
-      type_:
-        type: astx.DataType | None
-    returns:
-      type: str
+      type_: Type expression to process.
+    returns: One stable human-facing type name.
     """
     if type_ is None:
         return "<unknown>"
@@ -655,12 +620,9 @@ def same_type(lhs: astx.DataType | None, rhs: astx.DataType | None) -> bool:
     """
     title: Return whether two AST types share the same class.
     parameters:
-      lhs:
-        type: astx.DataType | None
-      rhs:
-        type: astx.DataType | None
-    returns:
-      type: bool
+      lhs: Left operand.
+      rhs: Right operand.
+    returns: Whether two AST types share the same class.
     """
     if lhs is None or rhs is None:
         return False
@@ -833,10 +795,8 @@ def is_integer_type(type_: astx.DataType | None) -> bool:
     """
     title: Is integer type.
     parameters:
-      type_:
-        type: astx.DataType | None
-    returns:
-      type: bool
+      type_: Type expression to process.
+    returns: 'Result of this operation: is integer type.'
     """
     return isinstance(type_, INT_TYPES + UINT_TYPES)
 
@@ -847,10 +807,8 @@ def is_signed_integer_type(type_: astx.DataType | None) -> bool:
     """
     title: Is signed integer type.
     parameters:
-      type_:
-        type: astx.DataType | None
-    returns:
-      type: bool
+      type_: Type expression to process.
+    returns: 'Result of this operation: is signed integer type.'
     """
     return isinstance(type_, INT_TYPES)
 
@@ -861,10 +819,8 @@ def is_unsigned_type(type_: astx.DataType | None) -> bool:
     """
     title: Is unsigned type.
     parameters:
-      type_:
-        type: astx.DataType | None
-    returns:
-      type: bool
+      type_: Type expression to process.
+    returns: 'Result of this operation: is unsigned type.'
     """
     return isinstance(type_, UINT_TYPES)
 
@@ -875,10 +831,8 @@ def is_float_type(type_: astx.DataType | None) -> bool:
     """
     title: Is float type.
     parameters:
-      type_:
-        type: astx.DataType | None
-    returns:
-      type: bool
+      type_: Type expression to process.
+    returns: 'Result of this operation: is float type.'
     """
     return isinstance(type_, FLOAT_TYPES)
 
@@ -889,10 +843,8 @@ def is_numeric_type(type_: astx.DataType | None) -> bool:
     """
     title: Is numeric type.
     parameters:
-      type_:
-        type: astx.DataType | None
-    returns:
-      type: bool
+      type_: Type expression to process.
+    returns: 'Result of this operation: is numeric type.'
     """
     return is_integer_type(type_) or is_float_type(type_)
 
@@ -903,10 +855,8 @@ def is_boolean_type(type_: astx.DataType | None) -> bool:
     """
     title: Is boolean type.
     parameters:
-      type_:
-        type: astx.DataType | None
-    returns:
-      type: bool
+      type_: Type expression to process.
+    returns: 'Result of this operation: is boolean type.'
     """
     return isinstance(type_, astx.Boolean)
 
@@ -917,10 +867,8 @@ def is_string_type(type_: astx.DataType | None) -> bool:
     """
     title: Is string type.
     parameters:
-      type_:
-        type: astx.DataType | None
-    returns:
-      type: bool
+      type_: Type expression to process.
+    returns: 'Result of this operation: is string type.'
     """
     return isinstance(type_, STRING_TYPES)
 
@@ -931,10 +879,8 @@ def is_temporal_type(type_: astx.DataType | None) -> bool:
     """
     title: Is temporal type.
     parameters:
-      type_:
-        type: astx.DataType | None
-    returns:
-      type: bool
+      type_: Type expression to process.
+    returns: 'Result of this operation: is temporal type.'
     """
     return isinstance(type_, TEMPORAL_TYPES)
 
@@ -945,10 +891,8 @@ def is_none_type(type_: astx.DataType | None) -> bool:
     """
     title: Is none type.
     parameters:
-      type_:
-        type: astx.DataType | None
-    returns:
-      type: bool
+      type_: Type expression to process.
+    returns: 'Result of this operation: is none type.'
     """
     return isinstance(type_, astx.NoneType)
 
@@ -962,12 +906,9 @@ def is_type_member(
     """
     title: Return whether a value type is a member of a target type.
     parameters:
-      target:
-        type: astx.DataType | None
-      value:
-        type: astx.DataType | None
-    returns:
-      type: bool
+      target: Destination of the operation.
+      value: Value to process.
+    returns: Whether a value type is a member of a target type.
     """
     if target is None or value is None:
         return False
@@ -995,10 +936,8 @@ def bit_width(type_: astx.DataType | None) -> int:
     """
     title: Return the nominal bit width for numeric types.
     parameters:
-      type_:
-        type: astx.DataType | None
-    returns:
-      type: int
+      type_: Type expression to process.
+    returns: The nominal bit width for numeric types.
     """
     if type_ is None:
         return 0
@@ -1011,10 +950,9 @@ def float_promotion_width_for_integer_width(width: int) -> int:
     """
     title: Select raw LLVM storage width, not a lossless language promotion.
     parameters:
-      width:
-        type: int
-    returns:
-      type: int
+      width: Bit width or display width.
+    returns: 'Result of this operation: select raw LLVM storage width, not
+      a lossless language promotion.'
     """
     if width <= BIT_WIDTH_16:
         return BIT_WIDTH_16
@@ -1032,12 +970,9 @@ def common_numeric_type(
     """
     title: Return a widened numeric type shared by both operands.
     parameters:
-      lhs:
-        type: astx.DataType | None
-      rhs:
-        type: astx.DataType | None
-    returns:
-      type: astx.DataType | None
+      lhs: Left operand.
+      rhs: Right operand.
+    returns: A widened numeric type shared by both operands.
     """
     if lhs is None or rhs is None:
         return None
@@ -1053,10 +988,9 @@ def union_storage_type(type_: astx.UnionType) -> astx.DataType | None:
     """
     title: Select a lossless untagged union representation during analysis.
     parameters:
-      type_:
-        type: astx.UnionType
-    returns:
-      type: astx.DataType | None
+      type_: Type expression to process.
+    returns: 'Result of this operation: select a lossless untagged union
+      representation during analysis.'
     """
     members = tuple(type_.members)
     if not members:
@@ -1083,12 +1017,9 @@ def is_explicitly_castable(
     """
     title: Return whether an explicit Cast expression is allowed.
     parameters:
-      source:
-        type: astx.DataType | None
-      target:
-        type: astx.DataType | None
-    returns:
-      type: bool
+      source: Source input to process.
+      target: Destination of the operation.
+    returns: Whether an explicit Cast expression is allowed.
     """
     if (
         contains_sequence(source)
@@ -1148,12 +1079,9 @@ def is_assignable(
     """
     title: Return whether a value type can be assigned to a target type.
     parameters:
-      target:
-        type: astx.DataType | None
-      value:
-        type: astx.DataType | None
-    returns:
-      type: bool
+      target: Destination of the operation.
+      value: Value to process.
+    returns: Whether a value type can be assigned to a target type.
     """
     if target is None or value is None:
         return True
@@ -1313,10 +1241,9 @@ def contains_file_type(type_: astx.DataType | None) -> bool:
     """
     title: Detect unsupported nested native-file storage.
     parameters:
-      type_:
-        type: astx.DataType | None
-    returns:
-      type: bool
+      type_: Type expression to process.
+    returns: 'Result of this operation: detect unsupported nested native-file
+      storage.'
     """
     if isinstance(type_, astx.FileType):
         return True
@@ -1352,10 +1279,9 @@ def contains_bytes(type_: astx.DataType | None) -> bool:
     """
     title: Detect unsupported nested byte-buffer storage.
     parameters:
-      type_:
-        type: astx.DataType | None
-    returns:
-      type: bool
+      type_: Type expression to process.
+    returns: 'Result of this operation: detect unsupported nested byte-buffer
+      storage.'
     """
     if isinstance(type_, astx.Bytes):
         return True
@@ -1389,15 +1315,13 @@ def substitute_type(
     type_: astx.DataType, bindings: dict[str, astx.DataType]
 ) -> astx.DataType:
     """
-    title: >-
-      Recursively substitute concrete template arguments in supported types.
+    title: Recursively substitute concrete template arguments in
+      supported types.
     parameters:
-      type_:
-        type: astx.DataType
-      bindings:
-        type: dict[str, astx.DataType]
-    returns:
-      type: astx.DataType
+      type_: Type expression to process.
+      bindings: Bindings.
+    returns: 'Result of this operation: recursively substitute concrete
+      template arguments in supported types.'
     """
     if isinstance(type_, astx.TemplateTypeVar):
         return clone_type(bindings.get(type_.name, type_))
@@ -1460,10 +1384,9 @@ def contains_sequence(type_: astx.DataType | None) -> bool:
     """
     title: Find borrowed sequence storage inside supported composite types.
     parameters:
-      type_:
-        type: astx.DataType | None
-    returns:
-      type: bool
+      type_: Type expression to process.
+    returns: 'Result of this operation: find borrowed sequence storage inside
+      supported composite types.'
     """
     if isinstance(type_, astx.SequenceType):
         return True
@@ -1500,10 +1423,9 @@ def contains_inferred_type(type_: astx.DataType | None) -> bool:
     """
     title: Detect inference requests embedded in unsupported type contexts.
     parameters:
-      type_:
-        type: astx.DataType | None
-    returns:
-      type: bool
+      type_: Type expression to process.
+    returns: 'Result of this operation: detect inference requests embedded
+      in unsupported type contexts.'
     """
     if isinstance(type_, astx.InferredType):
         return True

@@ -25,10 +25,8 @@ def _semantic(node: astx.AST) -> SemanticInfo:
     """
     title: Return semantic sidecar information for a node.
     parameters:
-      node:
-        type: astx.AST
-    returns:
-      type: SemanticInfo
+      node: Syntax node to process.
+    returns: Semantic sidecar information for a node.
     """
     return cast(SemanticInfo, getattr(node, "semantic"))
 
@@ -40,13 +38,11 @@ def _int_function(
     """
     title: Build a small int32-returning function.
     parameters:
-      name:
-        type: str
+      name: Name identifying the declaration or operation.
       body_nodes:
-        type: astx.AST
         variadic: positional
-    returns:
-      type: astx.FunctionDef
+        description: Body nodes.
+    returns: Constructed a small int32-returning function.
     """
     body = astx.Block()
     for node in body_nodes:
@@ -65,10 +61,8 @@ def _point_struct(name: str = "Point") -> astx.StructDefStmt:
     """
     title: Build a simple struct definition.
     parameters:
-      name:
-        type: str
-    returns:
-      type: astx.StructDefStmt
+      name: Name identifying the declaration or operation.
+    returns: Constructed a simple struct definition.
     """
     return astx.StructDefStmt(
         name=name,
@@ -83,10 +77,8 @@ def _sum2_function(name: str = "sum2") -> astx.FunctionDef:
     """
     title: Build a small float64 helper with two parameters.
     parameters:
-      name:
-        type: str
-    returns:
-      type: astx.FunctionDef
+      name: Name identifying the declaration or operation.
+    returns: Constructed a small float64 helper with two parameters.
     """
     body = astx.Block()
     body.append(astx.FunctionReturn(astx.Identifier("lhs")))
@@ -107,10 +99,8 @@ def _shape_class(name: str = "Shape") -> astx.ClassDefStmt:
     """
     title: Build a simple class definition.
     parameters:
-      name:
-        type: str
-    returns:
-      type: astx.ClassDefStmt
+      name: Name identifying the declaration or operation.
+    returns: Constructed a simple class definition.
     """
     return astx.ClassDefStmt(
         name=name,
@@ -465,14 +455,11 @@ def test_analyze_modules_propagates_unexpected_probe_failures() -> None:
         """
         title: Resolver that sometimes fails on child module lookups.
         parameters:
-          requesting_module_key:
-            type: str
-          import_node:
-            type: astx.ImportStmt | astx.ImportFromStmt
-          requested_specifier:
-            type: str
-        returns:
-          type: ParsedModule
+          requesting_module_key: Requesting module key.
+          import_node: Import node.
+          requested_specifier: Import specifier requested by the source module.
+        returns: 'Result of this operation: resolver that sometimes fails
+          on child module lookups.'
         """
         _ = requesting_module_key
         _ = import_node
@@ -868,14 +855,12 @@ def test_analyze_modules_propagates_unexpected_direct_resolver_failure() -> (
         """
         title: Raise one internal resolver failure.
         parameters:
-          requesting_module_key:
-            type: str
-          import_node:
-            type: astx.ImportStmt | astx.ImportFromStmt
-          requested_specifier:
-            type: str
-        returns:
-          type: ParsedModule
+          requesting_module_key: Requesting module key.
+          import_node: Import node.
+          requested_specifier: Import specifier requested by the
+            source module.
+        returns: 'Result of this operation: raise one internal resolver
+          failure.'
         """
         _ = requesting_module_key
         _ = import_node
@@ -1100,10 +1085,8 @@ def test_analyze_modules_rejects_unsupported_import_forms(
     """
     title: Nested and expression-form imports are rejected.
     parameters:
-      root:
-        type: ParsedModule
-      pattern:
-        type: str
+      root: Root module or resource.
+      pattern: Pattern.
     """
     lib = make_parsed_module(
         "lib",
@@ -1119,8 +1102,7 @@ def test_private_functions_cannot_cross_module_boundaries(style: str) -> None:
     """
     title: Private function access cannot bypass visibility through aliases.
     parameters:
-      style:
-        type: str
+      style: Style.
     """
     private = _int_function(
         "hidden", astx.FunctionReturn(astx.LiteralInt32(7))

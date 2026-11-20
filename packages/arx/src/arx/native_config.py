@@ -16,10 +16,9 @@ def toml_native_value(value: str | tuple[str, ...]) -> str:
     """
     title: Quote native TOML values without invalid Unicode surrogate escapes.
     parameters:
-      value:
-        type: str | tuple[str, Ellipsis]
-    returns:
-      type: str
+      value: Value to process.
+    returns: 'Result of this operation: quote native TOML values without
+      invalid Unicode surrogate escapes.'
     """
     return json.dumps(value, ensure_ascii=False)
 
@@ -29,12 +28,9 @@ class NativeArtifactConfig:
     """
     title: One package-relative native build input.
     attributes:
-      kind:
-        type: NativeArtifactKind
-      path:
-        type: str
-      include_dirs:
-        type: tuple[str, Ellipsis]
+      kind: Kind of value or operation.
+      path: Path to the input or output resource.
+      include_dirs: Include dirs.
     """
 
     kind: NativeArtifactKind
@@ -47,10 +43,8 @@ class NativeFeatureConfig:
     """
     title: Native artifacts and system libraries for one local feature.
     attributes:
-      artifacts:
-        type: tuple[NativeArtifactConfig, Ellipsis]
-      libraries:
-        type: tuple[str, Ellipsis]
+      artifacts: Artifacts.
+      libraries: Libraries.
     """
 
     artifacts: tuple[NativeArtifactConfig, ...] = ()
@@ -62,12 +56,9 @@ class NativeConfig:
     """
     title: Versioned native features and exact module bindings.
     attributes:
-      version:
-        type: int
-      features:
-        type: Mapping[str, NativeFeatureConfig]
-      modules:
-        type: Mapping[str, tuple[str, Ellipsis]]
+      version: Package version metadata.
+      features: Features.
+      modules: Modules.
     """
 
     version: int
@@ -79,10 +70,9 @@ class NativeConfig:
         """
         title: Build typed records after whole-manifest schema validation.
         parameters:
-          data:
-            type: Mapping[str, object]
-        returns:
-          type: NativeConfig
+          data: Data to process.
+        returns: Constructed typed records after whole-manifest schema
+          validation.
         """
         features = cast(Mapping[str, Mapping[str, object]], data["features"])
         modules = cast(Mapping[str, Mapping[str, object]], data["modules"])
@@ -116,8 +106,8 @@ class NativeConfig:
     def to_data(self) -> dict[str, object]:
         """
         title: Serialize native configuration for validation and persistence.
-        returns:
-          type: dict[str, object]
+        returns: 'Result of this operation: serialize native configuration
+          for validation and persistence.'
         """
         return {
             "version": self.version,
@@ -145,8 +135,7 @@ class NativeConfig:
         """
         title: Write a canonical native table without build-script hooks.
         parameters:
-          lines:
-            type: list[str]
+          lines: Source or output lines.
         """
         lines.extend(["", "[native]", f"version = {self.version}"])
         for name, feature in self.features.items():

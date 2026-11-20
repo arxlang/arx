@@ -25,12 +25,9 @@ def exception_source(body: str, definitions: str = "") -> str:
     """
     title: Build a documented exception acceptance program.
     parameters:
-      body:
-        type: str
-      definitions:
-        type: str
-    returns:
-      type: str
+      body: Statements forming the body.
+      definitions: Definitions.
+    returns: Constructed a documented exception acceptance program.
     """
     return (
         "```\ntitle: Native exception acceptance\n```\n"
@@ -51,16 +48,12 @@ def run_exception(
     """
     title: Verify optimized LLVM and run it with bounded execution time.
     parameters:
-      tmp_path:
-        type: Path
-      body:
-        type: str
-      definitions:
-        type: str
-      optimization:
-        type: int
-    returns:
-      type: subprocess.CompletedProcess[str]
+      tmp_path: Temporary directory for this test.
+      body: Statements forming the body.
+      definitions: Definitions.
+      optimization: Optimization level.
+    returns: 'Result of this operation: verify optimized LLVM and run it
+      with bounded execution time.'
     """
     if shutil.which("clang") is None:
         pytest.skip("native exception acceptance requires clang")
@@ -95,10 +88,8 @@ def test_exception_common_workflow(tmp_path: Path, optimization: int) -> None:
     """
     title: Catch a helper's builtin exception and run only the finalizer.
     parameters:
-      tmp_path:
-        type: Path
-      optimization:
-        type: int
+      tmp_path: Temporary directory for this test.
+      optimization: Optimization level.
     """
     result = run_exception(
         tmp_path,
@@ -179,14 +170,10 @@ def test_exception_region_ordering(
     """
     title: Native handlers and finalizers obey lexical exception regions.
     parameters:
-      tmp_path:
-        type: Path
-      optimization:
-        type: int
-      body:
-        type: str
-      output:
-        type: list[str]
+      tmp_path: Temporary directory for this test.
+      optimization: Optimization level.
+      body: Statements forming the body.
+      output: Output destination or generated result.
     """
     result = run_exception(tmp_path, body, optimization=optimization)
     assert result.returncode == 0, result.stderr
@@ -201,10 +188,8 @@ def test_finally_replaces_pending_return(
     """
     title: Finalization can replace returns and pending exceptions.
     parameters:
-      tmp_path:
-        type: Path
-      optimization:
-        type: int
+      tmp_path: Temporary directory for this test.
+      optimization: Optimization level.
     """
     result = run_exception(
         tmp_path,
@@ -228,10 +213,8 @@ def test_bare_raise_uses_dynamic_handler_state(
     """
     title: A helper re-raises the outer error after an inner handler exits.
     parameters:
-      tmp_path:
-        type: Path
-      optimization:
-        type: int
+      tmp_path: Temporary directory for this test.
+      optimization: Optimization level.
     """
     result = run_exception(
         tmp_path,
@@ -261,10 +244,8 @@ def test_custom_exception_inherits_constructor(
     """
     title: A custom nominal subtype keeps its fields through a base handler.
     parameters:
-      tmp_path:
-        type: Path
-      optimization:
-        type: int
+      tmp_path: Temporary directory for this test.
+      optimization: Optimization level.
     """
     result = run_exception(
         tmp_path,
@@ -302,14 +283,10 @@ def test_runtime_failure_can_recover(
     """
     title: Checked failures become catchable without exiting the process.
     parameters:
-      tmp_path:
-        type: Path
-      optimization:
-        type: int
-      operation:
-        type: str
-      type_name:
-        type: str
+      tmp_path: Temporary directory for this test.
+      optimization: Optimization level.
+      operation: Operation to resolve or execute.
+      type_name: Name of type.
     """
     body = (
         "try:\n"
@@ -331,10 +308,8 @@ def test_exception_unwinds_owned_class_before_caller_handler(
     """
     title: The throwing frame releases its class owner before caller recovery.
     parameters:
-      tmp_path:
-        type: Path
-      optimization:
-        type: int
+      tmp_path: Temporary directory for this test.
+      optimization: Optimization level.
     """
     result = run_exception(
         tmp_path,
@@ -362,10 +337,8 @@ def test_finally_releases_abandoned_owned_return(
     """
     title: A finalizer exception releases an evaluated but unpublished return.
     parameters:
-      tmp_path:
-        type: Path
-      optimization:
-        type: int
+      tmp_path: Temporary directory for this test.
+      optimization: Optimization level.
     """
     result = run_exception(
         tmp_path,
@@ -393,10 +366,8 @@ def test_recursive_exception_propagation(
     """
     title: Recursive calls propagate without publishing a fake result.
     parameters:
-      tmp_path:
-        type: Path
-      optimization:
-        type: int
+      tmp_path: Temporary directory for this test.
+      optimization: Optimization level.
     """
     result = run_exception(
         tmp_path,
@@ -421,10 +392,8 @@ def test_failing_argument_stops_later_evaluations(
     """
     title: A failed first argument prevents later operands and the call itself.
     parameters:
-      tmp_path:
-        type: Path
-      optimization:
-        type: int
+      tmp_path: Temporary directory for this test.
+      optimization: Optimization level.
     """
     result = run_exception(
         tmp_path,
@@ -451,12 +420,9 @@ def test_uncaught_exception_chaining(
     """
     title: Report explicit causes, implicit contexts, and suppressed contexts.
     parameters:
-      tmp_path:
-        type: Path
-      optimization:
-        type: int
-      chain:
-        type: str
+      tmp_path: Temporary directory for this test.
+      optimization: Optimization level.
+      chain: Chain.
     """
     suffix = {
         "implicit": "",
@@ -496,10 +462,8 @@ def test_caught_exception_alias_outlives_binding(
     """
     title: An owned alias survives automatic removal of the handler binding.
     parameters:
-      tmp_path:
-        type: Path
-      optimization:
-        type: int
+      tmp_path: Temporary directory for this test.
+      optimization: Optimization level.
     """
     result = run_exception(
         tmp_path,
@@ -522,12 +486,9 @@ def test_finally_replaces_moved_return(
     """
     title: Replacing a moved return neither double-frees nor publishes it.
     parameters:
-      tmp_path:
-        type: Path
-      optimization:
-        type: int
-      kind:
-        type: str
+      tmp_path: Temporary directory for this test.
+      optimization: Optimization level.
+      kind: Kind of value or operation.
     """
     initializer = '"temporary"' if kind == "str" else "list(range(0, 3))"
     result = run_exception(
@@ -550,10 +511,8 @@ def test_cleanup_failure_preserves_primary_exception(
     """
     title: An implicit destructor failure is secondary to an existing failure.
     parameters:
-      tmp_path:
-        type: Path
-      optimization:
-        type: int
+      tmp_path: Temporary directory for this test.
+      optimization: Optimization level.
     """
     result = run_exception(
         tmp_path,
@@ -586,12 +545,9 @@ def test_nested_resource_failure_precedence(
     """
     title: Nested exits see completion and preserve primary and cleanup errors.
     parameters:
-      tmp_path:
-        type: Path
-      optimization:
-        type: int
-      failure:
-        type: str
+      tmp_path: Temporary directory for this test.
+      optimization: Optimization level.
+      failure: Failure.
     """
     fail_enter = "true" if failure == "enter" else "false"
     body = (
@@ -650,10 +606,8 @@ def test_resource_exit_and_explicit_finally(
     """
     title: Finally replacement and implicit exit keep distinct precedence.
     parameters:
-      tmp_path:
-        type: Path
-      optimization:
-        type: int
+      tmp_path: Temporary directory for this test.
+      optimization: Optimization level.
     """
     result = run_exception(
         tmp_path,
@@ -712,12 +666,9 @@ def test_loop_transfer_cleanup_failure(
     """
     title: A failed drop cancels a loop transfer and still cleans outer owners.
     parameters:
-      tmp_path:
-        type: Path
-      transfer:
-        type: str
-      optimization:
-        type: int
+      tmp_path: Temporary directory for this test.
+      transfer: Transfer.
+      optimization: Optimization level.
     """
     result = run_exception(
         tmp_path,
@@ -756,10 +707,8 @@ def test_native_list_and_csv_recovery(
     """
     title: List bounds and missing CSV input use typed recoverable failures.
     parameters:
-      tmp_path:
-        type: Path
-      optimization:
-        type: int
+      tmp_path: Temporary directory for this test.
+      optimization: Optimization level.
     """
     result = run_exception(
         tmp_path,
@@ -782,10 +731,8 @@ def test_failed_constructor_rolls_back_initialized_fields(
     """
     title: Constructor failure releases fields without destroying partial self.
     parameters:
-      tmp_path:
-        type: Path
-      optimization:
-        type: int
+      tmp_path: Temporary directory for this test.
+      optimization: Optimization level.
     """
     result = run_exception(
         tmp_path,
@@ -811,12 +758,9 @@ def test_finalizer_local_catch_preserves_pending_return(
     """
     title: A catch inside finally does not abandon an outer pending return.
     parameters:
-      tmp_path:
-        type: Path
-      optimization:
-        type: int
-      kind:
-        type: str
+      tmp_path: Temporary directory for this test.
+      optimization: Optimization level.
+      kind: Kind of value or operation.
     """
     definitions = (
         "class Resource:\n  ```\n  title: Returned owner\n  ```\n"
@@ -857,12 +801,9 @@ def test_try_local_owner_survives_else(
     """
     title: A successful try owner remains alive throughout its else suite.
     parameters:
-      tmp_path:
-        type: Path
-      optimization:
-        type: int
-      kind:
-        type: str
+      tmp_path: Temporary directory for this test.
+      optimization: Optimization level.
+      kind: Kind of value or operation.
     """
     definitions = (
         "class Resource:\n  ```\n  title: Else owner\n  ```\n"
@@ -896,10 +837,8 @@ def test_return_cleanup_failure_preserves_outer_handler_owners(
     """
     title: An inner release failure enters its handler before outer cleanup.
     parameters:
-      tmp_path:
-        type: Path
-      optimization:
-        type: int
+      tmp_path: Temporary directory for this test.
+      optimization: Optimization level.
     """
     result = run_exception(
         tmp_path,
@@ -928,10 +867,8 @@ def test_cleanup_after_try_cannot_reenter_completed_handler(
     """
     title: A failure outside a completed try cannot jump back to its handler.
     parameters:
-      tmp_path:
-        type: Path
-      optimization:
-        type: int
+      tmp_path: Temporary directory for this test.
+      optimization: Optimization level.
     """
     result = run_exception(
         tmp_path,

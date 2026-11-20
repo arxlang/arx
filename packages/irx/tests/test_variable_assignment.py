@@ -38,14 +38,10 @@ def test_variable_assignment(
     """
     title: Test VariableAssignment by reassigning and printing.
     parameters:
-      builder_class:
-        type: type[Builder]
-      var_type:
-        type: type
-      literal_type:
-        type: type
-      expected_output:
-        type: str
+      builder_class: Builder implementation under test.
+      var_type: Type of var.
+      literal_type: Literal type used by this case.
+      expected_output: Expected output.
     """
     builder = builder_class()
     module = builder.module()
@@ -93,12 +89,9 @@ def test_variable_declaration_no_initializer(
     """
     title: Test VariableDeclaration without an initializer defaults to zero.
     parameters:
-      builder_class:
-        type: type[Builder]
-      var_type:
-        type: type
-      expected_output:
-        type: str
+      builder_class: Builder implementation under test.
+      var_type: Type of var.
+      expected_output: Expected output.
     """
     builder = builder_class()
     module = builder.module()

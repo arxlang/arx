@@ -1,9 +1,8 @@
 """
 title: Statement-only exception syntax.
-summary: >-
-  Preserve clause indentation and raise operand locations while constructing
-  language-independent ASTx nodes. IRx decides exception identities and
-  validity.
+summary: Preserve clause indentation and raise operand locations
+  while constructing language-independent ASTx nodes. IRx decides
+  exception identities and validity.
 """
 
 from typing import cast
@@ -23,8 +22,8 @@ class ExceptionParserMixin(ParserMixinBase):
     def parse_statement(self) -> astx.AST:
         """
         title: Keep exception, resource, and loop statements out of operands.
-        returns:
-          type: astx.AST
+        returns: 'Result of this operation: keep exception, resource, and
+          loop statements out of operands.'
         """
         if self.is_declaration_start():
             return self.parse_named_declaration()
@@ -47,9 +46,10 @@ class ExceptionParserMixin(ParserMixinBase):
 
     def exception_expression(self) -> astx.Expr:
         """
-        title: Require an expression rather than a statement-valued operand.
-        returns:
-          type: astx.Expr
+        title: Require an expression rather than a statement-valued
+          operand.
+        returns: 'Result of this operation: require an expression
+          rather than a statement-valued operand.'
         """
         expression = self.parse_expression()
         if not isinstance(expression, astx.Expr):
@@ -61,8 +61,7 @@ class ExceptionParserMixin(ParserMixinBase):
     def parse_raise_stmt(self) -> astx.ThrowStmt:
         """
         title: Parse an optional exception and optional explicit cause.
-        returns:
-          type: astx.ThrowStmt
+        returns: Parsed an optional exception and optional explicit cause.
         """
         location = self.tokens.cur_tok.location
         self.tokens.get_next_token()
@@ -106,10 +105,9 @@ class ExceptionParserMixin(ParserMixinBase):
         """
         title: Consume line markers only when a same-level clause follows.
         parameters:
-          indentation:
-            type: int
-        returns:
-          type: TokenKind | None
+          indentation: Indentation.
+        returns: 'Result of this operation: consume line markers only when
+          a same-level clause follows.'
         """
         for kind in (
             TokenKind.kw_except,
@@ -123,8 +121,7 @@ class ExceptionParserMixin(ParserMixinBase):
     def exception_type_reference(self) -> astx.Expr:
         """
         title: Parse a nominal or module-qualified handler type reference.
-        returns:
-          type: astx.Expr
+        returns: Parsed a nominal or module-qualified handler type reference.
         """
         token = self.tokens.cur_tok
         if token.kind != TokenKind.identifier or token.value == "as":
@@ -150,9 +147,10 @@ class ExceptionParserMixin(ParserMixinBase):
 
     def parse_except_clause(self) -> astx.CatchHandlerStmt:
         """
-        title: Parse a handler with optional nominal types and local binding.
-        returns:
-          type: astx.CatchHandlerStmt
+        title: Parse a handler with optional nominal types and local
+          binding.
+        returns: Parsed a handler with optional nominal types and
+          local binding.
         """
         location = self.tokens.cur_tok.location
         self.tokens.get_next_token()
@@ -197,8 +195,7 @@ class ExceptionParserMixin(ParserMixinBase):
     def parse_try_stmt(self) -> astx.ExceptionHandlerStmt:
         """
         title: Parse ordered handlers, optional else, and optional finally.
-        returns:
-          type: astx.ExceptionHandlerStmt
+        returns: Parsed ordered handlers, optional else, and optional finally.
         """
         location = self.tokens.cur_tok.location
         indentation = location.col - 1

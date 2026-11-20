@@ -3,9 +3,8 @@
 
 """
 title: Expression mutation helpers.
-summary: >-
-  Resolve assignment and mutation targets, including class-field mutation
-  handling.
+summary: Resolve assignment and mutation targets, including class-field
+  mutation handling.
 """
 
 from __future__ import annotations
@@ -52,17 +51,14 @@ class ExpressionMutationVisitorMixin(ClassMemberFormattingVisitorMixin):
         target_type: astx.DataType | None,
     ) -> SemanticSymbol:
         """
-        title: >-
-          Build one variable-like symbol for a resolved class field target.
+        title: Build one variable-like symbol for a resolved class field
+          target.
         parameters:
-          target:
-            type: astx.AST
-          member:
-            type: SemanticClassMember
-          target_type:
-            type: astx.DataType | None
-        returns:
-          type: SemanticSymbol
+          target: Destination of the operation.
+          member: Member.
+          target_type: Destination type for the conversion.
+        returns: Constructed one variable-like symbol for a resolved class
+          field target.
         """
         declaring_class = self._member_declaring_class(member)
         module_key = (
@@ -94,23 +90,16 @@ class ExpressionMutationVisitorMixin(ClassMemberFormattingVisitorMixin):
     ) -> tuple[SemanticSymbol, str, astx.DataType | None] | None:
         """
         title: Resolve a binding-write or owned-object mutation target.
-        summary: >-
-          Rebinding requires symbol or member mutability. In-place object
-          operations may opt out but must still validate ownership and domain
-          restrictions before authorizing a store.
+        summary: Rebinding requires symbol or member mutability. In-place
+          object operations may opt out but must still validate ownership
+          and domain restrictions before authorizing a store.
         parameters:
-          target:
-            type: astx.AST
-          node:
-            type: astx.AST
-          action:
-            type: str
-          invalid_message:
-            type: str
-          require_reassignment:
-            type: bool
-        returns:
-          type: tuple[SemanticSymbol, str, astx.DataType | None] | None
+          target: Destination of the operation.
+          node: Syntax node to process.
+          action: Action.
+          invalid_message: Invalid message.
+          require_reassignment: Whether to use require reassignment.
+        returns: Resolved a binding-write or owned-object mutation target.
         """
         target_type = self._expr_type(target)
         if isinstance(target_type, (astx.SequenceType, astx.GeneratorType)):
@@ -275,24 +264,18 @@ class ExpressionMutationVisitorMixin(ClassMemberFormattingVisitorMixin):
     ) -> None:
         """
         title: Validate and record one dynamic-list replacement transfer.
-        summary: >-
-          Replacing an actively iterated owner would invalidate the loop's
-          borrowed storage. Reject it before authorizing a transfer, even on
-          the last iteration or immediately before returning. Other bindings
-          and replacement after iteration retain the existing move contract.
+        summary: Replacing an actively iterated owner would invalidate the
+          loop's borrowed storage. Reject it before authorizing a transfer,
+          even on the last iteration or immediately before returning. Other
+          bindings and replacement after iteration retain the existing move
+          contract.
         parameters:
-          node:
-            type: astx.AST
-          value:
-            type: astx.AST
-          symbol:
-            type: SemanticSymbol
-          target_name:
-            type: str
-          target_type:
-            type: astx.DataType | None
-          is_local:
-            type: bool
+          node: Syntax node to process.
+          value: Value to process.
+          symbol: Resolved symbol for the operation.
+          target_name: Name of target.
+          target_type: Destination type for the conversion.
+          is_local: Whether is local.
         """
         if not isinstance(target_type, (astx.ListType, astx.Bytes)):
             return
@@ -371,18 +354,12 @@ class ExpressionMutationVisitorMixin(ClassMemberFormattingVisitorMixin):
         """
         title: Validate and record one string pointer replacement.
         parameters:
-          node:
-            type: astx.AST
-          value:
-            type: astx.AST
-          symbol:
-            type: SemanticSymbol
-          target_name:
-            type: str
-          target_type:
-            type: astx.DataType | None
-          is_local:
-            type: bool
+          node: Syntax node to process.
+          value: Value to process.
+          symbol: Resolved symbol for the operation.
+          target_name: Name of target.
+          target_type: Destination type for the conversion.
+          is_local: Whether is local.
         """
         if not is_string_type(target_type):
             return
@@ -478,8 +455,7 @@ class ExpressionMutationVisitorMixin(ClassMemberFormattingVisitorMixin):
         """
         title: Visit VariableAssignment nodes.
         parameters:
-          node:
-            type: astx.VariableAssignment
+          node: Syntax node to process.
         """
         symbol = self.context.scopes.resolve(node.name)
         contextualize_literal(

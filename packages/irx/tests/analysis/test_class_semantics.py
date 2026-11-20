@@ -38,10 +38,8 @@ def _semantic(node: astx.AST) -> SemanticInfo:
     """
     title: Return semantic sidecar information for a node.
     parameters:
-      node:
-        type: astx.AST
-    returns:
-      type: SemanticInfo
+      node: Syntax node to process.
+    returns: Semantic sidecar information for a node.
     """
     return cast(SemanticInfo, getattr(node, "semantic"))
 
@@ -50,10 +48,8 @@ def _class_type(name: str) -> astx.ClassType:
     """
     title: Build one named class type reference.
     parameters:
-      name:
-        type: str
-    returns:
-      type: astx.ClassType
+      name: Name identifying the declaration or operation.
+    returns: Constructed one named class type reference.
     """
     return astx.ClassType(name)
 
@@ -62,10 +58,9 @@ def _default_return_value(type_: astx.DataType) -> astx.AST | None:
     """
     title: Build one minimal default return value for a method test helper.
     parameters:
-      type_:
-        type: astx.DataType
-    returns:
-      type: astx.AST | None
+      type_: Type expression to process.
+    returns: Constructed one minimal default return value for a method test
+      helper.
     """
     if isinstance(type_, astx.NoneType):
         return None
@@ -90,19 +85,15 @@ def _method(
     """
     title: Build one class method definition.
     parameters:
-      name:
-        type: str
-      return_type:
-        type: astx.DataType | None
-      visibility:
-        type: astx.VisibilityKind
-      is_static:
-        type: bool
+      name: Name identifying the declaration or operation.
+      return_type: Declared result type.
+      visibility: Visibility.
+      is_static: Whether the member belongs to the class rather than
+        an instance.
       args:
-        type: astx.Argument
         variadic: positional
-    returns:
-      type: astx.FunctionDef
+        description: Positional arguments.
+    returns: Constructed one class method definition.
     """
     resolved_return_type = return_type or astx.Int32()
     prototype = astx.FunctionPrototype(
@@ -130,21 +121,16 @@ def _abstract_method(
     """
     title: Build one abstract class method declaration.
     parameters:
-      name:
-        type: str
-      return_type:
-        type: astx.DataType | None
-      visibility:
-        type: astx.VisibilityKind
-      is_static:
-        type: bool
-      body:
-        type: astx.Block | None
+      name: Name identifying the declaration or operation.
+      return_type: Declared result type.
+      visibility: Visibility.
+      is_static: Whether the member belongs to the class rather than
+        an instance.
+      body: Statements forming the body.
       args:
-        type: astx.Argument
         variadic: positional
-    returns:
-      type: astx.FunctionDef
+        description: Positional arguments.
+    returns: Constructed one abstract class method declaration.
     """
     prototype = astx.FunctionPrototype(
         name,
@@ -170,20 +156,14 @@ def _attribute(
     """
     title: Build one class attribute declaration.
     parameters:
-      name:
-        type: str
-      type_:
-        type: astx.DataType
-      mutability:
-        type: astx.MutabilityKind
-      visibility:
-        type: astx.VisibilityKind
-      is_static:
-        type: bool
-      value:
-        type: astx.AST | None
-    returns:
-      type: astx.VariableDeclaration
+      name: Name identifying the declaration or operation.
+      type_: Type expression to process.
+      mutability: Mutability.
+      visibility: Visibility.
+      is_static: Whether the member belongs to the class rather than
+        an instance.
+      value: Value to process.
+    returns: Constructed one class attribute declaration.
     """
     declaration = astx.VariableDeclaration(
         name=name,

@@ -32,16 +32,11 @@ def test_float_operations_with_print(
     """
     title: Test float operations by printing result to stdout.
     parameters:
-      builder_class:
-        type: type[Builder]
-      lhs:
-        type: float
-      op:
-        type: str
-      rhs:
-        type: float
-      expected:
-        type: float
+      builder_class: Builder implementation under test.
+      lhs: Left operand.
+      op: Op.
+      rhs: Right operand.
+      expected: Expected result for this case.
     """
     builder = builder_class()
     module = builder.module()

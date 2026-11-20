@@ -22,12 +22,9 @@ class LiteralString(Literal):
     """
     title: LiteralString data type class.
     attributes:
-      type_:
-        type: String
-      loc:
-        type: SourceLocation
-      value:
-        type: str
+      type_: Type associated with this expression.
+      loc: Source coordinates attached to this node.
+      value: Stored value.
     """
 
     type_: String
@@ -41,10 +38,8 @@ class LiteralString(Literal):
         """
         title: Initialize LiteralString.
         parameters:
-          value:
-            type: str
-          loc:
-            type: SourceLocation
+          value: Value to process.
+          loc: Source coordinates associated with the node.
         """
         super().__init__(loc)
         self.value = value
@@ -54,8 +49,7 @@ class LiteralString(Literal):
     def __str__(self) -> str:
         """
         title: Return a string representation of the object.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         return f"LiteralString({self.value})"
 
@@ -63,10 +57,8 @@ class LiteralString(Literal):
         """
         title: Return the AST structure of the object.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         key = f"LiteralString: {self.value}"
         value = self.value
@@ -79,12 +71,9 @@ class LiteralUTF8String(LiteralString):
     """
     title: Literal class for UTF-8 strings.
     attributes:
-      loc:
-        type: SourceLocation
-      type_:
-        type: UTF8String
-      value:
-        type: str
+      loc: Source coordinates attached to this node.
+      type_: Type associated with this expression.
+      value: Stored value.
     """
 
     loc: SourceLocation
@@ -98,10 +87,8 @@ class LiteralUTF8String(LiteralString):
         """
         title: Initialize the UTF-8 string literal.
         parameters:
-          value:
-            type: str
-          loc:
-            type: SourceLocation
+          value: Value to process.
+          loc: Source coordinates associated with the node.
         """
         super().__init__(value=value, loc=loc)
         self.type_ = UTF8String()
@@ -109,8 +96,7 @@ class LiteralUTF8String(LiteralString):
     def __str__(self) -> str:
         """
         title: Return a string representation of the object.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         return f"LiteralUTF8String({self.value})"
 
@@ -118,10 +104,8 @@ class LiteralUTF8String(LiteralString):
         """
         title: Return the structure of the object in a simplified.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         key = f"LiteralUTF8String: {self.value}"
         value = self.value
@@ -134,12 +118,9 @@ class LiteralUTF8Char(LiteralString):
     """
     title: Literal class for UTF-8 characters.
     attributes:
-      loc:
-        type: SourceLocation
-      type_:
-        type: UTF8Char
-      value:
-        type: str
+      loc: Source coordinates attached to this node.
+      type_: Type associated with this expression.
+      value: Stored value.
     """
 
     loc: SourceLocation
@@ -153,10 +134,8 @@ class LiteralUTF8Char(LiteralString):
         """
         title: Initialize the UTF-8 character literal.
         parameters:
-          value:
-            type: str
-          loc:
-            type: SourceLocation
+          value: Value to process.
+          loc: Source coordinates associated with the node.
         """
         super().__init__(value=value, loc=loc)
         self.type_ = UTF8Char()
@@ -164,8 +143,7 @@ class LiteralUTF8Char(LiteralString):
     def __str__(self) -> str:
         """
         title: Return a string representation of the object.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         return f"LiteralUTF8Char({self.value})"
 
@@ -173,10 +151,8 @@ class LiteralUTF8Char(LiteralString):
         """
         title: Return the structure of the object in a simplified.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         key = f"LiteralUTF8Char: {self.value}"
         value = self.value

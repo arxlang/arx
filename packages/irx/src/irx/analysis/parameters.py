@@ -34,12 +34,9 @@ def resolve_parameter_ownership(
     """
     title: Attach the same borrow or retained-copy contract to every parameter.
     parameters:
-      analyzer:
-        type: SemanticAnalyzerCore
-      arg_node:
-        type: astx.Argument
-      arg_symbol:
-        type: SemanticSymbol
+      analyzer: Semantic analyzer resolving the operation.
+      arg_node: Arg node.
+      arg_symbol: Arg symbol.
     """
     analyzer._semantic(arg_node).resource_ownership = None
     if isinstance(arg_symbol.type_, astx.ClassType):

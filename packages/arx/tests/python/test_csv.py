@@ -58,13 +58,12 @@ fn main() -> i32:
 @pytest.fixture(scope="module")
 def pipeline(tmp_path_factory: pytest.TempPathFactory) -> Path:
     """
-    title: >-
-      Compile once through parsing, analysis, LLVM verification and linking.
+    title: Compile once through parsing, analysis, LLVM verification and
+      linking.
     parameters:
-      tmp_path_factory:
-        type: pytest.TempPathFactory
-    returns:
-      type: Path
+      tmp_path_factory: Factory for shared temporary test directories.
+    returns: 'Result of this operation: compile once through parsing, analysis,
+      LLVM verification and linking.'
     """
     binary = tmp_path_factory.mktemp("csv-pipeline") / "csv"
     compile_program(PIPELINE, binary)
@@ -75,10 +74,8 @@ def test_csv_dataframe_roundtrip(tmp_path: Path, pipeline: Path) -> None:
     """
     title: Process every batch and preserve aliases, replacements and returns.
     parameters:
-      tmp_path:
-        type: Path
-      pipeline:
-        type: Path
+      tmp_path: Temporary directory for this test.
+      pipeline: Pipeline.
     """
     contents = "id\n" + "".join(f"{row}\n" for row in range(1000))
     (tmp_path / "input.csv").write_text(contents, encoding="utf-8")
@@ -110,17 +107,13 @@ def test_compiled_conversion_reports_data_errors(
     message: str,
 ) -> None:
     """
-    title: >-
-      Data-dependent failures use structured Arrow errors, not pointer casts.
+    title: Data-dependent failures use structured Arrow errors, not pointer
+      casts.
     parameters:
-      tmp_path:
-        type: Path
-      pipeline:
-        type: Path
-      contents:
-        type: str
-      message:
-        type: str
+      tmp_path: Temporary directory for this test.
+      pipeline: Pipeline.
+      contents: Contents.
+      message: Diagnostic or output message.
     """
     (tmp_path / "input.csv").write_text(contents)
     result = subprocess.run(
@@ -142,8 +135,7 @@ def test_unregistered_recordbatch_name_is_not_a_capability(
     """
     title: A user class with the same name cannot activate a native conversion.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     source = """
 class RecordBatch:

@@ -28,8 +28,7 @@ HAS_CLANG = shutil.which("clang") is not None
 def _list_i32_type() -> astx.ListType:
     """
     title: Return the canonical List[Int32] type.
-    returns:
-      type: astx.ListType
+    returns: The canonical List[Int32] type.
     """
     return astx.ListType([astx.Int32()])
 
@@ -42,14 +41,10 @@ def _mutable_decl(
     """
     title: Build one mutable variable declaration.
     parameters:
-      name:
-        type: str
-      type_:
-        type: astx.DataType
-      value:
-        type: astx.AST
-    returns:
-      type: astx.VariableDeclaration
+      name: Name identifying the declaration or operation.
+      type_: Type expression to process.
+      value: Value to process.
+    returns: Constructed one mutable variable declaration.
     """
     return astx.VariableDeclaration(
         name=name,
@@ -66,12 +61,10 @@ def _run_workspace_build(
     """
     title: Build and run one module using a workspace-local temporary path.
     parameters:
-      builder:
-        type: Builder
-      module:
-        type: astx.Module
-    returns:
-      type: CommandResult
+      builder: Builder generating the intermediate representation.
+      module: Module to process.
+    returns: Constructed and run one module using a workspace-local temporary
+      path.
     """
     output_path = ""
     with workspace_tmpdir_env() as temp_root:
@@ -191,10 +184,8 @@ def test_literal_collection_contains(
     """
     title: Literal collection containment should support common collections.
     parameters:
-      base:
-        type: astx.AST
-      value:
-        type: astx.AST
+      base: Base value or declaration.
+      value: Value to process.
     """
     builder = Builder()
     module = make_main_module(
@@ -317,10 +308,8 @@ def test_literal_sequence_search(expression: astx.AST, expected: int) -> None:
     """
     title: Literal sequence index and count should return Int32 results.
     parameters:
-      expression:
-        type: astx.AST
-      expected:
-        type: int
+      expression: Expression to process.
+      expected: Expected result for this case.
     """
     builder = Builder()
     module = make_main_module(astx.FunctionReturn(expression))
@@ -475,14 +464,10 @@ def test_nonlowerable_collection_forms_reject_semantically(
     """
     title: Unsupported collection receiver forms should fail in analysis.
     parameters:
-      type_:
-        type: astx.DataType
-      value:
-        type: astx.AST
-      expression:
-        type: astx.AST
-      return_type:
-        type: astx.DataType
+      type_: Type expression to process.
+      value: Value to process.
+      expression: Expression to process.
+      return_type: Declared result type.
     """
     module = make_main_module(
         _mutable_decl("items", type_, value),
@@ -508,10 +493,8 @@ def test_numeric_search_uses_lossless_comparison_domains(
     """
     title: Numeric collection matches use the same domains as scalar equality.
     parameters:
-      probe:
-        type: astx.DataType
-      expected:
-        type: int
+      probe: Probe.
+      expected: Expected result for this case.
     """
     expression = astx.CollectionCount(
         astx.LiteralTuple((astx.LiteralUInt32(1), astx.LiteralFloat32(1.0))),
@@ -523,8 +506,8 @@ def test_numeric_search_uses_lossless_comparison_domains(
 
 def test_numeric_search_rejects_an_uncomparable_member() -> None:
     """
-    title: >-
-      An incompatible numeric member cannot silently disappear from a count.
+    title: An incompatible numeric member cannot silently disappear from
+      a count.
     """
     expression = astx.CollectionCount(
         astx.LiteralTuple((astx.LiteralInt64(1), astx.LiteralUInt64(1))),

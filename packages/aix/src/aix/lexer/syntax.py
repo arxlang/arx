@@ -16,8 +16,10 @@ class SyntaxManifest:
     """
     title: Loaded syntax manifest facade.
     attributes:
-      data:
-        type: dict[str, Any]
+      data: Data to process.
+      line_comment_delimiters: Line comment delimiters.
+      reserved_operators: Reserved operators.
+      types: Types.
     """
 
     data: dict[str, Any]
@@ -26,8 +28,7 @@ class SyntaxManifest:
     def line_comment_delimiters(self) -> tuple[str, ...]:
         """
         title: Return configured line comment delimiters.
-        returns:
-          type: tuple[str, Ellipsis]
+        returns: Configured line comment delimiters.
         """
         comments = self.data.get("comments", {})
         line = comments.get("line", "⍝")
@@ -39,8 +40,7 @@ class SyntaxManifest:
     def reserved_operators(self) -> set[str]:
         """
         title: Return reserved AIX operator symbols.
-        returns:
-          type: set[str]
+        returns: Reserved AIX operator symbols.
         """
         return set(self.data.get("reserved_operators", []))
 
@@ -48,8 +48,7 @@ class SyntaxManifest:
     def types(self) -> set[str]:
         """
         title: Return primitive type spellings.
-        returns:
-          type: set[str]
+        returns: Primitive type spellings.
         """
         return set(self.data.get("types", []))
 
@@ -57,8 +56,7 @@ class SyntaxManifest:
 def load_syntax_manifest() -> SyntaxManifest:
     """
     title: Load the lexer syntax manifest bundled with AIX.
-    returns:
-      type: SyntaxManifest
+    returns: Loaded the lexer syntax manifest bundled with AIX.
     """
     manifest = resources.files("aix.lexer").joinpath("syntax.json")
     data = json.loads(manifest.read_text(encoding="utf-8"))

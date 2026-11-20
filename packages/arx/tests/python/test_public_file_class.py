@@ -1,6 +1,6 @@
 """
-title: >-
-  Public File construction and reference ownership across the host pipeline.
+title: Public File construction and reference ownership across the
+  host pipeline.
 """
 
 import shutil
@@ -27,10 +27,8 @@ def test_public_file_aliases_and_return(tmp_path: Path, factory: str) -> None:
     """
     title: Both factories return a shared class object through ordinary calls.
     parameters:
-      tmp_path:
-        type: Path
-      factory:
-        type: str
+      tmp_path: Temporary directory for this test.
+      factory: Factory.
     """
     if shutil.which("clang") is None:
         pytest.skip("native File tests require clang")
@@ -68,8 +66,7 @@ def test_factories_resolve_to_class_initialization(factory: str) -> None:
     """
     title: Public factories initialize one private field in a real class.
     parameters:
-      factory:
-        type: str
+      factory: Factory.
     """
     compiler = Compiler()
     parsed = compiler.parse_string(
@@ -111,10 +108,8 @@ def test_file_constructor_argument_forms(factory: str, arguments: str) -> None:
     """
     title: Both entry points accept the same argument profile.
     parameters:
-      factory:
-        type: str
-      arguments:
-        type: str
+      factory: Factory.
+      arguments: Arguments supplied to the call.
     """
     compiler = Compiler()
     artifact = compiler.compile(
@@ -152,10 +147,8 @@ def test_file_constructor_rejects_unsupported_arguments(
     """
     title: Both entry points reject unsupported options before native effects.
     parameters:
-      factory:
-        type: str
-      arguments:
-        type: str
+      factory: Factory.
+      arguments: Arguments supplied to the call.
     """
     compiler = Compiler()
     with pytest.raises(CompileError):
@@ -179,10 +172,8 @@ def test_builtin_imports_and_aliases(declarations: str, call: str) -> None:
     """
     title: Qualified builtin constructors need no filesystem origin.
     parameters:
-      declarations:
-        type: str
-      call:
-        type: str
+      declarations: Declarations.
+      call: Call being processed.
     """
     compiler = Compiler()
     artifact = compiler.compile(
@@ -208,13 +199,11 @@ def test_builtin_file_casts_fail_before_lowering(
     imports: str, target: str
 ) -> None:
     """
-    title: >-
-      File identity casts are rejected through builtin spellings and aliases.
+    title: File identity casts are rejected through builtin spellings and
+      aliases.
     parameters:
-      imports:
-        type: str
-      target:
-        type: str
+      imports: Imports.
+      target: Destination of the operation.
     """
     compiler = Compiler()
     program = compiler.parse_string(
@@ -243,8 +232,7 @@ def test_file_privilege_and_shadow_boundaries(body: str) -> None:
     """
     title: Raw type spellings and shadowed names grant no native privilege.
     parameters:
-      body:
-        type: str
+      body: Statements forming the body.
     """
     compiler = Compiler()
     with pytest.raises((CompileError, ParseError)):
@@ -312,8 +300,7 @@ def test_file_dependency_injection_is_idempotent(declaration: str) -> None:
     """
     title: Repeated host analysis does not accumulate synthetic imports.
     parameters:
-      declaration:
-        type: str
+      declaration: Declaration being processed.
     """
     ArxIO.string_to_buffer(
         MODULE_DOC + declaration + "fn main() -> i32:\n"
@@ -358,8 +345,7 @@ def test_file_method_pins_receiver_across_argument_effects(
     """
     title: Later arguments cannot release the receiver of an in-flight write.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     if shutil.which("clang") is None:
         pytest.skip("native File tests require clang")
@@ -394,10 +380,8 @@ def test_file_constructor_snapshots_path_before_mode_effects(
     """
     title: A field path snapshot survives replacement in a later mode argument.
     parameters:
-      tmp_path:
-        type: Path
-      factory:
-        type: str
+      tmp_path: Temporary directory for this test.
+      factory: Factory.
     """
     if shutil.which("clang") is None:
         pytest.skip("native File tests require clang")
@@ -429,8 +413,7 @@ def test_public_aliases_share_cursor_and_closed_state(tmp_path: Path) -> None:
     """
     title: Aliases neither duplicate file descriptors nor reset their cursor.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     if shutil.which("clang") is None:
         pytest.skip("native File tests require clang")

@@ -1,8 +1,7 @@
 """
 title: Import parser mixin.
-summary: >-
-  Parse import statements and grouped import syntax while reusing the shared
-  parser core helpers.
+summary: Parse import statements and grouped import syntax while reusing
+  the shared parser core helpers.
 """
 
 from __future__ import annotations
@@ -30,10 +29,8 @@ class ImportParserMixin(ParserMixinBase):
         """
         title: Reject user-facing imports from the internal builtin namespace.
         parameters:
-          module_path:
-            type: str
-          level:
-            type: int
+          module_path: Path to module.
+          level: Level.
         """
         if (
             module_path
@@ -54,8 +51,7 @@ class ImportParserMixin(ParserMixinBase):
     def parse_import_stmt(self) -> astx.ImportStmt | astx.ImportFromStmt:
         """
         title: Parse one import statement.
-        returns:
-          type: astx.ImportStmt | astx.ImportFromStmt
+        returns: Parsed one import statement.
         """
         import_loc = self.tokens.cur_tok.location
         self.tokens.get_next_token()  # eat import
@@ -147,8 +143,7 @@ class ImportParserMixin(ParserMixinBase):
     def parse_grouped_import_names(self) -> list[astx.AliasExpr]:
         """
         title: Parse grouped named imports.
-        returns:
-          type: list[astx.AliasExpr]
+        returns: Parsed grouped named imports.
         """
         self._consume_operator("(")
         self._skip_import_layout()
@@ -188,8 +183,7 @@ class ImportParserMixin(ParserMixinBase):
     def parse_import_alias(self) -> str:
         """
         title: Parse one optional import alias.
-        returns:
-          type: str
+        returns: Parsed one optional import alias.
         """
         if not self._is_identifier_value("as"):
             return ""
@@ -206,10 +200,8 @@ class ImportParserMixin(ParserMixinBase):
         """
         title: Parse one dotted module path.
         parameters:
-          prefix:
-            type: str | None
-        returns:
-          type: str
+          prefix: Prefix.
+        returns: Parsed one dotted module path.
         """
         parts: list[str] = []
         if prefix is not None:
@@ -234,8 +226,7 @@ class ImportParserMixin(ParserMixinBase):
     def parse_import_from_module_path(self) -> tuple[int, str]:
         """
         title: Parse one absolute or relative module path for from-imports.
-        returns:
-          type: tuple[int, str]
+        returns: Parsed one absolute or relative module path for from-imports.
         """
         level = 0
         while self._is_operator("."):

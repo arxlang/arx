@@ -23,20 +23,18 @@ def resolve_range_call(
     analyzer: SemanticAnalyzerCore, node: astx.FunctionCall
 ) -> None:
     """
-    title: Bind range operands once through the ordinary named-call machinery.
-    summary: >-
-      One positional operand denotes stop; two or three denote start, stop,
-      step. With an explicit stop keyword, a positional operand denotes start.
-      Named start defaults to zero and step to one; stop is required.
-      Duplicate, unknown and missing names follow ordinary call diagnostics.
-      Endpoints and step require lossless i32 inputs. Zero step raises
-      AssertionError at run time, including empty intervals. The result owns no
-      allocation.
+    title: Bind range operands once through the ordinary named-call
+      machinery.
+    summary: One positional operand denotes stop; two or three denote
+      start, stop, step. With an explicit stop keyword, a positional
+      operand denotes start. Named start defaults to zero and step
+      to one; stop is required. Duplicate, unknown and missing names
+      follow ordinary call diagnostics. Endpoints and step require
+      lossless i32 inputs. Zero step raises AssertionError at run
+      time, including empty intervals. The result owns no allocation.
     parameters:
-      analyzer:
-        type: SemanticAnalyzerCore
-      node:
-        type: astx.FunctionCall
+      analyzer: Semantic analyzer resolving the operation.
+      node: Syntax node to process.
     """
     errors_before = len(analyzer.context.diagnostics.diagnostics)
     positional = tuple(node.args)
@@ -106,16 +104,15 @@ def resolve_range_index(
     analyzer: SemanticAnalyzerCore, node: astx.SubscriptExpr
 ) -> None:
     """
-    title: Validate one nonnegative integer index without exposing storage.
-    summary: >-
-      Slicing is unsupported. Bounds failures raise IndexError, including for
-      empty ranges. Integer indices may be signed or unsigned through 64 bits;
-      bounds are checked before multiplication or element narrowing.
+    title: Validate one nonnegative integer index without exposing
+      storage.
+    summary: Slicing is unsupported. Bounds failures raise IndexError,
+      including for empty ranges. Integer indices may be signed or
+      unsigned through 64 bits; bounds are checked before multiplication
+      or element narrowing.
     parameters:
-      analyzer:
-        type: SemanticAnalyzerCore
-      node:
-        type: astx.SubscriptExpr
+      analyzer: Semantic analyzer resolving the operation.
+      node: Syntax node to process.
     """
     analyzer._set_type(node, None)
     if node.is_slice:

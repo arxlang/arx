@@ -1,9 +1,8 @@
 """
 title: ASTx shared collection helper AST nodes.
-summary: >-
-  Provide backend-neutral collection query nodes that frontends can target when
-  they need common list, tuple, set, or dictionary operations without binding
-  directly to one runtime representation.
+summary: Provide backend-neutral collection query nodes that frontends can
+  target when they need common list, tuple, set, or dictionary operations
+  without binding directly to one runtime representation.
 """
 
 from __future__ import annotations
@@ -19,14 +18,11 @@ from astx.tools.typing import typechecked
 class CollectionLength(astx.base.DataType):
     """
     title: Common collection length query node.
-    summary: >-
-      Return the logical length of a list, tuple, set, dictionary, or string as
-      an Int64 value. String length counts Unicode code points.
+    summary: Return the logical length of a list, tuple, set, dictionary,
+      or string as an Int64 value. String length counts Unicode code points.
     attributes:
-      base:
-        type: astx.AST
-      type_:
-        type: astx.Int64
+      base: Base value or declaration.
+      type_: Type associated with this expression.
     """
 
     base: astx.AST
@@ -36,8 +32,7 @@ class CollectionLength(astx.base.DataType):
         """
         title: Initialize one collection length query.
         parameters:
-          base:
-            type: astx.AST
+          base: Base value or declaration.
         """
         super().__init__()
         self.base = base
@@ -47,10 +42,8 @@ class CollectionLength(astx.base.DataType):
         """
         title: Return the structured representation.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: astx.base.ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         return self._prepare_struct(
             "CollectionLength",
@@ -66,13 +59,11 @@ class CollectionLength(astx.base.DataType):
 class CollectionIsEmpty(astx.base.DataType):
     """
     title: Common collection emptiness query node.
-    summary: >-
-      Return whether a list, tuple, set, or dictionary has no logical entries.
+    summary: Return whether a list, tuple, set, or dictionary has no logical
+      entries.
     attributes:
-      base:
-        type: astx.AST
-      type_:
-        type: astx.Boolean
+      base: Base value or declaration.
+      type_: Type associated with this expression.
     """
 
     base: astx.AST
@@ -82,8 +73,7 @@ class CollectionIsEmpty(astx.base.DataType):
         """
         title: Initialize one collection emptiness query.
         parameters:
-          base:
-            type: astx.AST
+          base: Base value or declaration.
         """
         super().__init__()
         self.base = base
@@ -93,10 +83,8 @@ class CollectionIsEmpty(astx.base.DataType):
         """
         title: Return the structured representation.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: astx.base.ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         return self._prepare_struct(
             "CollectionIsEmpty",
@@ -112,16 +100,12 @@ class CollectionIsEmpty(astx.base.DataType):
 class CollectionContains(astx.base.DataType):
     """
     title: Common collection containment query node.
-    summary: >-
-      Return whether a list, tuple, or set contains a value, or whether a
-      dictionary contains a key.
+    summary: Return whether a list, tuple, or set contains a value, or whether
+      a dictionary contains a key.
     attributes:
-      base:
-        type: astx.AST
-      value:
-        type: astx.AST
-      type_:
-        type: astx.Boolean
+      base: Base value or declaration.
+      value: Stored value.
+      type_: Type associated with this expression.
     """
 
     base: astx.AST
@@ -132,10 +116,8 @@ class CollectionContains(astx.base.DataType):
         """
         title: Initialize one collection containment query.
         parameters:
-          base:
-            type: astx.AST
-          value:
-            type: astx.AST
+          base: Base value or declaration.
+          value: Value to process.
         """
         super().__init__()
         self.base = base
@@ -146,10 +128,8 @@ class CollectionContains(astx.base.DataType):
         """
         title: Return the structured representation.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: astx.base.ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         return self._prepare_struct(
             "CollectionContains",
@@ -168,16 +148,12 @@ class CollectionContains(astx.base.DataType):
 class CollectionIndex(astx.base.DataType):
     """
     title: Common sequence index query node.
-    summary: >-
-      Return the first zero-based index of a value in a list or tuple. The
-      initial ASTx contract returns -1 when the value is not found.
+    summary: Return the first zero-based index of a value in a list or tuple.
+      The initial ASTx contract returns -1 when the value is not found.
     attributes:
-      base:
-        type: astx.AST
-      value:
-        type: astx.AST
-      type_:
-        type: astx.Int32
+      base: Base value or declaration.
+      value: Stored value.
+      type_: Type associated with this expression.
     """
 
     base: astx.AST
@@ -188,10 +164,8 @@ class CollectionIndex(astx.base.DataType):
         """
         title: Initialize one sequence index query.
         parameters:
-          base:
-            type: astx.AST
-          value:
-            type: astx.AST
+          base: Base value or declaration.
+          value: Value to process.
         """
         super().__init__()
         self.base = base
@@ -202,10 +176,8 @@ class CollectionIndex(astx.base.DataType):
         """
         title: Return the structured representation.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: astx.base.ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         return self._prepare_struct(
             "CollectionIndex",
@@ -224,16 +196,12 @@ class CollectionIndex(astx.base.DataType):
 class CollectionCount(astx.base.DataType):
     """
     title: Common sequence count query node.
-    summary: >-
-      Return how many times a value appears in a list or tuple as an Int32
-      value.
+    summary: Return how many times a value appears in a list or tuple as
+      an Int32 value.
     attributes:
-      base:
-        type: astx.AST
-      value:
-        type: astx.AST
-      type_:
-        type: astx.Int32
+      base: Base value or declaration.
+      value: Stored value.
+      type_: Type associated with this expression.
     """
 
     base: astx.AST
@@ -244,10 +212,8 @@ class CollectionCount(astx.base.DataType):
         """
         title: Initialize one sequence count query.
         parameters:
-          base:
-            type: astx.AST
-          value:
-            type: astx.AST
+          base: Base value or declaration.
+          value: Value to process.
         """
         super().__init__()
         self.base = base
@@ -258,10 +224,8 @@ class CollectionCount(astx.base.DataType):
         """
         title: Return the structured representation.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: astx.base.ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         return self._prepare_struct(
             "CollectionCount",

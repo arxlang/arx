@@ -19,10 +19,8 @@ def _parse_module(code: str) -> astx.Module:
     """
     title: Parse one Arx module snippet.
     parameters:
-      code:
-        type: str
-    returns:
-      type: astx.Module
+      code: Source code or diagnostic identifier.
+    returns: Parsed one Arx module snippet.
     """
     ArxIO.string_to_buffer(dedent(code).lstrip())
     return Parser().parse(Lexer().lex())
@@ -84,14 +82,10 @@ def test_metadata_calls_preserve_generic_syntax(
     """
     title: Metadata signature validity never depends on a parser type guess.
     parameters:
-      operation:
-        type: str
-      positional:
-        type: int
-      keywords:
-        type: int
-      templated:
-        type: bool
+      operation: Operation to resolve or execute.
+      positional: Positional.
+      keywords: Keywords.
+      templated: Whether to use templated.
     """
     source = (
         "fn frame() -> dataframe[x:i32]:\n  return dataframe({x:[1]})\n"
@@ -190,11 +184,10 @@ def test_malformed_metadata_call_syntax_still_fails_in_parser(
     call: str,
 ) -> None:
     """
-    title: >-
-      Routing signature policy to IRx does not admit malformed call syntax.
+    title: Routing signature policy to IRx does not admit malformed call
+      syntax.
     parameters:
-      call:
-        type: str
+      call: Call being processed.
     """
     with pytest.raises(ParserException):
         _parse_module(
@@ -217,12 +210,9 @@ def test_parse_temporal_constructors(
     """
     title: Temporal constructors emit existing reusable ASTx nodes.
     parameters:
-      constructor:
-        type: str
-      value:
-        type: str
-      kind:
-        type: type[astx.AST]
+      constructor: Constructor.
+      value: Value to process.
+      kind: Kind of value or operation.
     """
     tree = _parse_module(f'fn main() -> none:\n  {constructor}("{value}")\n')
     function = tree.nodes[0]
@@ -310,8 +300,8 @@ def test_dataframe_string_and_nullable_columns() -> None:
 
 def test_dataframe_invalid_nullable_union() -> None:
     """
-    title: >-
-      Reject arbitrary unions rather than pretending they are nullable fields.
+    title: Reject arbitrary unions rather than pretending they are nullable
+      fields.
     """
     with pytest.raises(ParserException, match=r"type \| none"):
         _parse_module(
@@ -341,8 +331,7 @@ def test_parse_parameterized_columns(annotation: str) -> None:
     """
     title: Parse storage parameters without treating them as expressions.
     parameters:
-      annotation:
-        type: str
+      annotation: Annotation.
     """
     tree = _parse_module(
         f"fn accept(frame: dataframe[x:{annotation} | none]) -> i32:\n"
@@ -374,8 +363,7 @@ def test_reject_invalid_column_parameters(annotation: str) -> None:
     """
     title: Invalid column syntax and physical parameters fail actionably.
     parameters:
-      annotation:
-        type: str
+      annotation: Annotation.
     """
     with pytest.raises(ParserException):
         _parse_module(

@@ -36,12 +36,9 @@ def test_binary_op_literals(
     """
     title: Test ASTx Module with a function called add.
     parameters:
-      builder_class:
-        type: type[Builder]
-      int_type:
-        type: type
-      literal_type:
-        type: type
+      builder_class: Builder implementation under test.
+      int_type: Type of int.
+      literal_type: Literal type used by this case.
     """
     builder = builder_class()
     module = builder.module()
@@ -103,16 +100,11 @@ def test_binary_op_basic(
     """
     title: Test ASTx Module with a function called add.
     parameters:
-      action:
-        type: str
-      expected_file:
-        type: str
-      builder_class:
-        type: type[Builder]
-      int_type:
-        type: type
-      literal_type:
-        type: type
+      action: Action.
+      expected_file: File containing expected.
+      builder_class: Builder implementation under test.
+      int_type: Type of int.
+      literal_type: Literal type used by this case.
     """
     builder = builder_class()
     module = builder.module()
@@ -166,8 +158,7 @@ def test_binary_op_string_not_equals(builder_class: type[Builder]) -> None:
     """
     title: Verify string '!=' uses strcmp_inline + xor 1 path.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     module = builder.module()
@@ -204,14 +195,10 @@ def test_binary_op_logical_and_or(
     """
     title: Verify Boolean '&&' and '||' lowering and execution.
     parameters:
-      builder_class:
-        type: type[Builder]
-      a_val:
-        type: bool
-      b_val:
-        type: bool
-      expect:
-        type: str
+      builder_class: Builder implementation under test.
+      a_val: Whether to use a val.
+      b_val: Whether to use b val.
+      expect: Expect.
     """
     builder = builder_class()
     module = builder.module()
@@ -263,8 +250,7 @@ def test_scalar_integer_invalid_divisor_fails_deterministically(
     """
     title: Integer division and remainder reject invalid divisors at runtime.
     parameters:
-      operator:
-        type: str
+      operator: Operator to apply.
     """
     module = astx.Module(name="arithmetic_failure")
     body = astx.Block()

@@ -49,14 +49,10 @@ def assert_executed_list_cleanups(
     """
     title: Count executed destructors, not copies on disjoint exception edges.
     parameters:
-      module:
-        type: astx.Module
-      tmp_path:
-        type: Path
-      expected:
-        type: int
-      expected_result:
-        type: int
+      module: Module to process.
+      tmp_path: Temporary directory for this test.
+      expected: Expected result for this case.
+      expected_result: Expected result.
     """
     builder = Builder()
     text = builder.translate(module)
@@ -102,8 +98,7 @@ entry:
 def _list_i32_type() -> astx.ListType:
     """
     title: Return the canonical list[Int32] test type.
-    returns:
-      type: astx.ListType
+    returns: The canonical list[Int32] test type.
     """
     return astx.ListType([astx.Int32()])
 
@@ -116,14 +111,10 @@ def _mutable_decl(
     """
     title: Build one mutable local variable declaration.
     parameters:
-      name:
-        type: str
-      type_:
-        type: astx.DataType
-      value:
-        type: astx.Expr
-    returns:
-      type: astx.VariableDeclaration
+      name: Name identifying the declaration or operation.
+      type_: Type expression to process.
+      value: Value to process.
+    returns: Constructed one mutable local variable declaration.
     """
     return astx.VariableDeclaration(
         name=name,
@@ -137,12 +128,9 @@ def _index(base: astx.Expr, index: int) -> astx.SubscriptExpr:
     """
     title: Build one integer list index expression.
     parameters:
-      base:
-        type: astx.Expr
-      index:
-        type: int
-    returns:
-      type: astx.SubscriptExpr
+      base: Base value or declaration.
+      index: Index selecting the item.
+    returns: Constructed one integer list index expression.
     """
     return astx.SubscriptExpr(base, astx.LiteralInt32(index))
 
@@ -152,10 +140,9 @@ def _module_with_main(*nodes: astx.AST) -> astx.Module:
     title: Build one int32 main module from the provided nodes.
     parameters:
       nodes:
-        type: astx.AST
         variadic: positional
-    returns:
-      type: astx.Module
+        description: Syntax nodes in source order.
+    returns: Constructed one int32 main module from the provided nodes.
     """
     module = astx.Module()
     main = astx.FunctionDef(
@@ -181,12 +168,10 @@ def _run_workspace_build(
     """
     title: Build and run one module using a workspace-local temporary path.
     parameters:
-      builder:
-        type: Builder
-      module:
-        type: astx.Module
-    returns:
-      type: CommandResult
+      builder: Builder generating the intermediate representation.
+      module: Module to process.
+    returns: Constructed and run one module using a workspace-local temporary
+      path.
     """
     output_path = ""
     with workspace_tmpdir_env() as temp_root:
@@ -214,12 +199,9 @@ def _assert_workspace_build_output(
     """
     title: Build and run one module using a workspace-local temporary path.
     parameters:
-      builder:
-        type: Builder
-      module:
-        type: astx.Module
-      expected_output:
-        type: str
+      builder: Builder generating the intermediate representation.
+      module: Module to process.
+      expected_output: Expected output.
     """
     result = _run_workspace_build(builder, module)
     actual_output = result.stdout.strip() or str(result.returncode)
@@ -232,8 +214,7 @@ def _assert_workspace_build_output(
 def _singleton_module() -> astx.Module:
     """
     title: Build one module that appends a variable value into a list.
-    returns:
-      type: astx.Module
+    returns: Constructed one module that appends a variable value into a list.
     """
     list_type = _list_i32_type()
     module = astx.Module()
@@ -287,8 +268,8 @@ def _singleton_module() -> astx.Module:
 def _loop_module() -> astx.Module:
     """
     title: Build one module that appends into a list inside a while loop.
-    returns:
-      type: astx.Module
+    returns: Constructed one module that appends into a list inside a while
+      loop.
     """
     list_type = _list_i32_type()
     module = astx.Module()
@@ -383,10 +364,10 @@ def _loop_module() -> astx.Module:
 
 def _uninitialized_local_module() -> astx.Module:
     """
-    title: >-
-      Build one module that appends after an uninitialized list declaration.
-    returns:
-      type: astx.Module
+    title: Build one module that appends after an uninitialized
+      list declaration.
+    returns: Constructed one module that appends after an uninitialized
+      list declaration.
     """
     list_type = _list_i32_type()
     module = astx.Module()
@@ -424,8 +405,8 @@ def _uninitialized_local_module() -> astx.Module:
 def _direct_list_node_module() -> astx.Module:
     """
     title: Build one module that exercises the direct list helper nodes.
-    returns:
-      type: astx.Module
+    returns: Constructed one module that exercises the direct list helper
+      nodes.
     """
     list_type = _list_i32_type()
     return _module_with_main(
@@ -463,10 +444,9 @@ def _literal_list_dynamic_index_module(index: astx.Expr) -> astx.Module:
     """
     title: Build one module that indexes one literal list through one variable.
     parameters:
-      index:
-        type: astx.Expr
-    returns:
-      type: astx.Module
+      index: Index selecting the item.
+    returns: Constructed one module that indexes one literal list through
+      one variable.
     """
     return _module_with_main(
         _mutable_decl("index", astx.Int32(), index),
@@ -508,8 +488,7 @@ def test_dynamic_list_native_status_and_destroy_are_safe(
     """
     title: Native allocation rollback, bounds, and element drops are defined.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     native_dir = Path(list_runtime_feature.__file__).parent / "native"
     program = Path(__file__).parent / "native" / "list_ownership.c"
@@ -627,8 +606,8 @@ def test_direct_list_length_from_literal_list_returns_constant() -> None:
 )
 def test_direct_list_index_from_literal_list() -> None:
     """
-    title: >-
-      Direct list index should lower LiteralList bases without runtime calls.
+    title: Direct list index should lower LiteralList bases without runtime
+      calls.
     """
     builder = Builder()
     module = _module_with_main(
@@ -764,8 +743,8 @@ def test_dynamic_list_append_rejects_type_mismatch() -> None:
 
 def test_direct_list_append_rejects_non_lvalue_target() -> None:
     """
-    title: >-
-      Direct list append should require a mutable variable or field target.
+    title: Direct list append should require a mutable variable or field
+      target.
     """
     module = _module_with_main(
         astx.FunctionReturn(
@@ -1112,8 +1091,7 @@ def test_list_lowering_cleans_owned_locals_but_moves_returned_storage(
     """
     title: Lowering cleans the caller local but moves the callee result.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     assert_executed_list_cleanups(
         _singleton_module(), tmp_path, 1, expected_result=7
@@ -1126,8 +1104,7 @@ def test_list_assignment_destroys_replaced_and_final_storage(
     """
     title: Replacing an owned list should destroy both lifetime generations.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     list_type = _list_i32_type()
     module = _module_with_main(
@@ -1155,8 +1132,7 @@ def test_binary_list_assignment_destroys_replaced_and_final_storage(
     """
     title: Parsed assignment syntax should preserve list replacement cleanup.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     list_type = _list_i32_type()
     module = _module_with_main(
@@ -1259,8 +1235,7 @@ def test_nested_block_fallthrough_destroys_owned_list(tmp_path: Path) -> None:
     """
     title: Normal nested-block fallthrough should destroy its owned list.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     then_block = astx.Block()
     then_block.append(
@@ -1295,10 +1270,8 @@ def test_loop_transfer_destroys_owned_list(
     """
     title: Loop break and continue should destroy body-owned lists.
     parameters:
-      terminator:
-        type: astx.AST
-      tmp_path:
-        type: Path
+      terminator: Terminator.
+      tmp_path: Temporary directory for this test.
     """
     loop_body = astx.Block()
     loop_body.append(
@@ -1335,8 +1308,7 @@ def test_while_condition_destroys_list_call_temporary_each_evaluation(
     """
     title: A list call temporary in a loop condition should clean in the loop.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     module = _singleton_module()
     main = module.block[1]
@@ -1381,8 +1353,7 @@ def test_owned_lists_reject_elements_without_drop_contracts(
     """
     title: Explicit constructors cannot bypass the owned element restriction.
     parameters:
-      element_type:
-        type: astx.DataType
+      element_type: Type of each element.
     """
     with pytest.raises(SemanticError, match="numeric, Boolean, and string"):
         analyze(astx.ListCreate(element_type))

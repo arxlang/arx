@@ -1,7 +1,6 @@
 """
 title: Validation helpers for semantic analysis.
-summary: >-
-  Collect the focused validation routines that emit diagnostics for
+summary: Collect the focused validation routines that emit diagnostics for
   assignments, calls, casts, and temporal literals.
 """
 
@@ -56,12 +55,10 @@ def _implicit_conversion_note(
     """
     title: Describe one rejected implicit conversion when relevant.
     parameters:
-      source_type:
-        type: astx.DataType | None
-      target_type:
-        type: astx.DataType | None
-    returns:
-      type: tuple[str, Ellipsis]
+      source_type: Type of the source value.
+      target_type: Destination type for the conversion.
+    returns: 'Result of this operation: describe one rejected implicit
+      conversion when relevant.'
     """
     if source_type is None or target_type is None:
         return ()
@@ -79,10 +76,8 @@ def _callable_resolution(function: SemanticFunction) -> CallableResolution:
     """
     title: Return the canonical callable wrapper for one semantic function.
     parameters:
-      function:
-        type: SemanticFunction
-    returns:
-      type: CallableResolution
+      function: Function to process.
+    returns: The canonical callable wrapper for one semantic function.
     """
     return CallableResolution(function=function, signature=function.signature)
 
@@ -92,10 +87,8 @@ def _is_void_return_sentinel(node: astx.AST | None) -> bool:
     """
     title: Return whether one AST value represents a bare void return.
     parameters:
-      node:
-        type: astx.AST | None
-    returns:
-      type: bool
+      node: Syntax node to process.
+    returns: Whether one AST value represents a bare void return.
     """
     return node is None or isinstance(node, astx.LiteralNone)
 
@@ -105,10 +98,8 @@ def _is_void_call_value(node: astx.AST | None) -> bool:
     """
     title: Return whether one AST value is the result of a void call.
     parameters:
-      node:
-        type: astx.AST | None
-    returns:
-      type: bool
+      node: Syntax node to process.
+    returns: Whether one AST value is the result of a void call.
     """
     semantic = getattr(node, "semantic", None)
     resolved_call = getattr(semantic, "resolved_call", None)
@@ -123,10 +114,8 @@ def _variadic_argument_type(
     """
     title: Return the normalized type for one C-style variadic argument.
     parameters:
-      arg_type:
-        type: astx.DataType | None
-    returns:
-      type: astx.DataType | None
+      arg_type: Type of arg.
+    returns: The normalized type for one C-style variadic argument.
     """
     if arg_type is None or is_none_type(arg_type):
         return None
@@ -166,16 +155,11 @@ def validate_assignment(
     """
     title: Validate an assignment.
     parameters:
-      diagnostics:
-        type: DiagnosticBag
-      target_name:
-        type: str
-      target_type:
-        type: astx.DataType | None
-      value_type:
-        type: astx.DataType | None
-      node:
-        type: astx.AST
+      diagnostics: Collected structured diagnostics.
+      target_name: Name of target.
+      target_type: Destination type for the conversion.
+      value_type: Type of the stored value.
+      node: Syntax node to process.
     """
     if contains_file_type(target_type) or contains_file_type(value_type):
         if not isinstance(
@@ -218,20 +202,12 @@ def validate_call(
     """
     title: Validate a function call.
     parameters:
-      diagnostics:
-        type: DiagnosticBag
-      function:
-        type: SemanticFunction
-      arg_types:
-        type: list[astx.DataType | None]
-      node:
-        type: >-
-          astx.BaseMethodCall | astx.FunctionCall | astx.MethodCall |
-          astx.StaticMethodCall | astx.WithStmt
-      binding_function:
-        type: SemanticFunction | None
-    returns:
-      type: CallResolution
+      diagnostics: Collected structured diagnostics.
+      function: Function to process.
+      arg_types: Types of arg.
+      node: Syntax node to process.
+      binding_function: Binding function.
+    returns: 'Result of this operation: validate a function call.'
     """
     signature = function.signature
     slots = argument_slots(function, node, diagnostics)
@@ -342,18 +318,12 @@ def resolve_return(
     """
     title: Validate one return statement.
     parameters:
-      diagnostics:
-        type: DiagnosticBag
-      function:
-        type: SemanticFunction
-      value:
-        type: astx.AST | None
-      value_type:
-        type: astx.DataType | None
-      node:
-        type: astx.FunctionReturn
-    returns:
-      type: ReturnResolution
+      diagnostics: Collected structured diagnostics.
+      function: Function to process.
+      value: Value to process.
+      value_type: Type of the stored value.
+      node: Syntax node to process.
+    returns: 'Result of this operation: validate one return statement.'
     """
     expected_type = function.signature.return_type
     callable_resolution = _callable_resolution(function)
@@ -445,14 +415,10 @@ def validate_cast(
     """
     title: Validate a cast expression.
     parameters:
-      diagnostics:
-        type: DiagnosticBag
-      source_type:
-        type: astx.DataType | None
-      target_type:
-        type: astx.DataType | None
-      node:
-        type: astx.AST
+      diagnostics: Collected structured diagnostics.
+      source_type: Type of the source value.
+      target_type: Destination type for the conversion.
+      node: Syntax node to process.
     """
     if source_type is None or target_type is None:
         return
@@ -478,10 +444,8 @@ def validate_literal_time(value: str) -> time:
     """
     title: Validate an astx time literal.
     parameters:
-      value:
-        type: str
-    returns:
-      type: time
+      value: Value to process.
+    returns: 'Result of this operation: validate an astx time literal.'
     """
     if "." in value:
         raise ValueError("fractional seconds are not supported")
@@ -514,10 +478,8 @@ def validate_literal_timestamp(value: str) -> datetime:
     """
     title: Validate an astx timestamp literal.
     parameters:
-      value:
-        type: str
-    returns:
-      type: datetime
+      value: Value to process.
+    returns: 'Result of this operation: validate an astx timestamp literal.'
     """
     if "." in value:
         raise ValueError("fractional seconds are not supported")
@@ -534,10 +496,8 @@ def validate_literal_datetime(value: str) -> datetime:
     """
     title: Validate an astx datetime literal.
     parameters:
-      value:
-        type: str
-    returns:
-      type: datetime
+      value: Value to process.
+    returns: 'Result of this operation: validate an astx datetime literal.'
     """
     stripped = value.strip()
 
@@ -599,9 +559,7 @@ def validate_calendar_date(value: str) -> date:
     """
     title: Validate a date component.
     parameters:
-      value:
-        type: str
-    returns:
-      type: date
+      value: Value to process.
+    returns: 'Result of this operation: validate a date component.'
     """
     return date.fromisoformat(value)

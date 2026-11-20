@@ -34,16 +34,11 @@ class Argument(Variable):
     """
     title: AST class for argument definition.
     attributes:
-      kind:
-        type: ASTKind
-      mutability:
-        type: MutabilityKind
-      name:
-        type: str
-      type_:
-        type: DataType
-      default:
-        type: Expr
+      kind: Kind of value or operation.
+      mutability: Mutability.
+      name: Name identifying this declaration.
+      type_: Type associated with this expression.
+      default: Default used when no value is supplied.
     """
 
     kind: ASTKind
@@ -65,18 +60,12 @@ class Argument(Variable):
         """
         title: Initialize the VarExprAST instance.
         parameters:
-          name:
-            type: str
-          type_:
-            type: DataType
-          mutability:
-            type: MutabilityKind
-          default:
-            type: Expr
-          loc:
-            type: SourceLocation
-          parent:
-            type: Optional[ASTNodes]
+          name: Name identifying the declaration or operation.
+          type_: Type expression to process.
+          mutability: Mutability.
+          default: Default used when no value is supplied.
+          loc: Source coordinates associated with the node.
+          parent: Parent node or enclosing scope.
         """
         super().__init__(name=name, loc=loc, parent=parent)
         self.mutability = mutability
@@ -87,8 +76,7 @@ class Argument(Variable):
     def __str__(self) -> str:
         """
         title: Return a string that represents the object.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         type_ = self.type_.__class__.__name__
         return f"Argument[{self.name}, {type_}]"
@@ -97,10 +85,8 @@ class Argument(Variable):
         """
         title: Return the AST structure of the object.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         key = f"Argument[{self.name}, {self.type_}] = {self.default}"
         value = self.default.get_struct()
@@ -119,11 +105,11 @@ class Arguments(ASTNodes[Argument]):
         title: Initialize the arguments collection.
         parameters:
           args:
-            type: Argument
             variadic: positional
+            description: Positional arguments.
           kwargs:
-            type: Any
             variadic: keyword
+            description: Keyword arguments.
         """
         super().__init__(**kwargs)
         for arg in args:
@@ -132,8 +118,7 @@ class Arguments(ASTNodes[Argument]):
     def __str__(self) -> str:
         """
         title: Return a string that represents the object.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         return f"Arguments({len(self.nodes)})"
 
@@ -141,10 +126,8 @@ class Arguments(ASTNodes[Argument]):
         """
         title: Return the AST structure of the object.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         args_nodes = []
 
@@ -162,10 +145,8 @@ class KeywordArgument(Expr):
     """
     title: One named call argument, preserving its source expression.
     attributes:
-      name:
-        type: str
-      value:
-        type: DataType
+      name: Name identifying this declaration.
+      value: Stored value.
     """
 
     name: str
@@ -180,12 +161,9 @@ class KeywordArgument(Expr):
         """
         title: Initialize a named argument.
         parameters:
-          name:
-            type: str
-          value:
-            type: DataType
-          loc:
-            type: SourceLocation
+          name: Name identifying the declaration or operation.
+          value: Value to process.
+          loc: Source coordinates associated with the node.
         """
         super().__init__(loc=loc)
         self.name = name
@@ -195,10 +173,8 @@ class KeywordArgument(Expr):
         """
         title: Render the named argument and its value.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         return self._prepare_struct(
             f"KEYWORD[{self.name}]",
@@ -215,10 +191,9 @@ def materialize_call_operands(
     """
     title: Snapshot and validate iterable call operands, including generators.
     parameters:
-      args:
-        type: Iterable[DataType]
-    returns:
-      type: tuple[DataType, Ellipsis]
+      args: Arguments supplied to the operation.
+    returns: 'Result of this operation: snapshot and validate iterable call
+      operands, including generators.'
     """
     return tuple(args)
 
@@ -229,16 +204,11 @@ class FunctionCall(DataType):
     """
     title: AST class for function call.
     attributes:
-      kind:
-        type: ASTKind
-      keywords:
-        type: tuple[KeywordArgument, Ellipsis]
-      fn:
-        type: str
-      args:
-        type: Iterable[DataType]
-      type_:
-        type: DataType
+      kind: Kind of value or operation.
+      keywords: Keywords.
+      fn: Function to process.
+      args: Declared or supplied call arguments.
+      type_: Type associated with this expression.
     """
 
     kind: ASTKind
@@ -261,18 +231,12 @@ class FunctionCall(DataType):
         """
         title: Initialize the Call instance.
         parameters:
-          fn:
-            type: FunctionDef | str
-          args:
-            type: Iterable[DataType]
-          type_:
-            type: DataType
-          loc:
-            type: SourceLocation
-          parent:
-            type: Optional[ASTNodes]
-          keywords:
-            type: tuple[KeywordArgument, Ellipsis]
+          fn: Function to process.
+          args: Arguments supplied to the operation.
+          type_: Type expression to process.
+          loc: Source coordinates associated with the node.
+          parent: Parent node or enclosing scope.
+          keywords: Keywords.
         """
         super().__init__(loc=loc, parent=parent)
         self.fn = fn if not isinstance(fn, FunctionDef) else fn.name
@@ -284,8 +248,7 @@ class FunctionCall(DataType):
     def __str__(self) -> str:
         """
         title: Return a string representation of the object.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         args = [str(arg) for arg in self.args]
         args.extend(f"{item.name}={item.value}" for item in self.keywords)
@@ -295,10 +258,8 @@ class FunctionCall(DataType):
         """
         title: Return the AST structure of the object.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         call_params = []
 
@@ -329,20 +290,13 @@ class FunctionPrototype(StatementType):
     """
     title: AST class for function prototype declaration.
     attributes:
-      loc:
-        type: SourceLocation
-      kind:
-        type: ASTKind
-      name:
-        type: str
-      args:
-        type: Arguments
-      return_type:
-        type: AnyType
-      scope:
-        type: ScopeKind
-      visibility:
-        type: VisibilityKind
+      loc: Source coordinates attached to this node.
+      kind: Kind of value or operation.
+      name: Name identifying this declaration.
+      args: Declared or supplied call arguments.
+      return_type: Declared result type.
+      scope: Scope used to resolve names.
+      visibility: Visibility.
     """
 
     loc: SourceLocation
@@ -367,20 +321,13 @@ class FunctionPrototype(StatementType):
         """
         title: Initialize the FunctionPrototype instance.
         parameters:
-          name:
-            type: str
-          args:
-            type: Arguments
-          return_type:
-            type: AnyType
-          scope:
-            type: ScopeKind
-          visibility:
-            type: VisibilityKind
-          loc:
-            type: SourceLocation
-          parent:
-            type: Optional[ASTNodes]
+          name: Name identifying the declaration or operation.
+          args: Arguments supplied to the operation.
+          return_type: Declared result type.
+          scope: Scope used to resolve names.
+          visibility: Visibility.
+          loc: Source coordinates associated with the node.
+          parent: Parent node or enclosing scope.
         """
         super().__init__(loc=loc, parent=parent)
         self.name = name
@@ -395,10 +342,8 @@ class FunctionPrototype(StatementType):
         """
         title: Get the AST structure that represent the object.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         raise Exception("Visitor method not necessary")
 
@@ -409,10 +354,8 @@ class FunctionReturn(StatementType):
     """
     title: AST class for function `return` statement.
     attributes:
-      kind:
-        type: ASTKind
-      value:
-        type: DataType
+      kind: Kind of value or operation.
+      value: Stored value.
     """
 
     kind: ASTKind
@@ -428,12 +371,9 @@ class FunctionReturn(StatementType):
         """
         title: Initialize the Return instance.
         parameters:
-          value:
-            type: DataType
-          loc:
-            type: SourceLocation
-          parent:
-            type: Optional[ASTNodes]
+          value: Value to process.
+          loc: Source coordinates associated with the node.
+          parent: Parent node or enclosing scope.
         """
         super().__init__(loc=loc, parent=parent)
         self.value = value
@@ -442,8 +382,7 @@ class FunctionReturn(StatementType):
     def __str__(self) -> str:
         """
         title: Return a string representation of the object.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         return f"Return[{self.value}]"
 
@@ -451,10 +390,8 @@ class FunctionReturn(StatementType):
         """
         title: Return the AST structure of the object.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         key = "RETURN"
         value = self.value.get_struct(simplified)
@@ -467,12 +404,10 @@ class FunctionDef(StatementType):
     """
     title: AST class for function definition.
     attributes:
-      kind:
-        type: ASTKind
-      prototype:
-        type: FunctionPrototype
-      body:
-        type: Block
+      kind: Kind of value or operation.
+      prototype: Prototype.
+      body: Statements forming the body.
+      name: Name identifying this declaration.
     """
 
     kind: ASTKind
@@ -490,14 +425,10 @@ class FunctionDef(StatementType):
         """
         title: Initialize the Function instance.
         parameters:
-          prototype:
-            type: FunctionPrototype
-          body:
-            type: Block
-          loc:
-            type: SourceLocation
-          parent:
-            type: Optional[ASTNodes]
+          prototype: Prototype.
+          body: Statements forming the body.
+          loc: Source coordinates associated with the node.
+          parent: Parent node or enclosing scope.
         """
         super().__init__(loc=loc, parent=parent)
         self.prototype = prototype
@@ -508,16 +439,14 @@ class FunctionDef(StatementType):
     def name(self) -> str:
         """
         title: Return the function prototype name.
-        returns:
-          type: str
+        returns: The function prototype name.
         """
         return self.prototype.name
 
     def __str__(self) -> str:
         """
         title: Return a string that represent the object.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         return f"FunctionDef[{self.name}]"
 
@@ -530,14 +459,10 @@ class FunctionDef(StatementType):
         """
         title: Initialize the Call instance.
         parameters:
-          args:
-            type: tuple[DataType, Ellipsis]
-          loc:
-            type: SourceLocation
-          parent:
-            type: Optional[ASTNodes]
-        returns:
-          type: FunctionCall
+          args: Arguments supplied to the operation.
+          loc: Source coordinates associated with the node.
+          parent: Parent node or enclosing scope.
+        returns: 'Result of this operation: initialize the Call instance.'
         """
         return FunctionCall(fn=self, args=args, loc=loc, parent=parent)
 
@@ -545,10 +470,8 @@ class FunctionDef(StatementType):
         """
         title: Get the AST structure that represent the object.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         fn_args = self.prototype.args.get_struct(simplified)
         fn_body = self.body.get_struct(simplified)
@@ -567,12 +490,9 @@ class LambdaExpr(Expr):
     """
     title: AST class for lambda expressions.
     attributes:
-      kind:
-        type: ASTKind
-      params:
-        type: Arguments
-      body:
-        type: Expr
+      kind: Kind of value or operation.
+      params: Params.
+      body: Statements forming the body.
     """
 
     kind: ASTKind
@@ -590,14 +510,10 @@ class LambdaExpr(Expr):
         """
         title: Initialize the lambda expression.
         parameters:
-          body:
-            type: Expr
-          params:
-            type: Arguments
-          loc:
-            type: SourceLocation
-          parent:
-            type: Optional[ASTNodes]
+          body: Statements forming the body.
+          params: Params.
+          loc: Source coordinates associated with the node.
+          parent: Parent node or enclosing scope.
         """
         super().__init__(loc=loc, parent=parent)
         self.params = params
@@ -607,8 +523,7 @@ class LambdaExpr(Expr):
     def __str__(self) -> str:
         """
         title: Return a string representation of the lambda expression.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         params_str = ", ".join(param.name for param in self.params)
         return f"lambda {params_str}: {self.body}"
@@ -617,10 +532,8 @@ class LambdaExpr(Expr):
         """
         title: Return the AST structure of the lambda expression.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         key = "LambdaExpr"
         value: ReprStruct = {
@@ -636,12 +549,10 @@ class FunctionAsyncDef(FunctionDef):
     """
     title: AST class for async function definition.
     attributes:
-      kind:
-        type: ASTKind
-      prototype:
-        type: FunctionPrototype
-      body:
-        type: Block
+      kind: Kind of value or operation.
+      prototype: Prototype.
+      body: Statements forming the body.
+      name: Name identifying this declaration.
     """
 
     kind: ASTKind
@@ -659,14 +570,10 @@ class FunctionAsyncDef(FunctionDef):
         """
         title: Initialize the FunctionAsync instance.
         parameters:
-          prototype:
-            type: FunctionPrototype
-          body:
-            type: Block
-          loc:
-            type: SourceLocation
-          parent:
-            type: Optional[ASTNodes]
+          prototype: Prototype.
+          body: Statements forming the body.
+          loc: Source coordinates associated with the node.
+          parent: Parent node or enclosing scope.
         """
         super().__init__(
             loc=loc, parent=parent, body=body, prototype=prototype
@@ -676,8 +583,7 @@ class FunctionAsyncDef(FunctionDef):
     def __str__(self) -> str:
         """
         title: Return a string that represent the object.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         return f"FunctionAsyncDef[{self.name}]"
 
@@ -685,10 +591,8 @@ class FunctionAsyncDef(FunctionDef):
         """
         title: Get the AST structure that represent the object.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         fn_args = self.prototype.args.get_struct(simplified)
         fn_body = self.body.get_struct(simplified)
@@ -707,10 +611,8 @@ class AwaitExpr(Expr):
     """
     title: AST class for AwaitExpr.
     attributes:
-      kind:
-        type: ASTKind
-      value:
-        type: Optional[Expr]
+      kind: Kind of value or operation.
+      value: Stored value.
     """
 
     kind: ASTKind
@@ -726,12 +628,9 @@ class AwaitExpr(Expr):
         """
         title: Initialize the AwaitExpr instance.
         parameters:
-          value:
-            type: Optional[Expr]
-          loc:
-            type: SourceLocation
-          parent:
-            type: Optional[ASTNodes]
+          value: Value to process.
+          loc: Source coordinates associated with the node.
+          parent: Parent node or enclosing scope.
         """
         super().__init__(loc=loc, parent=parent)
         self.value = value
@@ -740,8 +639,7 @@ class AwaitExpr(Expr):
     def __str__(self) -> str:
         """
         title: Return a string representation of the object.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         return f"AwaitExpr[{self.value}]"
 
@@ -749,10 +647,8 @@ class AwaitExpr(Expr):
         """
         title: Return the AST structure of the object.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         key = "AWAIT-EXPR"
         value = {} if self.value is None else self.value.get_struct(simplified)
@@ -765,10 +661,8 @@ class YieldExpr(Expr):
     """
     title: AST class for YieldExpr.
     attributes:
-      kind:
-        type: ASTKind
-      value:
-        type: Optional[Expr]
+      kind: Kind of value or operation.
+      value: Stored value.
     """
 
     kind: ASTKind
@@ -784,12 +678,9 @@ class YieldExpr(Expr):
         """
         title: Initialize the YieldExpr instance.
         parameters:
-          value:
-            type: Optional[Expr]
-          loc:
-            type: SourceLocation
-          parent:
-            type: Optional[ASTNodes]
+          value: Value to process.
+          loc: Source coordinates associated with the node.
+          parent: Parent node or enclosing scope.
         """
         super().__init__(loc=loc, parent=parent)
         self.value = value
@@ -798,8 +689,7 @@ class YieldExpr(Expr):
     def __str__(self) -> str:
         """
         title: Return a string representation of the object.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         return f"YieldExpr[{self.value}]"
 
@@ -807,10 +697,8 @@ class YieldExpr(Expr):
         """
         title: Return the AST structure of the object.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         key = "YIELD-EXPR"
         value = {} if self.value is None else self.value.get_struct(simplified)
@@ -823,10 +711,8 @@ class YieldStmt(StatementType):
     """
     title: AST class for yield statement.
     attributes:
-      kind:
-        type: ASTKind
-      value:
-        type: Optional[Expr]
+      kind: Kind of value or operation.
+      value: Stored value.
     """
 
     kind: ASTKind
@@ -841,18 +727,17 @@ class YieldStmt(StatementType):
     ) -> None:
         """
         title: Initialize the YieldStmt instance.
-        summary: |-
+        summary: >2-
 
           value: The expression to yield (optional)
+
           loc: Source location of the statement
+
           parent: Parent AST node
         parameters:
-          value:
-            type: Optional[Expr]
-          loc:
-            type: SourceLocation
-          parent:
-            type: Optional[ASTNodes]
+          value: Value to process.
+          loc: Source coordinates associated with the node.
+          parent: Parent node or enclosing scope.
         """
         super().__init__(loc=loc, parent=parent)
         self.value = value
@@ -861,8 +746,7 @@ class YieldStmt(StatementType):
     def __str__(self) -> str:
         """
         title: Return a string representation of the object.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         return (
             f"YieldStmt[{self.value}]"
@@ -874,10 +758,8 @@ class YieldStmt(StatementType):
         """
         title: Return the AST structure of the object.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         key = f"YIELD-STMT[{id(self)}]" if simplified else "YIELD-STMT"
         value = (
@@ -892,10 +774,8 @@ class YieldFromExpr(Expr):
     """
     title: AST class for YieldFromExpr.
     attributes:
-      kind:
-        type: ASTKind
-      value:
-        type: Expr
+      kind: Kind of value or operation.
+      value: Stored value.
     """
 
     kind: ASTKind
@@ -911,12 +791,9 @@ class YieldFromExpr(Expr):
         """
         title: Initialize the YieldFromExpr instance.
         parameters:
-          value:
-            type: Expr
-          loc:
-            type: SourceLocation
-          parent:
-            type: Optional[ASTNodes]
+          value: Value to process.
+          loc: Source coordinates associated with the node.
+          parent: Parent node or enclosing scope.
         """
         super().__init__(loc=loc, parent=parent)
         self.value = value
@@ -925,8 +802,7 @@ class YieldFromExpr(Expr):
     def __str__(self) -> str:
         """
         title: Return a string representation of the object.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         return f"YieldFromExpr[{self.value}]"
 
@@ -934,10 +810,8 @@ class YieldFromExpr(Expr):
         """
         title: Return the AST structure of the object.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         key = "YIELDFROM-EXPR"
         value = self.value.get_struct(simplified)

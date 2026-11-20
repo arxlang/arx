@@ -24,10 +24,8 @@ def emit_table_io(plan: TableIOCall, call: LoweringCall) -> None:
     """
     title: Emit a typed table plan using only explicit narrow backend services.
     parameters:
-      plan:
-        type: TableIOCall
-      call:
-        type: LoweringCall
+      plan: Resolved semantic execution plan.
+      call: Call being processed.
     """
     node, services = call.node, call.services
     builder = services.builder
@@ -40,10 +38,9 @@ def emit_table_io(plan: TableIOCall, call: LoweringCall) -> None:
         """
         title: Materialize trusted configuration text.
         parameters:
-          value:
-            type: str
-        returns:
-          type: ir.Value
+          value: Value to process.
+        returns: 'Result of this operation: materialize trusted configuration
+          text.'
         """
         return services.text(value)
 
@@ -51,14 +48,11 @@ def emit_table_io(plan: TableIOCall, call: LoweringCall) -> None:
         """
         title: Request a native feature only for a resolved operation.
         parameters:
-          feature:
-            type: str
-          name:
-            type: str
-          args:
-            type: list[ir.Value]
-        returns:
-          type: ir.Value
+          feature: Feature.
+          name: Name identifying the declaration or operation.
+          args: Arguments supplied to the operation.
+        returns: 'Result of this operation: request a native feature only
+          for a resolved operation.'
         """
         return services.invoke(node, feature, name, args)
 
@@ -210,9 +204,7 @@ class TableIOLoweringVisitor(CallLoweringVisitor):
         """
         title: Lower a validated table plan without configurable providers.
         parameters:
-          plan:
-            type: TableIOCall
-          call:
-            type: LoweringCall
+          plan: Resolved semantic execution plan.
+          call: Call being processed.
         """
         emit_table_io(plan, call)

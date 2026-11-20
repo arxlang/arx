@@ -23,14 +23,17 @@ from .conftest import check_result
     ],
 )
 class TestVoidFunctionNoReturn:
+    """
+    title: Fixture without an explicit return in a void function.
+    """
+
     def test_void_function_no_return_compiles(
         self, builder_class: type[Builder]
     ) -> None:
         """
         title: Void function with no return statement must compile cleanly.
         parameters:
-          builder_class:
-            type: type[Builder]
+          builder_class: Builder implementation under test.
         """
         builder = builder_class()
         module = builder.module()
@@ -70,8 +73,7 @@ class TestVoidFunctionNoReturn:
         """
         title: Void function with no return node compiles cleanly.
         parameters:
-          builder_class:
-            type: type[Builder]
+          builder_class: Builder implementation under test.
         """
         builder = builder_class()
         module = builder.module()
@@ -109,14 +111,17 @@ class TestVoidFunctionNoReturn:
     ],
 )
 class TestVoidFunctionWithEarlyReturn:
+    """
+    title: Fixture with an early return in a void function.
+    """
+
     def test_void_function_with_explicit_return_no_duplicate_terminator(
         self, builder_class: type[Builder]
     ) -> None:
         """
         title: Void function with explicit return, no duplicate terminator.
         parameters:
-          builder_class:
-            type: type[Builder]
+          builder_class: Builder implementation under test.
         """
         builder = builder_class()
         module = builder.module()
@@ -169,12 +174,9 @@ def test_non_void_function_missing_return_raises_error(
     """
     title: Non-void function with no return must raise an error.
     parameters:
-      builder_class:
-        type: type[Builder]
-      int_type:
-        type: type
-      literal_type:
-        type: type
+      builder_class: Builder implementation under test.
+      int_type: Type of int.
+      literal_type: Literal type used by this case.
     """
     builder = builder_class()
     module = builder.module()

@@ -22,18 +22,15 @@ def resolve_initializer_type(
 ) -> astx.DataType | None:
     """
     title: Resolve an initialized declaration to one concrete storage type.
-    summary: >-
-      Analyze each initializer once per visit. Explicit annotations provide
-      contextual literal types; inference supplies no expected type. Neither
-      path changes the original annotation. Missing, ambiguous, and non-value
-      inference fails before symbol publication, layout, or lowering.
+    summary: Analyze each initializer once per visit. Explicit annotations
+      provide contextual literal types; inference supplies no expected type.
+      Neither path changes the original annotation. Missing, ambiguous, and
+      non-value inference fails before symbol publication, layout, or lowering.
     parameters:
-      analyzer:
-        type: SemanticAnalyzerCore
-      node:
-        type: astx.VariableDeclaration | astx.InlineVariableDeclaration
-    returns:
-      type: astx.DataType | None
+      analyzer: Semantic analyzer resolving the operation.
+      node: Syntax node to process.
+    returns: Resolved an initialized declaration to one concrete storage
+      type.
     """
     info = analyzer._semantic(node)
     info.resolved_type = None

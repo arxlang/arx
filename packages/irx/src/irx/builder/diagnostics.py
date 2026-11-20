@@ -1,7 +1,6 @@
 """
 title: Shared lowering diagnostics helpers.
-summary: >-
-  Centralize the small helpers that lowering uses to raise structured
+summary: Centralize the small helpers that lowering uses to raise structured
   diagnostic exceptions instead of ad hoc Exception strings.
 """
 
@@ -30,10 +29,8 @@ def resolved_ast_type_name(node: astx.AST | None) -> str:
     """
     title: Return one node's best-effort semantic type name.
     parameters:
-      node:
-        type: astx.AST | None
-    returns:
-      type: str
+      node: Syntax node to process.
+    returns: One node's best-effort semantic type name.
     """
     if node is None:
         return "<unknown>"
@@ -52,10 +49,8 @@ def lowered_value_type_name(value: ir.Value | None) -> str:
     """
     title: Return one lowered LLVM value type name.
     parameters:
-      value:
-        type: ir.Value | None
-    returns:
-      type: str
+      value: Value to process.
+    returns: One lowered LLVM value type name.
     """
     if value is None:
         return "<missing>"
@@ -75,20 +70,12 @@ def raise_lowering_error(
     """
     title: Raise one user-facing lowering diagnostic.
     parameters:
-      message:
-        type: str
-      code:
-        type: str
-      node:
-        type: astx.AST | None
-      notes:
-        type: tuple[str, Ellipsis]
-      hint:
-        type: str | None
-      cause:
-        type: Exception | None
-    returns:
-      type: NoReturn
+      message: Diagnostic or output message.
+      code: Source code or diagnostic identifier.
+      node: Syntax node to process.
+      notes: Notes.
+      hint: Hint.
+      cause: Cause.
     """
     raise LoweringError(
         Diagnostic(
@@ -117,20 +104,12 @@ def raise_lowering_internal_error(
     """
     title: Raise one internal lowering consistency diagnostic.
     parameters:
-      message:
-        type: str
-      node:
-        type: astx.AST | None
-      code:
-        type: str
-      notes:
-        type: tuple[str, Ellipsis]
-      hint:
-        type: str | None
-      cause:
-        type: Exception | None
-    returns:
-      type: NoReturn
+      message: Diagnostic or output message.
+      node: Syntax node to process.
+      code: Source code or diagnostic identifier.
+      notes: Notes.
+      hint: Hint.
+      cause: Cause.
     """
     raise_lowering_error(
         f"internal compiler error: {message}",
@@ -153,16 +132,12 @@ def require_semantic_metadata(
     """
     title: Require one semantic sidecar field during lowering.
     parameters:
-      value:
-        type: T | None
-      node:
-        type: astx.AST
-      metadata:
-        type: str
-      context:
-        type: str
-    returns:
-      type: T
+      value: Value to process.
+      node: Syntax node to process.
+      metadata: Metadata associated with the operation.
+      context: Context for the operation.
+    returns: 'Result of this operation: require one semantic sidecar field
+      during lowering.'
     """
     if value is None:
         raise_lowering_internal_error(
@@ -183,14 +158,11 @@ def require_lowered_value(
     """
     title: Require one lowered LLVM value during lowering.
     parameters:
-      value:
-        type: ir.Value | None
-      node:
-        type: astx.AST
-      context:
-        type: str
-    returns:
-      type: ir.Value
+      value: Value to process.
+      node: Syntax node to process.
+      context: Context for the operation.
+    returns: 'Result of this operation: require one lowered LLVM value during
+      lowering.'
     """
     if value is None:
         raise_lowering_internal_error(

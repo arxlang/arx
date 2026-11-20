@@ -23,8 +23,7 @@ if TYPE_CHECKING:
 def build_libm_runtime_feature() -> RuntimeFeature:
     """
     title: Build the libm runtime feature specification.
-    returns:
-      type: RuntimeFeature
+    returns: Constructed the libm runtime feature specification.
     """
     return RuntimeFeature(
         name="libm",
@@ -40,10 +39,8 @@ def _declare_sqrt(visitor: VisitorProtocol) -> ir.Function:
     """
     title: Declare sqrt.
     parameters:
-      visitor:
-        type: VisitorProtocol
-    returns:
-      type: ir.Function
+      visitor: Visitor performing the traversal or lowering.
+    returns: 'Result of this operation: declare sqrt.'
     """
     fn_type = ir.FunctionType(
         visitor._llvm.DOUBLE_TYPE,

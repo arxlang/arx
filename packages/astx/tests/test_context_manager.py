@@ -18,8 +18,8 @@ from astx.context_manager import WithItem, WithStmt
 def context_expr() -> Expr:
     """
     title: Fixture providing a basic Expr instance.
-    returns:
-      type: Expr
+    returns: 'Result of this operation: fixture providing a basic
+      Expr instance.'
     """
     return LiteralInt32(42)
 
@@ -28,8 +28,8 @@ def context_expr() -> Expr:
 def var_name() -> Identifier:
     """
     title: Fixture providing a basic Identifier instance.
-    returns:
-      type: Identifier
+    returns: 'Result of this operation: fixture providing a basic Identifier
+      instance.'
     """
     return Identifier("x")
 
@@ -38,8 +38,8 @@ def var_name() -> Identifier:
 def empty_block() -> Block:
     """
     title: Fixture providing an empty Block instance.
-    returns:
-      type: Block
+    returns: 'Result of this operation: fixture providing an empty Block
+      instance.'
     """
     return Block(name="empty_block")
 
@@ -55,10 +55,8 @@ class TestWithItem:
         """
         title: Test basic initialization of WithItem.
         parameters:
-          context_expr:
-            type: Expr
-          var_name:
-            type: Identifier
+          context_expr: Context expr.
+          var_name: Name of var.
         """
         item = WithItem(context_expr, var_name)
         assert item.context_expr == context_expr
@@ -69,10 +67,8 @@ class TestWithItem:
         """
         title: Test string representation.
         parameters:
-          context_expr:
-            type: Expr
-          var_name:
-            type: Identifier
+          context_expr: Context expr.
+          var_name: Name of var.
         """
         item = WithItem(context_expr, var_name)
         # Type assertion since we know var_name is not None in this test
@@ -85,10 +81,8 @@ class TestWithItem:
         """
         title: Test basic structure representation.
         parameters:
-          context_expr:
-            type: Expr
-          var_name:
-            type: Identifier
+          context_expr: Context expr.
+          var_name: Name of var.
         """
         item = WithItem(context_expr, var_name)
         struct = item.get_struct()
@@ -115,12 +109,9 @@ class TestWithStmt:
         """
         title: Test basic initialization of WithStmt.
         parameters:
-          context_expr:
-            type: Expr
-          var_name:
-            type: Identifier
-          empty_block:
-            type: Block
+          context_expr: Context expr.
+          var_name: Name of var.
+          empty_block: Empty block.
         """
         item = WithItem(context_expr, var_name)
         stmt = WithStmt([item], empty_block)
@@ -134,12 +125,9 @@ class TestWithStmt:
         """
         title: Test string representation.
         parameters:
-          context_expr:
-            type: Expr
-          var_name:
-            type: Identifier
-          empty_block:
-            type: Block
+          context_expr: Context expr.
+          var_name: Name of var.
+          empty_block: Empty block.
         """
         item = WithItem(context_expr, var_name)
         stmt = WithStmt([item], empty_block)
@@ -152,12 +140,9 @@ class TestWithStmt:
         """
         title: Test basic structure representation.
         parameters:
-          context_expr:
-            type: Expr
-          var_name:
-            type: Identifier
-          empty_block:
-            type: Block
+          context_expr: Context expr.
+          var_name: Name of var.
+          empty_block: Empty block.
         """
         item = WithItem(context_expr, var_name)
         stmt = WithStmt([item], empty_block)

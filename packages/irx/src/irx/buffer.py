@@ -1,8 +1,7 @@
 """
 title: Low-level buffer/view substrate model.
-summary: >-
-  Define the canonical IRx buffer owner and buffer view contract that Arx may
-  target without introducing a user-facing scientific array API.
+summary: Define the canonical IRx buffer owner and buffer view contract that
+  Arx may target without introducing a user-facing scientific array API.
 """
 
 from __future__ import annotations
@@ -86,10 +85,10 @@ BUFFER_DTYPE_NAMES = {
 class BufferIndexBoundsPolicy(str, Enum):
     """
     title: Buffer view indexing bounds policy hook.
-    summary: >-
-      DEFAULT and CHECKED reject proven invalid indices in analysis and check
-      runtime rank, bounds and byte-offset overflow before access. UNCHECKED
-      remains unsupported; callers cannot silently bypass safety checks.
+    summary: DEFAULT and CHECKED reject proven invalid indices in analysis
+      and check runtime rank, bounds and byte-offset overflow before access.
+      UNCHECKED remains unsupported; callers cannot silently bypass safety
+      checks.
     """
 
     DEFAULT = "default"
@@ -126,12 +125,12 @@ class BufferMutability(str, Enum):
 class BufferHandle:
     """
     title: Static opaque handle reference for buffer descriptors.
-    summary: >-
-      Model a pointer-valued handle for semantic validation and deterministic
-      lowering. None means the handle is statically null.
+    summary: Model a pointer-valued handle for semantic validation
+      and deterministic lowering. None means the handle is statically
+      null.
     attributes:
-      address:
-        type: int | None
+      address: Address.
+      is_null: Whether is null.
     """
 
     address: int | None = None
@@ -149,8 +148,7 @@ class BufferHandle:
     def is_null(self) -> bool:
         """
         title: Return whether this handle is statically null.
-        returns:
-          type: bool
+        returns: Whether this handle is statically null.
         """
         return self.address is None
 
@@ -161,26 +159,18 @@ class BufferHandle:
 class BufferViewMetadata:
     """
     title: Static metadata for one low-level buffer view descriptor.
-    summary: >-
-      Represents the semantic contents of the canonical IRx buffer view. This
-      is not a scientific array object; it is a plain descriptor shape.
+    summary: Represents the semantic contents of the canonical IRx buffer
+      view. This is not a scientific array object; it is a plain descriptor
+      shape.
     attributes:
-      data:
-        type: BufferHandle
-      owner:
-        type: BufferHandle
-      dtype:
-        type: BufferHandle
-      ndim:
-        type: int
-      shape:
-        type: tuple[int, Ellipsis]
-      strides:
-        type: tuple[int, Ellipsis]
-      offset_bytes:
-        type: int
-      flags:
-        type: int
+      data: Data to process.
+      owner: Owner keeping the resource alive.
+      dtype: Element data type.
+      ndim: Ndim.
+      shape: Declared dimensions or result shape.
+      strides: Strides.
+      offset_bytes: Offset bytes.
+      flags: Flags.
     """
 
     data: BufferHandle
@@ -205,16 +195,11 @@ def buffer_view_flags(
     """
     title: Build canonical buffer view flags.
     parameters:
-      ownership:
-        type: BufferOwnership
-      mutability:
-        type: BufferMutability
-      c_contiguous:
-        type: bool
-      f_contiguous:
-        type: bool
-    returns:
-      type: int
+      ownership: Resolved resource ownership contract.
+      mutability: Mutability.
+      c_contiguous: Whether to use c contiguous.
+      f_contiguous: Whether to use f contiguous.
+    returns: Constructed canonical buffer view flags.
     """
     flags = {
         BufferOwnership.BORROWED: BUFFER_FLAG_BORROWED,
@@ -238,12 +223,9 @@ def buffer_flags_include(flags: int, flag: int) -> bool:
     """
     title: Return whether one buffer flag is set.
     parameters:
-      flags:
-        type: int
-      flag:
-        type: int
-    returns:
-      type: bool
+      flags: Flags.
+      flag: Flag.
+    returns: Whether one buffer flag is set.
     """
     return (flags & flag) == flag
 
@@ -254,10 +236,8 @@ def buffer_view_is_readonly(flags: int) -> bool:
     """
     title: Return whether a buffer view is readonly.
     parameters:
-      flags:
-        type: int
-    returns:
-      type: bool
+      flags: Flags.
+    returns: Whether a buffer view is readonly.
     """
     return buffer_flags_include(flags, BUFFER_FLAG_READONLY)
 
@@ -267,14 +247,11 @@ def buffer_view_is_readonly(flags: int) -> bool:
 def buffer_view_has_validity_bitmap(flags: int) -> bool:
     """
     title: Return whether a buffer view advertises a validity sidecar.
-    summary: >-
-      This flag only says that the producer has separate validity metadata. It
-      does not make generic buffer indexing null-aware.
+    summary: This flag only says that the producer has separate validity
+      metadata. It does not make generic buffer indexing null-aware.
     parameters:
-      flags:
-        type: int
-    returns:
-      type: bool
+      flags: Flags.
+    returns: Whether a buffer view advertises a validity sidecar.
     """
     return buffer_flags_include(flags, BUFFER_FLAG_VALIDITY_BITMAP)
 
@@ -285,10 +262,8 @@ def buffer_dtype_token(name: str) -> int:
     """
     title: Return one canonical primitive dtype token.
     parameters:
-      name:
-        type: str
-    returns:
-      type: int
+      name: Name identifying the declaration or operation.
+    returns: One canonical primitive dtype token.
     """
     try:
         return BUFFER_DTYPE_TOKENS[name]
@@ -302,10 +277,8 @@ def buffer_dtype_name(token: int) -> str:
     """
     title: Return the canonical name for one primitive dtype token.
     parameters:
-      token:
-        type: int
-    returns:
-      type: str
+      token: Token being processed.
+    returns: The canonical name for one primitive dtype token.
     """
     try:
         return BUFFER_DTYPE_NAMES[token]
@@ -319,10 +292,8 @@ def buffer_dtype_handle(name: str) -> BufferHandle:
     """
     title: Return one canonical primitive dtype token as a buffer handle.
     parameters:
-      name:
-        type: str
-    returns:
-      type: BufferHandle
+      name: Name identifying the declaration or operation.
+    returns: One canonical primitive dtype token as a buffer handle.
     """
     return BufferHandle(buffer_dtype_token(name))
 
@@ -333,10 +304,8 @@ def buffer_view_ownership(flags: int) -> BufferOwnership | None:
     """
     title: Return the explicit ownership state encoded in flags.
     parameters:
-      flags:
-        type: int
-    returns:
-      type: BufferOwnership | None
+      flags: Flags.
+    returns: The explicit ownership state encoded in flags.
     """
     ownership = [
         flag
@@ -360,10 +329,8 @@ def validate_buffer_view_metadata(
     """
     title: Validate static buffer view metadata.
     parameters:
-      metadata:
-        type: BufferViewMetadata
-    returns:
-      type: tuple[str, Ellipsis]
+      metadata: Metadata associated with the operation.
+    returns: 'Result of this operation: validate static buffer view metadata.'
     """
     errors: list[str] = []
 

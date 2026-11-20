@@ -1,5 +1,7 @@
 """
 title: Top-level package for IRx.
+attributes:
+  __version__: Installed package version.
 """
 
 from importlib import metadata as importlib_metadata
@@ -13,8 +15,7 @@ _DISTRIBUTION_NAME = "pyirx"
 def get_version() -> str:
     """
     title: Return the program version.
-    returns:
-      type: str
+    returns: The program version.
     """
     try:
         return importlib_metadata.version(_DISTRIBUTION_NAME)

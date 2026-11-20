@@ -65,22 +65,14 @@ def test_unsigned_vs_signed_comparison(
     """
     title: Verify unsigned comparisons work correctly and differ from signed.
     parameters:
-      action:
-        type: str
-      expected_file:
-        type: str
-      builder_class:
-        type: type[Builder]
-      u_type:
-        type: type
-      u_lit_type:
-        type: type
-      s_type:
-        type: type
-      s_lit_type:
-        type: type
-      u_val:
-        type: int
+      action: Action.
+      expected_file: File containing expected.
+      builder_class: Builder implementation under test.
+      u_type: Type of u.
+      u_lit_type: Type of u lit.
+      s_type: Type of s.
+      s_lit_type: Type of s lit.
+      u_val: U val.
     """
     builder = builder_class()
     module = builder.module()
@@ -216,22 +208,14 @@ def test_unsigned_vs_signed_division(
     """
     title: Verify unsigned division works correctly and differs from signed.
     parameters:
-      action:
-        type: str
-      expected_file:
-        type: str
-      builder_class:
-        type: type[Builder]
-      u_type:
-        type: type
-      u_lit_type:
-        type: type
-      s_type:
-        type: type
-      s_lit_type:
-        type: type
-      u_val:
-        type: int
+      action: Action.
+      expected_file: File containing expected.
+      builder_class: Builder implementation under test.
+      u_type: Type of u.
+      u_lit_type: Type of u lit.
+      s_type: Type of s.
+      s_lit_type: Type of s lit.
+      u_val: U val.
     """
     builder = builder_class()
     module = builder.module()

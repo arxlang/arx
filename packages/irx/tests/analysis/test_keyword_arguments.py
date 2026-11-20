@@ -26,10 +26,8 @@ def block(value: astx.DataType) -> astx.Block:
     """
     title: Return one expression from a function body.
     parameters:
-      value:
-        type: astx.DataType
-    returns:
-      type: astx.Block
+      value: Value to process.
+    returns: One expression from a function body.
     """
     result = astx.Block()
     result.append(astx.FunctionReturn(value))
@@ -40,10 +38,9 @@ def main(value: astx.DataType) -> astx.FunctionDef:
     """
     title: Wrap a test call in an ordinary main function.
     parameters:
-      value:
-        type: astx.DataType
-    returns:
-      type: astx.FunctionDef
+      value: Value to process.
+    returns: 'Result of this operation: wrap a test call in an ordinary main
+      function.'
     """
     return astx.FunctionDef(
         astx.FunctionPrototype("main", astx.Arguments(), astx.Int32()),
@@ -56,8 +53,7 @@ def test_astx_host_method_keywords(kind: str) -> None:
     """
     title: Every method representation lowers named arguments without Arx.
     parameters:
-      kind:
-        type: str
+      kind: Kind of value or operation.
     """
     prototype = astx.FunctionPrototype(
         "combine",
@@ -105,11 +101,10 @@ def test_astx_host_method_keywords(kind: str) -> None:
 @pytest.mark.parametrize("keyword", [True, False])
 def test_extern_fixed_keywords_and_variadic_promotions(keyword: bool) -> None:
     """
-    title: >-
-      Fixed names bind normally and positional tail promotions are retained.
+    title: Fixed names bind normally and positional tail promotions
+      are retained.
     parameters:
-      keyword:
-        type: bool
+      keyword: Whether to use keyword.
     """
     prototype = astx.FunctionPrototype(
         "printf",
@@ -163,8 +158,8 @@ def test_keyword_variadic_tail_name_is_not_a_parameter() -> None:
 
 def test_bound_metadata_runtime_item_validation() -> None:
     """
-    title: >-
-      Metadata rejects invalid types and non-first invalid collection items.
+    title: Metadata rejects invalid types and non-first invalid collection
+      items.
     """
     with pytest.raises(TypeCheckError):
         ResolvedCallArguments(

@@ -1,8 +1,7 @@
 """
 title: Template-specialization support helpers.
-summary: >-
-  Provide shared type identity, substitution, and binding-formatting helpers
-  for template specialization.
+summary: Provide shared type identity, substitution, and binding-formatting
+  helpers for template specialization.
 """
 
 from __future__ import annotations
@@ -38,10 +37,8 @@ class TemplateSupportVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Return one deterministic type identity string.
         parameters:
-          type_:
-            type: astx.DataType
-        returns:
-          type: str
+          type_: Type expression to process.
+        returns: One deterministic type identity string.
         """
         if isinstance(type_, astx.StructType):
             return type_.qualified_name or type_.name
@@ -105,12 +102,9 @@ class TemplateSupportVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Return one stable specialization key for a template function.
         parameters:
-          function:
-            type: SemanticFunction
-          concrete_args:
-            type: tuple[astx.DataType, Ellipsis]
-        returns:
-          type: TemplateSpecializationKey
+          function: Function to process.
+          concrete_args: Concrete args.
+        returns: One stable specialization key for a template function.
         """
         return TemplateSpecializationKey(
             qualified_name=function.qualified_name,
@@ -127,12 +121,9 @@ class TemplateSupportVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Return one deterministic specialization function basename.
         parameters:
-          function:
-            type: SemanticFunction
-          concrete_args:
-            type: tuple[astx.DataType, Ellipsis]
-        returns:
-          type: str
+          function: Function to process.
+          concrete_args: Concrete args.
+        returns: One deterministic specialization function basename.
         """
         key = self._template_specialization_key(function, concrete_args)
         return specialized_function_basename(function.name, key.arg_type_names)
@@ -145,12 +136,9 @@ class TemplateSupportVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Return one deterministic lowered specialization symbol name.
         parameters:
-          function:
-            type: SemanticFunction
-          concrete_args:
-            type: tuple[astx.DataType, Ellipsis]
-        returns:
-          type: str
+          function: Function to process.
+          concrete_args: Concrete args.
+        returns: One deterministic lowered specialization symbol name.
         """
         key = self._template_specialization_key(function, concrete_args)
         base_name = function.signature.symbol_name or function.name
@@ -163,10 +151,8 @@ class TemplateSupportVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Return the finite admissible type domain for one template param.
         parameters:
-          param:
-            type: astx.TemplateParam
-        returns:
-          type: tuple[astx.DataType, Ellipsis]
+          param: Param.
+        returns: The finite admissible type domain for one template param.
         """
         bound = param.bound
         if isinstance(bound, astx.UnionType):
@@ -181,12 +167,9 @@ class TemplateSupportVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Return whether one concrete type satisfies one template bound.
         parameters:
-          type_:
-            type: astx.DataType
-          bound:
-            type: astx.DataType
-        returns:
-          type: bool
+          type_: Type expression to process.
+          bound: Names bound in the function scope.
+        returns: Whether one concrete type satisfies one template bound.
         """
         if isinstance(bound, astx.UnionType):
             return any(
@@ -203,12 +186,10 @@ class TemplateSupportVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Substitute template variables inside one type.
         parameters:
-          type_:
-            type: astx.DataType
-          bindings:
-            type: dict[str, astx.DataType]
-        returns:
-          type: astx.DataType
+          type_: Type expression to process.
+          bindings: Bindings.
+        returns: 'Result of this operation: substitute template variables
+          inside one type.'
         """
         return substitute_type(type_, bindings)
 
@@ -220,12 +201,9 @@ class TemplateSupportVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Return the concrete binding map for one specialization.
         parameters:
-          function:
-            type: SemanticFunction
-          concrete_args:
-            type: tuple[astx.DataType, Ellipsis]
-        returns:
-          type: dict[str, astx.DataType]
+          function: Function to process.
+          concrete_args: Concrete args.
+        returns: The concrete binding map for one specialization.
         """
         return {
             param.name: clone_type(argument)
@@ -239,10 +217,8 @@ class TemplateSupportVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Return the concrete binding map stored on one specialization.
         parameters:
-          function:
-            type: SemanticFunction
-        returns:
-          type: dict[str, astx.DataType]
+          function: Function to process.
+        returns: The concrete binding map stored on one specialization.
         """
         return {
             binding.name: clone_type(binding.type_)
@@ -257,12 +233,9 @@ class TemplateSupportVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Return one visible callable wrapper with substituted types.
         parameters:
-          function:
-            type: SemanticFunction
-          bindings:
-            type: dict[str, astx.DataType]
-        returns:
-          type: SemanticFunction
+          function: Function to process.
+          bindings: Bindings.
+        returns: One visible callable wrapper with substituted types.
         """
         signature = replace(
             function.signature,
@@ -291,10 +264,9 @@ class TemplateSupportVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Render one template-binding set for diagnostics.
         parameters:
-          bindings:
-            type: Iterable[TemplateArgumentBinding]
-        returns:
-          type: str
+          bindings: Bindings.
+        returns: 'Result of this operation: render one template-binding
+          set for diagnostics.'
         """
         return ", ".join(
             f"{binding.name} = {display_type_name(binding.type_)}"

@@ -23,10 +23,8 @@ def exception_signature(operation: str) -> ir.FunctionType:
     """
     title: Return one opaque C ABI signature without exposing native layouts.
     parameters:
-      operation:
-        type: str
-    returns:
-      type: ir.FunctionType
+      operation: Operation to resolve or execute.
+    returns: One opaque C ABI signature without exposing native layouts.
     """
     pointer = ir.IntType(8).as_pointer()
     output = pointer.as_pointer()
@@ -79,8 +77,8 @@ def exception_signature(operation: str) -> ir.FunctionType:
 def build_exception_runtime_feature() -> RuntimeFeature:
     """
     title: Register exception ownership and reports without Arrow.
-    returns:
-      type: RuntimeFeature
+    returns: 'Result of this operation: register exception ownership and
+      reports without Arrow.'
     """
     native = Path(__file__).parent / "native"
     classes = native.parents[1] / "classes" / "native"
@@ -117,12 +115,10 @@ def build_exception_runtime_feature() -> RuntimeFeature:
             """
             title: Declare one checked exception runtime function.
             parameters:
-              visitor:
-                type: VisitorProtocol
-              name:
-                type: str
-            returns:
-              type: ir.Function
+              visitor: Visitor performing the traversal or lowering.
+              name: Name identifying the declaration or operation.
+            returns: 'Result of this operation: declare one checked exception
+              runtime function.'
             """
             return declare_external_function(
                 visitor._llvm.module,

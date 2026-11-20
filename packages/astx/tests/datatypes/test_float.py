@@ -37,8 +37,7 @@ def test_literal(literal_class: type[astx.Literal]) -> None:
     """
     title: Test float literals.
     parameters:
-      literal_class:
-        type: type[astx.Literal]
+      literal_class: Literal node class used by this case.
     """
     lit_a = literal_class(1.23)
     lit_b = literal_class(4.56)
@@ -72,12 +71,9 @@ def test_bin_ops(
     """
     title: Test binary operations.
     parameters:
-      literal_class:
-        type: type[astx.Literal]
-      fn_bin_op:
-        type: Callable[[type[astx.Literal]], BinaryOp]
-      op_code:
-        type: str
+      literal_class: Literal node class used by this case.
+      fn_bin_op: Fn bin op.
+      op_code: Operator spelling.
     """
     bin_op = fn_bin_op(literal_class)
     assert bin_op.op_code == op_code
@@ -103,12 +99,9 @@ def test_unary_ops(
     """
     title: Test unary operations.
     parameters:
-      literal_class:
-        type: type[astx.Literal]
-      fn_unary_op:
-        type: Callable[[type[astx.Literal]], UnaryOp]
-      op_code:
-        type: str
+      literal_class: Literal node class used by this case.
+      fn_unary_op: Fn unary op.
+      op_code: Operator spelling.
     """
     unary_op = fn_unary_op(literal_class)
     assert unary_op.op_code == op_code

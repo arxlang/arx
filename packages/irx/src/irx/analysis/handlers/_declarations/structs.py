@@ -4,9 +4,8 @@
 
 """
 title: Declaration struct visitors.
-summary: >-
-  Resolve struct field metadata and reject invalid by-value recursive struct
-  definitions.
+summary: Resolve struct field metadata and reject invalid by-value recursive
+  struct definitions.
 """
 
 from __future__ import annotations
@@ -40,10 +39,8 @@ class DeclarationStructVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Resolve one struct's ordered field metadata.
         parameters:
-          struct:
-            type: SemanticStruct
-        returns:
-          type: SemanticStruct
+          struct: Struct.
+        returns: Resolved one struct's ordered field metadata.
         """
         seen: set[str] = set()
         fields: list[SemanticStructField] = []
@@ -126,14 +123,11 @@ class DeclarationStructVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Find one by-value recursive struct cycle.
         parameters:
-          root:
-            type: SemanticStruct
-          current:
-            type: SemanticStruct
-          path:
-            type: tuple[SemanticStruct, Ellipsis]
-        returns:
-          type: tuple[SemanticStruct, Ellipsis] | None
+          root: Root module or resource.
+          current: Current.
+          path: Path to the input or output resource.
+        returns: 'Result of this operation: find one by-value recursive struct
+          cycle.'
         """
         seen = {struct.qualified_name for struct in path}
         for attr in current.declaration.attributes:
@@ -161,8 +155,7 @@ class DeclarationStructVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Reject by-value recursive struct layouts.
         parameters:
-          struct:
-            type: SemanticStruct
+          struct: Struct.
         """
         cycle = self._find_struct_cycle(struct, struct, (struct,))
         if cycle is None:
@@ -189,8 +182,7 @@ class DeclarationStructVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Visit StructDefStmt nodes.
         parameters:
-          node:
-            type: astx.StructDefStmt
+          node: Syntax node to process.
         """
         struct = self.registry.register_struct(node)
         self.bindings.bind_struct(node.name, struct, node=node)

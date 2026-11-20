@@ -1,11 +1,10 @@
 # mypy: disable-error-code=no-redef
 """
 title: Conservative declaration reachability for opt-in library modules.
-summary: >-
-  Analyze every declaration for validity first. Retain whole referenced classes
-  (including virtual methods and destructors), rather than pruning methods or
-  guessing calls from syntax. Other modules retain their existing exported
-  code.
+summary: Analyze every declaration for validity first. Retain whole referenced
+  classes (including virtual methods and destructors), rather than pruning
+  methods or guessing calls from syntax. Other modules retain their existing
+  exported code.
 """
 
 from __future__ import annotations
@@ -32,20 +31,16 @@ class DeclarationReachability:
     """
     title: Follow resolved AST and semantic edges without name rediscovery.
     attributes:
-      seen:
-        type: set[int]
-      pending:
-        type: list[object]
-      nominal:
-        type: dict[str, astx.AST]
+      seen: Seen.
+      pending: Pending.
+      nominal: Nominal.
     """
 
     def __init__(self, session: CompilationSession) -> None:
         """
         title: Index resolved nominal type declarations from the session.
         parameters:
-          session:
-            type: CompilationSession
+          session: Compilation session owning the semantic facts.
         """
         self.seen: set[int] = set()
         self.pending: list[object] = []
@@ -63,12 +58,12 @@ class DeclarationReachability:
 
     def collect(self, roots: list[astx.AST]) -> frozenset[int]:
         """
-        title: Compute a cycle-safe closure of resolved declaration references.
+        title: Compute a cycle-safe closure of resolved declaration
+          references.
         parameters:
-          roots:
-            type: list[astx.AST]
-        returns:
-          type: frozenset[int]
+          roots: Roots.
+        returns: Computed a cycle-safe closure of resolved declaration
+          references.
         """
         self.pending.extend(roots)
         while self.pending:
@@ -84,8 +79,7 @@ class DeclarationReachability:
         """
         title: Traverse semantic records and reject unknown dependency shapes.
         parameters:
-          value:
-            type: object
+          value: Value to process.
         """
         if is_dataclass(value) and not isinstance(value, type):
             for field in fields(value):
@@ -116,8 +110,7 @@ class DeclarationReachability:
         """
         title: Traverse provider-declared attachment dependencies.
         parameters:
-          value:
-            type: SemanticFacts
+          value: Value to process.
         """
         self.pending.extend(value.dependencies())
 
@@ -126,8 +119,7 @@ class DeclarationReachability:
         """
         title: Walk children and sidecars, never parent links or import roots.
         parameters:
-          value:
-            type: astx.AST
+          value: Value to process.
         """
         if isinstance(value, (astx.ImportStmt, astx.ImportFromStmt)):
             return
@@ -150,10 +142,7 @@ class DeclarationReachability:
         """
         title: Traverse dependency collections.
         parameters:
-          value:
-            type: >-
-              list[object] | tuple[object, Ellipsis] | set[object] |
-              frozenset[object]
+          value: Value to process.
         """
         self.pending.extend(value)
 
@@ -162,8 +151,7 @@ class DeclarationReachability:
         """
         title: Traverse sidecar maps and expression-bearing literal keys.
         parameters:
-          value:
-            type: dict[object, object]
+          value: Value to process.
         """
         self.pending.extend(value.keys())
         self.pending.extend(value.values())
@@ -175,10 +163,9 @@ def plan_declarations(session: CompilationSession) -> frozenset[int] | None:
     """
     title: Keep eager module exports and their lazy-library dependencies.
     parameters:
-      session:
-        type: CompilationSession
-    returns:
-      type: frozenset[int] | None
+      session: Compilation session owning the semantic facts.
+    returns: 'Result of this operation: keep eager module exports and their
+      lazy-library dependencies.'
     """
     if not any(item.lazy_declarations for item in session.modules.values()):
         return None

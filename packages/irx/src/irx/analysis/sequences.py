@@ -41,14 +41,11 @@ def sequence_access(
     """
     title: Validate exact numeric storage without widening or null erasure.
     parameters:
-      kind:
-        type: Literal[list, tensor, series, sequence]
-      element:
-        type: astx.DataType | None
-      node:
-        type: astx.AST | None
-    returns:
-      type: ResolvedSequenceAccess | None
+      kind: Kind of value or operation.
+      element: Element.
+      node: Syntax node to process.
+    returns: 'Result of this operation: validate exact numeric storage without
+      widening or null erasure.'
     """
     if element is None or not is_sequence_element(element):
         return None
@@ -80,12 +77,10 @@ def resolve_sequence_access(
     """
     title: Reject unsupported storage before constructing a borrowed view.
     parameters:
-      type_:
-        type: astx.DataType | None
-      node:
-        type: astx.AST | None
-    returns:
-      type: ResolvedSequenceAccess | None
+      type_: Type expression to process.
+      node: Syntax node to process.
+    returns: 'Result of this operation: reject unsupported storage before
+      constructing a borrowed view.'
     """
     del type_, node
     return None
@@ -99,12 +94,9 @@ def resolve_sequence_access(
     """
     title: Read immutable octets using the shared byte-width storage ABI.
     parameters:
-      type_:
-        type: astx.Bytes
-      node:
-        type: astx.AST | None
-    returns:
-      type: ResolvedSequenceAccess | None
+      type_: Type expression to process.
+      node: Syntax node to process.
+    returns: Read immutable octets using the shared byte-width storage ABI.
     """
     del type_
     return sequence_access("list", astx.UInt8(), node)
@@ -119,12 +111,10 @@ def resolve_sequence_access(
     """
     title: Borrow exact homogeneous list storage without conversion.
     parameters:
-      type_:
-        type: astx.ListType
-      node:
-        type: astx.AST | None
-    returns:
-      type: ResolvedSequenceAccess | None
+      type_: Type expression to process.
+      node: Syntax node to process.
+    returns: 'Result of this operation: borrow exact homogeneous list storage
+      without conversion.'
     """
     return sequence_access("list", sequence_element_type(type_), node)
 
@@ -138,12 +128,10 @@ def resolve_sequence_access(
     """
     title: Borrow rank-one tensors and defer unknown rank to a checked view.
     parameters:
-      type_:
-        type: astx.TensorType
-      node:
-        type: astx.AST | None
-    returns:
-      type: ResolvedSequenceAccess | None
+      type_: Type expression to process.
+      node: Syntax node to process.
+    returns: 'Result of this operation: borrow rank-one tensors and defer
+      unknown rank to a checked view.'
     """
     return sequence_access("tensor", sequence_element_type(type_), node)
 
@@ -157,12 +145,10 @@ def resolve_sequence_access(
     """
     title: Snapshot numeric chunks while preserving their nullability.
     parameters:
-      type_:
-        type: astx.SeriesType
-      node:
-        type: astx.AST | None
-    returns:
-      type: ResolvedSequenceAccess | None
+      type_: Type expression to process.
+      node: Syntax node to process.
+    returns: 'Result of this operation: snapshot numeric chunks while
+      preserving their nullability.'
     """
     return sequence_access("series", sequence_element_type(type_), node)
 
@@ -176,12 +162,10 @@ def resolve_sequence_access(
     """
     title: Forward an already borrowed descriptor within its owning call.
     parameters:
-      type_:
-        type: astx.SequenceType
-      node:
-        type: astx.AST | None
-    returns:
-      type: ResolvedSequenceAccess | None
+      type_: Type expression to process.
+      node: Syntax node to process.
+    returns: 'Result of this operation: forward an already borrowed descriptor
+      within its owning call.'
     """
     return sequence_access("sequence", type_.element_type, node)
 
@@ -192,19 +176,15 @@ def resolve_materialization(
     analyzer: SemanticAnalyzerCore, node: astx.FunctionCall
 ) -> None:
     """
-    title: >-
-      Resolve copied list or bytes construction without treating iterators as
-      views.
-    summary: >-
-      bytes() is empty; bytes(input, max_items=bound) copies integer octets.
-      Boolean, floating, nullable, and scalar inputs are rejected. Every item
-      must fit 0..255; unsized inputs require a bound. Consumed input is not
-      rolled back on failure; no partial output escapes.
+    title: Resolve copied list or bytes construction without treating iterators
+      as views.
+    summary: bytes() is empty; bytes(input, max_items=bound) copies integer
+      octets. Boolean, floating, nullable, and scalar inputs are rejected.
+      Every item must fit 0..255; unsized inputs require a bound. Consumed
+      input is not rolled back on failure; no partial output escapes.
     parameters:
-      analyzer:
-        type: SemanticAnalyzerCore
-      node:
-        type: astx.FunctionCall
+      analyzer: Semantic analyzer resolving the operation.
+      node: Syntax node to process.
     """
     from irx.analysis.iterables import (  # noqa: PLC0415
         resolve_iteration_capability,

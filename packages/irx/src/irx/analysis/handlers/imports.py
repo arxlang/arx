@@ -2,9 +2,9 @@
 
 """
 title: Import and module-binding semantic visitors.
-summary: >-
-  Resolve host-provided imports into semantic module-visible bindings while
-  keeping import coordination separate from declaration and expression rules.
+summary: Resolve host-provided imports into semantic module-visible bindings
+  while keeping import coordination separate from declaration and expression
+  rules.
 """
 
 from __future__ import annotations
@@ -30,8 +30,7 @@ class ImportVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Visit ImportStmt nodes.
         parameters:
-          node:
-            type: astx.ImportStmt
+          node: Syntax node to process.
         """
         self._set_type(node, None)
         if not self._imports_supported_here(node):
@@ -75,8 +74,7 @@ class ImportVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Visit ImportFromStmt nodes.
         parameters:
-          node:
-            type: astx.ImportFromStmt
+          node: Syntax node to process.
         """
         self._set_type(node, None)
         if not self._imports_supported_here(node):
@@ -183,8 +181,7 @@ class ImportVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Visit ImportExpr nodes.
         parameters:
-          node:
-            type: astx.ImportExpr
+          node: Syntax node to process.
         """
         self.context.diagnostics.add(
             "Import expressions are not supported in this MVP.",
@@ -197,8 +194,7 @@ class ImportVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Visit ImportFromExpr nodes.
         parameters:
-          node:
-            type: astx.ImportFromExpr
+          node: Syntax node to process.
         """
         self.context.diagnostics.add(
             "Import expressions are not supported in this MVP.",

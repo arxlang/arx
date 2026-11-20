@@ -1,13 +1,12 @@
 """
 title: Public exception hierarchy for the ArxPy API.
-summary: >-
-  Define the single error hierarchy ArxPy raises to callers: ArxError as the
-  base, with ParseError, CompileError, and ExecutionError for the lex/parse,
-  analysis/lowering, and execution stages of the pipeline. Each error carries a
-  list of structured Diagnostic records so callers can inspect failures
-  programmatically instead of scraping message text. The pipeline modules catch
-  upstream arx and irx exceptions and re-raise them as these types, building
-  diagnostics via the helpers in arxpy.diagnostics.
+summary: 'Define the single error hierarchy ArxPy raises to callers: ArxError
+  as the base, with ParseError, CompileError, and ExecutionError for the
+  lex/parse, analysis/lowering, and execution stages of the pipeline. Each
+  error carries a list of structured Diagnostic records so callers can inspect
+  failures programmatically instead of scraping message text. The pipeline
+  modules catch upstream arx and irx exceptions and re-raise them as these
+  types, building diagnostics via the helpers in arxpy.diagnostics.'
 """
 
 from __future__ import annotations
@@ -26,9 +25,7 @@ class ArxError(Exception):
     """
     title: Base class for every error raised by the ArxPy API.
     attributes:
-      diagnostics:
-        type: list[Diagnostic]
-        description: Structured diagnostics describing the failure.
+      diagnostics: Structured diagnostics describing the failure.
     """
 
     diagnostics: list[Diagnostic]
@@ -42,10 +39,8 @@ class ArxError(Exception):
         """
         title: Initialize an ArxError.
         parameters:
-          message:
-            type: str
-          diagnostics:
-            type: Sequence[Diagnostic] | None
+          message: Diagnostic or output message.
+          diagnostics: Collected structured diagnostics.
         """
         self.diagnostics = list(diagnostics or ())
         super().__init__(message)
@@ -56,12 +51,10 @@ class ArxError(Exception):
 class ParseError(ArxError):
     """
     title: Raised when lexing or parsing Arx source fails.
-    summary: >-
-      Lexer and parser diagnostics include a source location when the frontend
-      can attribute one without fabrication.
+    summary: Lexer and parser diagnostics include a source location when
+      the frontend can attribute one without fabrication.
     attributes:
-      diagnostics:
-        type: list[Diagnostic]
+      diagnostics: Collected structured diagnostics.
     """
 
 
@@ -69,15 +62,12 @@ class ParseError(ArxError):
 @typechecked
 class CompileError(ArxError):
     """
-    title: >-
-      Raised when semantic analysis, lowering, native compile, or linking
+    title: Raised when semantic analysis, lowering, native compile, or linking
       fails.
-    summary: >-
-      Carries the structured diagnostics from the irx error family, which
-      include source locations for most phases.
+    summary: Carries the structured diagnostics from the irx error family,
+      which include source locations for most phases.
     attributes:
-      diagnostics:
-        type: list[Diagnostic]
+      diagnostics: Collected structured diagnostics.
     """
 
 
@@ -86,13 +76,11 @@ class CompileError(ArxError):
 class ExecutionError(ArxError):
     """
     title: Raised when running a compiled Arx program fails to execute.
-    summary: >-
-      Reserved for failures that prevent execution from completing, such as a
-      missing binary or a timeout. A program that runs to completion with a
-      non-zero exit code is reported as data, not raised.
+    summary: Reserved for failures that prevent execution from completing,
+      such as a missing binary or a timeout. A program that runs to completion
+      with a non-zero exit code is reported as data, not raised.
     attributes:
-      diagnostics:
-        type: list[Diagnostic]
+      diagnostics: Collected structured diagnostics.
     """
 
 

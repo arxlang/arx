@@ -1,9 +1,11 @@
 """
 title: Symbol Table module for ASTx.
-summary: |-
+summary: >2-
 
   The `SymbolTable` class offered here allows the definition
+
   of scopes, so the variable or function would be available in
+
   specifics scopes.
 """
 
@@ -23,14 +25,10 @@ class ScopeNodeBase:
     """
     title: ScopeNodeBase is the base used for the nodes (levels) in the scope.
     attributes:
-      name:
-        type: str
-      parent:
-        type: Optional[ScopeNodeBase]
-      default_parent:
-        type: Optional[ScopeNodeBase]
-      named_expr:
-        type: dict[str, NamedExpr]
+      name: Name identifying this declaration.
+      parent: Parent node in the syntax tree.
+      default_parent: Default parent.
+      named_expr: Named expr.
     """
 
     name: str
@@ -44,10 +42,8 @@ class ScopeNodeBase:
         """
         title: Initialize ScopeNodeBase.
         parameters:
-          name:
-            type: str
-          parent:
-            type: Optional[ScopeNodeBase]
+          name: Name identifying the declaration or operation.
+          parent: Parent node or enclosing scope.
         """
         self.parent: Optional[ScopeNodeBase] = (
             parent or ScopeNodeBase.default_parent
@@ -62,14 +58,10 @@ class ScopeNode(ScopeNodeBase):
     """
     title: Scope node organize the scope in different levels in the stack.
     attributes:
-      name:
-        type: str
-      parent:
-        type: Optional[ScopeNodeBase]
-      default_parent:
-        type: Optional[ScopeNodeBase]
-      named_expr:
-        type: dict[str, NamedExpr]
+      name: Name identifying this declaration.
+      parent: Parent node in the syntax tree.
+      default_parent: Default parent.
+      named_expr: Named expr.
     """
 
     ...
@@ -81,14 +73,10 @@ class Scope:
     """
     title: Organize the ASTx objects according to the scope.
     attributes:
-      nodes:
-        type: dict[int, ScopeNodeBase]
-      current:
-        type: Optional[ScopeNodeBase]
-      previous:
-        type: Optional[ScopeNodeBase]
-      scope_node_class:
-        type: type[ScopeNodeBase]
+      nodes: Contained syntax nodes in order.
+      current: Current.
+      previous: Previous.
+      scope_node_class: Scope node class.
     """
 
     nodes: dict[int, ScopeNodeBase]
@@ -103,8 +91,7 @@ class Scope:
         """
         title: Initialize the scope.
         parameters:
-          scope_node_class:
-            type: type[ScopeNodeBase]
+          scope_node_class: Scope node class.
         """
         self.nodes: dict[int, ScopeNodeBase] = {}
         self.current = None
@@ -124,14 +111,10 @@ class Scope:
         """
         title: Add a new node in the scope.
         parameters:
-          name:
-            type: str
-          parent:
-            type: Optional[ScopeNodeBase]
-          change_current:
-            type: bool
-        returns:
-          type: ScopeNodeBase
+          name: Name identifying the declaration or operation.
+          parent: Parent node or enclosing scope.
+          change_current: Whether to use change current.
+        returns: 'Result of this operation: add a new node in the scope.'
         """
         node = self.scope_node_class(name, parent)
 
@@ -151,8 +134,7 @@ class Scope:
     def get_first(self) -> ScopeNodeBase:
         """
         title: Get the first node in the scope.
-        returns:
-          type: ScopeNodeBase
+        returns: The first node in the scope.
         """
         node_id = next(iter(self.nodes.keys()))
         return self.nodes[node_id]
@@ -160,8 +142,7 @@ class Scope:
     def get_last(self) -> ScopeNodeBase:
         """
         title: Get the latest node in the scope.
-        returns:
-          type: ScopeNodeBase
+        returns: The latest node in the scope.
         """
         node_id = list(self.nodes.keys())[-1]
         return self.nodes[node_id]
@@ -170,8 +151,7 @@ class Scope:
         """
         title: Destroy the current scope.
         parameters:
-          node:
-            type: ScopeNodeBase
+          node: Syntax node to process.
         """
         del self.nodes[id(node)]
         self.current = self.previous
@@ -181,8 +161,7 @@ class Scope:
         """
         title: Set default parent for the current scope.
         parameters:
-          node:
-            type: ScopeNodeBase
+          node: Syntax node to process.
         """
         self.scope_node_class.default_parent = node
 
@@ -193,8 +172,7 @@ class SymbolTable:
     """
     title: Symbol Table for ASTx.
     attributes:
-      scopes:
-        type: Scope
+      scopes: Scopes.
     """
 
     scopes: Scope
@@ -209,8 +187,7 @@ class SymbolTable:
         """
         title: Define a new named expression inside the scoped stack.
         parameters:
-          expr:
-            type: NamedExpr
+          expr: Expression to process.
         """
         if not self.scopes.current:
             raise Exception("SymbolTable: No scope active.")
@@ -219,12 +196,11 @@ class SymbolTable:
     def update(self, expr: NamedExpr) -> None:
         """
         title: Update the expression on the SymbolTable.
-        summary: |-
+        summary: >2-
 
           It is useful mainly for updating the comment of the expression.
         parameters:
-          expr:
-            type: NamedExpr
+          expr: Expression to process.
         """
         if not self.scopes.current:
             raise Exception("SymbolTable: No scope active.")
@@ -236,10 +212,8 @@ class SymbolTable:
         """
         title: Get a named expression from the scope stack.
         parameters:
-          name:
-            type: str
-        returns:
-          type: NamedExpr
+          name: Name identifying the declaration or operation.
+        returns: A named expression from the scope stack.
         """
         scope = self.scopes.current
         while scope is not None:

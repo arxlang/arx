@@ -21,10 +21,8 @@ def parse_exception_source(body: str) -> astx.Module:
     """
     title: Parse a documented exception function.
     parameters:
-      body:
-        type: str
-    returns:
-      type: astx.Module
+      body: Statements forming the body.
+    returns: Parsed a documented exception function.
     """
     source = (
         "```\ntitle: Exception syntax fixture\n```\n"
@@ -41,10 +39,9 @@ def function_statements(module: astx.Module) -> list[astx.AST]:
     """
     title: Require a parsed function before inspecting its body.
     parameters:
-      module:
-        type: astx.Module
-    returns:
-      type: list[astx.AST]
+      module: Module to process.
+    returns: 'Result of this operation: require a parsed function before
+      inspecting its body.'
     """
     function = module.nodes[0]
     assert isinstance(function, astx.FunctionDef)
@@ -69,10 +66,8 @@ def test_exception_lexical_contract(word: str, kind: TokenKind) -> None:
     """
     title: Reserve statements without reserving exception class names.
     parameters:
-      word:
-        type: str
-      kind:
-        type: TokenKind
+      word: Word.
+      kind: Kind of value or operation.
     """
     ArxIO.string_to_buffer(word)
     assert Lexer().get_token().kind is kind
@@ -130,8 +125,7 @@ def test_raise_does_not_consume_next_statement(body: str) -> None:
     """
     title: Bare and explicit raises stop at their statement boundary.
     parameters:
-      body:
-        type: str
+      body: Statements forming the body.
     """
     statements = function_statements(parse_exception_source(body))
     assert len(statements) == 2
@@ -184,8 +178,7 @@ def test_handler_forms(header: str) -> None:
     """
     title: Bare, single-type, and parenthesized handlers construct ASTx nodes.
     parameters:
-      header:
-        type: str
+      header: Header.
     """
     module = parse_exception_source(
         "try:\n  raise\n" + header + "\n  return 1\nreturn 0"
@@ -229,8 +222,7 @@ def test_malformed_exception_statements_are_located(body: str) -> None:
     """
     title: Reject malformed clauses and statement use in expression positions.
     parameters:
-      body:
-        type: str
+      body: Statements forming the body.
     """
     with pytest.raises(ParserException) as caught:
         parse_exception_source(body)
@@ -277,8 +269,7 @@ def test_docstring_only_exception_subclasses(suffix: str) -> None:
     """
     title: Nominal empty subclasses finish at either dedent or end of input.
     parameters:
-      suffix:
-        type: str
+      suffix: Suffix.
     """
     source = (
         "```\ntitle: Empty exception classes\n```\n"

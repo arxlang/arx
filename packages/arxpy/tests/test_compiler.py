@@ -89,8 +89,7 @@ def test_parse_file_reports_missing_source(tmp_path: Path) -> None:
     """
     title: Source I/O errors become ParseError rather than leaking OSError.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     missing = tmp_path / "missing.x"
     with pytest.raises(ParseError) as captured:
@@ -165,8 +164,7 @@ def test_missing_file_import_is_a_located_semantic_diagnostic(
     """
     title: Host module lookup failures cross ArxPy with a stable IRx code.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     source = tmp_path / "main.x"
     source.write_text(
@@ -200,8 +198,7 @@ def test_compile_llvm_ir_can_write_caller_path(tmp_path: Path) -> None:
     """
     title: An explicit LLVM IR output is materialized at the requested path.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     output = tmp_path / "module.ll"
     artifact = Compiler().compile(
@@ -228,8 +225,7 @@ def test_compile_object_materializes_requested_path(tmp_path: Path) -> None:
     """
     title: Object compilation returns a typed persistent artifact.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     output = tmp_path / "module.o"
     compiler = Compiler()
@@ -249,8 +245,7 @@ def test_executable_requires_main(tmp_path: Path) -> None:
     """
     title: Explicit executable requests reject programs without an entrypoint.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     compiler = Compiler()
     parsed = compiler.parse_string(FUNCTION_SOURCE)
@@ -267,8 +262,7 @@ def test_compile_and_run_executable(tmp_path: Path) -> None:
     """
     title: Executable results capture a program's non-zero exit as data.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     compiler = Compiler()
     artifact = compiler.compile(
@@ -286,8 +280,7 @@ def test_run_rejects_non_executable_artifact(tmp_path: Path) -> None:
     """
     title: run rejects object and IR artifacts before starting a subprocess.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     artifact = CompilationArtifact(
         kind=ArtifactKind.OBJECT,
@@ -308,10 +301,8 @@ def test_repeated_and_concurrent_parse_calls_are_isolated() -> None:
         """
         title: Parse one module through an independent compiler instance.
         parameters:
-          module_name:
-            type: str
-        returns:
-          type: str
+          module_name: Module name to resolve.
+        returns: Parsed one module through an independent compiler instance.
         """
         program = Compiler().parse_string(
             FUNCTION_SOURCE,
@@ -328,8 +319,7 @@ def test_file_builtin_through_check_and_build(tmp_path: Path) -> None:
     """
     title: ArxPy shares the file builtin's semantic and native paths.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     source = (
         MODULE_DOCSTRING
@@ -359,8 +349,7 @@ def test_lifecycle_through_facade(tmp_path: Path) -> None:
     """
     title: ArxPy check and compile share constructor and lifetime semantics.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     source = (
         MODULE_DOCSTRING
@@ -394,8 +383,7 @@ def test_file_builtin_is_available_in_memory(factory: str) -> None:
     """
     title: ArxPy supplies canonical File registration without project files.
     parameters:
-      factory:
-        type: str
+      factory: Factory.
     """
     compiler = Compiler()
     program = compiler.parse_string(

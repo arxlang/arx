@@ -1,8 +1,7 @@
 """
 title: Public FFI semantic helpers.
-summary: >-
-  Normalize runtime-feature metadata and enforce the narrow public FFI type
-  policy for explicit extern declarations.
+summary: Normalize runtime-feature metadata and enforce the narrow public
+  FFI type policy for explicit extern declarations.
 """
 
 from __future__ import annotations
@@ -48,16 +47,11 @@ def normalize_runtime_features(
     """
     title: Normalize runtime-feature metadata from one prototype.
     parameters:
-      prototype:
-        type: astx.FunctionPrototype
-      diagnostics:
-        type: DiagnosticBag
-      available_features:
-        type: tuple[str, Ellipsis]
-      bound_features:
-        type: tuple[str, Ellipsis]
-    returns:
-      type: tuple[str, Ellipsis]
+      prototype: Prototype.
+      diagnostics: Collected structured diagnostics.
+      available_features: Available features.
+      bound_features: Bound features.
+    returns: Normalized runtime-feature metadata from one prototype.
     """
     raw_feature = getattr(prototype, "runtime_feature", None)
     raw_features = getattr(prototype, "runtime_features", None)
@@ -130,10 +124,8 @@ def ffi_returns_owned_string(signature: FunctionSignature) -> bool:
     """
     title: Read the validated malloc-owned native string result contract.
     parameters:
-      signature:
-        type: FunctionSignature
-    returns:
-      type: bool
+      signature: Resolved callable signature.
+    returns: Read the validated malloc-owned native string result contract.
     """
     return (
         signature.ffi is not None
@@ -146,10 +138,8 @@ def _display_type_name(type_: astx.DataType) -> str:
     """
     title: Return one stable public FFI type name.
     parameters:
-      type_:
-        type: astx.DataType
-    returns:
-      type: str
+      type_: Type expression to process.
+    returns: One stable public FFI type name.
     """
     return display_type_name(type_)
 
@@ -164,14 +154,11 @@ def build_ffi_callable_info(
     """
     title: Build validated public FFI metadata for one extern signature.
     parameters:
-      context:
-        type: SemanticContext
-      signature:
-        type: FunctionSignature
-      prototype:
-        type: astx.FunctionPrototype
-    returns:
-      type: FFICallableInfo | None
+      context: Context for the operation.
+      signature: Resolved callable signature.
+      prototype: Prototype.
+    returns: Constructed validated public FFI metadata for one extern
+      signature.
     """
     start_count = len(context.diagnostics.diagnostics)
     ownership = getattr(prototype, "ffi_return_ownership", None)
@@ -248,22 +235,14 @@ def _classify_ffi_type(
     """
     title: Classify one declared FFI type.
     parameters:
-      context:
-        type: SemanticContext
-      type_:
-        type: astx.DataType
-      prototype:
-        type: astx.FunctionPrototype
-      position:
-        type: str
-      allow_void:
-        type: bool
-      struct_stack:
-        type: tuple[str, Ellipsis]
-      referenced_via_pointer:
-        type: bool
-    returns:
-      type: FFITypeInfo | None
+      context: Context for the operation.
+      type_: Type expression to process.
+      prototype: Prototype.
+      position: Position.
+      allow_void: Whether to use allow void.
+      struct_stack: Struct stack.
+      referenced_via_pointer: Whether to use referenced via pointer.
+    returns: 'Result of this operation: classify one declared FFI type.'
     """
     if is_none_type(type_):
         if allow_void:
@@ -384,20 +363,14 @@ def _classify_ffi_struct(
     """
     title: Validate one ABI-safe struct for FFI use.
     parameters:
-      context:
-        type: SemanticContext
-      struct_type:
-        type: astx.StructType
-      prototype:
-        type: astx.FunctionPrototype
-      position:
-        type: str
-      struct_stack:
-        type: tuple[str, Ellipsis]
-      referenced_via_pointer:
-        type: bool
-    returns:
-      type: FFITypeInfo | None
+      context: Context for the operation.
+      struct_type: Type of struct.
+      prototype: Prototype.
+      position: Position.
+      struct_stack: Struct stack.
+      referenced_via_pointer: Whether to use referenced via pointer.
+    returns: 'Result of this operation: validate one ABI-safe struct for
+      FFI use.'
     """
     struct = _resolve_struct(context, struct_type)
     if struct is None:
@@ -449,12 +422,9 @@ def _resolve_struct(
     """
     title: Resolve one struct reference for FFI validation.
     parameters:
-      context:
-        type: SemanticContext
-      struct_type:
-        type: astx.StructType
-    returns:
-      type: SemanticStruct | None
+      context: Context for the operation.
+      struct_type: Type of struct.
+    returns: Resolved one struct reference for FFI validation.
     """
     if struct_type.module_key is None:
         return None

@@ -46,12 +46,10 @@ class ExceptionVisitorMixin(VisitorMixinBase):
         """
         title: Call one registered opaque exception-runtime operation.
         parameters:
-          operation:
-            type: str
-          args:
-            type: list[ir.Value]
-        returns:
-          type: ir.Value
+          operation: Operation to resolve or execute.
+          args: Arguments supplied to the operation.
+        returns: 'Result of this operation: call one registered
+          opaque exception-runtime operation.'
         """
         function = self.require_runtime_symbol(
             "exceptions", "irx_exception_" + operation
@@ -61,8 +59,8 @@ class ExceptionVisitorMixin(VisitorMixinBase):
     def context_value(self) -> ir.Value:
         """
         title: Require the execution context of a generated frame.
-        returns:
-          type: ir.Value
+        returns: 'Result of this operation: require the execution context
+          of a generated frame.'
         """
         assert self.exception_context is not None
         return self.exception_context
@@ -71,10 +69,9 @@ class ExceptionVisitorMixin(VisitorMixinBase):
         """
         title: Materialize an immutable native diagnostic string.
         parameters:
-          value:
-            type: str
-        returns:
-          type: ir.Value
+          value: Value to process.
+        returns: 'Result of this operation: materialize an immutable native
+          diagnostic string.'
         """
         return cast(Any, self)._constant_c_string_pointer(
             value, name_hint="exception.text"
@@ -84,10 +81,9 @@ class ExceptionVisitorMixin(VisitorMixinBase):
         """
         title: Preserve the source location supplied by semantic analysis.
         parameters:
-          node:
-            type: astx.AST
-        returns:
-          type: list[ir.Value]
+          node: Syntax node to process.
+        returns: 'Result of this operation: preserve the source location
+          supplied by semantic analysis.'
         """
         return [
             self.exception_string(cast(Any, self)._assert_source_name(node)),
@@ -105,16 +101,11 @@ class ExceptionVisitorMixin(VisitorMixinBase):
         """
         title: Read an ABI result slot only on the successful status edge.
         parameters:
-          node:
-            type: astx.AST
-          callee:
-            type: ir.Value
-          signature:
-            type: FunctionSignature
-          args:
-            type: list[ir.Value]
-        returns:
-          type: ir.Value | None
+          node: Syntax node to process.
+          callee: Callee.
+          signature: Resolved callable signature.
+          args: Arguments supplied to the operation.
+        returns: Read an ABI result slot only on the successful status edge.
         """
         if not signature.exception_abi:
             if any(
@@ -150,10 +141,8 @@ class ExceptionVisitorMixin(VisitorMixinBase):
         """
         title: Route failed generated calls through the active lexical exits.
         parameters:
-          node:
-            type: astx.AST
-          status:
-            type: ir.Value
+          node: Syntax node to process.
+          status: Native operation status.
         """
         function = self._llvm.ir_builder.function
         success = function.append_basic_block("call.success")
@@ -181,10 +170,8 @@ class ExceptionVisitorMixin(VisitorMixinBase):
         """
         title: Release only suspended return results replaced by this transfer.
         parameters:
-          completions:
-            type: tuple[PendingReturn, Ellipsis] | None
-          preserved_depth:
-            type: int | None
+          completions: Completions.
+          preserved_depth: Preserved depth.
         """
         saved = self.pending_returns
         selected = tuple(saved) if completions is None else completions
@@ -210,8 +197,7 @@ class ExceptionVisitorMixin(VisitorMixinBase):
         """
         title: A loop transfer replaces only returns outside its local loops.
         parameters:
-          target:
-            type: LoopTargets
+          target: Destination of the operation.
         """
         self.abandon_pending_returns(
             tuple(
@@ -238,8 +224,7 @@ class ExceptionVisitorMixin(VisitorMixinBase):
         """
         title: Unwind lexical cleanup regions without crossing native frames.
         parameters:
-          node:
-            type: astx.AST | None
+          node: Syntax node to process.
         """
         target = next(
             (
@@ -279,8 +264,7 @@ class ExceptionVisitorMixin(VisitorMixinBase):
         """
         title: Publish a return value only after every exit region succeeded.
         parameters:
-          value:
-            type: ir.Value | None
+          value: Value to process.
         """
         if self.exception_context is None:
             if value is None:
@@ -384,14 +368,11 @@ class ExceptionVisitorMixin(VisitorMixinBase):
         """
         title: Address an inherited exception field through its descriptor.
         parameters:
-          payload:
-            type: ir.Value
-          exception:
-            type: ResolvedExceptionType
-          diagnostic:
-            type: bool
-        returns:
-          type: ir.Value
+          payload: Payload.
+          exception: Exception being handled.
+          diagnostic: Structured diagnostic to inspect or report.
+        returns: 'Result of this operation: address an inherited exception
+          field through its descriptor.'
         """
         field = (
             exception.diagnostic_field
@@ -421,14 +402,10 @@ class ExceptionVisitorMixin(VisitorMixinBase):
         """
         title: Snapshot nominal ancestry and message into an opaque record.
         parameters:
-          node:
-            type: astx.AST
-          payload:
-            type: ir.Value
-          exception:
-            type: ResolvedExceptionType
-          location:
-            type: list[ir.Value] | None
+          node: Syntax node to process.
+          payload: Payload.
+          exception: Exception being handled.
+          location: Source coordinates associated with the operation.
         """
         pointer = ir.IntType(8).as_pointer()
         identifiers = [
@@ -471,12 +448,9 @@ class ExceptionVisitorMixin(VisitorMixinBase):
         """
         title: Fail non-recursively when exception bookkeeping cannot allocate.
         parameters:
-          node:
-            type: astx.AST
-          status:
-            type: ir.Value
-          location:
-            type: list[ir.Value] | None
+          node: Syntax node to process.
+          status: Native operation status.
+          location: Source coordinates associated with the operation.
         """
         with self._llvm.ir_builder.if_then(
             self._llvm.ir_builder.icmp_signed(
@@ -513,14 +487,10 @@ class ExceptionVisitorMixin(VisitorMixinBase):
         """
         title: Materialize a trusted builtin exception for a native failure.
         parameters:
-          node:
-            type: astx.AST
-          role:
-            type: str
-          message:
-            type: ir.Value
-          code:
-            type: str
+          node: Syntax node to process.
+          role: Role.
+          message: Diagnostic or output message.
+          code: Source code or diagnostic identifier.
         """
         exception = require_semantic_metadata(
             self.runtime_exception_types.get(role),
@@ -546,12 +516,10 @@ class ExceptionVisitorMixin(VisitorMixinBase):
         """
         title: Share cold builtin materialization between failure guards.
         parameters:
-          node:
-            type: astx.AST
-          exception:
-            type: ResolvedExceptionType
-        returns:
-          type: ir.Function
+          node: Syntax node to process.
+          exception: Exception being handled.
+        returns: 'Result of this operation: share cold builtin materialization
+          between failure guards.'
         """
         name = "irx.raise." + exception.class_.qualified_name
         existing = self._llvm.module.globals.get(name)
@@ -621,18 +589,12 @@ class ExceptionVisitorMixin(VisitorMixinBase):
         """
         title: Create a builtin payload and pending status in a cold helper.
         parameters:
-          node:
-            type: astx.AST
-          exception:
-            type: ResolvedExceptionType
-          message:
-            type: ir.Value
-          location:
-            type: list[ir.Value]
-          code:
-            type: ir.Value
-        returns:
-          type: ir.Value
+          node: Syntax node to process.
+          exception: Exception being handled.
+          message: Diagnostic or output message.
+          location: Source coordinates associated with the operation.
+          code: Source code or diagnostic identifier.
+        returns: Created a builtin payload and pending status in a cold helper.
         """
         class_ = cast(
             SemanticInfo, getattr(exception.class_.declaration, "semantic")
@@ -749,8 +711,7 @@ class ExceptionVisitorMixin(VisitorMixinBase):
         """
         title: Raise one evaluated nominal exception or dynamically re-raise.
         parameters:
-          node:
-            type: astx.ThrowStmt
+          node: Syntax node to process.
         """
         semantic = cast(SemanticInfo | None, getattr(node, "semantic", None))
         resolution = require_semantic_metadata(
@@ -831,10 +792,8 @@ class ExceptionVisitorMixin(VisitorMixinBase):
         """
         title: Lower a statement-only exception suite without leaking values.
         parameters:
-          block:
-            type: astx.Block
-          preserve_scope:
-            type: bool
+          block: Block of statements.
+          preserve_scope: Whether to use preserve scope.
         """
         depth = len(self.result_stack)
         try:
@@ -849,8 +808,7 @@ class ExceptionVisitorMixin(VisitorMixinBase):
         """
         title: Lower handlers and finalization as shared lexical exit regions.
         parameters:
-          node:
-            type: astx.ExceptionHandlerStmt
+          node: Syntax node to process.
         """
         semantic = cast(SemanticInfo | None, getattr(node, "semantic", None))
         require_semantic_metadata(
@@ -984,8 +942,7 @@ class ExceptionVisitorMixin(VisitorMixinBase):
                 """
                 title: Restore the dynamically enclosing handler state.
                 parameters:
-                  token:
-                    type: ir.Value
+                  token: Token being processed.
                 """
                 self.exception_call(
                     "handler_leave", [self.context_value(), token]

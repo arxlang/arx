@@ -37,12 +37,9 @@ def test_math_compute_plans_through_source_reexports(
     """
     title: Resolve installed source reexports and nullable shapes before LLVM.
     parameters:
-      tmp_path:
-        type: Path
-      monkeypatch:
-        type: pytest.MonkeyPatch
-      kernel:
-        type: str
+      tmp_path: Temporary directory for this test.
+      monkeypatch: Fixture for temporarily replacing dependencies and settings.
+      kernel: Kernel.
     """
     document = "```\ntitle: Math semantic consumer\n```\n"
     site = tmp_path / "installed"
@@ -140,8 +137,8 @@ def test_math_compute_plans_through_source_reexports(
 
 def test_bundled_stdlib_package_data_is_present() -> None:
     """
-    title: >-
-      Bundled stdlib sources are present on disk and included in packaging.
+    title: Bundled stdlib sources are present on disk and included
+      in packaging.
     """
     stdlib_root = main_module.get_bundled_stdlib_root()
     assert (
@@ -184,10 +181,8 @@ def test_file_import_resolver_loads_stdlib_from_bundled_package(
     """
     title: Stdlib imports resolve from the installed arx package location.
     parameters:
-      tmp_path:
-        type: Path
-      monkeypatch:
-        type: pytest.MonkeyPatch
+      tmp_path: Temporary directory for this test.
+      monkeypatch: Fixture for temporarily replacing dependencies and settings.
     """
     monkeypatch.chdir(tmp_path)
     source = tmp_path / "main.x"
@@ -217,11 +212,10 @@ def test_arxmain_compiles_program_using_bundled_stdlib(
     tmp_path: Path,
 ) -> None:
     """
-    title: >-
-      Programs can compile against the bundled stdlib without local copies.
+    title: Programs can compile against the bundled stdlib without local
+      copies.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     source = tmp_path / "main.x"
     source.write_text(
@@ -254,8 +248,7 @@ def test_arxmain_rejects_local_stdlib_shadowing(tmp_path: Path) -> None:
     """
     title: Local user modules cannot shadow the reserved stdlib namespace.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     local_stdlib = tmp_path / "stdlib"
     local_stdlib.mkdir()
@@ -308,21 +301,17 @@ def test_math_templates_reject_unsupported_types(
     helper: str, arity: int, type_: str, value: str, explicit: bool
 ) -> None:
     """
-    title: Reject types outside the shared signed bound before LLVM lowering.
-    summary: >-
-      Cover every helper, rejected type, and inferred/explicit call form
-      without repeating the shared SignedInteger bound's Cartesian product.
+    title: Reject types outside the shared signed bound before LLVM
+      lowering.
+    summary: Cover every helper, rejected type, and inferred/explicit
+      call form without repeating the shared SignedInteger bound's
+      Cartesian product.
     parameters:
-      helper:
-        type: str
-      arity:
-        type: int
-      type_:
-        type: str
-      value:
-        type: str
-      explicit:
-        type: bool
+      helper: Helper.
+      arity: Number of explicit operands.
+      type_: Type expression to process.
+      value: Value to process.
+      explicit: Whether to use explicit.
     """
     specialization = f"<{type_}>" if explicit else ""
     arguments = ", ".join(["value"] * arity)
@@ -350,8 +339,7 @@ def test_math_templates_require_consistent_inference(call: str) -> None:
     """
     title: Do not silently promote mixed-width arguments during inference.
     parameters:
-      call:
-        type: str
+      call: Call being processed.
     """
     ArxIO.string_to_buffer(
         "```\ntitle: Mixed-width math inference\n```\n"

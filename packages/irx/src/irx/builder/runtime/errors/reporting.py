@@ -21,16 +21,11 @@ class RuntimeFailureReport:
     """
     title: Parsed fatal runtime diagnostic.
     attributes:
-      code:
-        type: str
-      source:
-        type: str
-      line:
-        type: int
-      col:
-        type: int
-      message:
-        type: str
+      code: Stable diagnostic identifier.
+      source: Source input to process.
+      line: Source line coordinate.
+      col: Source column coordinate.
+      message: Diagnostic message.
     """
 
     code: str
@@ -45,10 +40,8 @@ def _decode_runtime_failure_field(text: str) -> str:
     """
     title: Decode one escaped runtime diagnostic field.
     parameters:
-      text:
-        type: str
-    returns:
-      type: str
+      text: Text to process.
+    returns: Decoded one escaped runtime diagnostic field.
     """
     decoded: list[str] = []
     index = 0
@@ -84,10 +77,8 @@ def parse_runtime_failure_line(line: str) -> RuntimeFailureReport | None:
     """
     title: Parse one fatal runtime diagnostic line.
     parameters:
-      line:
-        type: str
-    returns:
-      type: RuntimeFailureReport | None
+      line: Source line coordinate.
+    returns: Parsed one fatal runtime diagnostic line.
     """
     stripped = line.strip()
     prefix = f"{RUNTIME_FAILURE_PREFIX}|"
@@ -119,10 +110,8 @@ def parse_runtime_failure_output(
     """
     title: Parse the first fatal runtime diagnostic from standard error.
     parameters:
-      stderr:
-        type: str
-    returns:
-      type: RuntimeFailureReport | None
+      stderr: Stderr.
+    returns: Parsed the first fatal runtime diagnostic from standard error.
     """
     for line in stderr.splitlines():
         parsed = parse_runtime_failure_line(line)

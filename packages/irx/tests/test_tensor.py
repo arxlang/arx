@@ -30,14 +30,13 @@ from .conftest import assert_ir_parses, build_and_run
 def instrument_tensor_lifetimes(builder: Builder) -> str:
     """
     title: Count live construction resources and fail a repeated native call.
-    summary: >-
-      Wrap both direct calls and the external owner's release callback. Failed
-      pointer outputs are poisoned so unchecked output use cannot pass quietly.
+    summary: Wrap both direct calls and the external owner's release callback.
+      Failed pointer outputs are poisoned so unchecked output use cannot
+      pass quietly.
     parameters:
-      builder:
-        type: Builder
-    returns:
-      type: str
+      builder: Builder generating the intermediate representation.
+    returns: 'Result of this operation: count live construction resources
+      and fail a repeated native call.'
     """
     module = builder.translator._llvm.module
     integer = ir.IntType(32)
@@ -145,12 +144,12 @@ entry:
 @pytest.fixture(scope="module")
 def tensor_lifetime_binary(tmp_path_factory: pytest.TempPathFactory) -> Path:
     """
-    title: Compile one instrumented tensor consumer for all failure stages.
+    title: Compile one instrumented tensor consumer for all failure
+      stages.
     parameters:
-      tmp_path_factory:
-        type: pytest.TempPathFactory
-    returns:
-      type: Path
+      tmp_path_factory: Factory for shared temporary test directories.
+    returns: 'Result of this operation: compile one instrumented
+      tensor consumer for all failure stages.'
     """
     if shutil.which("clang") is None:
         pytest.skip("native tensor ownership checks require clang")
@@ -262,12 +261,9 @@ def test_tensor_temporary_lifetimes(
     """
     title: Exactly-once cleanup survives consumption and construction failures.
     parameters:
-      tensor_lifetime_binary:
-        type: Path
-      stage:
-        type: int
-      divisor:
-        type: int
+      tensor_lifetime_binary: Tensor lifetime binary.
+      stage: Stage.
+      divisor: Divisor.
     """
     result = subprocess.run(
         [str(tensor_lifetime_binary)],
@@ -290,10 +286,9 @@ def _module_with_main(*nodes: astx.AST) -> astx.Module:
     title: Build an int32 main module.
     parameters:
       nodes:
-        type: astx.AST
         variadic: positional
-    returns:
-      type: astx.Module
+        description: Syntax nodes in source order.
+    returns: Constructed an int32 main module.
     """
     module = astx.Module()
     prototype = astx.FunctionPrototype(
@@ -320,16 +315,11 @@ def _int32_tensor(
     """
     title: Build one int32 Tensor literal node.
     parameters:
-      values:
-        type: list[int]
-      shape:
-        type: tuple[int, Ellipsis]
-      strides:
-        type: tuple[int, Ellipsis] | None
-      offset_bytes:
-        type: int
-    returns:
-      type: astx.TensorLiteral
+      values: Values to process, in order.
+      shape: Declared dimensions or result shape.
+      strides: Strides.
+      offset_bytes: Offset bytes.
+    returns: Constructed one int32 Tensor literal node.
     """
     return astx.TensorLiteral(
         [astx.LiteralInt32(value) for value in values],
@@ -432,8 +422,8 @@ def test_tensor_literal_lowers_through_tensor_runtime_and_owner_bridge() -> (
     None
 ):
     """
-    title: >-
-      Tensor literals should use the Arrow tensor runtime plus an owner bridge.
+    title: Tensor literals should use the Arrow tensor runtime plus an owner
+      bridge.
     """
     builder = Builder()
     literal = _int32_tensor([1, 2, 3, 4], shape=(2, 2))
@@ -582,10 +572,8 @@ def test_checked_tensor_bounds_release_temporaries(
     """
     title: A failed dynamic index releases fresh tensor backing owners.
     parameters:
-      tensor_lifetime_binary:
-        type: Path
-      index:
-        type: int
+      tensor_lifetime_binary: Tensor lifetime binary.
+      index: Index selecting the item.
     """
     result = subprocess.run(
         [str(tensor_lifetime_binary)],

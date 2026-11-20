@@ -16,10 +16,8 @@ def _expr_name(node: ast.expr) -> str:
     """
     title: Return a compact AST expression name.
     parameters:
-      node:
-        type: ast.expr
-    returns:
-      type: str
+      node: Syntax node to process.
+    returns: A compact AST expression name.
     """
     if isinstance(node, ast.Name):
         return node.id
@@ -36,10 +34,8 @@ def _decorator_names(
     """
     title: Return normalized decorator names for a function or class.
     parameters:
-      node:
-        type: ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef
-    returns:
-      type: set[str]
+      node: Syntax node to process.
+    returns: Normalized decorator names for a function or class.
     """
     return {_expr_name(decorator) for decorator in node.decorator_list}
 
@@ -50,10 +46,9 @@ def _is_typechecking_stub(
     """
     title: Detect typing-only stub functions kept out of runtime.
     parameters:
-      node:
-        type: ast.FunctionDef | ast.AsyncFunctionDef
-    returns:
-      type: bool
+      node: Syntax node to process.
+    returns: 'Result of this operation: detect typing-only stub functions
+      kept out of runtime.'
     """
     if len(node.body) != 1:
         return False
@@ -69,10 +64,8 @@ def _is_protocol_class(node: ast.ClassDef) -> bool:
     """
     title: Return whether a class is a typing Protocol.
     parameters:
-      node:
-        type: ast.ClassDef
-    returns:
-      type: bool
+      node: Syntax node to process.
+    returns: Whether a class is a typing Protocol.
     """
     base_names = {_expr_name(base) for base in node.bases}
     return "Protocol" in base_names
@@ -82,10 +75,8 @@ def _rebound_typechecked_names(tree: ast.Module) -> set[str]:
     """
     title: Return top-level function names wrapped by assignment.
     parameters:
-      tree:
-        type: ast.Module
-    returns:
-      type: set[str]
+      tree: Tree.
+    returns: Top-level function names wrapped by assignment.
     """
     rebound: set[str] = set()
 
@@ -142,9 +133,9 @@ def test_project_functions_are_typechecked() -> None:
 def test_concrete_project_classes_are_typechecked() -> None:
     """
     title: Assert concrete project classes use the typechecked decorator.
-    summary: >-
-      Concrete classes are required to use the class decorator so their methods
-      are covered at runtime without repeating typechecked on every method.
+    summary: Concrete classes are required to use the class decorator so
+      their methods are covered at runtime without repeating typechecked
+      on every method.
     """
     missing: list[str] = []
 

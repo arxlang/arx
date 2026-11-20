@@ -85,10 +85,8 @@ def compile_program(source: str, path: Path) -> None:
     """
     title: Exercise parsing, module semantics, LLVM verification and linking.
     parameters:
-      source:
-        type: str
-      path:
-        type: Path
+      source: Source input to process.
+      path: Path to the input or output resource.
     """
     ArxIO.string_to_buffer(
         "```\ntitle: Arrow integration test\n```\n" + source
@@ -113,12 +111,10 @@ def roundtrip(
     """
     title: Compile one binary for each standard Arrow IPC format.
     parameters:
-      request:
-        type: pytest.FixtureRequest
-      tmp_path_factory:
-        type: pytest.TempPathFactory
-    returns:
-      type: tuple[str, Path]
+      request: Fixture request providing the current test context.
+      tmp_path_factory: Factory for shared temporary test directories.
+    returns: 'Result of this operation: compile one binary for each standard
+      Arrow IPC format.'
     """
     format_name = str(request.param)
     path = tmp_path_factory.mktemp(f"arrow-{format_name}") / "roundtrip"
@@ -130,16 +126,14 @@ def run_roundtrip(
     roundtrip: tuple[str, Path], tmp_path: Path, batches: list[pa.RecordBatch]
 ) -> subprocess.CompletedProcess[str]:
     """
-    title: Write PyArrow input and run a standalone Arx consumer and producer.
+    title: Write PyArrow input and run a standalone Arx consumer
+      and producer.
     parameters:
-      roundtrip:
-        type: tuple[str, Path]
-      tmp_path:
-        type: Path
-      batches:
-        type: list[pa.RecordBatch]
-    returns:
-      type: subprocess.CompletedProcess[str]
+      roundtrip: Roundtrip.
+      tmp_path: Temporary directory for this test.
+      batches: Batches.
+    returns: 'Result of this operation: write PyArrow input and run
+      a standalone Arx consumer and producer.'
     """
     format_name, executable = roundtrip
     new_writer = (
@@ -166,10 +160,8 @@ def test_public_roundtrip_nullable_metadata_and_empty_batches(
     """
     title: Preserve schema metadata, timezone, nulls and batch boundaries.
     parameters:
-      roundtrip:
-        type: tuple[str, Path]
-      tmp_path:
-        type: Path
+      roundtrip: Roundtrip.
+      tmp_path: Temporary directory for this test.
     """
     schema = pa.schema(
         [
@@ -211,10 +203,8 @@ def test_public_zero_columns_with_rows(
     """
     title: Zero-column schemas do not erase nonzero Arrow row counts.
     parameters:
-      roundtrip:
-        type: tuple[str, Path]
-      tmp_path:
-        type: Path
+      roundtrip: Roundtrip.
+      tmp_path: Temporary directory for this test.
     """
     batch = pa.RecordBatch.from_struct_array(
         pa.array([{}, {}], type=pa.struct([]))
@@ -231,12 +221,9 @@ def test_public_input_errors(
     """
     title: Reject wrong types and text that Arx str cannot represent.
     parameters:
-      roundtrip:
-        type: tuple[str, Path]
-      tmp_path:
-        type: Path
-      failure:
-        type: str
+      roundtrip: Roundtrip.
+      tmp_path: Temporary directory for this test.
+      failure: Failure.
     """
     if failure == "type":
         arrays = [pa.array([42], type=pa.int32())]
@@ -271,12 +258,9 @@ def test_public_corrupt_input(
     """
     title: Corrupt and empty files produce structured runtime diagnostics.
     parameters:
-      roundtrip:
-        type: tuple[str, Path]
-      tmp_path:
-        type: Path
-      payload:
-        type: bytes
+      roundtrip: Roundtrip.
+      tmp_path: Temporary directory for this test.
+      payload: Payload.
     """
     (tmp_path / "input.arrow").write_bytes(payload)
     result = subprocess.run(
@@ -296,10 +280,9 @@ def demonstrations(tmp_path_factory: pytest.TempPathFactory) -> Path:
     """
     title: Build and execute every checked-in Arx/PyArrow demonstration.
     parameters:
-      tmp_path_factory:
-        type: pytest.TempPathFactory
-    returns:
-      type: Path
+      tmp_path_factory: Factory for shared temporary test directories.
+    returns: Constructed and execute every checked-in Arx/PyArrow
+      demonstration.
     """
     directory = tmp_path_factory.mktemp("arrow-examples")
     for scenario in ("files", "c"):
@@ -325,8 +308,7 @@ def test_executable_demonstrations(demonstrations: Path) -> None:
     """
     title: Real compiled programs demonstrate IPC, C sharing and TCP.
     parameters:
-      demonstrations:
-        type: Path
+      demonstrations: Demonstrations.
     """
     assert (demonstrations / "component.so").is_file()
 
@@ -335,10 +317,8 @@ def test_schema_mismatch_example(demonstrations: Path, tmp_path: Path) -> None:
     """
     title: The independently developed Arx consumer rejects a wrong schema.
     parameters:
-      demonstrations:
-        type: Path
-      tmp_path:
-        type: Path
+      demonstrations: Demonstrations.
+      tmp_path: Temporary directory for this test.
     """
     wrong = pa.record_batch([pa.array([42, 7])], names=["wrong"])
     with pa.ipc.new_file(
@@ -371,10 +351,8 @@ def test_tcp_demonstration(demonstrations: Path, tcp_available: None) -> None:
     """
     title: Run compiled Arx multi-batch TCP exchange in both directions.
     parameters:
-      demonstrations:
-        type: Path
-      tcp_available:
-        type: None
+      demonstrations: Demonstrations.
+      tcp_available: Tcp available.
     """
     result = subprocess.run(
         [
@@ -401,12 +379,9 @@ def test_compiled_tcp_failure(
     """
     title: Connection refusal and stream interruption are runtime failures.
     parameters:
-      demonstrations:
-        type: Path
-      interruption:
-        type: bool
-      tcp_available:
-        type: None
+      demonstrations: Demonstrations.
+      interruption: Whether to use interruption.
+      tcp_available: Tcp available.
     """
     with socket.socket() as server:
         server.bind(("127.0.0.1", 0))
@@ -472,8 +447,7 @@ def test_tcp_sources_compile_without_network(tmp_path: Path) -> None:
     """
     title: Always verify TCP producer and consumer compile/link, even offline.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     examples = ROOT / "examples/arrow"
     command = (

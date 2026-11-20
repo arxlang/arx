@@ -24,10 +24,8 @@ def _semantic(node: astx.AST) -> SemanticInfo:
     """
     title: Return semantic sidecar information for a node.
     parameters:
-      node:
-        type: astx.AST
-    returns:
-      type: SemanticInfo
+      node: Syntax node to process.
+    returns: Semantic sidecar information for a node.
     """
     return cast(SemanticInfo, getattr(node, "semantic"))
 
@@ -36,10 +34,8 @@ def _class_type(name: str) -> astx.ClassType:
     """
     title: Build one named class type reference.
     parameters:
-      name:
-        type: str
-    returns:
-      type: astx.ClassType
+      name: Name identifying the declaration or operation.
+    returns: Constructed one named class type reference.
     """
     return astx.ClassType(name)
 
@@ -54,16 +50,12 @@ def _attribute(
     """
     title: Build one class attribute declaration.
     parameters:
-      name:
-        type: str
-      type_:
-        type: astx.DataType
-      value:
-        type: astx.AST | None
-      is_static:
-        type: bool
-    returns:
-      type: astx.VariableDeclaration
+      name: Name identifying the declaration or operation.
+      type_: Type expression to process.
+      value: Value to process.
+      is_static: Whether the member belongs to the class rather than
+        an instance.
+    returns: Constructed one class attribute declaration.
     """
     declaration = astx.VariableDeclaration(
         name=name,
@@ -85,15 +77,12 @@ def _method(
     """
     title: Build one instance method from body nodes.
     parameters:
-      name:
-        type: str
-      return_type:
-        type: astx.DataType
+      name: Name identifying the declaration or operation.
+      return_type: Declared result type.
       body_nodes:
-        type: astx.AST
         variadic: positional
-    returns:
-      type: astx.FunctionDef
+        description: Body nodes.
+    returns: Constructed one instance method from body nodes.
     """
     body = astx.Block()
     for node in body_nodes:
@@ -113,10 +102,9 @@ def _main(*body_nodes: astx.AST) -> astx.FunctionDef:
     title: Build an Int32 main function.
     parameters:
       body_nodes:
-        type: astx.AST
         variadic: positional
-    returns:
-      type: astx.FunctionDef
+        description: Body nodes.
+    returns: Constructed an Int32 main function.
     """
     body = astx.Block()
     for node in body_nodes:
@@ -136,10 +124,9 @@ def _module(*nodes: astx.AST) -> astx.Module:
     title: Build one named module.
     parameters:
       nodes:
-        type: astx.AST
         variadic: positional
-    returns:
-      type: astx.Module
+        description: Syntax nodes in source order.
+    returns: Constructed one named module.
     """
     module = astx.Module(name="main")
     for node in nodes:
@@ -152,10 +139,9 @@ def _manager_class(*methods: astx.FunctionDef) -> astx.ClassDefStmt:
     title: Build a context-manager class declaration.
     parameters:
       methods:
-        type: astx.FunctionDef
         variadic: positional
-    returns:
-      type: astx.ClassDefStmt
+        description: Methods.
+    returns: Constructed a context-manager class declaration.
     """
     return astx.ClassDefStmt(
         name="Manager",
@@ -174,8 +160,7 @@ def _manager_class(*methods: astx.FunctionDef) -> astx.ClassDefStmt:
 def _enter_method() -> astx.FunctionDef:
     """
     title: Build a context __enter__ method.
-    returns:
-      type: astx.FunctionDef
+    returns: Constructed a context __enter__ method.
     """
     return _method(
         "__enter__",
@@ -192,8 +177,7 @@ def _enter_method() -> astx.FunctionDef:
 def _exit_method() -> astx.FunctionDef:
     """
     title: Build a completion-aware context __exit__ method.
-    returns:
-      type: astx.FunctionDef
+    returns: Constructed a completion-aware context __exit__ method.
     """
     method = _method(
         "__exit__",
@@ -211,8 +195,7 @@ def _exit_method() -> astx.FunctionDef:
 def _exit_with_parameter_method() -> astx.FunctionDef:
     """
     title: Build an invalid context __exit__ method.
-    returns:
-      type: astx.FunctionDef
+    returns: Constructed an invalid context __exit__ method.
     """
     return astx.FunctionDef(
         prototype=astx.FunctionPrototype(
@@ -270,8 +253,7 @@ def test_with_statement_calls_exit_on_normal_fallthrough(
     """
     title: Normal with fallthrough should run __exit__ before following code.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     body = astx.Block()
@@ -299,8 +281,7 @@ def test_with_statement_binds_enter_result_to_target(
     """
     title: With targets should expose the __enter__ result inside the body.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     body = astx.Block()
@@ -348,8 +329,7 @@ def test_break_inside_with_calls_exit(
     """
     title: Break inside a with body should run __exit__.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     with_body = astx.Block()
@@ -375,8 +355,7 @@ def test_continue_inside_with_calls_exit(
     """
     title: Continue inside a with body should run __exit__.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     with_body = astx.Block()
@@ -416,8 +395,7 @@ def test_break_inside_loop_keeps_outer_with_active(
     """
     title: Break should only clean up with scopes nested inside its loop.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     loop_body = astx.Block()
@@ -443,8 +421,7 @@ def test_return_inside_with_emits_exit_before_ret(
     """
     title: Return inside a with body should emit __exit__ before ret.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     with_body = astx.Block()
@@ -541,8 +518,7 @@ def test_context_exit_rejects_old_protocol_and_suppression(
     """
     title: Neither zero-argument exits nor suppression results are accepted.
     parameters:
-      takes_success:
-        type: bool
+      takes_success: Whether to use takes success.
     """
     exit_method = (
         _method(
@@ -570,8 +546,7 @@ def test_void_enter_requires_no_target(has_target: bool) -> None:
     """
     title: Statement-only enter hooks are valid only without a target.
     parameters:
-      has_target:
-        type: bool
+      has_target: Whether has target.
     """
     with_stmt = astx.WithStmt(
         astx.ClassConstruct("Manager"),

@@ -1,8 +1,7 @@
 """
 title: Control-flow parser mixin.
-summary: >-
-  Parse blocks, statements, and control-flow constructs that operate on parsed
-  expressions.
+summary: Parse blocks, statements, and control-flow constructs that operate
+  on parsed expressions.
 """
 
 from __future__ import annotations
@@ -43,8 +42,7 @@ class ControlFlowParserMixin(ParserMixinBase):
     def _looks_like_removed_for_range_header(self) -> bool:
         """
         title: Return whether the current token begins the removed colon range.
-        returns:
-          type: bool
+        returns: Whether the current token begins the removed colon range.
         """
         if not self._is_operator("("):
             return False
@@ -79,18 +77,12 @@ class ControlFlowParserMixin(ParserMixinBase):
         """
         title: Parse a block of nodes.
         parameters:
-          allow_docstring:
-            type: bool
-          declared_names:
-            type: tuple[str, Ellipsis]
-          declared_lists:
-            type: tuple[str, Ellipsis]
-          declared_tensors:
-            type: dict[str, TensorBinding | None] | None
-          declared_dataframes:
-            type: dict[str, DataFrameBinding | None] | None
-        returns:
-          type: astx.Block
+          allow_docstring: Whether to use allow docstring.
+          declared_names: Declared names.
+          declared_lists: Declared lists.
+          declared_tensors: Declared tensors.
+          declared_dataframes: Declared dataframes.
+        returns: Parsed a block of nodes.
         """
         start_token = self.tokens.cur_tok
         if start_token.kind != TokenKind.indent:
@@ -177,10 +169,9 @@ class ControlFlowParserMixin(ParserMixinBase):
     def parse_if_clause(self) -> astx.IfStmt:
         """
         title: Parse one if or elif condition and its scoped body.
-        summary: >-
-          Boolean validity belongs to IRx; statement conditions fail here.
-        returns:
-          type: astx.IfStmt
+        summary: Boolean validity belongs to IRx; statement conditions fail
+          here.
+        returns: Parsed one if or elif condition and its scoped body.
         """
         keyword = self.tokens.cur_tok
         self.tokens.get_next_token()
@@ -209,13 +200,14 @@ class ControlFlowParserMixin(ParserMixinBase):
 
     def parse_if_stmt(self) -> astx.IfStmt:
         """
-        title: Parse an if/elif chain and optional final else as nested IfStmt.
-        summary: >-
-          Attach only same-indentation clauses. Build the chain iteratively;
-          each elif occupies the preceding clause's else block and retains its
-          keyword location. IRx evaluates conditions until one matches.
-        returns:
-          type: astx.IfStmt
+        title: Parse an if/elif chain and optional final else as
+          nested IfStmt.
+        summary: Attach only same-indentation clauses. Build the
+          chain iteratively; each elif occupies the preceding clause's
+          else block and retains its keyword location. IRx evaluates
+          conditions until one matches.
+        returns: Parsed an if/elif chain and optional final else
+          as nested IfStmt.
         """
         indentation = self.tokens.cur_tok.location.col - 1
         root = self.parse_if_clause()
@@ -248,12 +240,12 @@ class ControlFlowParserMixin(ParserMixinBase):
 
     def parse_with_stmt(self) -> astx.WithStmt:
         """
-        title: Parse one manager expression and an optional entered-value name.
-        summary: >-
-          Targets are scoped to the body. IRx resolves protocol signatures, the
-          entered type, ownership, and all-exit finalization.
-        returns:
-          type: astx.WithStmt
+        title: Parse one manager expression and an optional entered-value
+          name.
+        summary: Targets are scoped to the body. IRx resolves protocol
+          signatures, the entered type, ownership, and all-exit finalization.
+        returns: Parsed one manager expression and an optional entered-value
+          name.
         """
         location = self.tokens.cur_tok.location
         self.tokens.get_next_token()
@@ -284,12 +276,13 @@ class ControlFlowParserMixin(ParserMixinBase):
 
     def parse_loop_transfer(self) -> astx.BreakStmt | astx.ContinueStmt:
         """
-        title: Parse break or continue without accepting a trailing operand.
-        summary: >-
-          Preserve the keyword location and statement boundary. IRx validates
-          loop nesting and resolves cleanup; these are never expressions.
-        returns:
-          type: astx.BreakStmt | astx.ContinueStmt
+        title: Parse break or continue without accepting a trailing
+          operand.
+        summary: Preserve the keyword location and statement boundary.
+          IRx validates loop nesting and resolves cleanup; these
+          are never expressions.
+        returns: Parsed break or continue without accepting a trailing
+          operand.
         """
         keyword = self.tokens.cur_tok
         if keyword.kind not in {TokenKind.kw_break, TokenKind.kw_continue}:
@@ -315,8 +308,7 @@ class ControlFlowParserMixin(ParserMixinBase):
     def parse_while_stmt(self) -> astx.WhileStmt:
         """
         title: Parse a while statement.
-        returns:
-          type: astx.WhileStmt
+        returns: Parsed a while statement.
         """
         while_loc = self.tokens.cur_tok.location
         self.tokens.get_next_token()  # eat while
@@ -330,8 +322,7 @@ class ControlFlowParserMixin(ParserMixinBase):
     def parse_for_stmt(self) -> astx.AST:
         """
         title: Parse a for statement.
-        returns:
-          type: astx.AST
+        returns: Parsed a for statement.
         """
         for_loc = self.tokens.cur_tok.location
         self.tokens.get_next_token()  # eat for
@@ -375,16 +366,11 @@ class ControlFlowParserMixin(ParserMixinBase):
         """
         title: Parse one generic for-in loop over a list-valued expression.
         parameters:
-          for_loc:
-            type: SourceLocation
-          loop_var_name:
-            type: str
-          loop_var_loc:
-            type: SourceLocation
-          iterable:
-            type: astx.Expr
-        returns:
-          type: astx.ForInLoopStmt
+          for_loc: For loc.
+          loop_var_name: Name of loop var.
+          loop_var_loc: Loop var loc.
+          iterable: Iterable.
+        returns: Parsed one generic for-in loop over a list-valued expression.
         """
         self._consume_operator(":")
 
@@ -403,10 +389,8 @@ class ControlFlowParserMixin(ParserMixinBase):
         """
         title: Parse count-style for loop.
         parameters:
-          for_loc:
-            type: SourceLocation
-        returns:
-          type: astx.ForCountLoopStmt
+          for_loc: For loc.
+        returns: Parsed count-style for loop.
         """
         initializer = self.parse_inline_var_declaration()
         self._consume_operator(";")
@@ -456,9 +440,10 @@ class ControlFlowParserMixin(ParserMixinBase):
 
     def parse_inline_var_declaration(self) -> astx.InlineVariableDeclaration:
         """
-        title: Parse inline variable declaration used by count-style for loops.
-        returns:
-          type: astx.InlineVariableDeclaration
+        title: Parse inline variable declaration used by count-style for
+          loops.
+        returns: Parsed inline variable declaration used by count-style for
+          loops.
         """
         name_token, modifiers = self.parse_declaration_head()
         self._validate_modifier_target(
@@ -493,12 +478,9 @@ class ControlFlowParserMixin(ParserMixinBase):
         """
         title: Parse name-first variables with explicit or inferred types.
         parameters:
-          name_token:
-            type: Token
-          modifiers:
-            type: ParsedAnnotation | None
-        returns:
-          type: astx.VariableDeclaration
+          name_token: Name token.
+          modifiers: Modifiers.
+        returns: Parsed name-first variables with explicit or inferred types.
         """
         var_loc = name_token.location
         name = cast(str, name_token.value)
@@ -564,8 +546,7 @@ class ControlFlowParserMixin(ParserMixinBase):
     def parse_assert_stmt(self) -> astx.AssertStmt:
         """
         title: Parse one fatal assertion statement.
-        returns:
-          type: astx.AssertStmt
+        returns: Parsed one fatal assertion statement.
         """
         assert_loc = self.tokens.cur_tok.location
         self.tokens.get_next_token()  # eat assert
@@ -596,8 +577,7 @@ class ControlFlowParserMixin(ParserMixinBase):
     def parse_return_function(self) -> astx.FunctionReturn:
         """
         title: Parse a return statement.
-        returns:
-          type: astx.FunctionReturn
+        returns: Parsed a return statement.
         """
         return_loc = self.tokens.cur_tok.location
         self.tokens.get_next_token()  # eat return

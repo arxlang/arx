@@ -51,12 +51,9 @@ def file_error(
     """
     title: Report an actionable file contract violation.
     parameters:
-      analyzer:
-        type: SemanticAnalyzerCore
-      node:
-        type: astx.AST
-      message:
-        type: str
+      analyzer: Semantic analyzer resolving the operation.
+      node: Syntax node to process.
+      message: Diagnostic or output message.
     """
     analyzer.context.diagnostics.add(
         message,
@@ -69,12 +66,12 @@ def file_error(
 @typechecked
 def literal_nul(node: astx.AST) -> bool:
     """
-    title: Detect literal NUL in a string expression without evaluating calls.
+    title: Detect literal NUL in a string expression without evaluating
+      calls.
     parameters:
-      node:
-        type: astx.AST
-    returns:
-      type: bool
+      node: Syntax node to process.
+    returns: 'Result of this operation: detect literal NUL in a string
+      expression without evaluating calls.'
     """
     if isinstance(node, astx.LiteralString):
         return "\0" in node.value
@@ -91,12 +88,10 @@ def supported_option(name: str, value: astx.DataType) -> bool:
     """
     title: Recognize the supported constant optional arguments of open.
     parameters:
-      name:
-        type: str
-      value:
-        type: astx.DataType
-    returns:
-      type: bool
+      name: Name identifying the declaration or operation.
+      value: Value to process.
+    returns: 'Result of this operation: recognize the supported constant
+      optional arguments of open.'
     """
     if name == "buffering":
         integers = (
@@ -131,16 +126,14 @@ def bind_file_arguments(
     entry: str,
 ) -> ResolvedFileOpen | None:
     """
-    title: Bind the restricted eight-argument open interface in source order.
+    title: Bind the restricted eight-argument open interface in source
+      order.
     parameters:
-      analyzer:
-        type: SemanticAnalyzerCore
-      node:
-        type: astx.FunctionCall | astx.ClassConstruct | astx.MethodCall
-      entry:
-        type: str
-    returns:
-      type: ResolvedFileOpen | None
+      analyzer: Semantic analyzer resolving the operation.
+      node: Syntax node to process.
+      entry: Entry.
+    returns: 'Result of this operation: bind the restricted eight-argument
+      open interface in source order.'
     """
     supplied = list(node.args)
     values: dict[str, astx.DataType] = {}
@@ -258,10 +251,8 @@ def resolve_file_open(
     """
     title: Resolve the open adapter, preserving explicit low-level IRx use.
     parameters:
-      analyzer:
-        type: SemanticAnalyzerCore
-      node:
-        type: astx.FunctionCall
+      analyzer: Semantic analyzer resolving the operation.
+      node: Syntax node to process.
     """
     from irx.analysis.builtin_file import (  # noqa: PLC0415
         registered_file_class,
@@ -297,14 +288,11 @@ def validate_file_method_arguments(
     """
     title: Preserve native method validation at public class call sites.
     parameters:
-      analyzer:
-        type: SemanticAnalyzerCore
-      node:
-        type: astx.MethodCall
-      public:
-        type: bool
-    returns:
-      type: bool
+      analyzer: Semantic analyzer resolving the operation.
+      node: Syntax node to process.
+      public: Whether to use public.
+    returns: 'Result of this operation: preserve native method validation
+      at public class call sites.'
     """
     arity = {
         "require_open": 0,
@@ -378,10 +366,8 @@ def resolve_file_method(
     """
     title: Resolve a native file method after visiting receiver and arguments.
     parameters:
-      analyzer:
-        type: SemanticAnalyzerCore
-      node:
-        type: astx.MethodCall
+      analyzer: Semantic analyzer resolving the operation.
+      node: Syntax node to process.
     """
     info = analyzer._semantic(node)
     info.resolved_call = None
@@ -427,12 +413,9 @@ def resolve_file_local(
     """
     title: Transfer a fresh open result into one local owner.
     parameters:
-      analyzer:
-        type: SemanticAnalyzerCore
-      node:
-        type: astx.VariableDeclaration | astx.InlineVariableDeclaration
-      symbol:
-        type: SemanticSymbol
+      analyzer: Semantic analyzer resolving the operation.
+      node: Syntax node to process.
+      symbol: Resolved symbol for the operation.
     """
     value = node.value
     if (

@@ -22,10 +22,9 @@ def block_of(*nodes: astx.AST) -> astx.Block:
     title: Build one block from positional AST nodes.
     parameters:
       nodes:
-        type: astx.AST
         variadic: positional
-    returns:
-      type: astx.Block
+        description: Syntax nodes in source order.
+    returns: Constructed one block from positional AST nodes.
     """
     block = astx.Block()
     for node in nodes:
@@ -37,8 +36,7 @@ def setup_function_context(visitor: LLVMVisitor) -> None:
     """
     title: Setup LLVM function context for IR generation.
     parameters:
-      visitor:
-        type: LLVMVisitor
+      visitor: Visitor performing the traversal or lowering.
     """
     provider = analyze(astx.Module(name="loop_context"))
     assert isinstance(provider, astx.Module)
@@ -56,8 +54,7 @@ def test_break_exits_to_loop_exit_block(builder_class: type[Builder]) -> None:
     """
     title: Break must branch to the canonical loop exit block.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     visitor = cast(LLVMVisitor, builder.translator)
@@ -83,8 +80,7 @@ def test_break_skips_remaining_statements(
     """
     title: Break must skip all statements after it in the loop body.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     visitor = cast(LLVMVisitor, builder.translator)
@@ -111,8 +107,7 @@ def test_nested_loop_break_affects_only_inner(
     """
     title: Break should only exit the innermost active loop.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     visitor = cast(LLVMVisitor, builder.translator)
@@ -141,8 +136,7 @@ def test_continue_branches_to_condition(builder_class: type[Builder]) -> None:
     """
     title: Continue must jump back to the canonical while condition block.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     visitor = cast(LLVMVisitor, builder.translator)
@@ -168,8 +162,7 @@ def test_continue_skips_remaining_statements(
     """
     title: Continue must skip statements after it in the loop body.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     visitor = cast(LLVMVisitor, builder.translator)
@@ -194,11 +187,10 @@ def test_loop_lowering_does_not_consume_preexisting_result_stack_values(
     builder_class: type[Builder],
 ) -> None:
     """
-    title: >-
-      Loop lowering should not accidentally pop unrelated result-stack values.
+    title: Loop lowering should not accidentally pop unrelated result-stack
+      values.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     visitor = cast(LLVMVisitor, builder.translator)
@@ -230,8 +222,7 @@ def test_break_outside_loop_raises(builder_class: type[Builder]) -> None:
     """
     title: Break outside a loop must raise one structured lowering diagnostic.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     visitor = cast(LLVMVisitor, builder.translator)
@@ -248,11 +239,10 @@ def test_break_outside_loop_raises(builder_class: type[Builder]) -> None:
 @pytest.mark.parametrize("builder_class", [LLVMBuilder])
 def test_continue_outside_loop_raises(builder_class: type[Builder]) -> None:
     """
-    title: >-
-      Continue outside a loop must raise one structured lowering diagnostic.
+    title: Continue outside a loop must raise one structured lowering
+      diagnostic.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     visitor = cast(LLVMVisitor, builder.translator)

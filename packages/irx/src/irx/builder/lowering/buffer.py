@@ -2,9 +2,8 @@
 
 """
 title: Low-level buffer/view lowering for llvmliteir.
-summary: >-
-  Lower the IRx buffer/view substrate as plain structs and explicit runtime
-  helper calls without adding a scientific array API.
+summary: Lower the IRx buffer/view substrate as plain structs and explicit
+  runtime helper calls without adding a scientific array API.
 """
 
 from __future__ import annotations
@@ -49,12 +48,9 @@ class BufferVisitorMixin(VisitorMixinBase):
         """
         title: Lower one static opaque handle.
         parameters:
-          handle:
-            type: BufferHandle
-          target_type:
-            type: ir.Type
-        returns:
-          type: ir.Value
+          handle: Opaque native handle.
+          target_type: Destination type for the conversion.
+        returns: Lowered one static opaque handle.
         """
         if handle.is_null:
             return ir.Constant(target_type, None)
@@ -72,14 +68,10 @@ class BufferVisitorMixin(VisitorMixinBase):
         """
         title: Lower one tuple of i64 values to a stable global pointer.
         parameters:
-          values:
-            type: tuple[int, Ellipsis]
-          purpose:
-            type: str
-          symbol_namespace:
-            type: str
-        returns:
-          type: ir.Value
+          values: Values to process, in order.
+          purpose: Purpose.
+          symbol_namespace: Symbol namespace.
+        returns: Lowered one tuple of i64 values to a stable global pointer.
         """
         ptr_type = self._llvm.INT64_TYPE.as_pointer()
         if not values:
@@ -117,10 +109,8 @@ class BufferVisitorMixin(VisitorMixinBase):
         """
         title: Lower static buffer view metadata to a struct value.
         parameters:
-          metadata:
-            type: BufferViewMetadata
-        returns:
-          type: ir.Value
+          metadata: Metadata associated with the operation.
+        returns: Lowered static buffer view metadata to a struct value.
         """
         fields: list[ir.Value] = [
             self._buffer_handle_value(
@@ -161,12 +151,9 @@ class BufferVisitorMixin(VisitorMixinBase):
         """
         title: Lower a buffer view expression to a temporary call pointer.
         parameters:
-          view:
-            type: astx.AST
-          name:
-            type: str
-        returns:
-          type: ir.Value
+          view: View.
+          name: Name identifying the declaration or operation.
+        returns: Lowered a buffer view expression to a temporary call pointer.
         """
         self.visit_child(view)
         value = safe_pop(self.result_stack)
@@ -191,14 +178,10 @@ class BufferVisitorMixin(VisitorMixinBase):
         """
         title: Extract one canonical buffer view descriptor field.
         parameters:
-          view:
-            type: ir.Value
-          field_name:
-            type: str
-          name:
-            type: str
-        returns:
-          type: ir.Value
+          view: View.
+          field_name: Name of field.
+          name: Name identifying the declaration or operation.
+        returns: Extracted one canonical buffer view descriptor field.
         """
         return self._llvm.ir_builder.extract_value(
             view,
@@ -210,10 +193,8 @@ class BufferVisitorMixin(VisitorMixinBase):
         """
         title: Extract a buffer view data pointer.
         parameters:
-          view:
-            type: ir.Value
-        returns:
-          type: ir.Value
+          view: View.
+        returns: Extracted a buffer view data pointer.
         """
         return self._extract_buffer_view_field(
             view,
@@ -225,10 +206,8 @@ class BufferVisitorMixin(VisitorMixinBase):
         """
         title: Extract a buffer view shape pointer.
         parameters:
-          view:
-            type: ir.Value
-        returns:
-          type: ir.Value
+          view: View.
+        returns: Extracted a buffer view shape pointer.
         """
         return self._extract_buffer_view_field(
             view,
@@ -240,10 +219,8 @@ class BufferVisitorMixin(VisitorMixinBase):
         """
         title: Extract a buffer view strides pointer.
         parameters:
-          view:
-            type: ir.Value
-        returns:
-          type: ir.Value
+          view: View.
+        returns: Extracted a buffer view strides pointer.
         """
         return self._extract_buffer_view_field(
             view,
@@ -255,10 +232,8 @@ class BufferVisitorMixin(VisitorMixinBase):
         """
         title: Extract a buffer view byte offset.
         parameters:
-          view:
-            type: ir.Value
-        returns:
-          type: ir.Value
+          view: View.
+        returns: Extracted a buffer view byte offset.
         """
         return self._extract_buffer_view_field(
             view,
@@ -273,10 +248,8 @@ class BufferVisitorMixin(VisitorMixinBase):
         """
         title: Return the semantic element type for indexed access lowering.
         parameters:
-          node:
-            type: astx.AST
-        returns:
-          type: astx.DataType
+          node: Syntax node to process.
+        returns: The semantic element type for indexed access lowering.
         """
         semantic = getattr(node, "semantic", None)
         extras = getattr(semantic, "extras", {})
@@ -298,12 +271,9 @@ class BufferVisitorMixin(VisitorMixinBase):
         """
         title: Normalize one lowered index to descriptor stride arithmetic.
         parameters:
-          value:
-            type: ir.Value
-          index_node:
-            type: astx.AST
-        returns:
-          type: ir.Value
+          value: Value to process.
+          index_node: Index node.
+        returns: Normalized one lowered index to descriptor stride arithmetic.
         """
         if not is_int_type(value.type):
             raise Exception(
@@ -344,20 +314,13 @@ class BufferVisitorMixin(VisitorMixinBase):
         """
         title: Lower one buffer view indexed access to a byte offset.
         parameters:
-          view:
-            type: ir.Value
-          indices:
-            type: list[ir.Value]
-          index_nodes:
-            type: list[astx.AST]
-          node:
-            type: astx.AST
-          element_size:
-            type: int
-          bounds_policy:
-            type: BufferIndexBoundsPolicy
-        returns:
-          type: ir.Value
+          view: View.
+          indices: Indices.
+          index_nodes: Index nodes.
+          node: Syntax node to process.
+          element_size: Size of element.
+          bounds_policy: Bounds policy.
+        returns: Lowered one buffer view indexed access to a byte offset.
         """
         if bounds_policy is BufferIndexBoundsPolicy.UNCHECKED:
             raise_lowering_error(
@@ -421,20 +384,14 @@ class BufferVisitorMixin(VisitorMixinBase):
         """
         title: Lower a buffer view indexed access to a typed element pointer.
         parameters:
-          view:
-            type: ir.Value
-          indices:
-            type: list[ir.Value]
-          element_type:
-            type: astx.DataType
-          index_nodes:
-            type: list[astx.AST]
-          node:
-            type: astx.AST
-          bounds_policy:
-            type: BufferIndexBoundsPolicy
-        returns:
-          type: ir.Value
+          view: View.
+          indices: Indices.
+          element_type: Type of each element.
+          index_nodes: Index nodes.
+          node: Syntax node to process.
+          bounds_policy: Bounds policy.
+        returns: Lowered a buffer view indexed access to a typed element
+          pointer.
         """
         element_llvm_type = self._llvm_type_for_ast_type(element_type)
         size = tensor_element_size_bytes(element_type)
@@ -475,10 +432,8 @@ class BufferVisitorMixin(VisitorMixinBase):
         """
         title: Lower buffer view index expressions.
         parameters:
-          indices:
-            type: list[astx.AST]
-        returns:
-          type: list[ir.Value]
+          indices: Indices.
+        returns: Lowered buffer view index expressions.
         """
         lowered_indices: list[ir.Value] = []
         for index in indices:
@@ -496,8 +451,7 @@ class BufferVisitorMixin(VisitorMixinBase):
         """
         title: Visit BufferViewDescriptor nodes.
         parameters:
-          node:
-            type: astx.BufferViewDescriptor
+          node: Syntax node to process.
         """
         metadata = getattr(
             getattr(node, "semantic", None),
@@ -513,8 +467,7 @@ class BufferVisitorMixin(VisitorMixinBase):
         """
         title: Visit BufferViewIndex nodes.
         parameters:
-          node:
-            type: astx.BufferViewIndex
+          node: Syntax node to process.
         """
         self.visit_child(node.base)
         view = safe_pop(self.result_stack)
@@ -542,8 +495,7 @@ class BufferVisitorMixin(VisitorMixinBase):
         """
         title: Visit BufferViewStore nodes.
         parameters:
-          node:
-            type: astx.BufferViewStore
+          node: Syntax node to process.
         """
         self.visit_child(node.base)
         view = safe_pop(self.result_stack)
@@ -578,8 +530,7 @@ class BufferVisitorMixin(VisitorMixinBase):
         """
         title: Visit BufferViewWrite nodes.
         parameters:
-          node:
-            type: astx.BufferViewWrite
+          node: Syntax node to process.
         """
         self.visit_child(node.view)
         view = safe_pop(self.result_stack)
@@ -616,8 +567,7 @@ class BufferVisitorMixin(VisitorMixinBase):
         """
         title: Visit BufferViewRetain nodes.
         parameters:
-          node:
-            type: astx.BufferViewRetain
+          node: Syntax node to process.
         """
         retain = self.require_runtime_symbol(
             "buffer",
@@ -639,8 +589,7 @@ class BufferVisitorMixin(VisitorMixinBase):
         """
         title: Visit BufferViewRelease nodes.
         parameters:
-          node:
-            type: astx.BufferViewRelease
+          node: Syntax node to process.
         """
         release = self.require_runtime_symbol(
             "buffer",

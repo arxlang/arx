@@ -1,5 +1,7 @@
 """
 title: Minimal AIX compiled-test placeholders.
+attributes:
+  DEFAULT_TEST_PATHS: Default test paths.
 """
 
 from __future__ import annotations
@@ -16,8 +18,7 @@ class AixTestSummary:
     """
     title: Summary returned by the placeholder test runner.
     attributes:
-      exit_code:
-        type: int
+      exit_code: Exit code.
     """
 
     exit_code: int
@@ -26,23 +27,26 @@ class AixTestSummary:
 class AixTestRunner:
     """
     title: Placeholder for future compiled AIX test execution.
+    attributes:
+      kwargs: Stored keyword options.
     """
+
+    kwargs: dict[str, object]
 
     def __init__(self, **kwargs: object) -> None:
         """
         title: Store runner options.
         parameters:
           kwargs:
-            type: object
             variadic: keyword
+            description: Keyword arguments.
         """
         self.kwargs = kwargs
 
     def run(self) -> AixTestSummary:
         """
         title: Return an unimplemented-test summary.
-        returns:
-          type: AixTestSummary
+        returns: An unimplemented-test summary.
         """
         return AixTestSummary(exit_code=2)
 

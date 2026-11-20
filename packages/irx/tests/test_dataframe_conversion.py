@@ -18,12 +18,10 @@ def import_schema(native: ctypes.CDLL, schema: pa.Schema) -> ctypes.c_void_p:
     """
     title: Import an independently owned expected schema.
     parameters:
-      native:
-        type: ctypes.CDLL
-      schema:
-        type: pa.Schema
-    returns:
-      type: ctypes.c_void_p
+      native: Loaded native runtime used by the ABI test.
+      schema: Declared data schema.
+    returns: 'Result of this operation: import an independently owned expected
+      schema.'
     """
     exported = ffi.new("struct ArrowSchema *")
     schema._export_to_c(address(exported))
@@ -52,16 +50,12 @@ def test_native_conversion_owns_buffers(
     native: ctypes.CDLL, rows: int, type_: pa.DataType
 ) -> None:
     """
-    title: >-
-      Both conversion directions survive source release and preserve physical
-      types.
+    title: Both conversion directions survive source release and preserve
+      physical types.
     parameters:
-      native:
-        type: ctypes.CDLL
-      rows:
-        type: int
-      type_:
-        type: pa.DataType
+      native: Loaded native runtime used by the ABI test.
+      rows: Rows.
+      type_: Type expression to process.
     """
     values = [True, False, True] if pa.types.is_boolean(type_) else [1, 2, 3]
     batch = pa.record_batch(
@@ -130,19 +124,14 @@ def test_conversion_rejects_without_publishing(
     message: str,
 ) -> None:
     """
-    title: >-
-      Unsupported data never publishes a partial table or consumes its source.
+    title: Unsupported data never publishes a partial table or consumes its
+      source.
     parameters:
-      native:
-        type: ctypes.CDLL
-      array:
-        type: pa.Array
-      name:
-        type: str
-      expected_type:
-        type: pa.DataType
-      message:
-        type: str
+      native: Loaded native runtime used by the ABI test.
+      array: Array.
+      name: Name identifying the declaration or operation.
+      expected_type: Expected semantic or storage type.
+      message: Diagnostic or output message.
     """
     handle = import_batch(native, pa.record_batch([array], names=[name]))
     expected = import_schema(
@@ -198,14 +187,10 @@ def test_native_csv_scalar_contract(
     """
     title: Verify Arrow CSV read/write support for each advertised scalar type.
     parameters:
-      native:
-        type: ctypes.CDLL
-      tmp_path:
-        type: Path
-      type_:
-        type: pa.DataType
-      value:
-        type: object
+      native: Loaded native runtime used by the ABI test.
+      tmp_path: Temporary directory for this test.
+      type_: Type expression to process.
+      value: Value to process.
     """
     expected = pa.record_batch(
         [pa.array([value, None], type=type_)], names=["v"]
@@ -259,11 +244,10 @@ def test_native_csv_scalar_contract(
 
 def test_table_export_combines_all_chunks(tmp_path: Path) -> None:
     """
-    title: >-
-      Native table export includes every chunk, not merely the first batch.
+    title: Native table export includes every chunk, not merely the first
+      batch.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     import subprocess  # noqa: PLC0415
 

@@ -27,10 +27,8 @@ class WithItem:
     """
     title: AST class representing an item inside a `with` statement.
     attributes:
-      context_expr:
-        type: Expr
-      instance_name:
-        type: Optional[Identifier]
+      context_expr: Context expr.
+      instance_name: Name of instance.
     """
 
     context_expr: Expr
@@ -42,10 +40,8 @@ class WithItem:
         """
         title: Initialize a WithItem instance.
         parameters:
-          context_expr:
-            type: Expr
-          instance_name:
-            type: Optional[Identifier]
+          context_expr: Context expr.
+          instance_name: Name of instance.
         """
         self.context_expr = context_expr
         self.instance_name = instance_name
@@ -53,8 +49,7 @@ class WithItem:
     def __str__(self) -> str:
         """
         title: Return string representation of the WithItem.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         if self.instance_name:
             return f"{self.context_expr} as {self.instance_name}"
@@ -66,14 +61,10 @@ class WithItem:
         """
         title: Prepare structural representation.
         parameters:
-          key:
-            type: str
-          value:
-            type: DataTypesStruct
-          simplified:
-            type: bool
-        returns:
-          type: dict[str, DataTypesStruct]
+          key: Key selecting the entry.
+          value: Value to process.
+          simplified: Whether to request the compact representation.
+        returns: 'Result of this operation: prepare structural representation.'
         """
         return {key: value} if simplified else {"WithItem": {key: value}}
 
@@ -83,10 +74,8 @@ class WithItem:
         """
         title: Get structural representation of the WithItem.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: dict[str, DataTypesStruct]
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         key = (
             "CONTEXT"
@@ -101,12 +90,9 @@ class WithStmt(StatementType):
     """
     title: AST class for the `with` statement (context manager).
     attributes:
-      items:
-        type: list[WithItem]
-      body:
-        type: Block
-      kind:
-        type: ASTKind
+      items: Items to process.
+      body: Statements forming the body.
+      kind: Kind of value or operation.
     """
 
     items: list[WithItem]
@@ -123,14 +109,10 @@ class WithStmt(StatementType):
         """
         title: Initialize WithStmt instance.
         parameters:
-          items:
-            type: list[WithItem]
-          body:
-            type: Block
-          loc:
-            type: SourceLocation
-          parent:
-            type: Optional[ASTNodes]
+          items: Items to process.
+          body: Statements forming the body.
+          loc: Source coordinates associated with the node.
+          parent: Parent node or enclosing scope.
         """
         super().__init__(loc=loc, parent=parent)
         self.items = items
@@ -140,8 +122,7 @@ class WithStmt(StatementType):
     def __str__(self) -> str:
         """
         title: Return string representation of the WithStmt.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         items_str = ", ".join(str(item) for item in self.items)
         return f"WithStmt[{items_str}]"
@@ -150,10 +131,8 @@ class WithStmt(StatementType):
         """
         title: Get structural representation of the WithStmt.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         items_structs: list[dict[str, DataTypesStruct]] = [
             item.get_struct(simplified) for item in self.items

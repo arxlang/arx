@@ -51,10 +51,8 @@ class ListVisitorMixin(VisitorMixinBase):
         """
         title: Convert typed list statuses before reading success output slots.
         parameters:
-          node:
-            type: astx.AST
-          status:
-            type: ir.Value
+          node: Syntax node to process.
+          status: Native operation status.
         """
         function = self._llvm.ir_builder.function
         success = function.append_basic_block("list.success")
@@ -95,8 +93,7 @@ class ListVisitorMixin(VisitorMixinBase):
     def _llvm_list_type(self) -> ir.Type:
         """
         title: Return the canonical lowered list value type.
-        returns:
-          type: ir.Type
+        returns: The canonical lowered list value type.
         """
         return cast(
             ir.Type,
@@ -118,10 +115,8 @@ class ListVisitorMixin(VisitorMixinBase):
         """
         title: Return the lowered LLVM type for one concrete list element type.
         parameters:
-          type_:
-            type: astx.DataType | None
-        returns:
-          type: ir.Type
+          type_: Type expression to process.
+        returns: The lowered LLVM type for one concrete list element type.
         """
         element_type = sequence_element_type(type_)
         if element_type is None:
@@ -139,10 +134,8 @@ class ListVisitorMixin(VisitorMixinBase):
         """
         title: Return the lowered element type for one list-valued AST node.
         parameters:
-          node:
-            type: astx.AST
-        returns:
-          type: ir.Type
+          node: Syntax node to process.
+        returns: The lowered element type for one list-valued AST node.
         """
         return self._list_element_llvm_type_from_type(
             self._resolved_ast_type(node)
@@ -155,10 +148,8 @@ class ListVisitorMixin(VisitorMixinBase):
         """
         title: Return one node's resolved iteration sidecar.
         parameters:
-          node:
-            type: astx.AST
-        returns:
-          type: ResolvedIteration | None
+          node: Syntax node to process.
+        returns: One node's resolved iteration sidecar.
         """
         semantic = getattr(node, "semantic", None)
         iteration = getattr(semantic, "resolved_iteration", None)
@@ -171,10 +162,8 @@ class ListVisitorMixin(VisitorMixinBase):
         """
         title: Return the ABI size in bytes for one concrete list type.
         parameters:
-          type_:
-            type: astx.DataType | None
-        returns:
-          type: int
+          type_: Type expression to process.
+        returns: The ABI size in bytes for one concrete list type.
         """
         llvm_type = self._list_element_llvm_type_from_type(type_)
         return cast(
@@ -186,10 +175,8 @@ class ListVisitorMixin(VisitorMixinBase):
         """
         title: Return the ABI size in bytes for one list element type.
         parameters:
-          node:
-            type: astx.AST
-        returns:
-          type: int
+          node: Syntax node to process.
+        returns: The ABI size in bytes for one list element type.
         """
         return self._list_element_size_from_type(self._resolved_ast_type(node))
 
@@ -200,10 +187,8 @@ class ListVisitorMixin(VisitorMixinBase):
         """
         title: Return one zero-length lowered list value for one list type.
         parameters:
-          type_:
-            type: astx.DataType | None
-        returns:
-          type: ir.Constant
+          type_: Type expression to process.
+        returns: One zero-length lowered list value for one list type.
         """
         return ir.Constant(
             cast(ir.LiteralStructType, self._llvm_list_type()),
@@ -226,10 +211,8 @@ class ListVisitorMixin(VisitorMixinBase):
         """
         title: Return one zero-length lowered list value.
         parameters:
-          node:
-            type: astx.AST
-        returns:
-          type: ir.Constant
+          node: Syntax node to process.
+        returns: One zero-length lowered list value.
         """
         return self._empty_list_value_for_type(self._resolved_ast_type(node))
 
@@ -237,12 +220,9 @@ class ListVisitorMixin(VisitorMixinBase):
         """
         title: Return an addressable lowered list value for runtime calls.
         parameters:
-          node:
-            type: astx.AST
-          name:
-            type: str
-        returns:
-          type: ir.Value
+          node: Syntax node to process.
+          name: Name identifying the declaration or operation.
+        returns: An addressable lowered list value for runtime calls.
         """
         if isinstance(
             node,
@@ -268,10 +248,8 @@ class ListVisitorMixin(VisitorMixinBase):
         """
         title: Return one static integer literal value when present.
         parameters:
-          node:
-            type: astx.AST
-        returns:
-          type: int | None
+          node: Syntax node to process.
+        returns: One static integer literal value when present.
         """
         if isinstance(
             node,
@@ -301,12 +279,9 @@ class ListVisitorMixin(VisitorMixinBase):
         """
         title: Load one list element through the shared runtime bounds checks.
         parameters:
-          base:
-            type: astx.AST
-          list_ptr:
-            type: ir.Value
-          index_node:
-            type: astx.AST
+          base: Base value or declaration.
+          list_ptr: List ptr.
+          index_node: Index node.
         """
         self.visit_child(index_node)
         index = safe_pop(self.result_stack)
@@ -335,14 +310,10 @@ class ListVisitorMixin(VisitorMixinBase):
         """
         title: Load one list element at a lowered Int64 index.
         parameters:
-          base:
-            type: astx.AST
-          list_ptr:
-            type: ir.Value
-          index:
-            type: ir.Value
-        returns:
-          type: ir.Value
+          base: Base value or declaration.
+          list_ptr: List ptr.
+          index: Index selecting the item.
+        returns: Loaded one list element at a lowered Int64 index.
         """
         output = self.create_entry_block_alloca(
             "list.element.out", self._llvm.OPAQUE_POINTER_TYPE
@@ -377,12 +348,10 @@ class ListVisitorMixin(VisitorMixinBase):
         """
         title: Build one transient runtime list view over one literal list.
         parameters:
-          base:
-            type: astx.LiteralList
-          literal_value:
-            type: ir.Value
-        returns:
-          type: ir.Value
+          base: Base value or declaration.
+          literal_value: Literal value.
+        returns: Constructed one transient runtime list view over one literal
+          list.
         """
         list_type = cast(ir.LiteralStructType, self._llvm_list_type())
         list_slot = self.create_entry_block_alloca(
@@ -394,10 +363,8 @@ class ListVisitorMixin(VisitorMixinBase):
             """
             title: Return one pointer to one runtime list field.
             parameters:
-              name:
-                type: str
-            returns:
-              type: ir.Value
+              name: Name identifying the declaration or operation.
+            returns: One pointer to one runtime list field.
             """
             return self._llvm.ir_builder.gep(
                 list_slot,
@@ -472,10 +439,9 @@ class ListVisitorMixin(VisitorMixinBase):
         """
         title: Roll back initialized elements even for a pending move.
         parameters:
-          output:
-            type: ir.Value
-        returns:
-          type: CleanupAction
+          output: Output destination or generated result.
+        returns: 'Result of this operation: roll back initialized elements
+          even for a pending move.'
         """
         destroy = self.require_runtime_symbol(
             LIST_RUNTIME_FEATURE, LIST_DESTROY_SYMBOL
@@ -497,8 +463,7 @@ class ListVisitorMixin(VisitorMixinBase):
         """
         title: Construct resolved elements in order with rollback cleanup.
         parameters:
-          node:
-            type: astx.ListExpr
+          node: Syntax node to process.
         """
         info = cast(
             SemanticInfo,
@@ -567,10 +532,8 @@ class ListVisitorMixin(VisitorMixinBase):
         """
         title: Lower one literal-list index through the runtime checks.
         parameters:
-          base:
-            type: astx.LiteralList
-          index_node:
-            type: astx.AST
+          base: Base value or declaration.
+          index_node: Index node.
         """
         self.visit_child(base)
         literal_value = safe_pop(self.result_stack)
@@ -594,10 +557,8 @@ class ListVisitorMixin(VisitorMixinBase):
         """
         title: Return an addressable list value and Int64 length for iteration.
         parameters:
-          base:
-            type: astx.AST
-        returns:
-          type: tuple[ir.Value, ir.Value]
+          base: Base value or declaration.
+        returns: An addressable list value and Int64 length for iteration.
         """
         if isinstance(base, astx.LiteralList):
             self.visit_child(base)
@@ -647,12 +608,9 @@ class ListVisitorMixin(VisitorMixinBase):
         """
         title: Lower one list indexing operation.
         parameters:
-          base:
-            type: astx.AST
-          index_node:
-            type: astx.AST
-          result_node:
-            type: astx.AST
+          base: Base value or declaration.
+          index_node: Index node.
+          result_node: Result node.
         """
         if isinstance(base, astx.LiteralList):
             static_index = self._static_integer_literal_value(index_node)
@@ -693,8 +651,7 @@ class ListVisitorMixin(VisitorMixinBase):
         """
         title: Detach indexed string storage from a mutable list owner.
         parameters:
-          node:
-            type: astx.AST
+          node: Syntax node to process.
         """
         if not is_string_type(self._resolved_ast_type(node)):
             return
@@ -717,14 +674,11 @@ class ListVisitorMixin(VisitorMixinBase):
     ) -> None:
         """
         title: Lower one literal-list indexing operation.
-        summary: >-
-          Use direct GEP lowering only when the caller has already proven the
-          index is one known-safe constant within bounds.
+        summary: Use direct GEP lowering only when the caller has already
+          proven the index is one known-safe constant within bounds.
         parameters:
-          base:
-            type: astx.LiteralList
-          index_node:
-            type: astx.AST
+          base: Base value or declaration.
+          index_node: Index node.
         """
         self.visit_child(base)
         literal_value = safe_pop(self.result_stack)
@@ -788,12 +742,9 @@ class ListVisitorMixin(VisitorMixinBase):
         """
         title: Append one computed comprehension element to the output list.
         parameters:
-          node:
-            type: astx.ListComprehension
-          output_ptr:
-            type: ir.Value
-          element_type:
-            type: astx.DataType
+          node: Syntax node to process.
+          output_ptr: Output ptr.
+          element_type: Type of each element.
         """
         element_depth = len(self.cleanup_stack)
         self.visit_child(node.element)
@@ -847,20 +798,13 @@ class ListVisitorMixin(VisitorMixinBase):
         """
         title: Lower one clause's comprehension filters.
         parameters:
-          node:
-            type: astx.ListComprehension
-          clauses:
-            type: list[astx.ComprehensionClause]
-          clause_index:
-            type: int
-          condition_index:
-            type: int
-          advance_block:
-            type: ir.Block
-          output_ptr:
-            type: ir.Value
-          element_type:
-            type: astx.DataType
+          node: Syntax node to process.
+          clauses: Clauses.
+          clause_index: Index selecting clause.
+          condition_index: Index selecting condition.
+          advance_block: Advance block.
+          output_ptr: Output ptr.
+          element_type: Type of each element.
         """
         clause = clauses[clause_index]
         conditions = list(clause.conditions.nodes)
@@ -914,16 +858,11 @@ class ListVisitorMixin(VisitorMixinBase):
         """
         title: Lower one nested list-comprehension clause.
         parameters:
-          node:
-            type: astx.ListComprehension
-          clauses:
-            type: list[astx.ComprehensionClause]
-          clause_index:
-            type: int
-          output_ptr:
-            type: ir.Value
-          element_type:
-            type: astx.DataType
+          node: Syntax node to process.
+          clauses: Clauses.
+          clause_index: Index selecting clause.
+          output_ptr: Output ptr.
+          element_type: Type of each element.
         """
         if clause_index >= len(clauses):
             self._append_list_comprehension_value(
@@ -1071,8 +1010,7 @@ class ListVisitorMixin(VisitorMixinBase):
         """
         title: Visit ListComprehension nodes.
         parameters:
-          node:
-            type: astx.ListComprehension
+          node: Syntax node to process.
         """
         result_type = self._resolved_ast_type(node)
         element_type = list_element_type(result_type)
@@ -1131,8 +1069,7 @@ class ListVisitorMixin(VisitorMixinBase):
         """
         title: Visit SetComprehension nodes.
         parameters:
-          node:
-            type: astx.SetComprehension
+          node: Syntax node to process.
         """
         raise_lowering_error(
             "set comprehension lowering requires the future dynamic set "
@@ -1146,8 +1083,7 @@ class ListVisitorMixin(VisitorMixinBase):
         """
         title: Visit DictComprehension nodes.
         parameters:
-          node:
-            type: astx.DictComprehension
+          node: Syntax node to process.
         """
         raise_lowering_error(
             "dict comprehension lowering requires the future dynamic dict "
@@ -1161,8 +1097,7 @@ class ListVisitorMixin(VisitorMixinBase):
         """
         title: Visit ListCreate nodes.
         parameters:
-          node:
-            type: astx.ListCreate
+          node: Syntax node to process.
         """
         self.result_stack.append(self._empty_list_value(node))
 
@@ -1171,8 +1106,7 @@ class ListVisitorMixin(VisitorMixinBase):
         """
         title: Visit ListIndex nodes.
         parameters:
-          node:
-            type: astx.ListIndex
+          node: Syntax node to process.
         """
         self._lower_list_subscript(
             base=node.base,
@@ -1185,8 +1119,7 @@ class ListVisitorMixin(VisitorMixinBase):
         """
         title: Visit ListLength nodes.
         parameters:
-          node:
-            type: astx.ListLength
+          node: Syntax node to process.
         """
         if isinstance(node.base, astx.LiteralList):
             self.result_stack.append(
@@ -1220,8 +1153,7 @@ class ListVisitorMixin(VisitorMixinBase):
         """
         title: Visit ListAppend nodes.
         parameters:
-          node:
-            type: astx.ListAppend
+          node: Syntax node to process.
         """
         append_fn = self.require_runtime_symbol(
             LIST_RUNTIME_FEATURE,

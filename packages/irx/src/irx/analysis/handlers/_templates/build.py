@@ -1,8 +1,7 @@
 """
 title: Template-specialization build helpers.
-summary: >-
-  Construct concrete template specializations and their substituted semantic
-  argument metadata.
+summary: Construct concrete template specializations and their substituted
+  semantic argument metadata.
 """
 
 from __future__ import annotations
@@ -42,14 +41,10 @@ class TemplateBuildVisitorMixin(TemplateStateVisitorMixin):
         """
         title: Return substituted semantic argument symbols.
         parameters:
-          function:
-            type: SemanticFunction
-          definition:
-            type: astx.FunctionDef
-          bindings:
-            type: dict[str, astx.DataType]
-        returns:
-          type: tuple[SemanticSymbol, Ellipsis]
+          function: Function to process.
+          definition: Definition.
+          bindings: Bindings.
+        returns: Substituted semantic argument symbols.
         """
         visible_args = tuple(definition.prototype.args.nodes)
         hidden_count = len(function.args) - len(visible_args)
@@ -75,14 +70,13 @@ class TemplateBuildVisitorMixin(TemplateStateVisitorMixin):
         concrete_args: tuple[astx.DataType, ...],
     ) -> SemanticFunction | None:
         """
-        title: Build or reuse one concrete specialization for a template func.
+        title: Build or reuse one concrete specialization for a template
+          func.
         parameters:
-          function:
-            type: SemanticFunction
-          concrete_args:
-            type: tuple[astx.DataType, Ellipsis]
-        returns:
-          type: SemanticFunction | None
+          function: Function to process.
+          concrete_args: Concrete args.
+        returns: Constructed or reuse one concrete specialization
+          for a template func.
         """
         key = self._template_specialization_key(function, concrete_args)
         existing = function.specializations.get(key)

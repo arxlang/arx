@@ -4,9 +4,10 @@
 
 """
 title: Declaration class-layout helpers.
-summary: >-
-  Build class layouts, initialization metadata, and family-level dispatch
-  finalization structures during declaration analysis.
+summary: Build class layouts, initialization metadata, and family-level
+  dispatch finalization structures during declaration analysis.
+attributes:
+  _CLASS_HEADER_LAYOUT: Class header layout.
 """
 
 from __future__ import annotations
@@ -74,20 +75,13 @@ class DeclarationClassLayoutVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Build one canonical low-level class layout.
         parameters:
-          class_:
-            type: SemanticClass
-          bases:
-            type: tuple[SemanticClass, Ellipsis]
-          declared_members:
-            type: tuple[SemanticClassMember, Ellipsis]
-          member_table:
-            type: dict[str, SemanticClassMember]
-          method_groups:
-            type: dict[str, tuple[SemanticClassMember, Ellipsis]]
-          field_ids:
-            type: dict[str, int]
-        returns:
-          type: SemanticClassLayout
+          class_: Class being processed.
+          bases: Bases.
+          declared_members: Declared members.
+          member_table: Member table.
+          method_groups: Method groups.
+          field_ids: Identifiers for field.
+        returns: Constructed one canonical low-level class layout.
         """
         header_fields = tuple(
             SemanticClassHeaderField(
@@ -242,12 +236,9 @@ class DeclarationClassLayoutVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Build one canonical class initialization plan.
         parameters:
-          class_:
-            type: SemanticClass
-          layout:
-            type: SemanticClassLayout
-        returns:
-          type: SemanticClassInitialization
+          class_: Class being processed.
+          layout: Layout.
+        returns: Constructed one canonical class initialization plan.
         """
         instance_initializers = tuple(
             SemanticClassFieldInitializer(
@@ -297,8 +288,7 @@ class DeclarationClassLayoutVisitorMixin(SemanticVisitorMixinBase):
     ) -> tuple[SemanticClass, ...]:
         """
         title: Return all structurally resolved classes in the context.
-        returns:
-          type: tuple[SemanticClass, Ellipsis]
+        returns: All structurally resolved classes in the context.
         """
         return tuple(
             class_
@@ -313,10 +303,9 @@ class DeclarationClassLayoutVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Partition classes into weakly connected inheritance families.
         parameters:
-          classes:
-            type: tuple[SemanticClass, Ellipsis]
-        returns:
-          type: tuple[tuple[SemanticClass, Ellipsis], Ellipsis]
+          classes: Classes.
+        returns: 'Result of this operation: partition classes into weakly
+          connected inheritance families.'
         """
         classes_by_name = {class_.qualified_name: class_ for class_ in classes}
         adjacency: dict[str, set[str]] = {
@@ -357,13 +346,11 @@ class DeclarationClassLayoutVisitorMixin(SemanticVisitorMixinBase):
         family: tuple[SemanticClass, ...],
     ) -> tuple[SemanticClass, ...]:
         """
-        title: >-
-          Return one deterministic ancestor-before-descendant family order.
+        title: Return one deterministic ancestor-before-descendant family
+          order.
         parameters:
-          family:
-            type: tuple[SemanticClass, Ellipsis]
-        returns:
-          type: tuple[SemanticClass, Ellipsis]
+          family: Family.
+        returns: One deterministic ancestor-before-descendant family order.
         """
         family_names = {class_.qualified_name for class_ in family}
         indegree = {class_.qualified_name: 0 for class_ in family}
@@ -410,10 +397,9 @@ class DeclarationClassLayoutVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Assign hierarchy-local dispatch slots for one class family.
         parameters:
-          family:
-            type: tuple[SemanticClass, Ellipsis]
-        returns:
-          type: dict[str, int]
+          family: Family.
+        returns: 'Result of this operation: assign hierarchy-local dispatch
+          slots for one class family.'
         """
         slot_by_signature: dict[str, int] = {}
         member_slots: dict[str, int] = {}
@@ -451,8 +437,7 @@ class DeclarationClassLayoutVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Compute effective members and layouts for one class family.
         parameters:
-          family:
-            type: tuple[SemanticClass, Ellipsis]
+          family: Family.
         """
         member_slots = self._assign_family_dispatch_slots(family)
         ordered_family = self._topologically_sorted_class_family(family)

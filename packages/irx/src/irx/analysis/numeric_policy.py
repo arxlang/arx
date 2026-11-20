@@ -1,10 +1,14 @@
 """
 title: Value-preserving numeric promotion and conversion classification.
-summary: >-
-  Describe the checked-arithmetic policy independently of LLVM and runtime
-  values. This policy covers fixed-width 8-64 bit integers and f16/f32/f64;
-  Boolean, nullable, vector, and storage types must be handled by their owning
-  semantic resolvers. Classification does not perform a conversion or a check.
+summary: Describe the checked-arithmetic policy independently of LLVM and
+  runtime values. This policy covers fixed-width 8-64 bit integers and
+  f16/f32/f64; Boolean, nullable, vector, and storage types must be handled
+  by their owning semantic resolvers. Classification does not perform a
+  conversion or a check.
+attributes:
+  SIGNED_TYPES: Signed types.
+  UNSIGNED_TYPES: Unsigned types.
+  FLOAT_PRECISIONS: Float precisions.
 """
 
 from __future__ import annotations
@@ -58,23 +62,18 @@ class NumericConversionKind(str, Enum):
 @dataclass(frozen=True)
 class NumericConversion:
     """
-    title: >-
-      Classification of a numeric conversion under the checked numeric policy.
-    summary: >-
-      A required range check must precede publication of the converted value.
-      Explicit floating conversions may round or truncate even when a range
-      check succeeds; implicit conversions may not lose source-domain values.
+    title: Classification of a numeric conversion under the checked numeric
+      policy.
+    summary: A required range check must precede publication of the converted
+      value. Explicit floating conversions may round or truncate even when
+      a range check succeeds; implicit conversions may not lose source-domain
+      values.
     attributes:
-      source_type:
-        type: astx.DataType
-      target_type:
-        type: astx.DataType
-      kind:
-        type: NumericConversionKind
-      implicit:
-        type: bool
-      requires_range_check:
-        type: bool
+      source_type: Type of the source value.
+      target_type: Destination type for the conversion.
+      kind: Kind of value or operation.
+      implicit: Whether to use implicit.
+      requires_range_check: Whether to use requires range check.
     """
 
     source_type: astx.DataType
@@ -90,10 +89,8 @@ def integer_bounds(type_: astx.DataType) -> tuple[int, int] | None:
     """
     title: Return the inclusive domain of a supported integer, excluding bool.
     parameters:
-      type_:
-        type: astx.DataType
-    returns:
-      type: tuple[int, int] | None
+      type_: Type expression to process.
+    returns: The inclusive domain of a supported integer, excluding bool.
     """
     width = SIGNED_TYPES.get(type(type_))
     if width is not None:
@@ -112,12 +109,10 @@ def is_lossless_numeric_conversion(
     """
     title: Test containment of full numeric domains, not the current values.
     parameters:
-      source:
-        type: astx.DataType
-      target:
-        type: astx.DataType
-    returns:
-      type: bool
+      source: Source input to process.
+      target: Destination of the operation.
+    returns: 'Result of this operation: test containment of full numeric
+      domains, not the current values.'
     """
     source_bounds = integer_bounds(source)
     target_bounds = integer_bounds(target)
@@ -146,18 +141,15 @@ def lossless_common_numeric_type(
 ) -> astx.DataType | None:
     """
     title: Select the smallest containing numeric domain or reject the pair.
-    summary: >-
-      Preserve matching integer signedness; mixed signed/unsigned operands
-      require a containing signed type. Integer-only operations never acquire a
-      floating result. Mixed floating operands require exact conversion of the
-      entire integer domain. Unsupported types fail closed.
+    summary: Preserve matching integer signedness; mixed signed/unsigned
+      operands require a containing signed type. Integer-only operations
+      never acquire a floating result. Mixed floating operands require exact
+      conversion of the entire integer domain. Unsupported types fail closed.
     parameters:
-      lhs:
-        type: astx.DataType
-      rhs:
-        type: astx.DataType
-    returns:
-      type: astx.DataType | None
+      lhs: Left operand.
+      rhs: Right operand.
+    returns: 'Result of this operation: select the smallest containing numeric
+      domain or reject the pair.'
     """
     if type(lhs) in FLOAT_PRECISIONS or type(rhs) in FLOAT_PRECISIONS:
         candidates = FLOAT_PRECISIONS
@@ -180,14 +172,13 @@ def numeric_conversion_kind(
     source: astx.DataType, target: astx.DataType
 ) -> NumericConversionKind | None:
     """
-    title: Classify a supported conversion without inspecting runtime values.
+    title: Classify a supported conversion without inspecting runtime
+      values.
     parameters:
-      source:
-        type: astx.DataType
-      target:
-        type: astx.DataType
-    returns:
-      type: NumericConversionKind | None
+      source: Source input to process.
+      target: Destination of the operation.
+    returns: 'Result of this operation: classify a supported conversion
+      without inspecting runtime values.'
     """
     source_integer = integer_bounds(source) is not None
     target_integer = integer_bounds(target) is not None
@@ -217,17 +208,15 @@ def classify_numeric_conversion(
 ) -> NumericConversion | None:
     """
     title: Plan implicit eligibility and explicit range checking for numerics.
-    summary: >-
-      Return None for unsupported domains. Integer-to-float precision loss is
-      explicit; a finite-range check is needed only for f16 among supported
-      integer widths. Classification alone does not enable checked execution.
+    summary: Return None for unsupported domains. Integer-to-float precision
+      loss is explicit; a finite-range check is needed only for f16 among
+      supported integer widths. Classification alone does not enable checked
+      execution.
     parameters:
-      source:
-        type: astx.DataType
-      target:
-        type: astx.DataType
-    returns:
-      type: NumericConversion | None
+      source: Source input to process.
+      target: Destination of the operation.
+    returns: 'Result of this operation: plan implicit eligibility and explicit
+      range checking for numerics.'
     """
     kind = numeric_conversion_kind(source, target)
     if kind is None:

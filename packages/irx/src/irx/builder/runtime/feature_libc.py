@@ -23,8 +23,7 @@ if TYPE_CHECKING:
 def build_libc_runtime_feature() -> RuntimeFeature:
     """
     title: Build the libc runtime feature specification.
-    returns:
-      type: RuntimeFeature
+    returns: Constructed the libc runtime feature specification.
     """
     return RuntimeFeature(
         name="libc",
@@ -43,10 +42,8 @@ def _declare_exit(visitor: VisitorProtocol) -> ir.Function:
     """
     title: Declare exit.
     parameters:
-      visitor:
-        type: VisitorProtocol
-    returns:
-      type: ir.Function
+      visitor: Visitor performing the traversal or lowering.
+    returns: 'Result of this operation: declare exit.'
     """
     fn_type = ir.FunctionType(
         visitor._llvm.VOID_TYPE,
@@ -60,10 +57,8 @@ def _declare_malloc(visitor: VisitorProtocol) -> ir.Function:
     """
     title: Declare malloc.
     parameters:
-      visitor:
-        type: VisitorProtocol
-    returns:
-      type: ir.Function
+      visitor: Visitor performing the traversal or lowering.
+    returns: 'Result of this operation: declare malloc.'
     """
     fn_type = ir.FunctionType(
         visitor._llvm.INT8_TYPE.as_pointer(),
@@ -77,10 +72,8 @@ def _declare_free(visitor: VisitorProtocol) -> ir.Function:
     """
     title: Declare the C heap-release function.
     parameters:
-      visitor:
-        type: VisitorProtocol
-    returns:
-      type: ir.Function
+      visitor: Visitor performing the traversal or lowering.
+    returns: 'Result of this operation: declare the C heap-release function.'
     """
     fn_type = ir.FunctionType(
         visitor._llvm.VOID_TYPE,
@@ -94,10 +87,8 @@ def _declare_puts(visitor: VisitorProtocol) -> ir.Function:
     """
     title: Declare puts.
     parameters:
-      visitor:
-        type: VisitorProtocol
-    returns:
-      type: ir.Function
+      visitor: Visitor performing the traversal or lowering.
+    returns: 'Result of this operation: declare puts.'
     """
     fn_type = ir.FunctionType(
         visitor._llvm.INT32_TYPE,
@@ -111,10 +102,8 @@ def _declare_snprintf(visitor: VisitorProtocol) -> ir.Function:
     """
     title: Declare snprintf.
     parameters:
-      visitor:
-        type: VisitorProtocol
-    returns:
-      type: ir.Function
+      visitor: Visitor performing the traversal or lowering.
+    returns: 'Result of this operation: declare snprintf.'
     """
     fn_type = ir.FunctionType(
         visitor._llvm.INT32_TYPE,

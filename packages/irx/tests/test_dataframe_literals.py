@@ -55,12 +55,9 @@ def test_literal_cells(
     """
     title: Decode supported literal cells without losing precision or shape.
     parameters:
-      type_:
-        type: pa.DataType
-      node:
-        type: astx.AST
-      expected:
-        type: object
+      type_: Type expression to process.
+      node: Syntax node to process.
+      expected: Expected result for this case.
     """
     assert literal_cell(node, pa.field("x", type_), "x") == expected
 
@@ -100,15 +97,12 @@ def test_invalid_literal_cells(
     type_: pa.DataType, node: astx.AST, message: str
 ) -> None:
     """
-    title: >-
-      Fail at the exact nested field instead of coercing unsupported input.
+    title: Fail at the exact nested field instead of coercing unsupported
+      input.
     parameters:
-      type_:
-        type: pa.DataType
-      node:
-        type: astx.AST
-      message:
-        type: str
+      type_: Type expression to process.
+      node: Syntax node to process.
+      message: Diagnostic or output message.
     """
     with pytest.raises(ValueError, match=message):
         literal_cell(node, pa.field("x", type_), "x")
@@ -118,10 +112,9 @@ def rich_literal(value: str) -> astx.DataFrameLiteral:
     """
     title: Build one declared decimal column independently of Arx parsing.
     parameters:
-      value:
-        type: str
-    returns:
-      type: astx.DataFrameLiteral
+      value: Value to process.
+    returns: Constructed one declared decimal column independently of Arx
+      parsing.
     """
     type_ = astx.DataFrameType(
         [astx.DataFrameColumn("x", astx.ColumnType("decimal128", (8, 2)))]
@@ -158,8 +151,8 @@ def test_rich_literal_semantics_and_lowering() -> None:
 
 def test_exact_float_literal_rounds_before_arrow_serialization() -> None:
     """
-    title: >-
-      Arrow IPC receives the resolved binary value, not a host-rounded decimal.
+    title: Arrow IPC receives the resolved binary value, not a host-rounded
+      decimal.
     """
     exact = Decimal("1.000000059604644830901776231257827021181583404541015625")
     cell = astx.LiteralFloat(exact)

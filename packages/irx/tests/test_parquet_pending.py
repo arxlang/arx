@@ -28,11 +28,10 @@ from .test_parquet_followup import read_batches, write_batch
 
 def test_csv_does_not_require_parquet(tmp_path: Path) -> None:
     """
-    title: >-
-      CSV builds/loads only the base library even without Parquet libraries.
+    title: CSV builds/loads only the base library even without Parquet
+      libraries.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     code = """
 from unittest.mock import patch
@@ -64,8 +63,7 @@ def test_local_writer_exclusion_and_release(tmp_path: Path) -> None:
     """
     title: A second cooperating writer cannot truncate or lose an append.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     path = tmp_path / "data.parquet"
     batch = pa.record_batch([[1]], names=["id"])
@@ -88,8 +86,7 @@ def test_durable_requires_atomic_without_truncation(tmp_path: Path) -> None:
     """
     title: Invalid durability policy is rejected before touching existing data.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     path = tmp_path / "data.parquet"
     path.write_bytes(b"original")
@@ -110,10 +107,8 @@ def test_atomic_dataset_snapshot_and_encryption(
     """
     title: Publish complete datasets and pin readers to immutable generations.
     parameters:
-      tmp_path:
-        type: Path
-      key:
-        type: bytes | None
+      tmp_path: Temporary directory for this test.
+      key: Key selecting the entry.
     """
     path = tmp_path / "dataset"
     batch = pa.record_batch([[1, 2], ["a", "b"]], names=["id", "part"])
@@ -153,11 +148,10 @@ def test_atomic_dataset_snapshot_and_encryption(
 
 def test_atomic_dataset_abort_and_evolution(tmp_path: Path) -> None:
     """
-    title: >-
-      Evolve only nullable same-typed schemas, with no partial publication.
+    title: Evolve only nullable same-typed schemas, with no partial
+      publication.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     path = tmp_path / "dataset"
     first = pa.record_batch([[1], ["a"]], names=["id", "part"])
@@ -210,12 +204,9 @@ def test_explicit_reconstruction(
     """
     title: Reconstruct logical types while exposing honest physical storage.
     parameters:
-      tmp_path:
-        type: Path
-      kind:
-        type: pa.DataType
-      values:
-        type: list[object]
+      tmp_path: Temporary directory for this test.
+      kind: Kind of value or operation.
+      values: Values to process, in order.
     """
     path = tmp_path / "reconstruct.parquet"
     array = (
@@ -247,8 +238,7 @@ def test_reconstruction_reserves_metadata_key(tmp_path: Path) -> None:
     """
     title: Reject a caller-supplied logical schema before truncation.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     path = tmp_path / "sentinel"
     path.write_bytes(b"unchanged")
@@ -275,12 +265,9 @@ def test_typed_hive_partitions(
     """
     title: Preserve typed and null partition keys without inference.
     parameters:
-      tmp_path:
-        type: Path
-      kind:
-        type: pa.DataType
-      value:
-        type: object
+      tmp_path: Temporary directory for this test.
+      kind: Kind of value or operation.
+      value: Value to process.
     """
     batch = pa.record_batch(
         [pa.array([1, 2]), pa.array([value, None], type=kind)],
@@ -306,8 +293,7 @@ def test_snapshot_rejects_invalid_evolution_without_publication(
     """
     title: Failed evolution cannot replace the public generation.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     path = tmp_path / "dataset"
     options = ParquetOptions(
@@ -330,8 +316,7 @@ def test_reconstruction_projection_and_empty_schema(tmp_path: Path) -> None:
     """
     title: Project reconstructed fields and retain schema for empty files.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     kind = pa.dictionary(pa.int8(), pa.int64())
     batch = pa.record_batch(
@@ -376,8 +361,8 @@ class ApplicationType(pa.ExtensionType):
     def __arrow_ext_serialize__(self) -> bytes:
         """
         title: Preserve an application-owned version payload.
-        returns:
-          type: bytes
+        returns: 'Result of this operation: preserve an application-owned
+          version payload.'
         """
         return b"version=1"
 
@@ -388,12 +373,10 @@ class ApplicationType(pa.ExtensionType):
         """
         title: Restore only matching versioned storage contracts.
         parameters:
-          storage_type:
-            type: pa.DataType
-          serialized:
-            type: bytes
-        returns:
-          type: ApplicationType
+          storage_type: Type of storage.
+          serialized: Serialized.
+        returns: 'Result of this operation: restore only matching versioned
+          storage contracts.'
         """
         if storage_type != pa.int64() or serialized != b"version=1":
             raise ValueError("unsupported application extension")
@@ -406,8 +389,7 @@ def test_python_extension_preserves_storage_and_metadata(
     """
     title: Native I/O preserves extensions without executing Python code.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     kind = ApplicationType()
     pa.register_extension_type(kind)
@@ -428,8 +410,7 @@ def test_process_death_releases_writer_lease(tmp_path: Path) -> None:
     """
     title: Process death preserves old output and releases advisory locks.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     path = tmp_path / "data.parquet"
     batch = pa.record_batch([[1]], names=["id"])
@@ -461,8 +442,7 @@ def test_invalid_reconstruction_metadata_fails_on_open(tmp_path: Path) -> None:
     """
     title: Never trust a malformed external logical-schema footer.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     path = tmp_path / "malformed.parquet"
     table = pa.table({"id": [1]}).replace_schema_metadata(
@@ -478,8 +458,7 @@ def test_reconstruction_rejects_ordered_dictionaries(tmp_path: Path) -> None:
     """
     title: Ordered codebooks cannot silently change their ordering.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     path = tmp_path / "ordered.parquet"
     path.write_bytes(b"unchanged")
@@ -501,10 +480,8 @@ def test_unused_new_flags_remain_compatible_with_older_abi(
     """
     title: Default flags do not require new symbols in explicit overrides.
     parameters:
-      monkeypatch:
-        type: pytest.MonkeyPatch
-      tmp_path:
-        type: Path
+      monkeypatch: Fixture for temporarily replacing dependencies and settings.
+      tmp_path: Temporary directory for this test.
     """
     lib = parquet_library()
     with ParquetOptions().native(lib):
@@ -515,14 +492,11 @@ def test_unused_new_flags_remain_compatible_with_older_abi(
         """
         title: Emulate an older backend that rejects new option names.
         parameters:
-          handle:
-            type: int
-          name:
-            type: bytes
-          value:
-            type: int
-        returns:
-          type: int
+          handle: Opaque native handle.
+          name: Name identifying the declaration or operation.
+          value: Value to process.
+        returns: 'Result of this operation: emulate an older backend that
+          rejects new option names.'
         """
         if name in (b"durable", b"reconstruct"):
             raise AssertionError("an unused new flag crossed the ABI")

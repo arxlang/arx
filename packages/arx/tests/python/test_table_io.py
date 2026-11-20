@@ -23,13 +23,12 @@ pytestmark = pytest.mark.skipif(
 @pytest.fixture(scope="module")
 def convenience(tmp_path_factory: pytest.TempPathFactory) -> Path:
     """
-    title: >-
-      Compile aliases, namespace calls, predicates, options and table casts.
+    title: Compile aliases, namespace calls, predicates, options and table
+      casts.
     parameters:
-      tmp_path_factory:
-        type: pytest.TempPathFactory
-    returns:
-      type: Path
+      tmp_path_factory: Factory for shared temporary test directories.
+    returns: 'Result of this operation: compile aliases, namespace calls,
+      predicates, options and table casts.'
     """
     binary = tmp_path_factory.mktemp("table-io") / "convenience"
     compile_program(
@@ -78,10 +77,8 @@ def test_compiled_module_convenience(
     """
     title: Format functions preserve all rows and typed immutable predicates.
     parameters:
-      tmp_path:
-        type: Path
-      convenience:
-        type: Path
+      tmp_path: Temporary directory for this test.
+      convenience: Convenience.
     """
     source = "id,name,active\n1,a,true\n2,b,false\n3,c,true\n4,d,\n"
     (tmp_path / "input.csv").write_text(source)
@@ -110,8 +107,7 @@ def test_compiled_streaming_frames(tmp_path: Path) -> None:
     """
     title: Streaming adapters retain independent frames and canonical schemas.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     binary = tmp_path / "stream"
     compile_program(
@@ -165,10 +161,9 @@ def checked_cast(tmp_path_factory: pytest.TempPathFactory) -> Path:
     """
     title: Compile a direct dynamic-to-static table cast across every chunk.
     parameters:
-      tmp_path_factory:
-        type: pytest.TempPathFactory
-    returns:
-      type: Path
+      tmp_path_factory: Factory for shared temporary test directories.
+    returns: 'Result of this operation: compile a direct dynamic-to-static
+      table cast across every chunk.'
     """
     binary = tmp_path_factory.mktemp("table-cast") / "cast"
     compile_program(
@@ -193,12 +188,9 @@ def test_compiled_table_cast_checks_later_chunks(
     """
     title: Nulls in a later row group fail before any output is opened.
     parameters:
-      tmp_path:
-        type: Path
-      checked_cast:
-        type: Path
-      null:
-        type: bool
+      tmp_path: Temporary directory for this test.
+      checked_cast: Checked cast.
+      'null': Whether to use null.
     """
     pq.write_table(
         pa.table({"id": pa.array([1, None if null else 2], type=pa.int64())}),
@@ -247,10 +239,8 @@ def test_invalid_table_io_fails_during_analysis(
     """
     title: Unsupported option names and types never reach the native boundary.
     parameters:
-      tmp_path:
-        type: Path
-      call:
-        type: str
+      tmp_path: Temporary directory for this test.
+      call: Call being processed.
     """
     source = f"""
 import (read_csv, write_csv) from stdlib.csv
@@ -265,11 +255,10 @@ fn main() -> i32:
 
 def test_compiled_table_argument_order_and_return(tmp_path: Path) -> None:
     """
-    title: >-
-      Named temporary inputs evaluate once in source order and survive return.
+    title: Named temporary inputs evaluate once in source order and survive
+      return.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     binary = tmp_path / "order"
     compile_program(

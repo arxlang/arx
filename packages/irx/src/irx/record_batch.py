@@ -1,5 +1,7 @@
 """
 title: Record batch streaming API.
+attributes:
+  _LIST_ELEM_CTYPE: List elem ctype.
 """
 
 from __future__ import annotations
@@ -59,8 +61,7 @@ PARQUET_ROW_GROUP_SIZE = 1048576
 def _load_native_lib() -> ctypes.CDLL:
     """
     title: _load_native_lib.
-    returns:
-      type: ctypes.CDLL
+    returns: 'Result of this operation: _load_native_lib.'
     """
     configured = os.environ.get(IRX_RECORD_BATCH_LIBRARY_ENV)
     if configured:
@@ -94,8 +95,7 @@ def _load_native_lib() -> ctypes.CDLL:
 def _get_lib() -> ctypes.CDLL:
     """
     title: Return the lazily-loaded record-batch native library.
-    returns:
-      type: ctypes.CDLL
+    returns: The lazily-loaded record-batch native library.
     """
     lib = _load_native_lib()
     _configure_lib(lib)
@@ -107,8 +107,7 @@ def _configure_lib(lib: ctypes.CDLL) -> None:
     """
     title: _configure_lib.
     parameters:
-      lib:
-        type: ctypes.CDLL
+      lib: Lib.
     """
     c = ctypes
     vp = c.c_void_p
@@ -143,13 +142,11 @@ def _configure_lib(lib: ctypes.CDLL) -> None:
         """
         title: Configure ctypes metadata for one exported native function.
         parameters:
-          name:
-            type: str
-          restype:
-            type: Any
+          name: Name identifying the declaration or operation.
+          restype: Restype.
           argtypes:
-            type: Any
             variadic: positional
+            description: Argtypes.
         """
         f = getattr(lib, name)
         f.restype = restype
@@ -252,9 +249,10 @@ def _configure_lib(lib: ctypes.CDLL) -> None:
 @typechecked
 def csv_library() -> ctypes.CDLL:
     """
-    title: Require and configure the optional CSV extension of the native ABI.
-    returns:
-      type: ctypes.CDLL
+    title: Require and configure the optional CSV extension of the native
+      ABI.
+    returns: 'Result of this operation: require and configure the optional
+      CSV extension of the native ABI.'
     """
     lib = _get_lib()
     try:
@@ -293,12 +291,10 @@ def csv_strings(
     """
     title: Validate C strings before passing CSV options across the ABI.
     parameters:
-      path:
-        type: str | os.PathLike[str]
-      delimiter:
-        type: str
-    returns:
-      type: tuple[bytes, bytes]
+      path: Path to the input or output resource.
+      delimiter: Delimiter.
+    returns: 'Result of this operation: validate C strings before passing
+      CSV options across the ABI.'
     """
     path_string = os.fspath(path)
     if "\0" in path_string:
@@ -321,8 +317,8 @@ def csv_strings(
 def load_parquet_plugin() -> ctypes.CDLL:
     """
     title: Load optional Parquet symbols while sharing the base handle owner.
-    returns:
-      type: ctypes.CDLL
+    returns: Loaded optional Parquet symbols while sharing the base handle
+      owner.
     """
     from irx.builder.runtime.parquet import (  # noqa: PLC0415
         ensure_parquet_shared_library,
@@ -340,8 +336,8 @@ def load_parquet_plugin() -> ctypes.CDLL:
 def parquet_library() -> ctypes.CDLL:
     """
     title: Lazily bind additive Parquet symbols without breaking old overrides.
-    returns:
-      type: ctypes.CDLL
+    returns: 'Result of this operation: lazily bind additive Parquet symbols
+      without breaking old overrides.'
     """
     lib = (
         _get_lib()
@@ -381,10 +377,9 @@ def parquet_path(path: str | os.PathLike[str]) -> bytes:
     """
     title: Validate a filesystem path before crossing the Parquet C ABI.
     parameters:
-      path:
-        type: str | os.PathLike[str]
-    returns:
-      type: bytes
+      path: Path to the input or output resource.
+    returns: 'Result of this operation: validate a filesystem path before
+      crossing the Parquet C ABI.'
     """
     value = os.fsencode(path)
     if b"\0" in value:
@@ -398,10 +393,8 @@ def parquet_size(value: int, option: str) -> None:
     """
     title: Reject bool and integers that ctypes would truncate.
     parameters:
-      value:
-        type: int
-      option:
-        type: str
+      value: Value to process.
+      option: Option.
     """
     if isinstance(value, bool) or not 0 < value < (1 << 63):
         raise ValueError(
@@ -426,12 +419,10 @@ def _date_to_int(v: date, col_type: IrxColumnType) -> int:
     """
     title: Convert a datetime.date to the raw storage int for a date column.
     parameters:
-      v:
-        type: date
-      col_type:
-        type: IrxColumnType
-    returns:
-      type: int
+      v: Input value.
+      col_type: Type of col.
+    returns: Converted a datetime.date to the raw storage int for a date
+      column.
     """
     days = (v - _EPOCH_DATE).days
     if col_type == IrxColumnType.DATE32:
@@ -446,12 +437,10 @@ def _datetime_to_int(v: datetime, col_type: IrxColumnType) -> int:
     """
     title: Convert a datetime to the raw storage int for a timestamp column.
     parameters:
-      v:
-        type: datetime
-      col_type:
-        type: IrxColumnType
-    returns:
-      type: int
+      v: Input value.
+      col_type: Type of col.
+    returns: Converted a datetime to the raw storage int for a timestamp
+      column.
     """
     if v.tzinfo is None:
         v = v.replace(tzinfo=timezone.utc)
@@ -477,12 +466,10 @@ def _time_to_int(v: time, col_type: IrxColumnType) -> int:
     """
     title: Convert a datetime.time to the raw storage int for a time column.
     parameters:
-      v:
-        type: time
-      col_type:
-        type: IrxColumnType
-    returns:
-      type: int
+      v: Input value.
+      col_type: Type of col.
+    returns: Converted a datetime.time to the raw storage int for a time
+      column.
     """
     total_us = (
         v.hour * 3600 + v.minute * 60 + v.second
@@ -503,10 +490,8 @@ def _check(rc: int, lib: ctypes.CDLL) -> None:
     """
     title: Validate a native record-batch call result code.
     parameters:
-      rc:
-        type: int
-      lib:
-        type: ctypes.CDLL
+      rc: Rc.
+      lib: Lib.
     """
     if rc < 0:
         msg = lib.irx_record_batch_errmsg()
@@ -601,17 +586,16 @@ _FLOAT_TYPES = frozenset({IrxColumnType.FLOAT32, IrxColumnType.FLOAT64})
 def _encode_list_elem(v: Any, elem_type: IrxColumnType) -> int | float:
     """
     title: Encode one list element to its raw storage value.
-    summary: |-
+    summary: >-
       datetime/date/time elements are converted through the same scale rules
+
       as the scalar temporal appenders; numeric elements pass through
+
       unchanged.
     parameters:
-      v:
-        type: Any
-      elem_type:
-        type: IrxColumnType
-    returns:
-      type: int | float
+      v: Input value.
+      elem_type: Type of elem.
+    returns: Encoded one list element to its raw storage value.
     """
     if isinstance(v, datetime):
         return _datetime_to_int(v, elem_type)
@@ -634,18 +618,13 @@ class RecordBatchSchema:
     """
     title: RecordBatchSchema.
     attributes:
-      _handle:
-        type: ctypes.c_void_p
-      _lib:
-        type: ctypes.CDLL
-      _released:
-        type: bool
-      _col_types:
-        type: list[IrxColumnType]
-      _elem_types:
-        type: list[Optional[IrxColumnType]]
-      _struct_fields:
-        type: list[Optional[list[tuple[str, IrxColumnType]]]]
+      _handle: Handle.
+      _lib: Lib.
+      _released: Whether to use released.
+      _col_types: Types of col.
+      _elem_types: Types of elem.
+      _struct_fields: Struct fields.
+      num_fields: Num fields.
     """
 
     _handle: ctypes.c_void_p
@@ -679,14 +658,10 @@ class RecordBatchSchema:
         """
         title: add_field.
         parameters:
-          name:
-            type: str
-          col_type:
-            type: IrxColumnType
-          nullable:
-            type: bool
-        returns:
-          type: RecordBatchSchema
+          name: Name identifying the declaration or operation.
+          col_type: Type of col.
+          nullable: Whether null values are permitted.
+        returns: 'Result of this operation: add_field.'
         """
         _check(
             self._lib.irx_rb_schema_add_field(
@@ -710,19 +685,20 @@ class RecordBatchSchema:
     ) -> "RecordBatchSchema":
         """
         title: Add a list column with the given fixed-width element type.
-        summary: |-
-          elem_type must be one of the fixed-width primitive or temporal types
-          (see _LIST_ELEM_CTYPE); bool, utf8, and nested element types are not
+        summary: >-
+          elem_type must be one of the fixed-width primitive or temporal
+          types
+
+          (see _LIST_ELEM_CTYPE); bool, utf8, and nested element types are
+          not
+
           supported yet.
         parameters:
-          name:
-            type: str
-          elem_type:
-            type: IrxColumnType
-          nullable:
-            type: bool
-        returns:
-          type: RecordBatchSchema
+          name: Name identifying the declaration or operation.
+          elem_type: Type of elem.
+          nullable: Whether null values are permitted.
+        returns: 'Result of this operation: add a list column with the given
+          fixed-width element type.'
         """
         if elem_type not in _LIST_ELEM_CTYPE:
             raise ValueError(
@@ -763,19 +739,18 @@ class RecordBatchSchema:
     ) -> "RecordBatchSchema":
         """
         title: Add a struct column with the given named fixed-width fields.
-        summary: |-
+        summary: >-
           Each field is a (name, type) pair whose type must be one of the
+
           fixed-width primitive or temporal types (see _STRUCT_FIELD_CTYPE);
+
           bool, utf8, and nested field types are not supported yet.
         parameters:
-          name:
-            type: str
-          fields:
-            type: Sequence[tuple[str, IrxColumnType]]
-          nullable:
-            type: bool
-        returns:
-          type: RecordBatchSchema
+          name: Name identifying the declaration or operation.
+          fields: Declared fields.
+          nullable: Whether null values are permitted.
+        returns: 'Result of this operation: add a struct column with the
+          given named fixed-width fields.'
         """
         field_list = list(fields)
         if not field_list:
@@ -830,16 +805,15 @@ class RecordBatchSchema:
     def num_fields(self) -> int:
         """
         title: Return the number of schema fields.
-        returns:
-          type: int
+        returns: The number of schema fields.
         """
         return int(self._lib.irx_rb_schema_num_fields(self._handle))
 
     def clone(self) -> "RecordBatchSchema":
         """
         title: Clone a recursive schema including metadata and type parameters.
-        returns:
-          type: RecordBatchSchema
+        returns: 'Result of this operation: clone a recursive schema including
+          metadata and type parameters.'
         """
         return clone_schema(self._raw(), self._lib)
 
@@ -860,12 +834,12 @@ class RecordBatchSchema:
     @classmethod
     def from_arrow(cls, schema: pa.Schema) -> RecordBatchSchema:
         """
-        title: Import a recursive PyArrow schema through the Arrow C Data ABI.
+        title: Import a recursive PyArrow schema through the Arrow C Data
+          ABI.
         parameters:
-          schema:
-            type: pa.Schema
-        returns:
-          type: RecordBatchSchema
+          schema: Declared data schema.
+        returns: 'Result of this operation: import a recursive PyArrow schema
+          through the Arrow C Data ABI.'
         """
         for field in schema:
             validate_c_data_field(field)
@@ -887,8 +861,8 @@ class RecordBatchSchema:
     def to_arrow(self) -> pa.Schema:
         """
         title: Export an independently owned recursive PyArrow schema.
-        returns:
-          type: pa.Schema
+        returns: 'Result of this operation: export an independently owned
+          recursive PyArrow schema.'
         """
         lib = c_data_library()
         exported = ArrowSchema()
@@ -902,8 +876,7 @@ class RecordBatchSchema:
     def _raw(self) -> ctypes.c_void_p:
         """
         title: Return the underlying native handle.
-        returns:
-          type: ctypes.c_void_p
+        returns: The underlying native handle.
         """
         if self._released:
             raise RuntimeError("RecordBatch schema is released")
@@ -916,8 +889,7 @@ def validate_c_data_field(field: pa.Field) -> None:
     """
     title: Reject names and timezones that C Data would silently truncate.
     parameters:
-      field:
-        type: pa.Field
+      field: Field to process.
     """
     if "\0" in field.name:
         raise ValueError(
@@ -945,8 +917,8 @@ def validate_c_data_field(field: pa.Field) -> None:
 def c_data_library() -> ctypes.CDLL:
     """
     title: Bind additive Arrow C Data interoperability symbols lazily.
-    returns:
-      type: ctypes.CDLL
+    returns: 'Result of this operation: bind additive Arrow C Data
+      interoperability symbols lazily.'
     """
     lib = _get_lib()
     pointer = ctypes.c_void_p
@@ -972,15 +944,13 @@ def clone_schema(
     handle: ctypes.c_void_p, lib: ctypes.CDLL
 ) -> RecordBatchSchema:
     """
-    title: >-
-      Adopt an owned schema clone without reconstructing its recursive fields.
+    title: Adopt an owned schema clone without reconstructing its recursive
+      fields.
     parameters:
-      handle:
-        type: ctypes.c_void_p
-      lib:
-        type: ctypes.CDLL
-    returns:
-      type: RecordBatchSchema
+      handle: Opaque native handle.
+      lib: Lib.
+    returns: 'Result of this operation: adopt an owned schema clone without
+      reconstructing its recursive fields.'
     """
     try:
         clone = lib.irx_rb_schema_clone
@@ -1042,18 +1012,12 @@ class RecordBatchBuilder:
     """
     title: RecordBatchBuilder.
     attributes:
-      _handle:
-        type: ctypes.c_void_p
-      _lib:
-        type: ctypes.CDLL
-      _released:
-        type: bool
-      _col_types:
-        type: list[IrxColumnType]
-      _elem_types:
-        type: list[Optional[IrxColumnType]]
-      _struct_fields:
-        type: list[Optional[list[tuple[str, IrxColumnType]]]]
+      _handle: Handle.
+      _lib: Lib.
+      _released: Whether to use released.
+      _col_types: Types of col.
+      _elem_types: Types of elem.
+      _struct_fields: Struct fields.
     """
 
     _handle: ctypes.c_void_p
@@ -1067,8 +1031,7 @@ class RecordBatchBuilder:
         """
         title: Create a builder for the supplied schema.
         parameters:
-          schema:
-            type: RecordBatchSchema
+          schema: Declared data schema.
         """
         self._handle = ctypes.c_void_p()
         self._released = True
@@ -1093,10 +1056,8 @@ class RecordBatchBuilder:
         """
         title: Append an 8-bit signed integer to a column.
         parameters:
-          col:
-            type: int
-          v:
-            type: int
+          col: Source column or column selector.
+          v: Input value.
         """
         _check(
             self._lib.irx_rb_builder_append_int8(
@@ -1109,10 +1070,8 @@ class RecordBatchBuilder:
         """
         title: Append a 16-bit signed integer to a column.
         parameters:
-          col:
-            type: int
-          v:
-            type: int
+          col: Source column or column selector.
+          v: Input value.
         """
         _check(
             self._lib.irx_rb_builder_append_int16(
@@ -1125,10 +1084,8 @@ class RecordBatchBuilder:
         """
         title: Append a 32-bit signed integer to a column.
         parameters:
-          col:
-            type: int
-          v:
-            type: int
+          col: Source column or column selector.
+          v: Input value.
         """
         _check(
             self._lib.irx_rb_builder_append_int32(
@@ -1141,10 +1098,8 @@ class RecordBatchBuilder:
         """
         title: Append a 64-bit signed integer to a column.
         parameters:
-          col:
-            type: int
-          v:
-            type: int
+          col: Source column or column selector.
+          v: Input value.
         """
         _check(
             self._lib.irx_rb_builder_append_int64(
@@ -1157,10 +1112,8 @@ class RecordBatchBuilder:
         """
         title: Append an 8-bit unsigned integer to a column.
         parameters:
-          col:
-            type: int
-          v:
-            type: int
+          col: Source column or column selector.
+          v: Input value.
         """
         _check(
             self._lib.irx_rb_builder_append_uint8(
@@ -1173,10 +1126,8 @@ class RecordBatchBuilder:
         """
         title: Append a 16-bit unsigned integer to a column.
         parameters:
-          col:
-            type: int
-          v:
-            type: int
+          col: Source column or column selector.
+          v: Input value.
         """
         _check(
             self._lib.irx_rb_builder_append_uint16(
@@ -1189,10 +1140,8 @@ class RecordBatchBuilder:
         """
         title: Append a 32-bit unsigned integer to a column.
         parameters:
-          col:
-            type: int
-          v:
-            type: int
+          col: Source column or column selector.
+          v: Input value.
         """
         _check(
             self._lib.irx_rb_builder_append_uint32(
@@ -1205,10 +1154,8 @@ class RecordBatchBuilder:
         """
         title: Append a 64-bit unsigned integer to a column.
         parameters:
-          col:
-            type: int
-          v:
-            type: int
+          col: Source column or column selector.
+          v: Input value.
         """
         _check(
             self._lib.irx_rb_builder_append_uint64(
@@ -1221,10 +1168,8 @@ class RecordBatchBuilder:
         """
         title: Append a 32-bit floating-point value to a column.
         parameters:
-          col:
-            type: int
-          v:
-            type: float
+          col: Source column or column selector.
+          v: Input value.
         """
         _check(
             self._lib.irx_rb_builder_append_float32(
@@ -1237,10 +1182,8 @@ class RecordBatchBuilder:
         """
         title: Append a 64-bit floating-point value to a column.
         parameters:
-          col:
-            type: int
-          v:
-            type: float
+          col: Source column or column selector.
+          v: Input value.
         """
         _check(
             self._lib.irx_rb_builder_append_float64(
@@ -1253,10 +1196,8 @@ class RecordBatchBuilder:
         """
         title: Append a boolean value to a column.
         parameters:
-          col:
-            type: int
-          v:
-            type: bool
+          col: Source column or column selector.
+          v: Input value.
         """
         _check(
             self._lib.irx_rb_builder_append_bool(
@@ -1269,10 +1210,8 @@ class RecordBatchBuilder:
         """
         title: Append a UTF-8 string to a utf8 or large_utf8 column.
         parameters:
-          col:
-            type: int
-          v:
-            type: str
+          col: Source column or column selector.
+          v: Input value.
         """
         data = v.encode("utf-8")
         _check(
@@ -1285,14 +1224,13 @@ class RecordBatchBuilder:
     def append_date(self, col: int, v: date | int) -> None:
         """
         title: Append a value to a date32 or date64 column.
-        summary: |-
+        summary: >-
           Accepts a datetime.date or a raw storage int (days since epoch for
+
           DATE32, milliseconds since epoch for DATE64).
         parameters:
-          col:
-            type: int
-          v:
-            type: date | int
+          col: Source column or column selector.
+          v: Input value.
         """
         if isinstance(v, date):
             v = _date_to_int(v, self._col_types[col])
@@ -1306,15 +1244,15 @@ class RecordBatchBuilder:
     def append_timestamp(self, col: int, v: datetime | int) -> None:
         """
         title: Append a value to a timestamp column.
-        summary: |-
+        summary: >-
           Accepts a datetime.datetime (naive treated as UTC) or a raw storage
+
           int already scaled to the column's unit (seconds, milliseconds,
+
           microseconds, or nanoseconds since epoch).
         parameters:
-          col:
-            type: int
-          v:
-            type: datetime | int
+          col: Source column or column selector.
+          v: Input value.
         """
         if isinstance(v, datetime):
             v = _datetime_to_int(v, self._col_types[col])
@@ -1328,15 +1266,15 @@ class RecordBatchBuilder:
     def append_time(self, col: int, v: time | int) -> None:
         """
         title: Append a value to a time32 or time64 column.
-        summary: |-
+        summary: >-
           Accepts a datetime.time or a raw storage int scaled to the column's
+
           unit (seconds, milliseconds, microseconds, or nanoseconds since
+
           midnight).
         parameters:
-          col:
-            type: int
-          v:
-            type: time | int
+          col: Source column or column selector.
+          v: Input value.
         """
         if isinstance(v, time):
             v = _time_to_int(v, self._col_types[col])
@@ -1351,8 +1289,7 @@ class RecordBatchBuilder:
         """
         title: Append a null value to a column.
         parameters:
-          col:
-            type: int
+          col: Source column or column selector.
         """
         _check(
             self._lib.irx_rb_builder_append_null(self._handle, col), self._lib
@@ -1361,16 +1298,17 @@ class RecordBatchBuilder:
     def append_list(self, col: int, values: Sequence[Any]) -> None:
         """
         title: Append one list slot to a list column.
-        summary: |-
+        summary: >-
           values is a sequence of the column's element type. Temporal elements
+
           accept datetime.date/datetime/time objects or raw storage ints;
+
           numeric elements accept plain numbers. Use append_null(col) for a
+
           null list slot.
         parameters:
-          col:
-            type: int
-          values:
-            type: Sequence[Any]
+          col: Source column or column selector.
+          values: Values to process, in order.
         """
         elem_type = self._elem_types[col]
         if elem_type is None:
@@ -1394,17 +1332,19 @@ class RecordBatchBuilder:
     ) -> None:
         """
         title: Append one struct slot to a struct column.
-        summary: |-
+        summary: >-
           values gives one value per field, either as a mapping keyed by field
+
           name or as a positional sequence in field order. Temporal fields
+
           accept datetime.date/datetime/time objects or raw storage ints;
+
           numeric fields accept plain numbers. Use append_null(col) for a null
+
           struct slot.
         parameters:
-          col:
-            type: int
-          values:
-            type: Mapping[str, Any] | Sequence[Any]
+          col: Source column or column selector.
+          values: Values to process, in order.
         """
         fields = self._struct_fields[col]
         if fields is None:
@@ -1442,8 +1382,7 @@ class RecordBatchBuilder:
     def finish(self) -> "RecordBatch":
         """
         title: finish.
-        returns:
-          type: RecordBatch
+        returns: 'Result of this operation: finish.'
         """
         batch_handle = ctypes.c_void_p()
         _check(
@@ -1474,19 +1413,22 @@ class RecordBatchBuilder:
 class RecordBatch:
     """
     title: RecordBatch.
-    summary: |-
+    summary: >-
       Null-slot behaviour is uniform across every getter: a null value reads
+
       back as the zero value of its type (0 for numerics, empty string for
+
       utf8/large_utf8, epoch-relative 0 for date/timestamp/time). Callers
+
       that need to distinguish a real zero/empty value from a null must
+
       check ``is_null(col, row)`` first.
     attributes:
-      _handle:
-        type: ctypes.c_void_p
-      _lib:
-        type: ctypes.CDLL
-      _released:
-        type: bool
+      _handle: Handle.
+      _lib: Lib.
+      _released: Whether to use released.
+      num_rows: Num rows.
+      num_columns: Num columns.
     """
 
     _handle: ctypes.c_void_p
@@ -1497,10 +1439,8 @@ class RecordBatch:
         """
         title: Create a wrapper around an existing native batch handle.
         parameters:
-          handle:
-            type: ctypes.c_void_p
-          lib:
-            type: ctypes.CDLL
+          handle: Opaque native handle.
+          lib: Lib.
         """
         self._handle = handle
         self._lib = lib
@@ -1511,10 +1451,9 @@ class RecordBatch:
         """
         title: Import a PyArrow batch, retaining independent native buffers.
         parameters:
-          batch:
-            type: pa.RecordBatch
-        returns:
-          type: RecordBatch
+          batch: Batch.
+        returns: 'Result of this operation: import a PyArrow batch, retaining
+          independent native buffers.'
         """
         for field in batch.schema:
             validate_c_data_field(field)
@@ -1540,8 +1479,8 @@ class RecordBatch:
     def to_arrow(self) -> pa.RecordBatch:
         """
         title: Export independent PyArrow buffers, including nested values.
-        returns:
-          type: pa.RecordBatch
+        returns: 'Result of this operation: export independent PyArrow
+          buffers, including nested values.'
         """
         if self._released:
             raise RuntimeError("RecordBatch is released")
@@ -1566,8 +1505,7 @@ class RecordBatch:
     def num_rows(self) -> int:
         """
         title: Return the number of rows in the batch.
-        returns:
-          type: int
+        returns: The number of rows in the batch.
         """
         return int(self._lib.irx_rb_batch_num_rows(self._handle))
 
@@ -1575,8 +1513,7 @@ class RecordBatch:
     def num_columns(self) -> int:
         """
         title: Return the number of columns in the batch.
-        returns:
-          type: int
+        returns: The number of columns in the batch.
         """
         return int(self._lib.irx_rb_batch_num_columns(self._handle))
 
@@ -1586,16 +1523,11 @@ class RecordBatch:
         """
         title: Read a scalar value from the batch through a native getter.
         parameters:
-          fn_name:
-            type: str
-          ctype:
-            type: type[Any]
-          col:
-            type: int
-          row:
-            type: int
-        returns:
-          type: Any
+          fn_name: Name of fn.
+          ctype: Ctype.
+          col: Source column or column selector.
+          row: Row index or row data.
+        returns: Read a scalar value from the batch through a native getter.
         """
         out = ctype()
         _check(
@@ -1610,12 +1542,9 @@ class RecordBatch:
         """
         title: Return an 8-bit signed integer value from the batch.
         parameters:
-          col:
-            type: int
-          row:
-            type: int
-        returns:
-          type: int
+          col: Source column or column selector.
+          row: Row index or row data.
+        returns: An 8-bit signed integer value from the batch.
         """
         return int(
             self._scalar_get("irx_rb_batch_get_int8", ctypes.c_int8, col, row)
@@ -1625,12 +1554,9 @@ class RecordBatch:
         """
         title: Return a 16-bit signed integer value from the batch.
         parameters:
-          col:
-            type: int
-          row:
-            type: int
-        returns:
-          type: int
+          col: Source column or column selector.
+          row: Row index or row data.
+        returns: A 16-bit signed integer value from the batch.
         """
         return int(
             self._scalar_get(
@@ -1642,12 +1568,9 @@ class RecordBatch:
         """
         title: Return a 32-bit signed integer value from the batch.
         parameters:
-          col:
-            type: int
-          row:
-            type: int
-        returns:
-          type: int
+          col: Source column or column selector.
+          row: Row index or row data.
+        returns: A 32-bit signed integer value from the batch.
         """
         return int(
             self._scalar_get(
@@ -1659,12 +1582,9 @@ class RecordBatch:
         """
         title: Return a 64-bit signed integer value from the batch.
         parameters:
-          col:
-            type: int
-          row:
-            type: int
-        returns:
-          type: int
+          col: Source column or column selector.
+          row: Row index or row data.
+        returns: A 64-bit signed integer value from the batch.
         """
         return int(
             self._scalar_get(
@@ -1676,12 +1596,9 @@ class RecordBatch:
         """
         title: Return an 8-bit unsigned integer value from the batch.
         parameters:
-          col:
-            type: int
-          row:
-            type: int
-        returns:
-          type: int
+          col: Source column or column selector.
+          row: Row index or row data.
+        returns: An 8-bit unsigned integer value from the batch.
         """
         return int(
             self._scalar_get(
@@ -1693,12 +1610,9 @@ class RecordBatch:
         """
         title: Return a 16-bit unsigned integer value from the batch.
         parameters:
-          col:
-            type: int
-          row:
-            type: int
-        returns:
-          type: int
+          col: Source column or column selector.
+          row: Row index or row data.
+        returns: A 16-bit unsigned integer value from the batch.
         """
         return int(
             self._scalar_get(
@@ -1710,12 +1624,9 @@ class RecordBatch:
         """
         title: Return a 32-bit unsigned integer value from the batch.
         parameters:
-          col:
-            type: int
-          row:
-            type: int
-        returns:
-          type: int
+          col: Source column or column selector.
+          row: Row index or row data.
+        returns: A 32-bit unsigned integer value from the batch.
         """
         return int(
             self._scalar_get(
@@ -1727,12 +1638,9 @@ class RecordBatch:
         """
         title: Return a 64-bit unsigned integer value from the batch.
         parameters:
-          col:
-            type: int
-          row:
-            type: int
-        returns:
-          type: int
+          col: Source column or column selector.
+          row: Row index or row data.
+        returns: A 64-bit unsigned integer value from the batch.
         """
         return int(
             self._scalar_get(
@@ -1744,12 +1652,9 @@ class RecordBatch:
         """
         title: Return a 32-bit floating-point value from the batch.
         parameters:
-          col:
-            type: int
-          row:
-            type: int
-        returns:
-          type: float
+          col: Source column or column selector.
+          row: Row index or row data.
+        returns: A 32-bit floating-point value from the batch.
         """
         return float(
             self._scalar_get(
@@ -1761,12 +1666,9 @@ class RecordBatch:
         """
         title: Return a 64-bit floating-point value from the batch.
         parameters:
-          col:
-            type: int
-          row:
-            type: int
-        returns:
-          type: float
+          col: Source column or column selector.
+          row: Row index or row data.
+        returns: A 64-bit floating-point value from the batch.
         """
         return float(
             self._scalar_get(
@@ -1778,12 +1680,9 @@ class RecordBatch:
         """
         title: Return a boolean value from the batch.
         parameters:
-          col:
-            type: int
-          row:
-            type: int
-        returns:
-          type: bool
+          col: Source column or column selector.
+          row: Row index or row data.
+        returns: A boolean value from the batch.
         """
         out = ctypes.c_int32()
         _check(
@@ -1797,18 +1696,18 @@ class RecordBatch:
     def get_string(self, col: int, row: int) -> str:
         """
         title: Return a UTF-8 string from a utf8 or large_utf8 column.
-        summary: |-
+        summary: >-
           Null slots return an empty string rather than an error, matching
+
           the behavior of the numeric getters. Callers that need to
+
           distinguish a real empty string from a null must check
+
           ``is_null(col, row)`` first.
         parameters:
-          col:
-            type: int
-          row:
-            type: int
-        returns:
-          type: str
+          col: Source column or column selector.
+          row: Row index or row data.
+        returns: A UTF-8 string from a utf8 or large_utf8 column.
         """
         data_ptr = ctypes.c_char_p()
         length = ctypes.c_int64()
@@ -1828,16 +1727,14 @@ class RecordBatch:
     def get_date(self, col: int, row: int) -> int:
         """
         title: Return the raw storage int for a date32 or date64 column.
-        summary: |-
+        summary: >-
           Value is days since epoch for DATE32 and milliseconds since epoch
+
           for DATE64.
         parameters:
-          col:
-            type: int
-          row:
-            type: int
-        returns:
-          type: int
+          col: Source column or column selector.
+          row: Row index or row data.
+        returns: The raw storage int for a date32 or date64 column.
         """
         out = ctypes.c_int64()
         _check(
@@ -1851,16 +1748,14 @@ class RecordBatch:
     def get_timestamp(self, col: int, row: int) -> int:
         """
         title: Return the raw storage int for a timestamp column.
-        summary: |-
+        summary: >-
           Value is scaled to the column's unit (seconds, milliseconds,
+
           microseconds, or nanoseconds since epoch).
         parameters:
-          col:
-            type: int
-          row:
-            type: int
-        returns:
-          type: int
+          col: Source column or column selector.
+          row: Row index or row data.
+        returns: The raw storage int for a timestamp column.
         """
         out = ctypes.c_int64()
         _check(
@@ -1874,16 +1769,14 @@ class RecordBatch:
     def get_time(self, col: int, row: int) -> int:
         """
         title: Return the raw storage int for a time32 or time64 column.
-        summary: |-
+        summary: >-
           Value is scaled to the column's unit (seconds, milliseconds,
+
           microseconds, or nanoseconds since midnight).
         parameters:
-          col:
-            type: int
-          row:
-            type: int
-        returns:
-          type: int
+          col: Source column or column selector.
+          row: Row index or row data.
+        returns: The raw storage int for a time32 or time64 column.
         """
         out = ctypes.c_int64()
         _check(
@@ -1897,18 +1790,18 @@ class RecordBatch:
     def get_list(self, col: int, row: int) -> Optional[list[Any]]:
         """
         title: Return the list at a list-column row, or None if it is null.
-        summary: |-
+        summary: >-
           Elements come back as raw storage values: numbers for numeric
+
           element types and raw storage ints for temporal element types
+
           (matching the scalar getters). An empty list slot returns an empty
+
           list; a null list slot returns None.
         parameters:
-          col:
-            type: int
-          row:
-            type: int
-        returns:
-          type: Optional[list[Any]]
+          col: Source column or column selector.
+          row: Row index or row data.
+        returns: The list at a list-column row, or None if it is null.
         """
         if self.is_null(col, row):
             return None
@@ -1947,17 +1840,16 @@ class RecordBatch:
     def get_struct(self, col: int, row: int) -> Optional[dict[str, Any]]:
         """
         title: Return the struct at a struct-column row, or None if it is null.
-        summary: |-
+        summary: >-
           Fields come back keyed by name; values are raw storage values
+
           (numbers for numeric fields, raw storage ints for temporal fields,
+
           matching the scalar getters). A null struct slot returns None.
         parameters:
-          col:
-            type: int
-          row:
-            type: int
-        returns:
-          type: Optional[dict[str, Any]]
+          col: Source column or column selector.
+          row: Row index or row data.
+        returns: Structured representation of this node.
         """
         if self.is_null(col, row):
             return None
@@ -2006,12 +1898,9 @@ class RecordBatch:
         """
         title: Return whether the value at the supplied location is null.
         parameters:
-          col:
-            type: int
-          row:
-            type: int
-        returns:
-          type: bool
+          col: Source column or column selector.
+          row: Row index or row data.
+        returns: Whether the value at the supplied location is null.
         """
         out = ctypes.c_int32()
         _check(
@@ -2042,16 +1931,11 @@ class RecordBatchStreamWriter:
     """
     title: RecordBatchStreamWriter.
     attributes:
-      _handle:
-        type: ctypes.c_void_p
-      _lib:
-        type: ctypes.CDLL
-      _is_buffer:
-        type: bool
-      _closed:
-        type: bool
-      _released:
-        type: bool
+      _handle: Handle.
+      _lib: Lib.
+      _is_buffer: Whether to use is buffer.
+      _closed: Whether to use closed.
+      _released: Whether to use released.
     """
 
     _handle: ctypes.c_void_p
@@ -2069,12 +1953,9 @@ class RecordBatchStreamWriter:
         """
         title: Wrap an existing native stream writer handle.
         parameters:
-          handle:
-            type: ctypes.c_void_p
-          lib:
-            type: ctypes.CDLL
-          is_buffer:
-            type: bool
+          handle: Opaque native handle.
+          lib: Lib.
+          is_buffer: Whether is buffer.
         """
         self._handle = handle
         self._lib = lib
@@ -2094,21 +1975,16 @@ class RecordBatchStreamWriter:
     ) -> "RecordBatchStreamWriter":
         """
         title: Create Parquet output with buffered row groups and exact types.
-        summary: >-
-          Explicit close checks footer finalization; output is not atomic.
+        summary: Explicit close checks footer finalization; output is not
+          atomic.
         parameters:
-          schema:
-            type: RecordBatchSchema
-          path:
-            type: str | os.PathLike[str]
-          compression:
-            type: str | None
-          row_group_size:
-            type: int | None
-          options:
-            type: ParquetOptions | None
-        returns:
-          type: RecordBatchStreamWriter
+          schema: Declared data schema.
+          path: Path to the input or output resource.
+          compression: Compression.
+          row_group_size: Size of row group.
+          options: Validated operation options.
+        returns: Created parquet output with buffered row groups and exact
+          types.
         """
         path_bytes = parquet_path(path)
         effective = options or ParquetOptions()
@@ -2162,20 +2038,15 @@ class RecordBatchStreamWriter:
     ) -> "RecordBatchStreamWriter":
         """
         title: Create or truncate a local CSV file with an exact batch schema.
-        summary: >-
-          Close explicitly to observe final flush errors; writes are not
-          atomic.
+        summary: Close explicitly to observe final flush errors; writes are
+          not atomic.
         parameters:
-          schema:
-            type: RecordBatchSchema
-          path:
-            type: str | os.PathLike[str]
-          delimiter:
-            type: str
-          header:
-            type: bool
-        returns:
-          type: RecordBatchStreamWriter
+          schema: Declared data schema.
+          path: Path to the input or output resource.
+          delimiter: Delimiter.
+          header: Whether to use header.
+        returns: Created or truncate a local CSV file with an exact batch
+          schema.
         """
         path_bytes, separator = csv_strings(path, delimiter)
         lib = csv_library()
@@ -2199,12 +2070,10 @@ class RecordBatchStreamWriter:
         """
         title: Open a stream writer backed by a file path.
         parameters:
-          schema:
-            type: RecordBatchSchema
-          path:
-            type: str | os.PathLike[str]
-        returns:
-          type: RecordBatchStreamWriter
+          schema: Declared data schema.
+          path: Path to the input or output resource.
+        returns: 'Result of this operation: open a stream writer backed by
+          a file path.'
         """
         lib = _get_lib()
         handle = ctypes.c_void_p()
@@ -2223,10 +2092,9 @@ class RecordBatchStreamWriter:
         """
         title: Open a stream writer backed by an in-memory buffer.
         parameters:
-          schema:
-            type: RecordBatchSchema
-        returns:
-          type: RecordBatchStreamWriter
+          schema: Declared data schema.
+        returns: 'Result of this operation: open a stream writer backed by
+          an in-memory buffer.'
         """
         lib = _get_lib()
         handle = ctypes.c_void_p()
@@ -2242,8 +2110,7 @@ class RecordBatchStreamWriter:
         """
         title: Write a completed batch to the stream.
         parameters:
-          batch:
-            type: RecordBatch
+          batch: Batch.
         """
         if self._closed or self._released:
             raise RuntimeError("RecordBatch writer is closed or released")
@@ -2269,8 +2136,7 @@ class RecordBatchStreamWriter:
     def buffer_data(self) -> bytes:
         """
         title: buffer_data.
-        returns:
-          type: bytes
+        returns: 'Result of this operation: buffer_data.'
         """
         if not self._is_buffer:
             raise RuntimeError(
@@ -2305,8 +2171,8 @@ class RecordBatchStreamWriter:
     def __enter__(self) -> "RecordBatchStreamWriter":
         """
         title: Support using the writer as a context manager.
-        returns:
-          type: RecordBatchStreamWriter
+        returns: 'Result of this operation: support using the writer as a
+          context manager.'
         """
         return self
 
@@ -2319,12 +2185,9 @@ class RecordBatchStreamWriter:
         """
         title: Finalize successful contexts and abandon exceptional writes.
         parameters:
-          exc_type:
-            type: type[BaseException] | None
-          exc_value:
-            type: BaseException | None
-          traceback:
-            type: TracebackType | None
+          exc_type: Type of exc.
+          exc_value: Exc value.
+          traceback: Traceback.
         """
         skip_unused(exc_value, traceback)
         try:
@@ -2339,12 +2202,9 @@ class RecordBatchStreamReader:
     """
     title: RecordBatchStreamReader.
     attributes:
-      _handle:
-        type: ctypes.c_void_p
-      _lib:
-        type: ctypes.CDLL
-      _closed:
-        type: bool
+      _handle: Handle.
+      _lib: Lib.
+      _closed: Whether to use closed.
     """
 
     _handle: ctypes.c_void_p
@@ -2355,10 +2215,8 @@ class RecordBatchStreamReader:
         """
         title: Wrap an existing native stream reader handle.
         parameters:
-          handle:
-            type: ctypes.c_void_p
-          lib:
-            type: ctypes.CDLL
+          handle: Opaque native handle.
+          lib: Lib.
         """
         self._handle = handle
         self._lib = lib
@@ -2374,19 +2232,15 @@ class RecordBatchStreamReader:
         options: ParquetOptions | None = None,
     ) -> "RecordBatchStreamReader":
         """
-        title: >-
-          Stream configured Parquet batches, optionally asserting the schema.
+        title: Stream configured Parquet batches, optionally asserting
+          the schema.
         parameters:
-          path:
-            type: str | os.PathLike[str]
-          schema:
-            type: RecordBatchSchema | None
-          batch_size:
-            type: int | None
-          options:
-            type: ParquetOptions | None
-        returns:
-          type: RecordBatchStreamReader
+          path: Path to the input or output resource.
+          schema: Declared data schema.
+          batch_size: Size of batch.
+          options: Validated operation options.
+        returns: 'Result of this operation: stream configured Parquet batches,
+          optionally asserting the schema.'
         """
         path_bytes = parquet_path(path)
         effective = options or ParquetOptions()
@@ -2418,8 +2272,7 @@ class RecordBatchStreamReader:
     def schema(self) -> RecordBatchSchema:
         """
         title: Return an independent schema snapshot before or after EOF.
-        returns:
-          type: RecordBatchSchema
+        returns: An independent schema snapshot before or after EOF.
         """
         if self._closed:
             raise RuntimeError("RecordBatch reader is closed")
@@ -2437,23 +2290,18 @@ class RecordBatchStreamReader:
         block_size: int = 1048576,
     ) -> "RecordBatchStreamReader":
         """
-        title: >-
-          Stream a local UTF-8 CSV file with explicit or first-block schema.
-        summary: >-
-          Unquoted empty fields are null; quoted empty strings remain strings.
+        title: Stream a local UTF-8 CSV file with explicit or first-block
+          schema.
+        summary: Unquoted empty fields are null; quoted empty strings remain
+          strings.
         parameters:
-          path:
-            type: str | os.PathLike[str]
-          schema:
-            type: RecordBatchSchema | None
-          delimiter:
-            type: str
-          header:
-            type: bool
-          block_size:
-            type: int
-        returns:
-          type: RecordBatchStreamReader
+          path: Path to the input or output resource.
+          schema: Declared data schema.
+          delimiter: Delimiter.
+          header: Whether to use header.
+          block_size: Size of block.
+        returns: 'Result of this operation: stream a local UTF-8 CSV file
+          with explicit or first-block schema.'
         """
         path_bytes, separator = csv_strings(path, delimiter)
         if (
@@ -2485,10 +2333,9 @@ class RecordBatchStreamReader:
         """
         title: Open a stream reader backed by a file path.
         parameters:
-          path:
-            type: str | os.PathLike[str]
-        returns:
-          type: RecordBatchStreamReader
+          path: Path to the input or output resource.
+        returns: 'Result of this operation: open a stream reader backed by
+          a file path.'
         """
         lib = _get_lib()
         handle = ctypes.c_void_p()
@@ -2505,10 +2352,9 @@ class RecordBatchStreamReader:
         """
         title: Open a stream reader backed by an in-memory buffer.
         parameters:
-          data:
-            type: bytes
-        returns:
-          type: RecordBatchStreamReader
+          data: Data to process.
+        returns: 'Result of this operation: open a stream reader backed by
+          an in-memory buffer.'
         """
         lib = _get_lib()
         handle = ctypes.c_void_p()
@@ -2524,8 +2370,7 @@ class RecordBatchStreamReader:
     def next_batch(self) -> Optional[RecordBatch]:
         """
         title: Return the next RecordBatch or None at end-of-stream.
-        returns:
-          type: Optional[RecordBatch]
+        returns: The next RecordBatch or None at end-of-stream.
         """
         if self._closed:
             raise RuntimeError("RecordBatch reader is closed")
@@ -2541,8 +2386,7 @@ class RecordBatchStreamReader:
     def __iter__(self) -> Iterator[RecordBatch]:
         """
         title: Iterate batches from the stream until exhaustion.
-        returns:
-          type: Iterator[RecordBatch]
+        returns: Iterator over the contained items.
         """
         batch = self.next_batch()
         while batch is not None:
@@ -2567,8 +2411,8 @@ class RecordBatchStreamReader:
     def __enter__(self) -> "RecordBatchStreamReader":
         """
         title: Support using the reader as a context manager.
-        returns:
-          type: RecordBatchStreamReader
+        returns: 'Result of this operation: support using the reader as a
+          context manager.'
         """
         return self
 
@@ -2577,8 +2421,8 @@ class RecordBatchStreamReader:
         title: Close and release the reader from a context manager.
         parameters:
           _exc:
-            type: object
             variadic: positional
+            description: Exc.
         """
         self.close()
 
@@ -2592,16 +2436,11 @@ class FileSession:
     """
     title: Private shared lifetime and mode checks for format-level APIs.
     attributes:
-      mode:
-        type: Literal[closed, read, write, failed]
-      reader:
-        type: RecordBatchStreamReader | None
-      writer:
-        type: RecordBatchStreamWriter | None
-      write_schema:
-        type: RecordBatchSchema | None
-      failure:
-        type: str | None
+      mode: Selected processing mode.
+      reader: Reader.
+      writer: Writer.
+      write_schema: Write schema.
+      failure: Failure.
     """
 
     def __init__(self) -> None:
@@ -2618,10 +2457,8 @@ class FileSession:
         """
         title: Reject wrong-mode calls before touching files or native handles.
         parameters:
-          mode:
-            type: str
-          operation:
-            type: str
+          mode: Selected processing mode.
+          operation: Operation to resolve or execute.
         """
         if self.mode != mode:
             raise RuntimeError(
@@ -2632,8 +2469,7 @@ class FileSession:
     def next_batch(self) -> RecordBatch | None:
         """
         title: Read an independently owned batch or return None at EOF.
-        returns:
-          type: RecordBatch | None
+        returns: Read an independently owned batch or return None at EOF.
         """
         self.require("read", "next_batch")
         assert self.reader is not None
@@ -2647,8 +2483,7 @@ class FileSession:
         """
         title: Write an exact-schema batch in write mode.
         parameters:
-          batch:
-            type: RecordBatch
+          batch: Batch.
         """
         self.require("write", "write_batch")
         assert self.writer is not None
@@ -2661,8 +2496,7 @@ class FileSession:
     def schema(self) -> RecordBatchSchema:
         """
         title: Return an owned schema snapshot in either open mode.
-        returns:
-          type: RecordBatchSchema
+        returns: An owned schema snapshot in either open mode.
         """
         if self.mode == "read":
             assert self.reader is not None
@@ -2675,8 +2509,7 @@ class FileSession:
         """
         title: Invalidate a failed session and retain its error for close.
         parameters:
-          error:
-            type: Exception
+          error: Error being reported or inspected.
         """
         self.mode = "failed"
         self.failure = str(error)
@@ -2698,8 +2531,8 @@ class FileSession:
 
     def close(self) -> None:
         """
-        title: >-
-          Check finalization once, preserving failures and successful reuse.
+        title: Check finalization once, preserving failures and successful
+          reuse.
         """
         if self.mode == "failed":
             raise RuntimeError(f"File session failed: {self.failure}")
@@ -2716,8 +2549,7 @@ class FileSession:
     def __iter__(self) -> Iterator[RecordBatch]:
         """
         title: Iterate in read mode, releasing each batch when advancing.
-        returns:
-          type: Iterator[RecordBatch]
+        returns: Iterator over the contained items.
         """
         self.require("read", "iteration")
         while (batch := self.next_batch()) is not None:
@@ -2729,8 +2561,8 @@ class FileSession:
     def __enter__(self: FileType) -> FileType:
         """
         title: Enter a context without implicitly opening a file.
-        returns:
-          type: FileType
+        returns: 'Result of this operation: enter a context without implicitly
+          opening a file.'
         """
         return self
 
@@ -2743,12 +2575,9 @@ class FileSession:
         """
         title: Check normal finalization without masking an active exception.
         parameters:
-          exc_type:
-            type: type[BaseException] | None
-          exc_value:
-            type: BaseException | None
-          traceback:
-            type: TracebackType | None
+          exc_type: Type of exc.
+          exc_value: Exc value.
+          traceback: Traceback.
         """
         skip_unused(exc_value, traceback)
         if exc_type is None:
@@ -2770,22 +2599,16 @@ class FileSession:
 class ParquetStream(FileSession):
     """
     title: Stream a Parquet file or dataset in explicit read or write mode.
-    summary: >-
-      Process batches incrementally without implicit temporal coercion. Close
-      explicitly to check footer errors. Nontransactional output is partial on
-      failure. Use irx.table_io.read_parquet and write_parquet for eager
-      tables.
+    summary: Process batches incrementally without implicit temporal coercion.
+      Close explicitly to check footer errors. Nontransactional output is
+      partial on failure. Use irx.table_io.read_parquet and write_parquet
+      for eager tables.
     attributes:
-      mode:
-        type: Literal[closed, read, write, failed]
-      reader:
-        type: RecordBatchStreamReader | None
-      writer:
-        type: RecordBatchStreamWriter | None
-      write_schema:
-        type: RecordBatchSchema | None
-      failure:
-        type: str | None
+      mode: Selected processing mode.
+      reader: Reader.
+      writer: Writer.
+      write_schema: Write schema.
+      failure: Failure.
     """
 
     def open_read(
@@ -2797,17 +2620,13 @@ class ParquetStream(FileSession):
         options: ParquetOptions | None = None,
     ) -> None:
         """
-        title: >-
-          Open for batched reading with an optional exact schema assertion.
+        title: Open for batched reading with an optional exact schema
+          assertion.
         parameters:
-          path:
-            type: str | os.PathLike[str]
-          schema:
-            type: RecordBatchSchema | None
-          batch_size:
-            type: int | None
-          options:
-            type: ParquetOptions | None
+          path: Path to the input or output resource.
+          schema: Declared data schema.
+          batch_size: Size of batch.
+          options: Validated operation options.
         """
         self.require("closed", "open_read")
         self.reader = RecordBatchStreamReader.open_parquet(
@@ -2827,16 +2646,11 @@ class ParquetStream(FileSession):
         """
         title: Open a writer after validation, retaining an independent schema.
         parameters:
-          path:
-            type: str | os.PathLike[str]
-          schema:
-            type: RecordBatchSchema
-          compression:
-            type: str | None
-          row_group_size:
-            type: int | None
-          options:
-            type: ParquetOptions | None
+          path: Path to the input or output resource.
+          schema: Declared data schema.
+          compression: Compression.
+          row_group_size: Size of row group.
+          options: Validated operation options.
         """
         self.require("closed", "open_write")
         snapshot = schema.clone()
@@ -2859,22 +2673,18 @@ class ParquetStream(FileSession):
 @typechecked
 class CSVStream(FileSession):
     """
-    title: Stream a local CSV file with the same session API as ParquetStream.
-    summary: >-
-      Preserve existing Arrow CSV quoting, null and first-block inference
-      rules. Explicit schemas control parsing, unlike Parquet assertions. Use
-      irx.table_io.read_csv and write_csv for eager tables instead.
+    title: Stream a local CSV file with the same session API
+      as ParquetStream.
+    summary: Preserve existing Arrow CSV quoting, null and first-block
+      inference rules. Explicit schemas control parsing, unlike
+      Parquet assertions. Use irx.table_io.read_csv and write_csv
+      for eager tables instead.
     attributes:
-      mode:
-        type: Literal[closed, read, write, failed]
-      reader:
-        type: RecordBatchStreamReader | None
-      writer:
-        type: RecordBatchStreamWriter | None
-      write_schema:
-        type: RecordBatchSchema | None
-      failure:
-        type: str | None
+      mode: Selected processing mode.
+      reader: Reader.
+      writer: Writer.
+      write_schema: Write schema.
+      failure: Failure.
     """
 
     def open_read(
@@ -2889,16 +2699,11 @@ class CSVStream(FileSession):
         """
         title: Open CSV using inferred or explicit physical column types.
         parameters:
-          path:
-            type: str | os.PathLike[str]
-          schema:
-            type: RecordBatchSchema | None
-          delimiter:
-            type: str
-          header:
-            type: bool
-          block_size:
-            type: int
+          path: Path to the input or output resource.
+          schema: Declared data schema.
+          delimiter: Delimiter.
+          header: Whether to use header.
+          block_size: Size of block.
         """
         self.require("closed", "open_read")
         self.reader = RecordBatchStreamReader.open_csv(
@@ -2919,17 +2724,13 @@ class CSVStream(FileSession):
         header: bool = True,
     ) -> None:
         """
-        title: >-
-          Open CSV output without changing the established format contract.
+        title: Open CSV output without changing the established format
+          contract.
         parameters:
-          path:
-            type: str | os.PathLike[str]
-          schema:
-            type: RecordBatchSchema
-          delimiter:
-            type: str
-          header:
-            type: bool
+          path: Path to the input or output resource.
+          schema: Declared data schema.
+          delimiter: Delimiter.
+          header: Whether to use header.
         """
         self.require("closed", "open_write")
         snapshot = schema.clone()

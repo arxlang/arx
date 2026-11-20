@@ -14,15 +14,16 @@ def kinds(source: str) -> list[TokenKind]:
     """
     title: Return token kinds excluding EOF.
     parameters:
-      source:
-        type: str
-    returns:
-      type: list[TokenKind]
+      source: Source input to process.
+    returns: Token kinds excluding EOF.
     """
     return [token.kind for token in Lexer(source).tokenize().tokens[:-1]]
 
 
 def test_lex_hello() -> None:
+    """
+    title: Verify tokenization of a hello program.
+    """
     source = '∴ main ⟦⟧ → ∅\n  ⟣ "hello"\n∎'
     assert kinds(source) == [
         TokenKind.define,
@@ -38,6 +39,9 @@ def test_lex_hello() -> None:
 
 
 def test_lex_compact_fibonacci() -> None:
+    """
+    title: Verify compact Fibonacci tokenization.
+    """
     source = "∴fib⟦n:ℕ⟧→ℕ{⊢n≤1⇒n;⊢fib⟦n-1⟧+fib⟦n-2⟧}"
     assert TokenKind.define in kinds(source)
     assert TokenKind.turnstile in kinds(source)
@@ -46,6 +50,9 @@ def test_lex_compact_fibonacci() -> None:
 
 
 def test_lex_unicode_types_and_booleans() -> None:
+    """
+    title: Verify Unicode types and Boolean literals.
+    """
     tokens = Lexer("ℕ ℤ ℝ ℂ 𝔹 ∅ ⊤ ⊥ true false").tokenize().tokens
     assert [token.kind for token in tokens[:-1]] == [
         TokenKind.primitive_type,
@@ -62,6 +69,9 @@ def test_lex_unicode_types_and_booleans() -> None:
 
 
 def test_lex_comments_and_unicode_identifiers() -> None:
+    """
+    title: Verify comments and Unicode identifiers.
+    """
     tokens = Lexer("∴ μέain ⟦⟧ → ∅ ⍝ ignored\n∎").tokenize().tokens
     values = [token.value for token in tokens]
     assert "μέain" in values
@@ -69,5 +79,8 @@ def test_lex_comments_and_unicode_identifiers() -> None:
 
 
 def test_reject_unknown_glyph() -> None:
+    """
+    title: Verify unknown-glyph rejection.
+    """
     with pytest.raises(LexerError, match="unknown symbol"):
         Lexer("☃").tokenize()

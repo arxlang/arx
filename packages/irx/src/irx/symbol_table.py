@@ -1,5 +1,7 @@
 """
 title: Symbol Table classes.
+attributes:
+  SymbolTable: Symbol table.
 """
 
 from typing import TypeAlias
@@ -20,8 +22,8 @@ class RegisterTable:
     """
     title: Track named registers in nested scopes.
     attributes:
-      stack:
-        type: list[int]
+      stack: Stack.
+      last: Last.
     """
 
     # Each level in the stack represents a context.
@@ -43,10 +45,8 @@ class RegisterTable:
         """
         title: Increase.
         parameters:
-          count:
-            type: int
-        returns:
-          type: int
+          count: Number of items.
+        returns: 'Result of this operation: increase.'
         """
         self.stack[-1] += count
         return self.stack[-1]
@@ -55,8 +55,7 @@ class RegisterTable:
     def last(self) -> int:
         """
         title: Last.
-        returns:
-          type: int
+        returns: 'Result of this operation: last.'
         """
         return self.stack[-1]
 
@@ -70,8 +69,7 @@ class RegisterTable:
         """
         title: Redefine.
         parameters:
-          count:
-            type: int
+          count: Number of items.
         """
         self.stack[-1] = count
 

@@ -56,10 +56,9 @@ def text_runtime(tmp_path_factory: pytest.TempPathFactory) -> ct.CDLL:
     """
     title: Compile the real text/list ABI once for the native contract matrix.
     parameters:
-      tmp_path_factory:
-        type: pytest.TempPathFactory
-    returns:
-      type: ct.CDLL
+      tmp_path_factory: Factory for shared temporary test directories.
+    returns: 'Result of this operation: compile the real text/list ABI once
+      for the native contract matrix.'
     """
     if shutil.which("clang") is None:
         pytest.skip("clang required")
@@ -113,10 +112,8 @@ def test_text_codepoint_queries(text_runtime: ct.CDLL, value: str) -> None:
     """
     title: Length, ordinal and indexing count scalars without normalization.
     parameters:
-      text_runtime:
-        type: ct.CDLL
-      value:
-        type: str
+      text_runtime: Text runtime.
+      value: Value to process.
     """
     encoded = value.encode()
     number = ct.c_int64(-1)
@@ -161,10 +158,8 @@ def test_text_rejects_invalid_utf8(
     """
     title: Bounded native input rejects NUL and every UTF-8 invalidity class.
     parameters:
-      text_runtime:
-        type: ct.CDLL
-      invalid:
-        type: bytes
+      text_runtime: Text runtime.
+      invalid: Invalid.
     """
     count = ct.c_int64(99)
     assert (
@@ -203,16 +198,11 @@ def test_text_slice_contract(
     """
     title: Half-open slices clip only nonnegative bounds and require unit step.
     parameters:
-      text_runtime:
-        type: ct.CDLL
-      start:
-        type: int
-      stop:
-        type: int
-      step:
-        type: int
-      status:
-        type: int
+      text_runtime: Text runtime.
+      start: Starting position.
+      stop: Stopping position.
+      step: Iteration stride.
+      status: Native operation status.
     """
     value = "A😀e\u0301"
     output = ct.c_void_p()
@@ -249,17 +239,13 @@ def test_text_split_matches_supported_python_contract(
     text_runtime: ct.CDLL, value: str, separator: str | None, limit: int
 ) -> None:
     """
-    title: >-
-      Whitespace and explicit splitting preserve limit and empty semantics.
+    title: Whitespace and explicit splitting preserve limit and empty
+      semantics.
     parameters:
-      text_runtime:
-        type: ct.CDLL
-      value:
-        type: str
-      separator:
-        type: str | None
-      limit:
-        type: int
+      text_runtime: Text runtime.
+      value: Value to process.
+      separator: Separator.
+      limit: Limit.
     """
     output = NativeTextList()
     assert (
@@ -302,12 +288,9 @@ def test_text_strip_set_contract(
     """
     title: Strip removes code-point sets rather than substrings or graphemes.
     parameters:
-      text_runtime:
-        type: ct.CDLL
-      value:
-        type: str
-      chars:
-        type: str | None
+      text_runtime: Text runtime.
+      value: Value to process.
+      chars: Chars.
     """
     output = ct.c_void_p()
     assert (
@@ -354,19 +337,14 @@ def test_text_integer_contract(
     text_runtime: ct.CDLL, value: str, base: int, status: int, expected: int
 ) -> None:
     """
-    title: >-
-      Integer parsing is complete, locale independent and i64 range checked.
+    title: Integer parsing is complete, locale independent and i64 range
+      checked.
     parameters:
-      text_runtime:
-        type: ct.CDLL
-      value:
-        type: str
-      base:
-        type: int
-      status:
-        type: int
-      expected:
-        type: int
+      text_runtime: Text runtime.
+      value: Value to process.
+      base: Base value or declaration.
+      status: Native operation status.
+      expected: Expected result for this case.
     """
     output = ct.c_int64(99)
     assert (
@@ -380,11 +358,10 @@ def test_text_native_invalid_options_and_whitespace(
     text_runtime: ct.CDLL,
 ) -> None:
     """
-    title: >-
-      Optional text validation and the complete whitespace set are explicit.
+    title: Optional text validation and the complete whitespace set
+      are explicit.
     parameters:
-      text_runtime:
-        type: ct.CDLL
+      text_runtime: Text runtime.
     """
     output = ct.c_void_p()
     words = NativeTextList()
@@ -551,10 +528,8 @@ def test_text_semantic_contract_rejections(
     """
     title: Invalid text calls and storage fail during analysis, not lowering.
     parameters:
-      expression:
-        type: astx.AST
-      message:
-        type: str
+      expression: Expression to process.
+      message: Diagnostic or output message.
     """
     with pytest.raises(SemanticError, match=message):
         analyze(_string_main(expression))
@@ -628,10 +603,8 @@ def test_owned_text_result_cleanup(
     """
     title: Source temporaries, snapshots, and owned results each drop once.
     parameters:
-      expression:
-        type: astx.DataType
-      frees:
-        type: int
+      expression: Expression to process.
+      frees: Frees.
     """
     module = _string_main(
         astx.VariableDeclaration(
@@ -648,10 +621,8 @@ def assert_executed_string_frees(module: astx.Module, expected: int) -> None:
     title: Count executed source cleanup calls instead of failure-edge copies.
     summary: Instrument source functions only; runtime bookkeeping is separate.
     parameters:
-      module:
-        type: astx.Module
-      expected:
-        type: int
+      module: Module to process.
+      expected: Expected result for this case.
     """
     builder = LLVMBuilder()
     builder.translate(module)
@@ -704,12 +675,9 @@ def _string_concat(lhs: str, rhs: str) -> astx.BinaryOp:
     """
     title: Build one heap-producing string concatenation.
     parameters:
-      lhs:
-        type: str
-      rhs:
-        type: str
-    returns:
-      type: astx.BinaryOp
+      lhs: Left operand.
+      rhs: Right operand.
+    returns: Constructed one heap-producing string concatenation.
     """
     return astx.BinaryOp(
         "+",
@@ -723,10 +691,9 @@ def _string_main(*nodes: astx.AST) -> astx.Module:
     title: Build one integer main module for string ownership tests.
     parameters:
       nodes:
-        type: astx.AST
         variadic: positional
-    returns:
-      type: astx.Module
+        description: Syntax nodes in source order.
+    returns: Constructed one integer main module for string ownership tests.
     """
     module = astx.Module()
     body = astx.Block()
@@ -754,8 +721,7 @@ def test_string_literal_utf8_with_print(
     """
     title: Test UTF-8 string literal by printing to stdout.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     module = builder.module()
@@ -789,8 +755,7 @@ def test_string_literal_utf8_char_with_print(
     """
     title: Test UTF-8 char literal by printing to stdout.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     module = builder.module()
@@ -824,8 +789,7 @@ def test_string_literal_generic_with_print(
     """
     title: Test generic string literal by printing to stdout.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     module = builder.module()
@@ -870,14 +834,10 @@ def test_string_concatenation_with_print(
     """
     title: Test string concatenation by printing result to stdout.
     parameters:
-      builder_class:
-        type: type[Builder]
-      lhs_str:
-        type: str
-      rhs_str:
-        type: str
-      expected:
-        type: str
+      builder_class: Builder implementation under test.
+      lhs_str: Left operand str.
+      rhs_str: Right operand str.
+      expected: Expected result for this case.
     """
     builder = builder_class()
     module = builder.module()
@@ -925,16 +885,11 @@ def test_string_comparison_with_print(
     """
     title: Test string comparison operations by printing result to stdout.
     parameters:
-      builder_class:
-        type: type[Builder]
-      lhs_str:
-        type: str
-      op:
-        type: str
-      rhs_str:
-        type: str
-      expected_result:
-        type: bool
+      builder_class: Builder implementation under test.
+      lhs_str: Left operand str.
+      op: Op.
+      rhs_str: Right operand str.
+      expected_result: Whether to use expected result.
     """
     builder = builder_class()
     module = builder.module()
@@ -970,8 +925,7 @@ def test_empty_string_with_print(
     """
     title: Test empty string by printing to stdout.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     module = builder.module()
@@ -1005,8 +959,7 @@ def test_string_with_special_characters_with_print(
     """
     title: Test string with special characters by printing to stdout.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     module = builder.module()
@@ -1140,8 +1093,8 @@ def test_owned_string_local_is_released_after_use() -> None:
 
 def test_owned_string_assignment_releases_each_lifetime_generation() -> None:
     """
-    title: >-
-      Replacing owned strings should free old and final storage exactly once.
+    title: Replacing owned strings should free old and final storage exactly
+      once.
     """
     module = _string_main(
         astx.VariableDeclaration(
@@ -1298,10 +1251,8 @@ def test_string_assignment_rejects_storage_class_changes(
     """
     title: Assignment should not mix static and heap string lifetimes.
     parameters:
-      initializer:
-        type: astx.Expr
-      replacement:
-        type: astx.DataType
+      initializer: Expression providing the initial value.
+      replacement: Replacement.
     """
     module = _string_main(
         astx.VariableDeclaration(

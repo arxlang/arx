@@ -48,10 +48,8 @@ class TensorVisitorMixin(VisitorMixinBase):
         """
         title: Return static Tensor layout metadata for lowering.
         parameters:
-          node:
-            type: astx.AST
-        returns:
-          type: TensorLayout
+          node: Syntax node to process.
+        returns: Static Tensor layout metadata for lowering.
         """
         semantic = getattr(node, "semantic", None)
         extras = getattr(semantic, "extras", {})
@@ -73,10 +71,8 @@ class TensorVisitorMixin(VisitorMixinBase):
         """
         title: Return static Tensor element type for lowering.
         parameters:
-          node:
-            type: astx.AST
-        returns:
-          type: astx.DataType
+          node: Syntax node to process.
+        returns: Static Tensor element type for lowering.
         """
         semantic = getattr(node, "semantic", None)
         extras = getattr(semantic, "extras", {})
@@ -109,10 +105,8 @@ class TensorVisitorMixin(VisitorMixinBase):
         """
         title: Return static Tensor flags for lowering.
         parameters:
-          node:
-            type: astx.AST
-        returns:
-          type: int
+          node: Syntax node to process.
+        returns: Static Tensor flags for lowering.
         """
         semantic = getattr(node, "semantic", None)
         extras = getattr(semantic, "extras", {})
@@ -140,14 +134,11 @@ class TensorVisitorMixin(VisitorMixinBase):
         """
         title: Extract one canonical buffer-view field from an Tensor value.
         parameters:
-          view:
-            type: ir.Value
-          field_name:
-            type: str
-          name:
-            type: str
-        returns:
-          type: ir.Value
+          view: View.
+          field_name: Name of field.
+          name: Name identifying the declaration or operation.
+        returns: Extracted one canonical buffer-view field from an Tensor
+          value.
         """
         return self._llvm.ir_builder.extract_value(
             view,
@@ -166,22 +157,17 @@ class TensorVisitorMixin(VisitorMixinBase):
         offset_value: ir.Value | None = None,
     ) -> ir.Value:
         """
-        title: Assemble one lowered tensor value from storage and layout parts.
+        title: Assemble one lowered tensor value from storage and layout
+          parts.
         parameters:
-          data:
-            type: ir.Value
-          owner:
-            type: ir.Value
-          dtype:
-            type: ir.Value
-          layout:
-            type: TensorLayout
-          flags:
-            type: int
-          offset_value:
-            type: ir.Value | None
-        returns:
-          type: ir.Value
+          data: Data to process.
+          owner: Owner keeping the resource alive.
+          dtype: Element data type.
+          layout: Layout.
+          flags: Flags.
+          offset_value: Offset value.
+        returns: 'Result of this operation: assemble one lowered tensor value
+          from storage and layout parts.'
         """
         fields: list[ir.Value] = [
             data,
@@ -220,16 +206,14 @@ class TensorVisitorMixin(VisitorMixinBase):
         self, node: astx.AST, *, track_temporary: bool = True
     ) -> ir.Value:
         """
-        title: Lower one Tensor expression and require buffer-view storage.
+        title: Lower one Tensor expression and require buffer-view
+          storage.
         parameters:
-          node:
-            type: astx.AST
-          track_temporary:
-            type: bool
-            description: >-
-              False when forwarding a view or managing it explicitly.
-        returns:
-          type: ir.Value
+          node: Syntax node to process.
+          track_temporary: False when forwarding a view or managing
+            it explicitly.
+        returns: Lowered one Tensor expression and require buffer-view
+          storage.
         """
         self.visit_child(node)
         value = safe_pop(self.result_stack)
@@ -271,14 +255,10 @@ class TensorVisitorMixin(VisitorMixinBase):
         """
         title: Guard construction outputs using the owning runtime's error.
         parameters:
-          node:
-            type: astx.AST
-          status:
-            type: ir.Value
-          operation:
-            type: str
-          feature:
-            type: Literal[tensor, buffer]
+          node: Syntax node to process.
+          status: Native operation status.
+          operation: Operation to resolve or execute.
+          feature: Feature.
         """
         symbol = (
             "irx_arrow_last_error"
@@ -299,10 +279,8 @@ class TensorVisitorMixin(VisitorMixinBase):
         """
         title: Return one runtime primitive storage spec for Tensor lowering.
         parameters:
-          element_type:
-            type: astx.DataType
-        returns:
-          type: ArrayPrimitiveTypeSpec
+          element_type: Type of each element.
+        returns: One runtime primitive storage spec for Tensor lowering.
         """
         primitive_name = tensor_primitive_type_name(element_type)
         if primitive_name is None:
@@ -326,12 +304,9 @@ class TensorVisitorMixin(VisitorMixinBase):
         """
         title: Append one lowered scalar to the Arrow tensor builder.
         parameters:
-          builder_handle:
-            type: ir.Value
-          value_node:
-            type: astx.AST
-          element_type:
-            type: astx.DataType
+          builder_handle: Builder handle.
+          value_node: Value node.
+          element_type: Type of each element.
         """
         self.visit_child(value_node)
         value = safe_pop(self.result_stack)
@@ -416,16 +391,11 @@ class TensorVisitorMixin(VisitorMixinBase):
         """
         title: Build one Arrow tensor handle from scalar AST values.
         parameters:
-          node:
-            type: astx.AST
-          values:
-            type: list[astx.AST]
-          element_type:
-            type: astx.DataType
-          layout:
-            type: TensorLayout
-        returns:
-          type: ir.Value
+          node: Syntax node to process.
+          values: Values to process, in order.
+          element_type: Type of each element.
+          layout: Layout.
+        returns: Constructed one Arrow tensor handle from scalar AST values.
         """
         spec = self._tensor_primitive_spec(element_type)
         builder_new = self.require_runtime_symbol(
@@ -500,16 +470,12 @@ class TensorVisitorMixin(VisitorMixinBase):
         """
         title: Wrap one Arrow tensor handle as an owned Tensor value.
         parameters:
-          node:
-            type: astx.AST
-          tensor_handle:
-            type: ir.Value
-          layout:
-            type: TensorLayout
-          flags:
-            type: int
-        returns:
-          type: ir.Value
+          node: Syntax node to process.
+          tensor_handle: Tensor handle.
+          layout: Layout.
+          flags: Flags.
+        returns: 'Result of this operation: wrap one Arrow tensor handle
+          as an owned Tensor value.'
         """
         borrow_view = self.require_runtime_symbol(
             "tensor",
@@ -596,8 +562,7 @@ class TensorVisitorMixin(VisitorMixinBase):
         """
         title: Visit TensorLiteral nodes.
         parameters:
-          node:
-            type: astx.TensorLiteral
+          node: Syntax node to process.
         """
         layout = self._static_tensor_layout(node)
         flags = self._static_tensor_flags(node)
@@ -622,8 +587,7 @@ class TensorVisitorMixin(VisitorMixinBase):
         """
         title: Visit TensorView nodes.
         parameters:
-          node:
-            type: astx.TensorView
+          node: Syntax node to process.
         """
         base_value = self._require_tensor_value(
             node.base, track_temporary=False
@@ -658,8 +622,7 @@ class TensorVisitorMixin(VisitorMixinBase):
         """
         title: Visit TensorIndex nodes.
         parameters:
-          node:
-            type: astx.TensorIndex
+          node: Syntax node to process.
         """
         view = self._require_tensor_value(node.base)
         indices = cast(Any, self)._lower_buffer_index_indices(node.indices)
@@ -682,8 +645,7 @@ class TensorVisitorMixin(VisitorMixinBase):
         """
         title: Visit TensorStore nodes.
         parameters:
-          node:
-            type: astx.TensorStore
+          node: Syntax node to process.
         """
         view = self._require_tensor_value(node.base)
         indices = cast(Any, self)._lower_buffer_index_indices(node.indices)
@@ -713,8 +675,7 @@ class TensorVisitorMixin(VisitorMixinBase):
         """
         title: Visit TensorNDim nodes.
         parameters:
-          node:
-            type: astx.TensorNDim
+          node: Syntax node to process.
         """
         view = self._require_tensor_value(node.base)
         self.result_stack.append(
@@ -730,8 +691,7 @@ class TensorVisitorMixin(VisitorMixinBase):
         """
         title: Visit TensorShape nodes.
         parameters:
-          node:
-            type: astx.TensorShape
+          node: Syntax node to process.
         """
         view = self._require_tensor_value(node.base)
         shape_ptr = self._extract_view_field(
@@ -756,8 +716,7 @@ class TensorVisitorMixin(VisitorMixinBase):
         """
         title: Visit TensorStride nodes.
         parameters:
-          node:
-            type: astx.TensorStride
+          node: Syntax node to process.
         """
         view = self._require_tensor_value(node.base)
         stride_ptr = self._extract_view_field(
@@ -782,8 +741,7 @@ class TensorVisitorMixin(VisitorMixinBase):
         """
         title: Visit TensorElementCount nodes.
         parameters:
-          node:
-            type: astx.TensorElementCount
+          node: Syntax node to process.
         """
         layout = self._static_tensor_layout(node.base)
         self.result_stack.append(
@@ -798,8 +756,7 @@ class TensorVisitorMixin(VisitorMixinBase):
         """
         title: Visit TensorByteOffset nodes.
         parameters:
-          node:
-            type: astx.TensorByteOffset
+          node: Syntax node to process.
         """
         view = self._require_tensor_value(node.base)
         indices = cast(Any, self)._lower_buffer_index_indices(node.indices)
@@ -816,8 +773,7 @@ class TensorVisitorMixin(VisitorMixinBase):
         """
         title: Visit TensorRetain nodes.
         parameters:
-          node:
-            type: astx.TensorRetain
+          node: Syntax node to process.
         """
         retain = self.require_runtime_symbol(
             "buffer",
@@ -841,8 +797,7 @@ class TensorVisitorMixin(VisitorMixinBase):
         """
         title: Visit TensorRelease nodes.
         parameters:
-          node:
-            type: astx.TensorRelease
+          node: Syntax node to process.
         """
         release = self.require_runtime_symbol(
             "buffer",

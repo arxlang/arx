@@ -72,10 +72,8 @@ class FunctionVisitorMixin(ClassVisitorMixin):
     """
     title: Lower function definitions and calls to LLVM.
     attributes:
-      call_visitor:
-        type: CallLoweringVisitor
-      call_services:
-        type: CallLoweringServices
+      call_visitor: Call visitor.
+      call_services: Call services.
     """
 
     call_visitor: CallLoweringVisitor
@@ -87,10 +85,9 @@ class FunctionVisitorMixin(ClassVisitorMixin):
         """
         title: Select specialized emission from semantic plan type, not syntax.
         parameters:
-          node:
-            type: astx.FunctionCall | astx.MethodCall
-        returns:
-          type: bool
+          node: Syntax node to process.
+        returns: 'Result of this operation: select specialized emission from
+          semantic plan type, not syntax.'
         """
         info = getattr(node, "semantic", None)
         if not isinstance(info, SemanticInfo):
@@ -114,10 +111,8 @@ class FunctionVisitorMixin(ClassVisitorMixin):
         """
         title: Materialize and register cleanup for one owned list call result.
         parameters:
-          node:
-            type: astx.AST
-          result:
-            type: ir.Value
+          node: Syntax node to process.
+          result: Result of the operation.
         """
         ownership = resource_ownership(node)
         if ownership is None or ownership.kind is not OwnershipKind.OWNED:
@@ -178,10 +173,8 @@ class FunctionVisitorMixin(ClassVisitorMixin):
         """
         title: Return owner ids moved out through one return statement.
         parameters:
-          node:
-            type: astx.FunctionReturn
-        returns:
-          type: frozenset[str]
+          node: Syntax node to process.
+        returns: Owner ids moved out through one return statement.
         """
         ownership = resource_ownership(node)
         if ownership is None:
@@ -203,12 +196,9 @@ class FunctionVisitorMixin(ClassVisitorMixin):
         """
         title: Return the resolved semantic function for one node.
         parameters:
-          node:
-            type: astx.AST
-          label:
-            type: str
-        returns:
-          type: SemanticFunction
+          node: Syntax node to process.
+          label: Label.
+        returns: The resolved semantic function for one node.
         """
         semantic = getattr(node, "semantic", None)
         function = getattr(semantic, "resolved_function", None)
@@ -228,12 +218,9 @@ class FunctionVisitorMixin(ClassVisitorMixin):
         """
         title: Return the resolved semantic signature for one node.
         parameters:
-          node:
-            type: astx.AST
-          label:
-            type: str
-        returns:
-          type: FunctionSignature
+          node: Syntax node to process.
+          label: Label.
+        returns: The resolved semantic signature for one node.
         """
         return self._semantic_function(node, label=label).signature
 
@@ -244,10 +231,8 @@ class FunctionVisitorMixin(ClassVisitorMixin):
         """
         title: Return the resolved semantic call metadata for one call.
         parameters:
-          node:
-            type: astx.FunctionCall
-        returns:
-          type: CallResolution
+          node: Syntax node to process.
+        returns: The resolved semantic call metadata for one call.
         """
         semantic = getattr(node, "semantic", None)
         resolution = getattr(semantic, "resolved_call", None)
@@ -265,10 +250,8 @@ class FunctionVisitorMixin(ClassVisitorMixin):
         """
         title: Return the resolved semantic method-call metadata for one call.
         parameters:
-          node:
-            type: astx.BaseMethodCall | astx.MethodCall | astx.StaticMethodCall
-        returns:
-          type: ResolvedMethodCall
+          node: Syntax node to process.
+        returns: The resolved semantic method-call metadata for one call.
         """
         semantic = getattr(node, "semantic", None)
         resolution = getattr(semantic, "resolved_method_call", None)
@@ -289,14 +272,11 @@ class FunctionVisitorMixin(ClassVisitorMixin):
         """
         title: Lower one semantically validated explicit call argument list.
         parameters:
-          args:
-            type: Sequence[astx.AST]
-          resolution:
-            type: CallResolution
-          label:
-            type: str
-        returns:
-          type: list[ir.Value]
+          args: Arguments supplied to the operation.
+          resolution: Resolution.
+          label: Label.
+        returns: Lowered one semantically validated explicit call argument
+          list.
         """
         llvm_args: list[ir.Value] = []
         for index, arg in enumerate(args):
@@ -347,14 +327,10 @@ class FunctionVisitorMixin(ClassVisitorMixin):
         """
         title: Bind one temporary symbol while lowering default arguments.
         parameters:
-          symbol_name:
-            type: str
-          symbol_id:
-            type: str
-          llvm_value:
-            type: ir.Value
-          saved_bindings:
-            type: dict[str, Any | None]
+          symbol_name: Name of symbol.
+          symbol_id: Identifier for symbol.
+          llvm_value: LLVM value.
+          saved_bindings: Saved bindings.
         """
         if symbol_id not in saved_bindings:
             saved_bindings[symbol_id] = self.named_values.get(symbol_id)
@@ -369,8 +345,7 @@ class FunctionVisitorMixin(ClassVisitorMixin):
         """
         title: Restore the temporary symbol bindings used for one call.
         parameters:
-          saved_bindings:
-            type: dict[str, Any | None]
+          saved_bindings: Saved bindings.
         """
         for symbol_id, previous in saved_bindings.items():
             if previous is None:
@@ -385,15 +360,13 @@ class FunctionVisitorMixin(ClassVisitorMixin):
         receiver_value: ir.Value | None = None,
     ) -> list[ir.Value]:
         """
-        title: >-
-          Evaluate in source order, fill defaults, then assemble ABI slots.
+        title: Evaluate in source order, fill defaults, then assemble ABI
+          slots.
         parameters:
-          resolution:
-            type: CallResolution
-          receiver_value:
-            type: ir.Value | None
-        returns:
-          type: list[ir.Value]
+          resolution: Resolution.
+          receiver_value: Receiver value.
+        returns: 'Result of this operation: evaluate in source order, fill
+          defaults, then assemble ABI slots.'
         """
         plan = require_semantic_metadata(
             resolution.arguments,
@@ -474,14 +447,10 @@ class FunctionVisitorMixin(ClassVisitorMixin):
         """
         title: Lower one dispatch-table lookup for an instance method.
         parameters:
-          node:
-            type: astx.AST
-          method_resolution:
-            type: ResolvedMethodCall
-          receiver_value:
-            type: ir.Value
-        returns:
-          type: ir.Value
+          node: Syntax node to process.
+          method_resolution: Method resolution.
+          receiver_value: Receiver value.
+        returns: Lowered one dispatch-table lookup for an instance method.
         """
         receiver_class = method_resolution.receiver_class
         if receiver_class is None or receiver_class.layout is None:
@@ -559,10 +528,8 @@ class FunctionVisitorMixin(ClassVisitorMixin):
         """
         title: Return the resolved semantic return metadata for one return.
         parameters:
-          node:
-            type: astx.FunctionReturn
-        returns:
-          type: ReturnResolution
+          node: Syntax node to process.
+        returns: The resolved semantic return metadata for one return.
         """
         semantic = getattr(node, "semantic", None)
         resolution = getattr(semantic, "resolved_return", None)
@@ -580,8 +547,7 @@ class FunctionVisitorMixin(ClassVisitorMixin):
         """
         title: Preserve semantic calling-convention intent in lowering.
         parameters:
-          signature:
-            type: FunctionSignature
+          signature: Resolved callable signature.
         """
         if signature.calling_convention in {
             CallingConvention.IRX_DEFAULT,
@@ -601,10 +567,8 @@ class FunctionVisitorMixin(ClassVisitorMixin):
         """
         title: Return the LLVM function type for one semantic signature.
         parameters:
-          signature:
-            type: FunctionSignature
-        returns:
-          type: ir.FunctionType
+          signature: Resolved callable signature.
+        returns: The LLVM function type for one semantic signature.
         """
         args_type: list[ir.Type] = []
         for parameter in signature.parameters:
@@ -645,10 +609,9 @@ class FunctionVisitorMixin(ClassVisitorMixin):
         """
         title: Declare or reuse one LLVM function from semantic metadata.
         parameters:
-          function:
-            type: SemanticFunction
-        returns:
-          type: ir.Function
+          function: Function to process.
+        returns: 'Result of this operation: declare or reuse one LLVM function
+          from semantic metadata.'
         """
         function_key = function.symbol_id
         existing = self.llvm_functions_by_symbol_id.get(function_key)
@@ -741,8 +704,7 @@ class FunctionVisitorMixin(ClassVisitorMixin):
         """
         title: Visit FunctionCall nodes.
         parameters:
-          node:
-            type: astx.FunctionCall
+          node: Syntax node to process.
         """
         if lower_text_operation(cast(VisitorCore, self), node):
             return
@@ -801,8 +763,7 @@ class FunctionVisitorMixin(ClassVisitorMixin):
         """
         title: Visit MethodCall nodes.
         parameters:
-          node:
-            type: astx.MethodCall
+          node: Syntax node to process.
         """
         if lower_collection_access(self, node):
             return
@@ -916,8 +877,7 @@ class FunctionVisitorMixin(ClassVisitorMixin):
         """
         title: Visit BaseMethodCall nodes.
         parameters:
-          node:
-            type: astx.BaseMethodCall
+          node: Syntax node to process.
         """
         method_resolution = self._semantic_method_call(node)
         self.visit_child(node.receiver)
@@ -961,8 +921,7 @@ class FunctionVisitorMixin(ClassVisitorMixin):
         """
         title: Visit StaticMethodCall nodes.
         parameters:
-          node:
-            type: astx.StaticMethodCall
+          node: Syntax node to process.
         """
         method_resolution = self._semantic_method_call(node)
         callee = self._declare_semantic_function(method_resolution.function)
@@ -981,8 +940,7 @@ class FunctionVisitorMixin(ClassVisitorMixin):
         """
         title: Visit FunctionDef nodes.
         parameters:
-          node:
-            type: astx.FunctionDef
+          node: Syntax node to process.
         """
         function = self._semantic_function(
             node,
@@ -1129,8 +1087,7 @@ class FunctionVisitorMixin(ClassVisitorMixin):
         """
         title: Visit FunctionPrototype nodes.
         parameters:
-          node:
-            type: astx.FunctionPrototype
+          node: Syntax node to process.
         """
         function = self._semantic_function(
             node,
@@ -1146,8 +1103,7 @@ class FunctionVisitorMixin(ClassVisitorMixin):
         """
         title: Visit FunctionReturn nodes.
         parameters:
-          node:
-            type: astx.FunctionReturn
+          node: Syntax node to process.
         """
         if self._current_generator_frame_ptr is not None:
             if node.value is not None and not isinstance(

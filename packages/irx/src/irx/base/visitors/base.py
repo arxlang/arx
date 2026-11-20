@@ -1,7 +1,6 @@
 """
 title: Minimal fail-closed Plum visitor base.
-summary: >-
-  Concrete visitors explicitly register supported nodes and structural
+summary: Concrete visitors explicitly register supported nodes and structural
   traversal. Modeling an ASTx node does not imply compiler support.
 """
 
@@ -23,8 +22,7 @@ class BaseVisitor:
         """
         title: Reject unsupported nodes without implicit structural traversal.
         parameters:
-          node:
-            type: astx.AST
+          node: Syntax node to process.
         raises:
           NotImplementedError: When the visitor does not implement the node.
         """

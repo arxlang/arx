@@ -1,13 +1,18 @@
 #!/usr/bin/env python3
 """
 title: Audit and smoke-test built package artifacts.
-summary: |-
+summary: >2-
 
   The default mode creates an isolated virtual environment and lets pip resolve
+
   third-party dependencies. `--current-environment` is a local/offline aid: it
+
   installs the six wheels into a clean target directory without dependencies
+
   and uses the caller's existing third-party packages. CI and release
+
   rehearsals
+
   must use the default isolated mode.
 """
 
@@ -33,12 +38,9 @@ class PackageArtifact:
     """
     title: Describe one package artifact contract.
     attributes:
-      directory:
-        type: str
-      distribution:
-        type: str
-      import_name:
-        type: str
+      directory: Directory.
+      distribution: Distribution.
+      import_name: Name of import.
     """
 
     directory: str
@@ -628,12 +630,9 @@ def _single_artifact(directory: Path, pattern: str) -> Path:
     """
     title: Return exactly one artifact matching a package build pattern.
     parameters:
-      directory:
-        type: Path
-      pattern:
-        type: str
-    returns:
-      type: Path
+      directory: Directory.
+      pattern: Pattern.
+    returns: Exactly one artifact matching a package build pattern.
     """
     matches = sorted(directory.glob(pattern))
     if len(matches) != 1:
@@ -647,10 +646,8 @@ def python_requirement(project_dir: Path) -> str:
     """
     title: Read a project's declared Python requirement.
     parameters:
-      project_dir:
-        type: Path
-    returns:
-      type: str
+      project_dir: Project dir.
+    returns: Read a project's declared Python requirement.
     raises:
       ValueError: If the requirement is not a string.
     """
@@ -665,14 +662,12 @@ def python_requirement(project_dir: Path) -> str:
 def audit_artifacts(workspace: Path) -> tuple[Path, ...]:
     """
     title: Validate artifact completeness and return the wheel paths.
-    summary: >-
-      Package manifests must agree with the root Python requirement, and wheel
-      metadata must match it. Reject stale or inconsistent artifacts.
+    summary: Package manifests must agree with the root Python requirement,
+      and wheel metadata must match it. Reject stale or inconsistent artifacts.
     parameters:
-      workspace:
-        type: Path
-    returns:
-      type: tuple[Path, Ellipsis]
+      workspace: Workspace.
+    returns: 'Result of this operation: validate artifact completeness and
+      return the wheel paths.'
     """
     expected_license = (workspace / "LICENSE").read_bytes()
     expected_python = python_requirement(workspace)
@@ -773,10 +768,8 @@ def _venv_python(environment: Path) -> Path:
     """
     title: Return the Python executable inside a virtual environment.
     parameters:
-      environment:
-        type: Path
-    returns:
-      type: Path
+      environment: Environment used by the subprocess or compiler.
+    returns: The Python executable inside a virtual environment.
     """
     if os.name == "nt":
         return environment / "Scripts" / "python.exe"
@@ -791,14 +784,11 @@ def _install_wheels(
     """
     title: Install wheels and return the smoke Python plus environment.
     parameters:
-      wheels:
-        type: tuple[Path, Ellipsis]
-      work_dir:
-        type: Path
-      current_environment:
-        type: bool
-    returns:
-      type: tuple[Path, dict[str, str]]
+      wheels: Wheels.
+      work_dir: Work dir.
+      current_environment: Whether to use current environment.
+    returns: 'Result of this operation: install wheels and return the smoke
+      Python plus environment.'
     """
     env = dict(os.environ)
     if current_environment:
@@ -845,12 +835,10 @@ def build_native_fixture_wheel(workspace: Path, output: Path) -> Path:
     """
     title: Package the independent native test dependency without build hooks.
     parameters:
-      workspace:
-        type: Path
-      output:
-        type: Path
-    returns:
-      type: Path
+      workspace: Workspace.
+      output: Output destination or generated result.
+    returns: 'Result of this operation: package the independent native test
+      dependency without build hooks.'
     """
     return build_source_fixture_wheel(
         workspace / "packages/arx/tests/fixtures/native-package",
@@ -864,12 +852,10 @@ def build_pure_arx_fixture_wheel(workspace: Path, output: Path) -> Path:
     """
     title: Package the typed Arrow math library without native adapters.
     parameters:
-      workspace:
-        type: Path
-      output:
-        type: Path
-    returns:
-      type: Path
+      workspace: Workspace.
+      output: Output destination or generated result.
+    returns: 'Result of this operation: package the typed Arrow math library
+      without native adapters.'
     """
     fixture = workspace / "packages/arx/tests/fixtures/pure-arx-package"
     if any(
@@ -891,16 +877,12 @@ def build_source_fixture_wheel(
     """
     title: Build an independent fixture distribution from source resources.
     parameters:
-      fixture:
-        type: Path
-      output:
-        type: Path
-      distribution:
-        type: str
-      resource:
-        type: str
-    returns:
-      type: Path
+      fixture: Fixture.
+      output: Output destination or generated result.
+      distribution: Distribution.
+      resource: Resource.
+    returns: Constructed an independent fixture distribution from source
+      resources.
     """
     if not (fixture / ".arxproject.toml").is_file():
         raise FileNotFoundError(f"wheel fixture is missing: {fixture}")
@@ -935,12 +917,9 @@ def run_smoke(
     """
     title: Install and execute the wheel-only compiler and runtime smoke set.
     parameters:
-      workspace:
-        type: Path
-      wheels:
-        type: tuple[Path, Ellipsis]
-      current_environment:
-        type: bool
+      workspace: Workspace.
+      wheels: Wheels.
+      current_environment: Whether to use current environment.
     """
     smoke_root = workspace / ".tmp" / "wheel-smoke"
     smoke_root.mkdir(parents=True, exist_ok=True)
@@ -993,9 +972,10 @@ def run_smoke(
 
 def main() -> int:
     """
-    title: Run artifact audits and the selected installed-wheel smoke mode.
-    returns:
-      type: int
+    title: Run artifact audits and the selected installed-wheel smoke
+      mode.
+    returns: 'Result of this operation: run artifact audits and the
+      selected installed-wheel smoke mode.'
     """
     parser = argparse.ArgumentParser()
     parser.add_argument(

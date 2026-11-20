@@ -1,21 +1,27 @@
 # mypy: disable-error-code=no-redef
 """
 title: Python AST to ASTx lowering for arxjit.
-summary: >-
-  Fourth stage of the arxjit pipeline: turn the ast node of a validated
-  function, plus the Signature reconciliation settled on, into the astx module
-  IRx compiles. Dispatch is by node type via plum, matching the visitor
-  convention used across the Arx packages. What is lowered so far is the
-  function shell — the prototype and its typed arguments — and straight-line
-  expressions: literals, parameter reads, arithmetic and unary operators, and
-  single comparisons. Boolean operators and chained comparisons fail closed
-  until control-flow lowering can preserve their short-circuit behavior. Where
-  an expression is not lowered at a type its context declares, the type is
-  inferred from the expression itself, over a scope holding the parameters.
-  Local assignments and control flow follow in later stages, and until then any
-  other construct fails closed with LoweringError. The decorator does not call
-  this stage yet, so nothing here changes what @jit does; that wiring lands
-  once the lowerer covers the whole validated subset.
+summary: 'Fourth stage of the arxjit pipeline: turn the ast node
+  of a validated function, plus the Signature reconciliation settled
+  on, into the astx module IRx compiles. Dispatch is by node type
+  via plum, matching the visitor convention used across the Arx
+  packages. What is lowered so far is the function shell — the
+  prototype and its typed arguments — and straight-line expressions:
+  literals, parameter reads, arithmetic and unary operators, and
+  single comparisons. Boolean operators and chained comparisons
+  fail closed until control-flow lowering can preserve their short-circuit
+  behavior. Where an expression is not lowered at a type its context
+  declares, the type is inferred from the expression itself, over
+  a scope holding the parameters. Local assignments and control
+  flow follow in later stages, and until then any other construct
+  fails closed with LoweringError. The decorator does not call
+  this stage yet, so nothing here changes what @jit does; that
+  wiring lands once the lowerer covers the whole validated subset.'
+attributes:
+  SCALARS: Scalars.
+  BINARY_OPS: Binary ops.
+  UNARY_OPS: Unary ops.
+  COMPARE_OPS: Compare ops.
 """
 
 from __future__ import annotations
@@ -49,26 +55,15 @@ from arxjit.types import Signature, SigType, bool_, f32, f64, i32, i64
 class Scalar(NamedTuple):
     """
     title: Everything this stage needs to lower a value at one scalar type.
-    summary: >-
-      Held together in one row rather than in parallel tables so the parts
-      cannot drift: a type with no literal class, or an integer type with no
-      range to check against, is not expressible here.
+    summary: 'Held together in one row rather than in parallel tables so
+      the parts cannot drift: a type with no literal class, or an integer
+      type with no range to check against, is not expressible here.'
     attributes:
-      type_:
-        type: type[AnyType]
-        description: The astx type class, used for arguments and returns.
-      literal:
-        type: type[astx.Literal]
-        description: The astx literal class values are built with.
-      kind:
-        type: str
-        description: Which Python literals belong here; bool, int, or float.
-      bounds:
-        type: tuple[int, int] | None
-        description: The representable integer range, for integer types.
-      single:
-        type: bool
-        description: Whether the type has single rather than double precision.
+      type_: The astx type class, used for arguments and returns.
+      literal: The astx literal class values are built with.
+      kind: Which Python literals belong here; bool, int, or float.
+      bounds: The representable integer range, for integer types.
+      single: Whether the type has single rather than double precision.
     """
 
     type_: type[AnyType]
@@ -151,18 +146,15 @@ MANGLE_PREFIX = "arxjit_"
 def location(extracted: ExtractedSource, node: ast.AST) -> astx.SourceLocation:
     """
     title: Convert an ast node's position into an astx source location.
-    summary: >-
-      Reuses the diagnostic builder so astx nodes carry exactly the positions
-      arxjit reports in its own diagnostics, one-based character columns
-      included, rather than raw byte offsets. A node without a position, which
-      only the synthesized ones have, maps to astx's own no-location value.
+    summary: Reuses the diagnostic builder so astx nodes carry exactly
+      the positions arxjit reports in its own diagnostics, one-based character
+      columns included, rather than raw byte offsets. A node without a
+      position, which only the synthesized ones have, maps to astx's own
+      no-location value.
     parameters:
-      extracted:
-        type: ExtractedSource
-      node:
-        type: ast.AST
-    returns:
-      type: astx.SourceLocation
+      extracted: Extracted Python source and syntax.
+      node: Syntax node to process.
+    returns: Converted an ast node's position into an astx source location.
     """
     located = diagnostic(extracted, node, "")
     if located.line is None or located.column is None:
@@ -175,12 +167,12 @@ def scalar(sig_type: SigType) -> Scalar:
     """
     title: Look up everything needed to lower values at a signature type.
     parameters:
-      sig_type:
-        type: SigType
-    returns:
-      type: Scalar
+      sig_type: Type of sig.
+    returns: 'Result of this operation: look up everything needed to lower
+      values at a signature type.'
     raises:
-      LoweringError: If the type names an astx class this stage does not map.
+      LoweringError: If the type names an astx class this stage does not
+        map.
     """
     mapped = SCALARS.get(sig_type.astx_name)
     if mapped is None:
@@ -196,12 +188,12 @@ def astx_type(sig_type: SigType) -> AnyType:
     """
     title: Instantiate the astx type a signature type lowers to.
     parameters:
-      sig_type:
-        type: SigType
-    returns:
-      type: AnyType
+      sig_type: Type of sig.
+    returns: 'Result of this operation: instantiate the astx type a signature
+      type lowers to.'
     raises:
-      LoweringError: If the type names an astx class this stage does not map.
+      LoweringError: If the type names an astx class this stage does not
+        map.
     """
     return scalar(sig_type).type_()
 
@@ -209,18 +201,18 @@ def astx_type(sig_type: SigType) -> AnyType:
 @private
 def function_name(python_name: str) -> str:
     """
-    title: Return the astx function name a Python function is emitted under.
-    summary: >-
-      Usually the Python name unchanged, so IR dumps and compiled symbols stay
-      recognisable. A name IRx reserves for the program entry point is prefixed
-      instead: a decorated function called main is an ordinary compiled
-      function, but emitting it under that name would subject it to IRx's
-      entry-point rules, which demand no parameters and an Int32 return.
+    title: Return the astx function name a Python function is emitted
+      under.
+    summary: 'Usually the Python name unchanged, so IR dumps and
+      compiled symbols stay recognisable. A name IRx reserves for
+      the program entry point is prefixed instead: a decorated function
+      called main is an ordinary compiled function, but emitting
+      it under that name would subject it to IRx''s entry-point rules,
+      which demand no parameters and an Int32 return.'
     parameters:
-      python_name:
-        type: str
-    returns:
-      type: str
+      python_name: Name of python.
+    returns: The astx function name a Python function is emitted
+      under.
     """
     if python_name in RESERVED_NAMES:
         return f"{MANGLE_PREFIX}{python_name}"
@@ -231,25 +223,36 @@ def function_name(python_name: str) -> str:
 def representable(value: float, single: bool) -> bool:
     """
     title: Report whether a float value survives the target's precision.
-    summary: |-
+    summary: >-
       Python floats are doubles, so only a single-precision target can
+
       overflow. Packing and unpacking is the exact test. Loss of precision,
+
       including underflow to zero, is not overflow and is accepted, because
+
       narrowing a float always loses precision and rejecting that would rule
+
       out most decimals.
-      How struct reports an overflow is not portable: the same value packs to
-      an infinity on some builds and raises OverflowError on others, and this
+
+      How struct reports an overflow is not portable: the same value packs
+      to
+
+      an infinity on some builds and raises OverflowError on others, and
+      this
+
       differs between platforms at one CPython version rather than only
+
       between versions. Both are the same answer, so both are handled here;
-      letting the exception escape would also turn a rejectable literal into a
+
+      letting the exception escape would also turn a rejectable literal into
+      a
+
       raw stdlib error rather than a diagnostic.
     parameters:
-      value:
-        type: float
-      single:
-        type: bool
-    returns:
-      type: bool
+      value: Value to process.
+      single: Whether to use single.
+    returns: 'Result of this operation: report whether a float value survives
+      the target''s precision.'
     """
     if not single:
         return True
@@ -264,22 +267,20 @@ def representable(value: float, single: bool) -> bool:
 class Lowerer:
     """
     title: Build the astx nodes for one validated function.
-    summary: >-
-      Dispatches by node type via plum: each lowerable construct has its own
-      overload, and the ast.AST overload is the fail-closed default. Failing
-      closed matters more here than in validation, because this stage runs on a
-      function already accepted: a node with no overload means the subset and
-      the lowerer disagree, which must surface rather than silently produce a
-      module missing part of the function.
+    summary: 'Dispatches by node type via plum: each lowerable construct
+      has its own overload, and the ast.AST overload is the fail-closed
+      default. Failing closed matters more here than in validation, because
+      this stage runs on a function already accepted: a node with no overload
+      means the subset and the lowerer disagree, which must surface rather
+      than silently produce a module missing part of the function.'
     attributes:
-      extracted:
-        description: The extracted source being lowered.
-      signature:
-        description: The signature reconciliation settled on.
-      scope:
-        type: dict[str, SigType]
-        description: The type of every name a lowered expression may read.
+      extracted: The extracted source being lowered.
+      signature: The signature reconciliation settled on.
+      scope: The type of every name a lowered expression may read.
     """
+
+    extracted: ExtractedSource
+    signature: Signature
 
     def __init__(
         self,
@@ -288,18 +289,16 @@ class Lowerer:
     ) -> None:
         """
         title: Initialize the lowerer for one function.
-        summary: >-
-          The scope is seeded with the parameters, which are the only names in
-          it until local assignment is lowered. It is built by zipping rather
-          than after checking the two agree, so that constructing a lowerer
-          raises nothing: a signature that declares the wrong number of types
-          is arguments' to report, and it says so in terms of the whole
-          function rather than of whichever parameter ran out first.
+        summary: 'The scope is seeded with the parameters, which
+          are the only names in it until local assignment is lowered.
+          It is built by zipping rather than after checking the two
+          agree, so that constructing a lowerer raises nothing: a
+          signature that declares the wrong number of types is arguments''
+          to report, and it says so in terms of the whole function
+          rather than of whichever parameter ran out first.'
         parameters:
-          extracted:
-            type: ExtractedSource
-          signature:
-            type: Signature
+          extracted: Extracted Python source and syntax.
+          signature: Resolved callable signature.
         """
         self.extracted = extracted
         self.signature = signature
@@ -315,16 +314,13 @@ class Lowerer:
     def reject(self, node: ast.AST, message: str) -> LoweringError:
         """
         title: Build a LoweringError located at an ast node.
-        summary: >-
-          Returned rather than raised so callers raise at the point of failure
-          and the traceback names the overload that could not proceed.
+        summary: Returned rather than raised so callers raise at the point
+          of failure and the traceback names the overload that could not
+          proceed.
         parameters:
-          node:
-            type: ast.AST
-          message:
-            type: str
-        returns:
-          type: LoweringError
+          node: Syntax node to process.
+          message: Diagnostic or output message.
+        returns: Constructed a LoweringError located at an ast node.
         """
         return LoweringError(
             message, diagnostics=[diagnostic(self.extracted, node, message)]
@@ -335,10 +331,9 @@ class Lowerer:
         """
         title: Reject any statement with no overload (fail closed).
         parameters:
-          node:
-            type: ast.AST
-        returns:
-          type: astx.AST | None
+          node: Syntax node to process.
+        returns: 'Result of this operation: reject any statement with no
+          overload (fail closed).'
         raises:
           LoweringError: Always.
         """
@@ -349,14 +344,11 @@ class Lowerer:
     def statement(self, node: ast.Pass) -> astx.AST | None:
         """
         title: Lower a pass statement to nothing.
-        summary: >-
-          It has no effect to compile, so it contributes no node rather than an
-          empty one.
+        summary: It has no effect to compile, so it contributes no node rather
+          than an empty one.
         parameters:
-          node:
-            type: ast.Pass
-        returns:
-          type: astx.AST | None
+          node: Syntax node to process.
+        returns: Lowered a pass statement to nothing.
         """
         return None
 
@@ -364,15 +356,12 @@ class Lowerer:
     def statement(self, node: ast.Expr) -> astx.AST | None:
         """
         title: Lower a docstring or no-op string statement to nothing.
-        summary: >-
-          Validation admits a bare string statement and nothing else in this
-          position, so the string is discarded and anything else is a
-          disagreement between the two stages.
+        summary: Validation admits a bare string statement and nothing else
+          in this position, so the string is discarded and anything else
+          is a disagreement between the two stages.
         parameters:
-          node:
-            type: ast.Expr
-        returns:
-          type: astx.AST | None
+          node: Syntax node to process.
+        returns: Lowered a docstring or no-op string statement to nothing.
         """
         if isinstance(node.value, ast.Constant) and isinstance(
             node.value.value, str
@@ -386,17 +375,14 @@ class Lowerer:
     def statement(self, node: ast.Return) -> astx.AST | None:
         """
         title: Lower a return statement.
-        summary: >-
-          The value is lowered against the signature's return type, which is
-          the type the returned expression is required to have. A bare return
-          leaves a function with a declared return type without a value, which
-          no signature this stage can be given describes, so it is rejected
-          rather than lowered to a return of nothing.
+        summary: The value is lowered against the signature's return type,
+          which is the type the returned expression is required to have.
+          A bare return leaves a function with a declared return type without
+          a value, which no signature this stage can be given describes,
+          so it is rejected rather than lowered to a return of nothing.
         parameters:
-          node:
-            type: ast.Return
-        returns:
-          type: astx.AST | None
+          node: Syntax node to process.
+        returns: Lowered a return statement.
         raises:
           LoweringError: If the return has no value.
         """
@@ -416,12 +402,10 @@ class Lowerer:
         """
         title: Reject any expression with no overload (fail closed).
         parameters:
-          node:
-            type: ast.AST
-          expected:
-            type: SigType
-        returns:
-          type: astx.DataType
+          node: Syntax node to process.
+          expected: Expected result for this case.
+        returns: 'Result of this operation: reject any expression with no
+          overload (fail closed).'
         raises:
           LoweringError: Always.
         """
@@ -435,23 +419,23 @@ class Lowerer:
         self, node: ast.Constant, expected: SigType
     ) -> astx.DataType:
         """
-        title: Lower an int, float, or bool literal at its expected type.
-        summary: >-
-          The literal is built at the width its context declares rather than at
-          Python's own, because IRx only inserts safe widening conversions: an
-          Int64 literal in an i32 function is rejected outright, not narrowed.
-          The value still has to belong to that type, so a literal of the wrong
-          kind, or one outside the type's range, is refused here instead of
-          becoming an astx node that misstates its own value.
+        title: Lower an int, float, or bool literal at its expected
+          type.
+        summary: 'The literal is built at the width its context declares
+          rather than at Python''s own, because IRx only inserts
+          safe widening conversions: an Int64 literal in an i32 function
+          is rejected outright, not narrowed. The value still has
+          to belong to that type, so a literal of the wrong kind,
+          or one outside the type''s range, is refused here instead
+          of becoming an astx node that misstates its own value.'
         parameters:
-          node:
-            type: ast.Constant
-          expected:
-            type: SigType
-        returns:
-          type: astx.DataType
+          node: Syntax node to process.
+          expected: Expected result for this case.
+        returns: Lowered an int, float, or bool literal at its expected
+          type.
         raises:
-          LoweringError: If the literal's kind or value does not fit.
+          LoweringError: If the literal's kind or value does not
+            fit.
         """
         return self.literal(node, node.value, expected)
 
@@ -460,21 +444,18 @@ class Lowerer:
     ) -> astx.DataType:
         """
         title: Build an astx literal for a value at its expected type.
-        summary: >-
-          Takes the value separately from the node it is located at, so that a
-          negated constant can be folded through here as one literal rather
-          than lowered as an operator applied to its magnitude. That is not
-          only a convenience: it is what lets the exact minimum of a signed
-          type through, since its magnitude is one larger than the maximum.
+        summary: 'Takes the value separately from the node it is located
+          at, so that a negated constant can be folded through here as
+          one literal rather than lowered as an operator applied to its
+          magnitude. That is not only a convenience: it is what lets the
+          exact minimum of a signed type through, since its magnitude
+          is one larger than the maximum.'
         parameters:
-          node:
-            type: ast.expr
-          value:
-            type: object
-          expected:
-            type: SigType
-        returns:
-          type: astx.DataType
+          node: Syntax node to process.
+          value: Value to process.
+          expected: Expected result for this case.
+        returns: Constructed an astx literal for a value at its expected
+          type.
         raises:
           LoweringError: If the value's kind or magnitude does not fit.
         """
@@ -486,20 +467,16 @@ class Lowerer:
     def expression(self, node: ast.Name, expected: SigType) -> astx.DataType:
         """
         title: Lower a variable read.
-        summary: >-
-          Only the parameters are in scope at this stage, and their types are
-          already declared on the prototype, so the reference carries no type
-          of its own and IRx resolves it from the declaration. The expected
-          type is therefore not applied here: unlike a literal, a variable has
-          the type it was given, and reconciling it with its context is IRx's
-          to do.
+        summary: 'Only the parameters are in scope at this stage, and their
+          types are already declared on the prototype, so the reference carries
+          no type of its own and IRx resolves it from the declaration. The
+          expected type is therefore not applied here: unlike a literal,
+          a variable has the type it was given, and reconciling it with its
+          context is IRx''s to do.'
         parameters:
-          node:
-            type: ast.Name
-          expected:
-            type: SigType
-        returns:
-          type: astx.DataType
+          node: Syntax node to process.
+          expected: Expected result for this case.
+        returns: Lowered a variable read.
         """
         return astx.Variable(name=node.id, loc=location(self.extracted, node))
 
@@ -507,17 +484,14 @@ class Lowerer:
     def expression(self, node: ast.BinOp, expected: SigType) -> astx.DataType:
         """
         title: Lower an arithmetic binary operation.
-        summary: >-
-          Both operands are lowered at the expected type, so a literal in
-          either position takes the width of its context rather than Python's.
-          The result type is IRx's to compute from the operands.
+        summary: Both operands are lowered at the expected type,
+          so a literal in either position takes the width of its
+          context rather than Python's. The result type is IRx's
+          to compute from the operands.
         parameters:
-          node:
-            type: ast.BinOp
-          expected:
-            type: SigType
-        returns:
-          type: astx.DataType
+          node: Syntax node to process.
+          expected: Expected result for this case.
+        returns: Lowered an arithmetic binary operation.
         raises:
           LoweringError: If the operator has no astx equivalent.
         """
@@ -542,20 +516,16 @@ class Lowerer:
     ) -> astx.DataType:
         """
         title: Lower a unary operation.
-        summary: >-
-          A unary plus is the identity and lowers to its operand alone. A
-          negated literal is folded into one negative literal, which is the
-          only form a negative constant takes in Python and the only negation
-          that can be lowered at all: IRx implements no unary minus, so
-          negating anything else is refused rather than emitted as a node
-          codegen would later reject.
+        summary: 'A unary plus is the identity and lowers to its operand
+          alone. A negated literal is folded into one negative literal, which
+          is the only form a negative constant takes in Python and the only
+          negation that can be lowered at all: IRx implements no unary minus,
+          so negating anything else is refused rather than emitted as a node
+          codegen would later reject.'
         parameters:
-          node:
-            type: ast.UnaryOp
-          expected:
-            type: SigType
-        returns:
-          type: astx.DataType
+          node: Syntax node to process.
+          expected: Expected result for this case.
+        returns: Lowered a unary operation.
         raises:
           LoweringError: If the operator has no astx equivalent.
         """
@@ -604,24 +574,20 @@ class Lowerer:
     ) -> astx.DataType:
         """
         title: Lower a single comparison.
-        summary: >-
-          The operands are lowered at one type wide enough for all of them
-          rather than at the expected type, which is the type of the comparison
-          itself and never the type being compared: at a condition the expected
-          type is bool, and lowering ``a < 3`` there would ask for 3 as a bool.
-          Chained comparisons are rejected until this stage can represent their
-          short-circuit control flow and evaluate each middle operand once.
+        summary: 'The operands are lowered at one type wide enough for
+          all of them rather than at the expected type, which is the
+          type of the comparison itself and never the type being compared:
+          at a condition the expected type is bool, and lowering ``a
+          < 3`` there would ask for 3 as a bool. Chained comparisons
+          are rejected until this stage can represent their short-circuit
+          control flow and evaluate each middle operand once.'
         parameters:
-          node:
-            type: ast.Compare
-          expected:
-            type: SigType
-            description: Unused; a comparison is a bool whatever its context.
-        returns:
-          type: astx.DataType
+          node: Syntax node to process.
+          expected: Unused; a comparison is a bool whatever its context.
+        returns: Lowered a single comparison.
         raises:
-          LoweringError: >-
-            If the comparison is chained or its operator has no IRx equivalent.
+          LoweringError: If the comparison is chained or its operator
+            has no IRx equivalent.
         """
         del expected
         if len(node.ops) > 1:
@@ -656,13 +622,10 @@ class Lowerer:
         """
         title: Reject and/or until short-circuit control flow is lowerable.
         parameters:
-          node:
-            type: ast.BoolOp
-          expected:
-            type: SigType
-            description: Unused; the result is logical whatever its context.
-        returns:
-          type: astx.DataType
+          node: Syntax node to process.
+          expected: Unused; the result is logical whatever its context.
+        returns: 'Result of this operation: reject and/or until short-circuit
+          control flow is lowerable.'
         raises:
           LoweringError: Always.
         """
@@ -683,26 +646,21 @@ class Lowerer:
     ) -> astx.BinaryOp:
         """
         title: Build a binary node, refusing operands astx cannot combine.
-        summary: >-
-          astx requires both operands of a binary operator to carry a DataType,
-          and its UnaryOp carries the generic ExprType instead, so ``not a`` in
-          either position raises a bare Exception out of astx's constructor
-          with no source location on it. Checked here so the user gets a
-          located diagnostic naming the construct, the way every other
-          unlowerable expression is reported. The real fix belongs upstream in
-          astx, where giving UnaryOp the type of its operand would make these
-          compose.
+        summary: astx requires both operands of a binary operator to carry
+          a DataType, and its UnaryOp carries the generic ExprType instead,
+          so ``not a`` in either position raises a bare Exception out of
+          astx's constructor with no source location on it. Checked here
+          so the user gets a located diagnostic naming the construct, the
+          way every other unlowerable expression is reported. The real fix
+          belongs upstream in astx, where giving UnaryOp the type of its
+          operand would make these compose.
         parameters:
-          node:
-            type: ast.expr
-          op_code:
-            type: str
-          lhs:
-            type: astx.DataType
-          rhs:
-            type: astx.DataType
-        returns:
-          type: astx.BinaryOp
+          node: Syntax node to process.
+          op_code: Operator spelling.
+          lhs: Left operand.
+          rhs: Right operand.
+        returns: Constructed a binary node, refusing operands astx cannot
+          combine.
         raises:
           LoweringError: If either operand carries no astx DataType.
         """
@@ -720,21 +678,19 @@ class Lowerer:
     @private
     def promote(self, left: SigType, right: SigType, node: ast.AST) -> SigType:
         """
-        title: Pick the type that can represent both of two operand types.
-        summary: >-
-          Numeric inference delegates to IRx's lossless domain policy:
-          Int32/Float32 selects Float64, while Int64/float is rejected. Boolean
-          inference retains Python's existing selection rule; it does not
-          authorize implicit Boolean conversions during IRx analysis.
+        title: Pick the type that can represent both of two operand
+          types.
+        summary: 'Numeric inference delegates to IRx''s lossless domain
+          policy: Int32/Float32 selects Float64, while Int64/float
+          is rejected. Boolean inference retains Python''s existing
+          selection rule; it does not authorize implicit Boolean conversions
+          during IRx analysis.'
         parameters:
-          left:
-            type: SigType
-          right:
-            type: SigType
-          node:
-            type: ast.AST
-        returns:
-          type: SigType
+          left: Left operand.
+          right: Right operand.
+          node: Syntax node to process.
+        returns: 'Result of this operation: pick the type that can
+          represent both of two operand types.'
         raises:
           LoweringError: If no lossless common numeric domain exists.
         """
@@ -758,16 +714,14 @@ class Lowerer:
     def infer(self, node: ast.AST) -> SigType:
         """
         title: Refuse to infer a type for a node with no overload.
-        summary: >-
-          Fails closed for the same reason the lowering dispatch does: this
-          runs on a validated function, so a node reaching here means inference
-          and the subset disagree, which must surface rather than resolve to
-          some default type the expression does not have.
+        summary: 'Fails closed for the same reason the lowering dispatch
+          does: this runs on a validated function, so a node reaching here
+          means inference and the subset disagree, which must surface rather
+          than resolve to some default type the expression does not have.'
         parameters:
-          node:
-            type: ast.AST
-        returns:
-          type: SigType
+          node: Syntax node to process.
+        returns: 'Result of this operation: refuse to infer a type for a
+          node with no overload.'
         raises:
           LoweringError: Always.
         """
@@ -780,16 +734,15 @@ class Lowerer:
     def infer(self, node: ast.Constant) -> SigType:
         """
         title: Infer the type of a literal from its Python kind.
-        summary: >-
-          Integer literals use IRx's i32-then-i64 source default; Python float
-          literals remain f64. A declared context can still select another
-          width when the literal is representable. This does not change the
-          reserved Python int annotation, which continues to mean i64.
+        summary: Integer literals use IRx's i32-then-i64 source default;
+          Python float literals remain f64. A declared context can still
+          select another width when the literal is representable. This does
+          not change the reserved Python int annotation, which continues
+          to mean i64.
         parameters:
-          node:
-            type: ast.Constant
-        returns:
-          type: SigType
+          node: Syntax node to process.
+        returns: 'Result of this operation: infer the type of a literal from
+          its Python kind.'
         raises:
           LoweringError: If the literal is of no kind the subset admits.
         """
@@ -809,10 +762,9 @@ class Lowerer:
         """
         title: Infer the type of a name from the scope it was declared in.
         parameters:
-          node:
-            type: ast.Name
-        returns:
-          type: SigType
+          node: Syntax node to process.
+        returns: 'Result of this operation: infer the type of a name from
+          the scope it was declared in.'
         raises:
           LoweringError: If the name is not in scope.
         """
@@ -829,15 +781,13 @@ class Lowerer:
     def infer(self, node: ast.BinOp) -> SigType:
         """
         title: Infer an arithmetic result from its operator and operands.
-        summary: >-
-          True division produces a float even when both operands are integers.
-          Other arithmetic operators use the same pairwise numeric promotion
-          policy as IRx.
+        summary: True division produces a float even when both operands
+          are integers. Other arithmetic operators use the same pairwise
+          numeric promotion policy as IRx.
         parameters:
-          node:
-            type: ast.BinOp
-        returns:
-          type: SigType
+          node: Syntax node to process.
+        returns: 'Result of this operation: infer an arithmetic result from
+          its operator and operands.'
         """
         inferred = self.promote(
             self.infer(node.left), self.infer(node.right), node
@@ -850,14 +800,13 @@ class Lowerer:
     def infer(self, node: ast.UnaryOp) -> SigType:
         """
         title: Infer the type of a unary operation.
-        summary: >-
-          Only ``not`` changes the type of what it is applied to; the other
-          operators the subset admits leave it as it was.
+        summary: Only ``not`` changes the type of what it is applied
+          to; the other operators the subset admits leave it as it
+          was.
         parameters:
-          node:
-            type: ast.UnaryOp
-        returns:
-          type: SigType
+          node: Syntax node to process.
+        returns: 'Result of this operation: infer the type of a unary
+          operation.'
         """
         if isinstance(node.op, ast.Not):
             return bool_
@@ -868,10 +817,8 @@ class Lowerer:
         """
         title: Infer the type of a comparison.
         parameters:
-          node:
-            type: ast.Compare
-        returns:
-          type: SigType
+          node: Syntax node to process.
+        returns: 'Result of this operation: infer the type of a comparison.'
         """
         return bool_
 
@@ -879,14 +826,12 @@ class Lowerer:
     def infer(self, node: ast.BoolOp) -> SigType:
         """
         title: Infer the type of an and/or expression.
-        summary: >-
-          Logical once lowered, whatever its operands were, which is what makes
-          it usable as a condition.
+        summary: Logical once lowered, whatever its operands were,
+          which is what makes it usable as a condition.
         parameters:
-          node:
-            type: ast.BoolOp
-        returns:
-          type: SigType
+          node: Syntax node to process.
+        returns: 'Result of this operation: infer the type of an
+          and/or expression.'
         """
         return bool_
 
@@ -899,29 +844,28 @@ class Lowerer:
         target: Scalar,
     ) -> bool | int | float:
         """
-        title: Check a literal against its expected type and convert it.
-        summary: >-
-          bool is checked before int because it is a subclass of one: without
-          that order True would satisfy an integer context. An integer in a
-          float context is converted, which is the widening Python itself
-          performs; the reverse is not, because a float has no integer value to
-          preserve. The value is passed in rather than read off the node so a
-          negated constant is checked as the negative number it is, which is
-          what admits the exact minimum of a signed type: its magnitude alone
-          is one larger than that type's maximum.
+        title: Check a literal against its expected type and convert
+          it.
+        summary: 'bool is checked before int because it is a subclass
+          of one: without that order True would satisfy an integer
+          context. An integer in a float context is converted, which
+          is the widening Python itself performs; the reverse is
+          not, because a float has no integer value to preserve.
+          The value is passed in rather than read off the node so
+          a negated constant is checked as the negative number it
+          is, which is what admits the exact minimum of a signed
+          type: its magnitude alone is one larger than that type''s
+          maximum.'
         parameters:
-          node:
-            type: ast.expr
-          value:
-            type: object
-          expected:
-            type: SigType
-          target:
-            type: Scalar
-        returns:
-          type: bool | int | float
+          node: Syntax node to process.
+          value: Value to process.
+          expected: Expected result for this case.
+          target: Destination of the operation.
+        returns: 'Result of this operation: check a literal against
+          its expected type and convert it.'
         raises:
-          LoweringError: If the literal's kind or value does not fit.
+          LoweringError: If the literal's kind or value does not
+            fit.
         """
         if isinstance(value, bool):
             if target.kind != "bool":
@@ -957,21 +901,16 @@ class Lowerer:
     ) -> int:
         """
         title: Check an integer literal fits the integer type it lowers into.
-        summary: >-
-          Python integers are unbounded, so a value has to be checked rather
-          than assumed to fit: without this one too large to represent would
-          still be labelled Int64 and misstate its own value.
+        summary: 'Python integers are unbounded, so a value has to be checked
+          rather than assumed to fit: without this one too large to represent
+          would still be labelled Int64 and misstate its own value.'
         parameters:
-          node:
-            type: ast.expr
-          value:
-            type: int
-          expected:
-            type: SigType
-          target:
-            type: Scalar
-        returns:
-          type: int
+          node: Syntax node to process.
+          value: Value to process.
+          expected: Expected result for this case.
+          target: Destination of the operation.
+        returns: 'Result of this operation: check an integer literal fits
+          the integer type it lowers into.'
         raises:
           LoweringError: If the value is outside the type's range.
         """
@@ -993,23 +932,19 @@ class Lowerer:
     ) -> float:
         """
         title: Convert a numeric literal to the float type it lowers into.
-        summary: >-
-          Converting an integer can overflow when it has more magnitude than a
-          double holds, and a double can exceed what a single holds, so both
-          steps are checked rather than left to produce an infinity. Integer
-          literals must also remain exact; rounded integer values require an
-          explicit conversion rather than an implicit literal context.
+        summary: Converting an integer can overflow when it has more magnitude
+          than a double holds, and a double can exceed what a single holds,
+          so both steps are checked rather than left to produce an infinity.
+          Integer literals must also remain exact; rounded integer values
+          require an explicit conversion rather than an implicit literal
+          context.
         parameters:
-          node:
-            type: ast.expr
-          value:
-            type: int | float
-          expected:
-            type: SigType
-          target:
-            type: Scalar
-        returns:
-          type: float
+          node: Syntax node to process.
+          value: Value to process.
+          expected: Expected result for this case.
+          target: Destination of the operation.
+        returns: Converted a numeric literal to the float type it lowers
+          into.
         raises:
           LoweringError: If the value is outside the type's range.
         """
@@ -1040,16 +975,15 @@ class Lowerer:
     def arguments(self) -> astx.Arguments:
         """
         title: Build the typed argument list from the signature.
-        summary: >-
-          The names come from the definition and the types from the signature,
-          which is what makes an explicit signature= able to decide types
-          without the function having to annotate. Validation rejects every
-          shape refused here first, but lower is public and the astx argument
-          list cannot express any of them, so each is refused rather than
-          quietly dropped: a variadic or keyword-only parameter would vanish
-          from the prototype, and a default would become a required argument.
-        returns:
-          type: astx.Arguments
+        summary: 'The names come from the definition and the types from the
+          signature, which is what makes an explicit signature= able to decide
+          types without the function having to annotate. Validation rejects
+          every shape refused here first, but lower is public and the astx
+          argument list cannot express any of them, so each is refused rather
+          than quietly dropped: a variadic or keyword-only parameter would
+          vanish from the prototype, and a default would become a required
+          argument.'
+        returns: Constructed the typed argument list from the signature.
         raises:
           LoweringError: If the argument shape or count cannot be lowered.
         """
@@ -1083,17 +1017,15 @@ class Lowerer:
     def check_shape(self, args: ast.arguments) -> None:
         """
         title: Reject an argument shape astx.Arguments cannot express.
-        summary: >-
-          Checked before the count, because counting the positional parameters
-          of a function that also takes *args would report a number no caller
-          could act on. Mirrors the shape check reconciliation applies, so the
-          two stages refuse the same definitions.
+        summary: Checked before the count, because counting the positional
+          parameters of a function that also takes *args would report a number
+          no caller could act on. Mirrors the shape check reconciliation
+          applies, so the two stages refuse the same definitions.
         parameters:
-          args:
-            type: ast.arguments
+          args: Arguments supplied to the operation.
         raises:
-          LoweringError: >-
-            If any parameter is variadic, keyword-only, or has a default.
+          LoweringError: If any parameter is variadic, keyword-only, or has
+            a default.
         """
         offender = next(
             (
@@ -1127,12 +1059,10 @@ class Lowerer:
     def body(self) -> astx.Block:
         """
         title: Lower the function body into an astx block.
-        summary: >-
-          Statements that compile to nothing, a docstring or a pass, are
-          dropped rather than represented, so the block holds only what IRx has
-          to translate.
-        returns:
-          type: astx.Block
+        summary: Statements that compile to nothing, a docstring or a pass,
+          are dropped rather than represented, so the block holds only what
+          IRx has to translate.
+        returns: Lowered the function body into an astx block.
         """
         block = astx.Block()
         for node in self.extracted.node.body:
@@ -1144,27 +1074,25 @@ class Lowerer:
 
 def lower(extracted: ExtractedSource, signature: Signature) -> astx.Module:
     """
-    title: Lower a validated function into a single-function astx module.
-    summary: >-
-      Takes the function ast from arxjit.source and the Signature from
-      arxjit.reconcile, and returns the astx module IRx compiles. The module
-      keeps the Python function's name so a compiled artifact is identifiable,
-      and holds exactly one function definition: arxjit compiles one decorated
-      function at a time. The definition itself may be emitted under a
-      different name; see function_name. Both inputs are expected to have
-      passed their own stage, so anything this stage cannot map is a
-      LoweringError rather than a user-facing rejection.
+    title: Lower a validated function into a single-function astx
+      module.
+    summary: 'Takes the function ast from arxjit.source and the
+      Signature from arxjit.reconcile, and returns the astx module
+      IRx compiles. The module keeps the Python function''s name
+      so a compiled artifact is identifiable, and holds exactly
+      one function definition: arxjit compiles one decorated function
+      at a time. The definition itself may be emitted under a different
+      name; see function_name. Both inputs are expected to have
+      passed their own stage, so anything this stage cannot map
+      is a LoweringError rather than a user-facing rejection.'
     parameters:
-      extracted:
-        type: ExtractedSource
-        description: A function that has already passed validation.
-      signature:
-        type: Signature
-        description: The signature resolve_signature settled on.
-    returns:
-      type: astx.Module
+      extracted: A function that has already passed validation.
+      signature: The signature resolve_signature settled on.
+    returns: Lowered a validated function into a single-function
+      astx module.
     raises:
-      LoweringError: If any part of the function has no astx mapping yet.
+      LoweringError: If any part of the function has no astx mapping
+        yet.
     """
     lowerer = Lowerer(extracted, signature)
     node = extracted.node

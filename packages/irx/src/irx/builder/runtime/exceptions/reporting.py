@@ -22,12 +22,9 @@ class ExceptionFrame:
     """
     title: One trustworthy generated propagation location.
     attributes:
-      source:
-        type: str
-      line:
-        type: int
-      col:
-        type: int
+      source: Source input to process.
+      line: Source line coordinate.
+      col: Source column coordinate.
     """
 
     source: str
@@ -42,28 +39,19 @@ class ExceptionReport:
     """
     title: Immutable typed report with chronological related diagnostics.
     attributes:
-      role:
-        type: Literal[root, cause, context, cleanup]
-      code:
-        type: str
-      type_name:
-        type: str
-      source:
-        type: str
-      line:
-        type: int
-      col:
-        type: int
-      message:
-        type: str
-      frames:
-        type: tuple[ExceptionFrame, Ellipsis]
-      related:
-        type: tuple[ExceptionReport, Ellipsis]
-    notes: >-
-      type_name is a canonical nominal identity, not message-derived text.
-      Unknown origins use line and col minus one; they are not fabricated.
-      related holds cause, context, and secondary cleanup reports in order.
+      role: Role.
+      code: Stable diagnostic identifier.
+      type_name: Name of type.
+      source: Source input to process.
+      line: Source line coordinate.
+      col: Source column coordinate.
+      message: Diagnostic message.
+      frames: Frames.
+      related: Related.
+    notes: type_name is a canonical nominal identity, not message-derived
+      text. Unknown origins use line and col minus one; they are
+      not fabricated. related holds cause, context, and secondary
+      cleanup reports in order.
     """
 
     role: Literal["root", "cause", "context", "cleanup"]
@@ -83,10 +71,8 @@ def decode_field(value: str) -> str:
     """
     title: Decode protocol escapes while preserving unknown escape pairs.
     parameters:
-      value:
-        type: str
-    returns:
-      type: str
+      value: Value to process.
+    returns: Decoded protocol escapes while preserving unknown escape pairs.
     """
     escapes = {"\\": "\\", "n": "\n", "r": "\r", "t": "\t", "p": "|"}
     result: list[str] = []
@@ -106,16 +92,15 @@ def decode_field(value: str) -> str:
 @typechecked
 def parse_exception_output(stderr: str) -> ExceptionReport | None:
     """
-    title: Parse the first complete root report and its preceding diagnostics.
+    title: Parse the first complete root report and its preceding
+      diagnostics.
     parameters:
-      stderr:
-        type: str
-    returns:
-      type: ExceptionReport | None
-    notes: >-
-      Unrelated stderr and malformed records are ignored. Frame records attach
-      only to the immediately preceding report. This parser does not classify
-      exceptions by display name or message.
+      stderr: Stderr.
+    returns: Parsed the first complete root report and its preceding
+      diagnostics.
+    notes: Unrelated stderr and malformed records are ignored. Frame
+      records attach only to the immediately preceding report. This
+      parser does not classify exceptions by display name or message.
     """
     reports: list[ExceptionReport] = []
     root: ExceptionReport | None = None

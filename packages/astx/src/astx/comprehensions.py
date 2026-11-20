@@ -29,16 +29,11 @@ class ComprehensionClause(Expr):
     """
     title: AST node for generic comprehensions.
     attributes:
-      kind:
-        type: ASTKind
-      target:
-        type: Expr
-      iterable:
-        type: Expr
-      conditions:
-        type: ASTNodes[Expr]
-      is_async:
-        type: bool
+      kind: Kind of value or operation.
+      target: Destination of the operation.
+      iterable: Iterable.
+      conditions: Conditions.
+      is_async: Whether is async.
     """
 
     kind: ASTKind
@@ -60,18 +55,12 @@ class ComprehensionClause(Expr):
         """
         title: Initialize the comprehension clause.
         parameters:
-          target:
-            type: Expr
-          iterable:
-            type: Expr
-          conditions:
-            type: Optional[Iterable[Expr] | ASTNodes[Expr]]
-          is_async:
-            type: bool
-          loc:
-            type: SourceLocation
-          parent:
-            type: Optional[ASTNodes]
+          target: Destination of the operation.
+          iterable: Iterable.
+          conditions: Conditions.
+          is_async: Whether is async.
+          loc: Source coordinates associated with the node.
+          parent: Parent node or enclosing scope.
         """
         super().__init__(loc=loc, parent=parent)
         self.target = target
@@ -91,8 +80,7 @@ class ComprehensionClause(Expr):
     def __str__(self) -> str:
         """
         title: Return a string representation of the object.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         return f"COMPREHENSION[is_async={self.is_async}]"
 
@@ -100,10 +88,8 @@ class ComprehensionClause(Expr):
         """
         title: Return the AST structure of the object.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         conditions = (
             {"conditions": self.conditions.get_struct(simplified)}
@@ -127,8 +113,7 @@ class Comprehension(Expr):
     """
     title: AST Comprehension class.
     attributes:
-      generators:
-        type: ASTNodes[ComprehensionClause]
+      generators: Generators.
     """
 
     generators: ASTNodes[ComprehensionClause]
@@ -144,12 +129,9 @@ class Comprehension(Expr):
         """
         title: Initialize the comprehension expression.
         parameters:
-          generators:
-            type: Iterable[ComprehensionClause] | ASTNodes[ComprehensionClause]
-          loc:
-            type: SourceLocation
-          parent:
-            type: Optional[ASTNodes]
+          generators: Generators.
+          loc: Source coordinates associated with the node.
+          parent: Parent node or enclosing scope.
         """
         super().__init__(loc=loc, parent=parent)
 
@@ -165,10 +147,8 @@ class Comprehension(Expr):
         """
         title: Return the AST structure of the object.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         value: ReprStruct = {
             "generators": self.generators.get_struct(simplified),
@@ -183,10 +163,8 @@ class ListComprehension(Comprehension):
     """
     title: ListComprehension class.
     attributes:
-      generators:
-        type: ASTNodes[ComprehensionClause]
-      element:
-        type: Expr
+      generators: Generators.
+      element: Element.
     """
 
     element: Expr
@@ -202,14 +180,10 @@ class ListComprehension(Comprehension):
         """
         title: Initialize the GeneratorExpr instance.
         parameters:
-          element:
-            type: Expr
-          generators:
-            type: ASTNodes[ComprehensionClause] | Iterable[ComprehensionClause]
-          loc:
-            type: SourceLocation
-          parent:
-            type: Optional[ASTNodes]
+          element: Element.
+          generators: Generators.
+          loc: Source coordinates associated with the node.
+          parent: Parent node or enclosing scope.
         """
         super().__init__(generators=generators, loc=loc, parent=parent)
         self.element = element
@@ -218,10 +192,8 @@ class ListComprehension(Comprehension):
         """
         title: Return the AST structure of the object.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         key = f"{self}"
         key += f"#{id(self)}" if simplified else ""
@@ -245,12 +217,9 @@ class SetComprehension(Comprehension):
     """
     title: AST node representing set comprehension expressions.
     attributes:
-      generators:
-        type: ASTNodes[ComprehensionClause]
-      kind:
-        type: ASTKind
-      element:
-        type: Expr
+      generators: Generators.
+      kind: Kind of value or operation.
+      element: Element.
     """
 
     kind: ASTKind
@@ -268,14 +237,10 @@ class SetComprehension(Comprehension):
         """
         title: Initialize the SetComprehension instance.
         parameters:
-          element:
-            type: Expr
-          generators:
-            type: ASTNodes[ComprehensionClause] | Iterable[ComprehensionClause]
-          loc:
-            type: SourceLocation
-          parent:
-            type: Optional[ASTNodes]
+          element: Element.
+          generators: Generators.
+          loc: Source coordinates associated with the node.
+          parent: Parent node or enclosing scope.
         """
         super().__init__(generators=generators, loc=loc, parent=parent)
         self.element = element
@@ -284,8 +249,7 @@ class SetComprehension(Comprehension):
     def __str__(self) -> str:
         """
         title: Return a string representation of the object.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         return "SET-COMPREHENSION"
 
@@ -293,10 +257,8 @@ class SetComprehension(Comprehension):
         """
         title: Return the AST structure of the object.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         generators = (
             {"generators": self.generators.get_struct(simplified)}
@@ -318,12 +280,9 @@ class GeneratorExpr(Comprehension):
     """
     title: AST class for generator expressions.
     attributes:
-      generators:
-        type: ASTNodes[ComprehensionClause]
-      kind:
-        type: ASTKind
-      element:
-        type: Expr
+      generators: Generators.
+      kind: Kind of value or operation.
+      element: Element.
     """
 
     kind: ASTKind
@@ -341,14 +300,10 @@ class GeneratorExpr(Comprehension):
         """
         title: Initialize the GeneratorExpr instance.
         parameters:
-          element:
-            type: Expr
-          generators:
-            type: Iterable[ComprehensionClause] | ASTNodes[ComprehensionClause]
-          loc:
-            type: SourceLocation
-          parent:
-            type: Optional[ASTNodes]
+          element: Element.
+          generators: Generators.
+          loc: Source coordinates associated with the node.
+          parent: Parent node or enclosing scope.
         """
         super().__init__(generators=generators, loc=loc, parent=parent)
         self.element = element
@@ -358,10 +313,8 @@ class GeneratorExpr(Comprehension):
         """
         title: Return the AST structure of the object.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         key = f"GENERATOR-EXPR#{id(self)}" if simplified else "GENERATOR-EXPR"
         value: ReprStruct = {

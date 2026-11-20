@@ -23,11 +23,9 @@ def _diagnostic(**overrides: object) -> Diagnostic:
     title: Build a valid Diagnostic, overriding selected fields.
     parameters:
       overrides:
-        type: object
         description: Field values replacing the base diagnostic's.
         variadic: keyword
-    returns:
-      type: Diagnostic
+    returns: Constructed a valid Diagnostic, overriding selected fields.
     """
     return dataclasses.replace(_BASE, **overrides)
 

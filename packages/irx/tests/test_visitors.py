@@ -45,8 +45,7 @@ class BlockProbeMixin(MixinVisitorCore):
         """
         title: Traverse supported block children through shared dispatch.
         parameters:
-          node:
-            type: astx.Block
+          node: Syntax node to process.
         """
         for child in node.nodes:
             self.visit(child)
@@ -70,8 +69,7 @@ class _SpecializedVisitor(BaseVisitor):
     """
     title: Minimal visitor used to validate shared dispatch behavior.
     attributes:
-      calls:
-        type: list[str]
+      calls: Calls.
     """
 
     calls: list[str]
@@ -87,8 +85,7 @@ class _SpecializedVisitor(BaseVisitor):
         """
         title: Visit LiteralInt32 nodes.
         parameters:
-          node:
-            type: astx.LiteralInt32
+          node: Syntax node to process.
         """
         self.calls.append(type(node).__name__)
 
@@ -103,10 +100,8 @@ class UnknownNode(astx.AST):
         """
         title: Supply the AST representation contract without a visit handler.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         return {"UnknownNode": {}}
 
@@ -123,8 +118,7 @@ class InheritedVisitor(_SpecializedVisitor):
     """
     title: Add one overload without replacing the inherited integer handler.
     attributes:
-      calls:
-        type: list[str]
+      calls: Calls.
     """
 
     @dispatch
@@ -133,8 +127,7 @@ class InheritedVisitor(_SpecializedVisitor):
         """
         title: Record string visits alongside inherited integer visits.
         parameters:
-          node:
-            type: astx.LiteralString
+          node: Syntax node to process.
         """
         self.calls.append(type(node).__name__)
 
@@ -146,8 +139,7 @@ def test_base_visitor_raises_not_implemented(node: astx.AST) -> None:
     """
     title: BaseVisitor should raise a consistent error for ASTx nodes.
     parameters:
-      node:
-        type: astx.AST
+      node: Syntax node to process.
     """
     visitor = BaseVisitor()
     name = type(node).__name__
@@ -196,8 +188,7 @@ def test_shared_mixin_dispatch_recurses_without_retaining_instances(
     """
     title: Cross-module overloads preserve specificity and instance state.
     parameters:
-      visitor_class:
-        type: type[MixinVisitorCore]
+      visitor_class: Visitor class.
     """
     inner = astx.Block()
     inner.append(IntegerSubtype(7))
@@ -230,10 +221,9 @@ def test_plum_can_warn_about_exact_visit_redefinitions() -> None:
         """
         title: Supply the original exact signature.
         parameters:
-          node:
-            type: astx.LiteralInt32
-        returns:
-          type: str
+          node: Syntax node to process.
+        returns: 'Result of this operation: supply the original exact
+          signature.'
         """
         del node
         return "original"
@@ -242,10 +232,9 @@ def test_plum_can_warn_about_exact_visit_redefinitions() -> None:
         """
         title: Accidentally contribute the same signature again.
         parameters:
-          node:
-            type: astx.LiteralInt32
-        returns:
-          type: str
+          node: Syntax node to process.
+        returns: 'Result of this operation: accidentally contribute the same
+          signature again.'
         """
         del node
         return "replacement"
@@ -305,8 +294,7 @@ def test_unknown_nodes_fail_at_the_responsible_phase(typed: bool) -> None:
     """
     title: A type annotation cannot grant unknown syntax compiler support.
     parameters:
-      typed:
-        type: bool
+      typed: Whether to use typed.
     """
     node = UnknownNode()
     if typed:
@@ -329,8 +317,8 @@ def test_unknown_nodes_fail_at_the_responsible_phase(typed: bool) -> None:
 
 def test_structural_traversal_and_scalar_subtypes_are_explicit() -> None:
     """
-    title: >-
-      Supported blocks traverse children while unregistered containers fail.
+    title: Supported blocks traverse children while unregistered containers
+      fail.
     """
     scalar = IntegerSubtype(7)
     block = astx.Block()

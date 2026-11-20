@@ -1,11 +1,11 @@
 """
 title: Typed programmatic facade for the Arx compiler pipeline.
-summary: >-
-  Provide parse, check, compile, artifact, and execution APIs without exposing
-  CLI state. Heavy frontend, semantic, and LLVM modules are imported only when
-  an operation needs them, keeping `import arxpy` lightweight. Compiler
-  operations are serialized because the current Arx lexer reads a process-wide
-  source buffer; each lowering operation uses a fresh backend builder.
+summary: Provide parse, check, compile, artifact, and execution APIs without
+  exposing CLI state. Heavy frontend, semantic, and LLVM modules are imported
+  only when an operation needs them, keeping `import arxpy` lightweight.
+  Compiler operations are serialized because the current Arx lexer reads
+  a process-wide source buffer; each lowering operation uses a fresh backend
+  builder.
 """
 
 # Compiler dependencies are intentionally operation-local to keep metadata and
@@ -59,18 +59,12 @@ class ParsedProgram:
     """
     title: Parsed Arx source plus stable source attribution.
     attributes:
-      module:
-        type: astx.Module
-      source:
-        type: str
-      filename:
-        type: str
-      module_name:
-        type: str
-      origin:
-        type: Path | None
-      has_source_imports:
-        type: bool
+      module: Module to process.
+      source: Source input to process.
+      filename: Source or resource filename.
+      module_name: Module name to resolve.
+      origin: Origin.
+      has_source_imports: Whether has source imports.
     """
 
     module: astx.Module
@@ -92,18 +86,12 @@ class ParsedProgram:
         """
         title: Initialize an attributed parsed program.
         parameters:
-          module:
-            type: astx.Module
-          source:
-            type: str
-          filename:
-            type: str
-          module_name:
-            type: str
-          origin:
-            type: Path | None
-          has_source_imports:
-            type: bool
+          module: Module to process.
+          source: Source input to process.
+          filename: Source or resource filename.
+          module_name: Module name to resolve.
+          origin: Origin.
+          has_source_imports: Whether has source imports.
         """
         object.__setattr__(self, "module", module)
         object.__setattr__(self, "source", source)
@@ -124,8 +112,7 @@ class CheckedProgram:
     """
     title: Program that completed semantic analysis successfully.
     attributes:
-      parsed:
-        type: ParsedProgram
+      parsed: Parsed.
     """
 
     parsed: ParsedProgram
@@ -134,8 +121,7 @@ class CheckedProgram:
         """
         title: Initialize a semantically checked program.
         parameters:
-          parsed:
-            type: ParsedProgram
+          parsed: Parsed.
         """
         object.__setattr__(self, "parsed", parsed)
 
@@ -147,12 +133,9 @@ class CompilationArtifact:
     """
     title: Materialized compiler output.
     attributes:
-      kind:
-        type: ArtifactKind
-      path:
-        type: Path | None
-      llvm_ir:
-        type: str | None
+      kind: Kind of value or operation.
+      path: Path to the input or output resource.
+      llvm_ir: LLVM IR.
     """
 
     kind: ArtifactKind
@@ -168,12 +151,9 @@ class CompilationArtifact:
         """
         title: Initialize a materialized compiler artifact.
         parameters:
-          kind:
-            type: ArtifactKind
-          path:
-            type: Path | None
-          llvm_ir:
-            type: str | None
+          kind: Kind of value or operation.
+          path: Path to the input or output resource.
+          llvm_ir: LLVM IR.
         """
         object.__setattr__(self, "kind", kind)
         object.__setattr__(self, "path", path)
@@ -186,17 +166,14 @@ class CompilationArtifact:
 class ExecutionResult:
     """
     title: Captured result of running an executable artifact.
-    summary: >-
-      A completed nonzero execution remains result data. The exception property
-      decodes an uncaught Arx exception when stderr contains a valid runtime
-      report; it does not raise a Python compiler exception.
+    summary: A completed nonzero execution remains result data. The exception
+      property decodes an uncaught Arx exception when stderr contains a valid
+      runtime report; it does not raise a Python compiler exception.
     attributes:
-      exit_code:
-        type: int
-      stdout:
-        type: str
-      stderr:
-        type: str
+      exit_code: Exit code.
+      stdout: Stdout.
+      stderr: Stderr.
+      exception: Exception being handled.
     """
 
     exit_code: int
@@ -207,12 +184,9 @@ class ExecutionResult:
         """
         title: Initialize a captured execution result.
         parameters:
-          exit_code:
-            type: int
-          stdout:
-            type: str
-          stderr:
-            type: str
+          exit_code: Exit code.
+          stdout: Stdout.
+          stderr: Stderr.
         """
         object.__setattr__(self, "exit_code", exit_code)
         object.__setattr__(self, "stdout", stdout)
@@ -222,11 +196,10 @@ class ExecutionResult:
     def exception(self) -> ExceptionReport | None:
         """
         title: Decode an uncaught Arx exception as execution data.
-        summary: >-
-          Return None for ordinary output or a malformed record. Import the
-          runtime parser only on access, preserving lightweight metadata use.
-        returns:
-          type: ExceptionReport | None
+        summary: Return None for ordinary output or a malformed record. Import
+          the runtime parser only on access, preserving lightweight metadata
+          use.
+        returns: Decoded an uncaught Arx exception as execution data.
         """
         from irx.builder.runtime.exceptions import parse_exception_output
 
@@ -244,14 +217,10 @@ def api_diagnostic(
     """
     title: Build one facade-originated error diagnostic.
     parameters:
-      message:
-        type: str
-      filename:
-        type: str
-      code:
-        type: str
-    returns:
-      type: Diagnostic
+      message: Diagnostic or output message.
+      filename: Source or resource filename.
+      code: Source code or diagnostic identifier.
+    returns: Constructed one facade-originated error diagnostic.
     """
     return Diagnostic(
         severity=DiagnosticSeverity.ERROR,
@@ -273,12 +242,10 @@ def compile_diagnostics(
     """
     title: Translate a structured IRx failure into public diagnostics.
     parameters:
-      error:
-        type: object
-      filename:
-        type: str
-    returns:
-      type: list[Diagnostic]
+      error: Error being reported or inspected.
+      filename: Source or resource filename.
+    returns: 'Result of this operation: translate a structured IRx failure
+      into public diagnostics.'
     """
     from arxpy.diagnostics import from_irx
 
@@ -297,10 +264,8 @@ def has_imports(module: astx.Module) -> bool:
     """
     title: Return whether a parsed module contains source imports.
     parameters:
-      module:
-        type: astx.Module
-    returns:
-      type: bool
+      module: Module to process.
+    returns: Whether a parsed module contains source imports.
     """
     return any(
         isinstance(node, (astx.ImportStmt, astx.ImportFromStmt))
@@ -314,10 +279,8 @@ def has_main(module: astx.Module) -> bool:
     """
     title: Return whether a module defines the executable entry point.
     parameters:
-      module:
-        type: astx.Module
-    returns:
-      type: bool
+      module: Module to process.
+    returns: Whether a module defines the executable entry point.
     """
     return any(
         isinstance(node, astx.FunctionDef) and node.prototype.name == "main"
@@ -333,10 +296,9 @@ def program_context(
     """
     title: Build import and native capabilities from a program's origin.
     parameters:
-      program:
-        type: ParsedProgram
-    returns:
-      type: tuple[ParsedModule, ImportResolver] | None
+      program: Program.
+    returns: Constructed import and native capabilities from a program's
+      origin.
     """
     if not has_imports(program.module) and program.origin is None:
         return None
@@ -408,14 +370,10 @@ def resolved_output_path(
     """
     title: Resolve a caller-owned materialized artifact path.
     parameters:
-      program:
-        type: ParsedProgram
-      kind:
-        type: ArtifactKind
-      output:
-        type: str | Path | None
-    returns:
-      type: Path
+      program: Program.
+      kind: Kind of value or operation.
+      output: Output destination or generated result.
+    returns: Resolved a caller-owned materialized artifact path.
     """
     if output is not None:
         return Path(output).expanduser().resolve()
@@ -436,12 +394,12 @@ def resolved_output_path(
 class Compiler:
     """
     title: Reusable facade for parse, check, compile, and run operations.
-    summary: >-
-      Operations are safe to repeat and serialized across Compiler instances
-      while the frontend uses its process-wide input buffer. The facade never
-      creates an implicit temporary artifact: callers provide an output path
-      for in-memory compilation, while file compilation defaults beside the
-      source. Unknown internal exceptions are not hidden as user diagnostics.
+    summary: 'Operations are safe to repeat and serialized across Compiler
+      instances while the frontend uses its process-wide input buffer. The
+      facade never creates an implicit temporary artifact: callers provide
+      an output path for in-memory compilation, while file compilation defaults
+      beside the source. Unknown internal exceptions are not hidden as user
+      diagnostics.'
     """
 
     def parse_string(
@@ -454,14 +412,10 @@ class Compiler:
         """
         title: Parse Arx source text.
         parameters:
-          source:
-            type: str
-          filename:
-            type: str
-          module_name:
-            type: str
-        returns:
-          type: ParsedProgram
+          source: Source input to process.
+          filename: Source or resource filename.
+          module_name: Module name to resolve.
+        returns: Parsed arx source text.
         """
         from arx.exceptions import ArxError as FrontendError
         from arx.io import ArxIO
@@ -493,10 +447,8 @@ class Compiler:
         """
         title: Read and parse one UTF-8 Arx source file.
         parameters:
-          path:
-            type: str | Path
-        returns:
-          type: ParsedProgram
+          path: Path to the input or output resource.
+        returns: Read and parse one UTF-8 Arx source file.
         """
         from arx.main import get_module_name_from_file_path
 
@@ -532,10 +484,9 @@ class Compiler:
         """
         title: Run semantic analysis without lowering or materialization.
         parameters:
-          program:
-            type: ParsedProgram
-        returns:
-          type: CheckedProgram
+          program: Program.
+        returns: 'Result of this operation: run semantic analysis without
+          lowering or materialization.'
         """
         from arx.main import inject_ambient_builtin_imports
         from irx.analysis import analyze_module, analyze_modules
@@ -573,16 +524,11 @@ class Compiler:
         """
         title: Lower a program and optionally materialize a host artifact.
         parameters:
-          program:
-            type: ParsedProgram | CheckedProgram
-          kind:
-            type: ArtifactKind
-          output:
-            type: str | Path | None
-          link_mode:
-            type: Literal[auto, pie, no-pie]
-        returns:
-          type: CompilationArtifact
+          program: Program.
+          kind: Kind of value or operation.
+          output: Output destination or generated result.
+          link_mode: Link mode.
+        returns: Lowered a program and optionally materialize a host artifact.
         """
         from arx.codegen import ArxBuilder
         from arx.main import inject_ambient_builtin_imports
@@ -692,16 +638,11 @@ class Compiler:
         """
         title: Parse and compile one source file.
         parameters:
-          path:
-            type: str | Path
-          kind:
-            type: ArtifactKind
-          output:
-            type: str | Path | None
-          link_mode:
-            type: Literal[auto, pie, no-pie]
-        returns:
-          type: CompilationArtifact
+          path: Path to the input or output resource.
+          kind: Kind of value or operation.
+          output: Output destination or generated result.
+          link_mode: Link mode.
+        returns: Parsed and compile one source file.
         """
         return self.compile(
             self.parse_file(path),
@@ -722,18 +663,13 @@ class Compiler:
         """
         title: Run an executable artifact without invoking a shell.
         parameters:
-          artifact:
-            type: CompilationArtifact
-          args:
-            type: Sequence[str]
-          cwd:
-            type: str | Path | None
-          env:
-            type: Mapping[str, str] | None
-          timeout:
-            type: float | None
-        returns:
-          type: ExecutionResult
+          artifact: Artifact.
+          args: Arguments supplied to the operation.
+          cwd: Cwd.
+          env: Environment used by the subprocess or compiler.
+          timeout: Time limit for the operation.
+        returns: 'Result of this operation: run an executable artifact without
+          invoking a shell.'
         """
         if isinstance(args, (str, bytes)):
             raise TypeCheckError(

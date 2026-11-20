@@ -1,5 +1,13 @@
 """
 title: Class ownership, constructor binding, and bounded lifecycle validity.
+attributes:
+  INITIALIZER_HOOK: Initializer hook.
+  FINALIZER_HOOK: Finalizer hook.
+  CONTEXT_ENTER_HOOK: Context enter hook.
+  CONTEXT_EXIT_HOOK: Context exit hook.
+  CLASS_HOOKS: Class hooks.
+  LIFECYCLE_HOOKS: Lifecycle hooks.
+  DUNDER_MIN_LENGTH: Dunder min length.
 """
 
 from collections.abc import Iterator, Mapping
@@ -37,12 +45,9 @@ class ClassHookSpec:
     """
     title: One language-defined class protocol, not a private method.
     attributes:
-      name:
-        type: str
-      accepts_parameters:
-        type: bool
-      is_lifecycle:
-        type: bool
+      name: Name identifying this declaration.
+      accepts_parameters: Whether to use accepts parameters.
+      is_lifecycle: Whether is lifecycle.
     """
 
     name: str
@@ -58,12 +63,9 @@ class ClassHookSpec:
         """
         title: Validate hook specification inputs before freezing them.
         parameters:
-          name:
-            type: str
-          accepts_parameters:
-            type: bool
-          is_lifecycle:
-            type: bool
+          name: Name identifying the declaration or operation.
+          accepts_parameters: Whether to use accepts parameters.
+          is_lifecycle: Whether is lifecycle.
         """
         object.__setattr__(self, "name", name)
         object.__setattr__(self, "accepts_parameters", accepts_parameters)
@@ -103,14 +105,11 @@ def reject_hook_call(
     """
     title: Reject explicit calls to compiler-only lifecycle entry points.
     parameters:
-      analyzer:
-        type: SemanticAnalyzerCore
-      node:
-        type: astx.AST
-      name:
-        type: str
-    returns:
-      type: bool
+      analyzer: Semantic analyzer resolving the operation.
+      node: Syntax node to process.
+      name: Name identifying the declaration or operation.
+    returns: 'Result of this operation: reject explicit calls to compiler-only
+      lifecycle entry points.'
     """
     if name not in LIFECYCLE_HOOKS:
         return False
@@ -131,12 +130,9 @@ def lifecycle_error(
     """
     title: Reject an unsupported or unsafe lifecycle operation.
     parameters:
-      analyzer:
-        type: SemanticAnalyzerCore
-      node:
-        type: astx.AST
-      message:
-        type: str
+      analyzer: Semantic analyzer resolving the operation.
+      node: Syntax node to process.
+      message: Diagnostic or output message.
     """
     analyzer.context.diagnostics.add(
         message, node=node, code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP
@@ -149,10 +145,9 @@ def field_resource(type_: astx.DataType | None) -> ResourceKind | None:
     """
     title: Classify supported owned instance storage during analysis.
     parameters:
-      type_:
-        type: astx.DataType | None
-    returns:
-      type: ResourceKind | None
+      type_: Type expression to process.
+    returns: 'Result of this operation: classify supported owned instance
+      storage during analysis.'
     """
     if isinstance(type_, astx.ClassType):
         return ResourceKind.CLASS
@@ -169,10 +164,9 @@ def unsupported_class_field(type_: astx.DataType) -> bool:
     """
     title: Preserve scalar unions while rejecting unmodeled field resources.
     parameters:
-      type_:
-        type: astx.DataType
-    returns:
-      type: bool
+      type_: Type expression to process.
+    returns: 'Result of this operation: preserve scalar unions while rejecting
+      unmodeled field resources.'
     """
     if isinstance(type_, astx.UnionType):
         return any(
@@ -201,10 +195,9 @@ def contains_class(type_: astx.DataType | None) -> bool:
     """
     title: Detect class references hidden in unsupported aggregate types.
     parameters:
-      type_:
-        type: astx.DataType | None
-    returns:
-      type: bool
+      type_: Type expression to process.
+    returns: 'Result of this operation: detect class references hidden in
+      unsupported aggregate types.'
     """
     if isinstance(type_, astx.ClassType):
         return True
@@ -241,16 +234,12 @@ def class_ownership(
     """
     title: Describe one owned reference, not a unique object.
     parameters:
-      kind:
-        type: OwnershipKind
-      symbol:
-        type: str | None
-      transfer:
-        type: OwnershipTransferKind
-      escape:
-        type: OwnershipEscapeKind
-    returns:
-      type: ResourceOwnership
+      kind: Kind of value or operation.
+      symbol: Resolved symbol for the operation.
+      transfer: Transfer.
+      escape: Escape.
+    returns: 'Result of this operation: describe one owned reference, not
+      a unique object.'
     """
     return ResourceOwnership(
         ResourceKind.CLASS,
@@ -273,14 +262,10 @@ def acquire_class(
     """
     title: Resolve an owned reference acquired by a binding, store, or return.
     parameters:
-      analyzer:
-        type: SemanticAnalyzerCore
-      node:
-        type: astx.AST
-      value:
-        type: astx.AST | None
-      symbol:
-        type: str | None
+      analyzer: Semantic analyzer resolving the operation.
+      node: Syntax node to process.
+      value: Value to process.
+      symbol: Resolved symbol for the operation.
     """
     ownership = resource_ownership(value)
     operation = OwnershipTransferKind.COPY
@@ -311,12 +296,9 @@ def class_local(
     """
     title: Resolve a class reference owner without changing alias semantics.
     parameters:
-      analyzer:
-        type: SemanticAnalyzerCore
-      node:
-        type: astx.VariableDeclaration | astx.InlineVariableDeclaration
-      symbol:
-        type: SemanticSymbol
+      analyzer: Semantic analyzer resolving the operation.
+      node: Syntax node to process.
+      symbol: Resolved symbol for the operation.
     """
     function = analyzer.context.current_function
     if (
@@ -340,12 +322,9 @@ def lifecycle_plan(
     """
     title: Resolve base-first phases from canonical field storage order.
     parameters:
-      class_:
-        type: SemanticClass
-      initialization:
-        type: SemanticClassInitialization
-    returns:
-      type: SemanticClassInitialization
+      class_: Class being processed.
+      initialization: Initialization.
+    returns: Resolved base-first phases from canonical field storage order.
     """
     owners: list[SemanticClass] = []
 
@@ -353,8 +332,7 @@ def lifecycle_plan(
         """
         title: Deduplicate shared ancestors in existing storage order.
         parameters:
-          owner:
-            type: SemanticClass
+          owner: Owner keeping the resource alive.
         """
         for base in owner.bases:
             append(base)
@@ -398,16 +376,11 @@ def constructor_arguments(
     """
     title: Bind constructor names while preserving supplied evaluation order.
     parameters:
-      analyzer:
-        type: SemanticAnalyzerCore
-      node:
-        type: astx.ClassConstruct | astx.FunctionCall | astx.MethodCall
-      class_:
-        type: SemanticClass
-    returns:
-      type: >-
-        tuple[tuple[astx.DataType, Ellipsis], tuple[int, Ellipsis],
-        tuple[astx.DataType, Ellipsis]]
+      analyzer: Semantic analyzer resolving the operation.
+      node: Syntax node to process.
+      class_: Class being processed.
+    returns: 'Result of this operation: bind constructor names while preserving
+      supplied evaluation order.'
     """
     assert class_.initialization is not None
     function = analyzer.context.current_function
@@ -500,10 +473,9 @@ def lifecycle_children(node: astx.AST) -> Iterator[astx.AST]:
     """
     title: Traverse source children without semantic/parent backreferences.
     parameters:
-      node:
-        type: astx.AST
-    returns:
-      type: Iterator[astx.AST]
+      node: Syntax node to process.
+    returns: 'Result of this operation: traverse source children without
+      semantic/parent backreferences.'
     """
     for name, value in vars(node).items():
         if name in {"semantic", "parent", "type_", "loc"}:
@@ -524,10 +496,8 @@ def validate_hook(
     """
     title: Forbid resurrection, receiver escape, and unsafe hook declarations.
     parameters:
-      analyzer:
-        type: SemanticAnalyzerCore
-      declaration:
-        type: astx.FunctionDef
+      analyzer: Semantic analyzer resolving the operation.
+      declaration: Declaration being processed.
     """
     hook = CLASS_HOOKS.get(declaration.name)
     if hook is None:
@@ -574,10 +544,8 @@ def validate_hook(
         """
         title: Allow the receiver only as the base of a field access.
         parameters:
-          node:
-            type: astx.AST
-          parent:
-            type: astx.AST | None
+          node: Syntax node to process.
+          parent: Parent node or enclosing scope.
         """
         if isinstance(node, astx.Identifier) and node.name == "self":
             if not (
@@ -604,8 +572,7 @@ def validate_class_graph(analyzer: SemanticAnalyzerCore) -> None:
     """
     title: Reject strong ownership cycles including assignable subtypes.
     parameters:
-      analyzer:
-        type: SemanticAnalyzerCore
+      analyzer: Semantic analyzer resolving the operation.
     """
     classes = tuple(analyzer.context.classes.values())
     edges: dict[str, set[str]] = {}
@@ -627,12 +594,10 @@ def validate_class_graph(analyzer: SemanticAnalyzerCore) -> None:
         """
         title: Detect a cycle without accepting subtype-hidden back edges.
         parameters:
-          name:
-            type: str
-          active:
-            type: frozenset[str]
-        returns:
-          type: bool
+          name: Name identifying the declaration or operation.
+          active: Active.
+        returns: 'Result of this operation: detect a cycle without accepting
+          subtype-hidden back edges.'
         """
         if name in active:
             return True
@@ -659,14 +624,10 @@ def resolve_store(
     """
     title: Resolve managed storage before ordinary assignment validation.
     parameters:
-      analyzer:
-        type: SemanticAnalyzerCore
-      node:
-        type: astx.BinaryOp
-      symbol:
-        type: SemanticSymbol
-    returns:
-      type: bool
+      analyzer: Semantic analyzer resolving the operation.
+      node: Syntax node to process.
+      symbol: Resolved symbol for the operation.
+    returns: Resolved managed storage before ordinary assignment validation.
     """
     analyzer._semantic(node).resolved_resource_store = None
     analyzer._semantic(node).lifecycle_field_store = False
@@ -750,10 +711,8 @@ def validate_file_fields(
     """
     title: Prove exactly-once initialization of native file fields.
     parameters:
-      analyzer:
-        type: SemanticAnalyzerCore
-      class_:
-        type: SemanticClass
+      analyzer: Semantic analyzer resolving the operation.
+      class_: Class being processed.
     """
     from irx.analysis.builtin_file import (  # noqa: PLC0415
         is_native_file_class,
@@ -783,8 +742,7 @@ def validate_file_fields(
         """
         title: Reject reads of later fields during setup.
         parameters:
-          node:
-            type: astx.AST
+          node: Syntax node to process.
         """
         if (
             isinstance(node, astx.FieldAccess)
@@ -829,10 +787,9 @@ def validate_file_fields(
         """
         title: Identify this phase's direct receiver file slots.
         parameters:
-          node:
-            type: astx.AST
-        returns:
-          type: str | None
+          node: Syntax node to process.
+        returns: 'Result of this operation: identify this phase''s direct
+          receiver file slots.'
         """
         if (
             isinstance(node, astx.FieldAccess)
@@ -847,10 +804,8 @@ def validate_file_fields(
         """
         title: Reject a file read before initialization.
         parameters:
-          node:
-            type: astx.AST
-          state:
-            type: set[str]
+          node: Syntax node to process.
+          state: Current processing state.
         """
         name = field_name(node)
         if name is not None and name not in state:
@@ -866,10 +821,8 @@ def validate_file_fields(
         """
         title: Check normal constructor exits separately.
         parameters:
-          node:
-            type: astx.AST
-          state:
-            type: set[str]
+          node: Syntax node to process.
+          state: Current processing state.
         """
         if required - state:
             lifecycle_error(
@@ -882,10 +835,9 @@ def validate_file_fields(
         """
         title: Conservatively collect file fields published within a subtree.
         parameters:
-          node:
-            type: astx.AST
-        returns:
-          type: set[str]
+          node: Syntax node to process.
+        returns: 'Result of this operation: conservatively collect file
+          fields published within a subtree.'
         """
         names: set[str] = set()
         if isinstance(node, astx.BinaryOp) and node.op_code == "=":
@@ -900,12 +852,10 @@ def validate_file_fields(
         """
         title: Merge definite initialization over supported branches.
         parameters:
-          node:
-            type: astx.AST
-          state:
-            type: set[str]
-        returns:
-          type: set[str] | None
+          node: Syntax node to process.
+          state: Current processing state.
+        returns: 'Result of this operation: merge definite initialization
+          over supported branches.'
         """
         if isinstance(node, astx.Block):
             for child in node.nodes:
@@ -985,10 +935,9 @@ def validate_file_fields(
             """
             title: Detect initialization hidden in loops or expressions.
             parameters:
-              child:
-                type: astx.AST
-            returns:
-              type: bool
+              child: Child.
+            returns: 'Result of this operation: detect initialization hidden
+              in loops or expressions.'
             """
             if (
                 isinstance(child, astx.BinaryOp)

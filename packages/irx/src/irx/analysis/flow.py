@@ -1,9 +1,9 @@
 """
 title: Compositional statement completion outcomes.
-summary: >-
-  Keep fallthrough distinct from every abrupt transfer. A finalizer replaces
-  prior completions only on its own abrupt paths; a falling-through finalizer
-  resumes the saved completion. Potential expression failures remain possible.
+summary: Keep fallthrough distinct from every abrupt transfer. A finalizer
+  replaces prior completions only on its own abrupt paths; a falling-through
+  finalizer resumes the saved completion. Potential expression failures remain
+  possible.
 """
 
 from __future__ import annotations
@@ -37,10 +37,9 @@ def flow_outcomes(node: astx.AST) -> frozenset[FlowOutcome]:
     """
     title: Compose conservative outcomes without conflating raise and return.
     parameters:
-      node:
-        type: astx.AST
-    returns:
-      type: frozenset[FlowOutcome]
+      node: Syntax node to process.
+    returns: 'Result of this operation: compose conservative outcomes without
+      conflating raise and return.'
     """
     normal, raised = FlowOutcome.NORMAL, FlowOutcome.RAISE
     if isinstance(node, astx.FunctionReturn):

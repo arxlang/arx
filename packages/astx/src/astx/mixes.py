@@ -1,5 +1,7 @@
 """
 title: Module for mixing ASTx types from different modules.
+attributes:
+  NamedExpr: Alias for expression nodes carrying a name.
 """
 
 from typing import TypeAlias

@@ -32,10 +32,9 @@ def _block_of(*nodes: astx.AST) -> astx.Block:
     title: Build one block from nodes.
     parameters:
       nodes:
-        type: astx.AST
         variadic: positional
-    returns:
-      type: astx.Block
+        description: Syntax nodes in source order.
+    returns: Constructed one block from nodes.
     """
     block = astx.Block()
     for node in nodes:
@@ -46,8 +45,7 @@ def _block_of(*nodes: astx.AST) -> astx.Block:
 def _numbers_function() -> astx.FunctionDef:
     """
     title: Build a generator function that yields three integers.
-    returns:
-      type: astx.FunctionDef
+    returns: Constructed a generator function that yields three integers.
     """
     return astx.FunctionDef(
         prototype=astx.FunctionPrototype(
@@ -74,8 +72,7 @@ def _numbers_function() -> astx.FunctionDef:
 def _sum_generator_module() -> astx.Module:
     """
     title: Build one module that sums values yielded by a generator.
-    returns:
-      type: astx.Module
+    returns: Constructed one module that sums values yielded by a generator.
     """
     module = astx.Module()
     module.block.append(_numbers_function())
@@ -120,8 +117,8 @@ def _sum_generator_module() -> astx.Module:
 def _sum_generator_float_target_module() -> astx.Module:
     """
     title: Build a module that iterates Int32 yields into a Float64 target.
-    returns:
-      type: astx.Module
+    returns: Constructed a module that iterates Int32 yields into a Float64
+      target.
     """
     module = astx.Module()
     module.block.append(_numbers_function())
@@ -166,8 +163,7 @@ def _sum_generator_float_target_module() -> astx.Module:
 def _guarded_exhaustion_module() -> astx.Module:
     """
     title: Build a module that re-iterates an exhausted generator.
-    returns:
-      type: astx.Module
+    returns: Constructed a module that re-iterates an exhausted generator.
     """
     guarded_generator = astx.FunctionDef(
         prototype=astx.FunctionPrototype(
@@ -324,8 +320,8 @@ def test_nested_yield_is_diagnosed() -> None:
 
 def test_owned_list_local_in_generator_is_diagnosed() -> None:
     """
-    title: >-
-      Generator frames should reject owned lists until close cleanup exists.
+    title: Generator frames should reject owned lists until close cleanup
+      exists.
     """
     list_type = astx.ListType([astx.Int32()])
     module = astx.Module()
@@ -357,8 +353,8 @@ def test_owned_list_local_in_generator_is_diagnosed() -> None:
 
 def test_owned_string_local_in_generator_is_diagnosed() -> None:
     """
-    title: >-
-      Generator frames should reject owned strings until close cleanup exists.
+    title: Generator frames should reject owned strings until close cleanup
+      exists.
     """
     module = astx.Module()
     module.block.append(
@@ -574,8 +570,7 @@ def test_generator_cursor_closes_and_rejects_reacquisition(
     """
     title: Closed one-shot cursors reject reuse while preserving live owners.
     parameters:
-      transfer:
-        type: str
+      transfer: Transfer.
     """
     tree = _sum_generator_module()
     main = tree.nodes[1]
@@ -720,8 +715,7 @@ def test_owned_string_access_in_generators_is_diagnosed(
     """
     title: Owned text results cannot escape generator frame cleanup.
     parameters:
-      operation:
-        type: str
+      operation: Operation to resolve or execute.
     """
     if operation == "iteration":
         statement: astx.AST = astx.ForInLoopStmt(
@@ -778,10 +772,8 @@ def test_generator_frames_reject_owned_non_scalar_locals(
     """
     title: Frame deallocation must not bypass nested resource destruction.
     parameters:
-      type_:
-        type: astx.DataType
-      value:
-        type: astx.Expr
+      type_: Type expression to process.
+      value: Value to process.
     """
     function = _numbers_function()
     function.body = _block_of(
@@ -809,10 +801,9 @@ def test_materialization_failure_closes_borrowed_iterator() -> None:
         """
         title: Borrow the same iterator with an exact i64 bound.
         parameters:
-          limit:
-            type: int
-        returns:
-          type: astx.FunctionCall
+          limit: Limit.
+        returns: 'Result of this operation: borrow the same iterator with
+          an exact i64 bound.'
         """
         return astx.FunctionCall(
             "list",
@@ -859,17 +850,15 @@ def test_materialization_failure_closes_borrowed_iterator() -> None:
 @pytest.fixture(scope="module")
 def materialization_binary(tmp_path_factory: pytest.TempPathFactory) -> Path:
     """
-    title: >-
-      Compile bounded consumption once, with finite and infinite ABI inputs.
-    summary: >-
-      The test resume adapter exercises an infinite single-pass source without
-      claiming nested source-level yield support. Allocation counters prove
-      frame cleanup on normal completion and checked failures.
+    title: Compile bounded consumption once, with finite and infinite ABI
+      inputs.
+    summary: The test resume adapter exercises an infinite single-pass source
+      without claiming nested source-level yield support. Allocation counters
+      prove frame cleanup on normal completion and checked failures.
     parameters:
-      tmp_path_factory:
-        type: pytest.TempPathFactory
-    returns:
-      type: Path
+      tmp_path_factory: Factory for shared temporary test directories.
+    returns: 'Result of this operation: compile bounded consumption once,
+      with finite and infinite ABI inputs.'
     """
     if not HAS_CLANG:
         pytest.skip("native generator checks require clang")
@@ -1032,16 +1021,11 @@ def test_bounded_materialization_consumption(
     """
     title: Consume at most N+1 items once and release owned frames on failure.
     parameters:
-      materialization_binary:
-        type: Path
-      infinite:
-        type: bool
-      bound:
-        type: int
-      resumes:
-        type: int
-      failure:
-        type: bool
+      materialization_binary: Materialization binary.
+      infinite: Whether to use infinite.
+      bound: Names bound in the function scope.
+      resumes: Resumes.
+      failure: Whether to use failure.
     """
     result = subprocess.run(
         [str(materialization_binary)],

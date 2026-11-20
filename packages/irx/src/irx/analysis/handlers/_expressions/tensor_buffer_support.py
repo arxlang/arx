@@ -1,8 +1,7 @@
 """
 title: Tensor and buffer metadata helpers.
-summary: >-
-  Provide static tensor and buffer-view metadata lookup plus shared validation
-  used by the tensor-and-buffer expression visitors.
+summary: Provide static tensor and buffer-view metadata lookup plus shared
+  validation used by the tensor-and-buffer expression visitors.
 """
 
 from __future__ import annotations
@@ -48,10 +47,8 @@ class ExpressionTensorBufferSupportVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Return static buffer metadata when analysis can prove it.
         parameters:
-          node:
-            type: astx.AST
-        returns:
-          type: BufferViewMetadata | None
+          node: Syntax node to process.
+        returns: Static buffer metadata when analysis can prove it.
         """
         semantic = self._semantic(node)
         metadata = semantic.extras.get(BUFFER_VIEW_METADATA_EXTRA)
@@ -78,10 +75,8 @@ class ExpressionTensorBufferSupportVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Return the scalar element type when analysis can prove it.
         parameters:
-          node:
-            type: astx.AST
-        returns:
-          type: astx.DataType | None
+          node: Syntax node to process.
+        returns: The scalar element type when analysis can prove it.
         """
         semantic = self._semantic(node)
         element_type = semantic.extras.get(BUFFER_VIEW_ELEMENT_TYPE_EXTRA)
@@ -126,10 +121,8 @@ class ExpressionTensorBufferSupportVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Return static tensor layout metadata when analysis can prove it.
         parameters:
-          node:
-            type: astx.AST
-        returns:
-          type: TensorLayout | None
+          node: Syntax node to process.
+        returns: Static tensor layout metadata when analysis can prove it.
         """
         semantic = self._semantic(node)
         layout = semantic.extras.get(TENSOR_LAYOUT_EXTRA)
@@ -154,13 +147,11 @@ class ExpressionTensorBufferSupportVisitorMixin(SemanticVisitorMixinBase):
         node: astx.AST,
     ) -> astx.DataType | None:
         """
-        title: >-
-          Return the scalar tensor element type when analysis can prove it.
+        title: Return the scalar tensor element type when analysis can prove
+          it.
         parameters:
-          node:
-            type: astx.AST
-        returns:
-          type: astx.DataType | None
+          node: Syntax node to process.
+        returns: The scalar tensor element type when analysis can prove it.
         """
         semantic = self._semantic(node)
         element_type = semantic.extras.get(TENSOR_ELEMENT_TYPE_EXTRA)
@@ -205,10 +196,8 @@ class ExpressionTensorBufferSupportVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Return static Tensor flags when analysis can prove them.
         parameters:
-          node:
-            type: astx.AST
-        returns:
-          type: int | None
+          node: Syntax node to process.
+        returns: Static Tensor flags when analysis can prove them.
         """
         semantic = self._semantic(node)
         flags = semantic.extras.get(TENSOR_FLAGS_EXTRA)
@@ -232,10 +221,8 @@ class ExpressionTensorBufferSupportVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Return a static integer literal value when present.
         parameters:
-          node:
-            type: astx.AST
-        returns:
-          type: int | None
+          node: Syntax node to process.
+        returns: A static integer literal value when present.
         """
         if isinstance(
             node,
@@ -266,16 +253,12 @@ class ExpressionTensorBufferSupportVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Validate one low-level buffer view indexed access.
         parameters:
-          node:
-            type: astx.AST
-          base:
-            type: astx.AST
-          indices:
-            type: list[astx.AST]
-          is_store:
-            type: bool
-        returns:
-          type: astx.DataType | None
+          node: Syntax node to process.
+          base: Base value or declaration.
+          indices: Indices.
+          is_store: Whether is store.
+        returns: 'Result of this operation: validate one low-level buffer
+          view indexed access.'
         """
         base_type = self._expr_type(base)
         if not isinstance(base_type, astx.BufferViewType):
@@ -375,16 +358,12 @@ class ExpressionTensorBufferSupportVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Validate one Tensor indexed access.
         parameters:
-          node:
-            type: astx.AST
-          base:
-            type: astx.AST
-          indices:
-            type: list[astx.AST]
-          is_store:
-            type: bool
-        returns:
-          type: astx.DataType | None
+          node: Syntax node to process.
+          base: Base value or declaration.
+          indices: Indices.
+          is_store: Whether is store.
+        returns: 'Result of this operation: validate one Tensor indexed
+          access.'
         """
         base_type = self._expr_type(base)
         if not isinstance(base_type, astx.TensorType):
@@ -468,12 +447,9 @@ class ExpressionTensorBufferSupportVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Validate one explicit buffer lifetime helper operation.
         parameters:
-          node:
-            type: astx.AST
-          view:
-            type: astx.AST
-          operation:
-            type: str
+          node: Syntax node to process.
+          view: View.
+          operation: Operation to resolve or execute.
         """
         metadata = self._static_buffer_view_metadata(view)
         if metadata is None:
@@ -496,12 +472,9 @@ class ExpressionTensorBufferSupportVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Validate one explicit Tensor lifetime helper operation.
         parameters:
-          node:
-            type: astx.AST
-          view:
-            type: astx.AST
-          operation:
-            type: str
+          node: Syntax node to process.
+          view: View.
+          operation: Operation to resolve or execute.
         """
         flags = self._static_tensor_flags(view)
         if flags is None:

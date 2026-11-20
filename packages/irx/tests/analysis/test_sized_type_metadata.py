@@ -24,8 +24,7 @@ DATAFRAME_ROW_COUNT = 100
 def _dataframe_columns() -> tuple[astx.DataFrameColumn, ...]:
     """
     title: Build a small dataframe schema for metadata tests.
-    returns:
-      type: tuple[astx.DataFrameColumn, Ellipsis]
+    returns: Constructed a small dataframe schema for metadata tests.
     """
     return (astx.DataFrameColumn("age", astx.Int32()),)
 

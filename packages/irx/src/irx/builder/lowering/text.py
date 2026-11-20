@@ -38,14 +38,10 @@ def check_text_status(
     """
     title: Raise typed text failures before reading any output slot.
     parameters:
-      visitor:
-        type: VisitorCore
-      node:
-        type: astx.AST
-      status:
-        type: ir.Value
-      operation:
-        type: TextOperationKind
+      visitor: Visitor performing the traversal or lowering.
+      node: Syntax node to process.
+      status: Native operation status.
+      operation: Operation to resolve or execute.
     """
     builder = visitor._llvm.ir_builder
     function = builder.function
@@ -109,17 +105,14 @@ def check_text_status(
 def lower_text_operation(visitor: VisitorCore, node: astx.AST) -> bool:
     """
     title: Consume a text plan without repeating name or argument resolution.
-    summary: >-
-      Snapshot string operands before subsequent expressions can replace their
-      backing storage. Release inputs after the checked operation; register
-      independent result cleanup unless ownership moves to the caller.
+    summary: Snapshot string operands before subsequent expressions can replace
+      their backing storage. Release inputs after the checked operation;
+      register independent result cleanup unless ownership moves to the caller.
     parameters:
-      visitor:
-        type: VisitorCore
-      node:
-        type: astx.AST
-    returns:
-      type: bool
+      visitor: Visitor performing the traversal or lowering.
+      node: Syntax node to process.
+    returns: 'Result of this operation: consume a text plan without repeating
+      name or argument resolution.'
     """
     info = getattr(node, "semantic", None)
     if (
@@ -170,8 +163,7 @@ def lower_text_operation(visitor: VisitorCore, node: astx.AST) -> bool:
                 """
                 title: Release one operand snapshot on success or failure.
                 parameters:
-                  pointer:
-                    type: ir.Value
+                  pointer: Pointer to the native storage.
                 """
                 visitor._llvm.ir_builder.call(free, [pointer])
 

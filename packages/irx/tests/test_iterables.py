@@ -50,12 +50,9 @@ def test_range_binding_and_cursor_plan(
     """
     title: Range calls retain source evaluation and select independent cursors.
     parameters:
-      positional:
-        type: tuple[int, Ellipsis]
-      keywords:
-        type: tuple[tuple[str, int], Ellipsis]
-      indices:
-        type: tuple[int, Ellipsis]
+      positional: Positional.
+      keywords: Keywords.
+      indices: Indices.
     """
     call = astx.FunctionCall(
         "range",
@@ -102,12 +99,9 @@ def test_range_rejects_invalid_binding(
     """
     title: Invalid range calls use ordinary binding errors and publish no plan.
     parameters:
-      operands:
-        type: tuple[int, Ellipsis]
-      names:
-        type: tuple[str, Ellipsis]
-      match:
-        type: str
+      operands: Operands.
+      names: Names.
+      match: Match.
     """
     call = astx.FunctionCall(
         "range",
@@ -162,8 +156,7 @@ def test_range_rejects_implicit_input_conversion(
     """
     title: Range inputs neither coerce Boolean nor narrow typed scalar widths.
     parameters:
-      argument:
-        type: astx.DataType
+      argument: Argument.
     """
     call = astx.FunctionCall("range", [argument])
     module = _main_module(call, astx.FunctionReturn(astx.LiteralInt32(0)))
@@ -181,8 +174,7 @@ def test_range_rejects_slice_and_noninteger_access(
     """
     title: Unsupported range access fails semantically without an access plan.
     parameters:
-      index:
-        type: astx.Expr | None
+      index: Index selecting the item.
     """
     access = astx.SubscriptExpr(
         astx.FunctionCall("range", [astx.LiteralInt32(4)]), index=index
@@ -198,10 +190,9 @@ def _block_of(*nodes: astx.AST) -> astx.Block:
     title: Build one block from nodes.
     parameters:
       nodes:
-        type: astx.AST
         variadic: positional
-    returns:
-      type: astx.Block
+        description: Syntax nodes in source order.
+    returns: Constructed one block from nodes.
     """
     block = astx.Block()
     for node in nodes:
@@ -214,10 +205,9 @@ def _main_module(*nodes: astx.AST) -> astx.Module:
     title: Build one Int32 main module.
     parameters:
       nodes:
-        type: astx.AST
         variadic: positional
-    returns:
-      type: astx.Module
+        description: Syntax nodes in source order.
+    returns: Constructed one Int32 main module.
     """
     module = astx.Module()
     body = astx.Block()
@@ -241,10 +231,9 @@ def _literal_list(*values: int) -> astx.LiteralList:
     title: Build one Int32 literal list.
     parameters:
       values:
-        type: int
         variadic: positional
-    returns:
-      type: astx.LiteralList
+        description: Values to process, in order.
+    returns: Constructed one Int32 literal list.
     """
     return astx.LiteralList([astx.LiteralInt32(value) for value in values])
 
@@ -252,8 +241,7 @@ def _literal_list(*values: int) -> astx.LiteralList:
 def _sum_for_in_module() -> astx.Module:
     """
     title: Build one module that sums a literal list with for-in.
-    returns:
-      type: astx.Module
+    returns: Constructed one module that sums a literal list with for-in.
     """
     loop_body = _block_of(
         astx.VariableAssignment(
@@ -285,8 +273,8 @@ def _sum_for_in_module() -> astx.Module:
 def _filtered_comprehension_module() -> astx.Module:
     """
     title: Build one module that returns a filtered list-comprehension length.
-    returns:
-      type: astx.Module
+    returns: Constructed one module that returns a filtered list-comprehension
+      length.
     """
     comprehension = astx.ListComprehension(
         element=astx.BinaryOp(
@@ -325,8 +313,7 @@ def _filtered_comprehension_module() -> astx.Module:
 def _dynamic_for_in_module() -> astx.Module:
     """
     title: Build one module that iterates a runtime list variable.
-    returns:
-      type: astx.Module
+    returns: Constructed one module that iterates a runtime list variable.
     """
     list_type = astx.ListType([astx.Int32()])
     loop_body = _block_of(
@@ -366,8 +353,7 @@ def _dynamic_for_in_module() -> astx.Module:
 def _nested_comprehension_module() -> astx.Module:
     """
     title: Build one module with two comprehension clauses.
-    returns:
-      type: astx.Module
+    returns: Constructed one module with two comprehension clauses.
     """
     comprehension = astx.ListComprehension(
         element=astx.BinaryOp(
@@ -461,10 +447,8 @@ def test_for_in_rejects_owner_replacement(
     """
     title: All supported owner-backed iterable forms protect their binding.
     parameters:
-      source_kind:
-        type: Literal[identifier, assignment, cast]
-      assignment_kind:
-        type: Literal[binary, variable]
+      source_kind: Source kind.
+      assignment_kind: Assignment kind.
     """
     source: astx.Expr = astx.Identifier("values")
     if source_kind == "assignment":
@@ -513,8 +497,7 @@ def test_for_in_protects_owner_in_nested_regions(region: str) -> None:
     """
     title: List iteration borrows span branches and all exception clauses.
     parameters:
-      region:
-        type: str
+      region: Region.
     """
     replacement = astx.VariableAssignment(
         "values", astx.ListCreate(astx.Int32())
@@ -585,8 +568,7 @@ def test_comprehension_protects_iteration_owner(position: str) -> None:
     """
     title: Comprehension borrows span filters, dependent sources, and results.
     parameters:
-      position:
-        type: str
+      position: Position.
     """
     replacement = astx.BinaryOp(
         "=", astx.Identifier("values"), astx.ListCreate(astx.Int32())
@@ -658,8 +640,7 @@ def test_for_in_returned_owner_cleans_on_exception(tmp_path: Path) -> None:
     """
     title: Move an iterated owner and clean it on exceptional iteration exit.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     make = astx.FunctionDef(
         astx.FunctionPrototype("make", astx.Arguments(), _list_i32_type()),

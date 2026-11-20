@@ -3,9 +3,8 @@
 
 """
 title: Generator lowering visitors for llvmliteir.
-summary: >-
-  Lower the initial IRx generator MVP as factory functions plus internal resume
-  state machines consumed through the iterable lowering path.
+summary: Lower the initial IRx generator MVP as factory functions plus internal
+  resume state machines consumed through the iterable lowering path.
 """
 
 from __future__ import annotations
@@ -48,10 +47,8 @@ def _is_yield_node(node: astx.AST) -> bool:
     """
     title: Return whether one node is a generator suspension site.
     parameters:
-      node:
-        type: astx.AST
-    returns:
-      type: bool
+      node: Syntax node to process.
+    returns: Whether one node is a generator suspension site.
     """
     return isinstance(node, (astx.YieldExpr, astx.YieldStmt))
 
@@ -70,10 +67,9 @@ class GeneratorVisitorMixin(VisitorMixinBase):
         """
         title: Isolate status and cleanup state in factory and resume frames.
         parameters:
-          generator:
-            type: ResolvedGeneratorFunction
-        returns:
-          type: Iterator[None]
+          generator: Generator.
+        returns: 'Result of this operation: isolate status and cleanup state
+          in factory and resume frames.'
         """
         previous = (
             self.exception_context,
@@ -113,10 +109,8 @@ class GeneratorVisitorMixin(VisitorMixinBase):
         """
         title: Return generator metadata attached to one function definition.
         parameters:
-          node:
-            type: astx.FunctionDef
-        returns:
-          type: ResolvedGeneratorFunction | None
+          node: Syntax node to process.
+        returns: Generator metadata attached to one function definition.
         """
         semantic = getattr(node, "semantic", None)
         generator = getattr(semantic, "resolved_generator_function", None)
@@ -128,10 +122,8 @@ class GeneratorVisitorMixin(VisitorMixinBase):
         """
         title: Return the semantic yield metadata for one yield node.
         parameters:
-          node:
-            type: astx.AST
-        returns:
-          type: ResolvedYield
+          node: Syntax node to process.
+        returns: The semantic yield metadata for one yield node.
         """
         semantic = getattr(node, "semantic", None)
         resolution = getattr(semantic, "resolved_yield", None)
@@ -145,8 +137,7 @@ class GeneratorVisitorMixin(VisitorMixinBase):
     def _generator_value_type(self) -> ir.LiteralStructType:
         """
         title: Return the low-level generator object type.
-        returns:
-          type: ir.LiteralStructType
+        returns: The low-level generator object type.
         """
         return ir.LiteralStructType(
             [
@@ -162,10 +153,8 @@ class GeneratorVisitorMixin(VisitorMixinBase):
         """
         title: Return the LLVM element type yielded by one generator.
         parameters:
-          generator:
-            type: ResolvedGeneratorFunction
-        returns:
-          type: ir.Type
+          generator: Generator.
+        returns: The LLVM element type yielded by one generator.
         """
         llvm_type = self._llvm_type_for_ast_type(generator.yield_type)
         if llvm_type is None or isinstance(llvm_type, ir.VoidType):
@@ -179,8 +168,7 @@ class GeneratorVisitorMixin(VisitorMixinBase):
     def _malloc_function(self) -> ir.Function:
         """
         title: Return or declare the C malloc function.
-        returns:
-          type: ir.Function
+        returns: Or declare the C malloc function.
         """
         existing = self._llvm.module.globals.get("malloc")
         if existing is not None:
@@ -201,10 +189,8 @@ class GeneratorVisitorMixin(VisitorMixinBase):
         """
         title: Return the lowered factory symbol name for a generator function.
         parameters:
-          function:
-            type: SemanticFunction
-        returns:
-          type: str
+          function: Function to process.
+        returns: The lowered factory symbol name for a generator function.
         """
         return self.llvm_function_name_for_node(
             function.prototype,
@@ -215,10 +201,8 @@ class GeneratorVisitorMixin(VisitorMixinBase):
         """
         title: Return the internal resume function name.
         parameters:
-          function:
-            type: SemanticFunction
-        returns:
-          type: str
+          function: Function to process.
+        returns: The internal resume function name.
         """
         return f"{self._generator_function_name(function)}.__resume"
 
@@ -229,10 +213,8 @@ class GeneratorVisitorMixin(VisitorMixinBase):
         """
         title: Collect local variable symbols stored in a generator frame.
         parameters:
-          node:
-            type: astx.AST
-        returns:
-          type: tuple[SemanticSymbol, Ellipsis]
+          node: Syntax node to process.
+        returns: Collected local variable symbols stored in a generator frame.
         """
         symbols: list[SemanticSymbol] = []
         semantic = getattr(node, "semantic", None)
@@ -263,10 +245,8 @@ class GeneratorVisitorMixin(VisitorMixinBase):
         """
         title: Return the frame type and symbol-slot map for one generator.
         parameters:
-          generator:
-            type: ResolvedGeneratorFunction
-        returns:
-          type: tuple[ir.IdentifiedStructType, dict[str, int]]
+          generator: Generator.
+        returns: The frame type and symbol-slot map for one generator.
         """
         function = generator.function
         existing = self._generator_frame_types.get(function.symbol_id)
@@ -314,14 +294,10 @@ class GeneratorVisitorMixin(VisitorMixinBase):
         """
         title: Return the address of one generator frame field.
         parameters:
-          frame_ptr:
-            type: ir.Value
-          field_index:
-            type: int
-          name:
-            type: str
-        returns:
-          type: ir.Value
+          frame_ptr: Frame ptr.
+          field_index: Index selecting field.
+          name: Name identifying the declaration or operation.
+        returns: The address of one generator frame field.
         """
         return self._llvm.ir_builder.gep(
             frame_ptr,
@@ -340,10 +316,9 @@ class GeneratorVisitorMixin(VisitorMixinBase):
         """
         title: Declare or return the internal resume function.
         parameters:
-          generator:
-            type: ResolvedGeneratorFunction
-        returns:
-          type: ir.Function
+          generator: Generator.
+        returns: 'Result of this operation: declare or return the internal
+          resume function.'
         """
         function = generator.function
         existing = self._generator_resume_functions.get(function.symbol_id)
@@ -380,10 +355,8 @@ class GeneratorVisitorMixin(VisitorMixinBase):
         """
         title: Bind generator frame fields as variable storage addresses.
         parameters:
-          frame_ptr:
-            type: ir.Value
-          slots:
-            type: dict[str, int]
+          frame_ptr: Frame ptr.
+          slots: Slots.
         """
         for symbol_id, field_index in slots.items():
             self.named_values[symbol_id] = self._generator_field_address(
@@ -396,8 +369,7 @@ class GeneratorVisitorMixin(VisitorMixinBase):
         """
         title: Publish successful exhaustion separately from resume failure.
         parameters:
-          node:
-            type: astx.AST | None
+          node: Syntax node to process.
         """
         frame_ptr = self._current_generator_frame_ptr
         if frame_ptr is None:
@@ -431,10 +403,8 @@ class GeneratorVisitorMixin(VisitorMixinBase):
         """
         title: Lower one yield site as a resume suspension.
         parameters:
-          node:
-            type: astx.AST
-          value:
-            type: astx.AST | None
+          node: Syntax node to process.
+          value: Value to process.
         """
         resolution = self._semantic_yield_resolution(node)
         frame_ptr = self._current_generator_frame_ptr
@@ -487,10 +457,8 @@ class GeneratorVisitorMixin(VisitorMixinBase):
         """
         title: Lower a generator body slice for one resume state.
         parameters:
-          body:
-            type: astx.Block
-          state_index:
-            type: int
+          body: Statements forming the body.
+          state_index: Index selecting state.
         """
         yielded_seen = 0
         for node in body.nodes:
@@ -521,8 +489,7 @@ class GeneratorVisitorMixin(VisitorMixinBase):
         """
         title: Emit the internal resume state machine for one generator.
         parameters:
-          generator:
-            type: ResolvedGeneratorFunction
+          generator: Generator.
         """
         function = generator.function
         if function.definition is None:
@@ -626,14 +593,13 @@ class GeneratorVisitorMixin(VisitorMixinBase):
         node: astx.AST,
     ) -> ir.Value:
         """
-        title: Allocate one generator frame or fail before dereferencing null.
+        title: Allocate one generator frame or fail before dereferencing
+          null.
         parameters:
-          frame_type:
-            type: ir.IdentifiedStructType
-          node:
-            type: astx.AST
-        returns:
-          type: ir.Value
+          frame_type: Type of frame.
+          node: Syntax node to process.
+        returns: 'Result of this operation: allocate one generator frame
+          or fail before dereferencing null.'
         """
         malloc = self._malloc_function()
         size_type = self._llvm.SIZE_T_TYPE or self._llvm.INT64_TYPE
@@ -669,10 +635,9 @@ class GeneratorVisitorMixin(VisitorMixinBase):
         """
         title: Emit the public generator factory function.
         parameters:
-          generator:
-            type: ResolvedGeneratorFunction
-        returns:
-          type: ir.Function
+          generator: Generator.
+        returns: 'Result of this operation: emit the public generator factory
+          function.'
         """
         function = generator.function
         factory = cast(Any, self)._declare_semantic_function(function)
@@ -759,14 +724,13 @@ class GeneratorVisitorMixin(VisitorMixinBase):
         generator: ResolvedGeneratorFunction,
     ) -> ir.Function:
         """
-        title: Lower one generator function as factory plus resume function.
+        title: Lower one generator function as factory plus resume
+          function.
         parameters:
-          node:
-            type: astx.FunctionDef
-          generator:
-            type: ResolvedGeneratorFunction
-        returns:
-          type: ir.Function
+          node: Syntax node to process.
+          generator: Generator.
+        returns: Lowered one generator function as factory plus resume
+          function.
         """
         _ = node
         with self.generator_function_scope(generator):
@@ -781,8 +745,7 @@ class GeneratorVisitorMixin(VisitorMixinBase):
         """
         title: Visit YieldStmt nodes.
         parameters:
-          node:
-            type: astx.YieldStmt
+          node: Syntax node to process.
         """
         self._lower_generator_suspend(node, node.value)
 
@@ -791,8 +754,7 @@ class GeneratorVisitorMixin(VisitorMixinBase):
         """
         title: Visit YieldExpr nodes.
         parameters:
-          node:
-            type: astx.YieldExpr
+          node: Syntax node to process.
         """
         self._lower_generator_suspend(node, node.value)
 
@@ -801,8 +763,7 @@ class GeneratorVisitorMixin(VisitorMixinBase):
         """
         title: Visit YieldFromExpr nodes.
         parameters:
-          node:
-            type: astx.YieldFromExpr
+          node: Syntax node to process.
         """
         raise_lowering_error(
             "yield from lowering is not supported yet",
@@ -815,8 +776,7 @@ class GeneratorVisitorMixin(VisitorMixinBase):
         """
         title: Visit GeneratorExpr nodes.
         parameters:
-          node:
-            type: astx.GeneratorExpr
+          node: Syntax node to process.
         """
         raise_lowering_error(
             "generator expression lowering is not supported yet",

@@ -1,8 +1,8 @@
 """
 title: Declaration-oriented semantic visitors.
-summary: >-
-  Handle modules, functions, structs, and lexical declarations while delegating
-  semantic entity creation and registration to smaller concern-focused mixins.
+summary: Handle modules, functions, structs, and lexical declarations
+  while delegating semantic entity creation and registration to smaller
+  concern-focused mixins.
 """
 
 from __future__ import annotations
@@ -41,7 +41,7 @@ class DeclarationVisitorMixin(
 ):
     """
     title: Declaration-oriented semantic visitors.
-    summary: >-
-      Compose the declaration-focused semantic mixins so the analyzer keeps the
-      same visitor surface while the implementation stays split by concern.
+    summary: Compose the declaration-focused semantic mixins so the analyzer
+      keeps the same visitor surface while the implementation stays split
+      by concern.
     """

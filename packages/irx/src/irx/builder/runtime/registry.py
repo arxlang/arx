@@ -51,8 +51,7 @@ class RuntimeFeatureRegistry:
     """
     title: Registry of named runtime features.
     attributes:
-      _features:
-        type: Mapping[str, RuntimeFeature]
+      _features: Features.
     """
 
     def __init__(self) -> None:
@@ -65,8 +64,7 @@ class RuntimeFeatureRegistry:
         """
         title: Register a runtime feature by name.
         parameters:
-          feature:
-            type: RuntimeFeature
+          feature: Feature.
         """
         if not isinstance(self._features, dict):
             raise ValueError("runtime capability snapshot is immutable")
@@ -79,8 +77,8 @@ class RuntimeFeatureRegistry:
     def freeze(self) -> RuntimeFeatureRegistry:
         """
         title: Close registration before sharing this capability snapshot.
-        returns:
-          type: RuntimeFeatureRegistry
+        returns: 'Result of this operation: close registration before sharing
+          this capability snapshot.'
         """
         self._features = MappingProxyType(dict(self._features))
         return self
@@ -91,10 +89,9 @@ class RuntimeFeatureRegistry:
         """
         title: Copy builtin definitions into an isolated compilation registry.
         parameters:
-          features:
-            type: tuple[NativeFeature, Ellipsis]
-        returns:
-          type: RuntimeFeatureRegistry
+          features: Features.
+        returns: 'Result of this operation: copy builtin definitions into
+          an isolated compilation registry.'
         """
         registry = RuntimeFeatureRegistry()
         for feature in self._features.values():
@@ -113,10 +110,8 @@ class RuntimeFeatureRegistry:
         """
         title: Return a runtime feature by name.
         parameters:
-          name:
-            type: str
-        returns:
-          type: RuntimeFeature
+          name: Name identifying the declaration or operation.
+        returns: A runtime feature by name.
         """
         try:
             return self._features[name]
@@ -139,8 +134,7 @@ class RuntimeFeatureRegistry:
     def names(self) -> tuple[str, ...]:
         """
         title: Return the registered runtime feature names.
-        returns:
-          type: tuple[str, Ellipsis]
+        returns: The registered runtime feature names.
         """
         return tuple(sorted(self._features))
 
@@ -150,14 +144,10 @@ class RuntimeFeatureState:
     """
     title: Track feature activation and symbol declarations for one module.
     attributes:
-      _owner:
-        type: VisitorProtocol
-      _registry:
-        type: RuntimeFeatureRegistry
-      _active_features:
-        type: set[str]
-      _declared_symbols:
-        type: dict[tuple[str, str], ir.Function]
+      _owner: Owner.
+      _registry: Registry.
+      _active_features: Active features.
+      _declared_symbols: Declared symbols.
     """
 
     _owner: VisitorProtocol
@@ -174,12 +164,9 @@ class RuntimeFeatureState:
         """
         title: Initialize RuntimeFeatureState.
         parameters:
-          owner:
-            type: VisitorProtocol
-          registry:
-            type: RuntimeFeatureRegistry
-          active_features:
-            type: Iterable[str] | None
+          owner: Owner keeping the resource alive.
+          registry: Registry.
+          active_features: Active features.
         """
         self._owner = owner
         self._registry = registry
@@ -196,8 +183,7 @@ class RuntimeFeatureState:
         """
         title: Activate a runtime feature for the current module.
         parameters:
-          feature_name:
-            type: str
+          feature_name: Name of feature.
         """
         features = self.dependency_order(feature_name, frozenset())
         self._active_features.update(feature.name for feature in features)
@@ -206,14 +192,13 @@ class RuntimeFeatureState:
         self, name: str, visiting: frozenset[str]
     ) -> tuple[RuntimeFeature, ...]:
         """
-        title: Validate a feature dependency graph before activating any nodes.
+        title: Validate a feature dependency graph before activating any
+          nodes.
         parameters:
-          name:
-            type: str
-          visiting:
-            type: frozenset[str]
-        returns:
-          type: tuple[RuntimeFeature, Ellipsis]
+          name: Name identifying the declaration or operation.
+          visiting: Visiting.
+        returns: 'Result of this operation: validate a feature dependency
+          graph before activating any nodes.'
         """
         if name in visiting:
             raise RuntimeFeatureError(
@@ -243,18 +228,15 @@ class RuntimeFeatureState:
         """
         title: Return whether a feature is active for the current module.
         parameters:
-          feature_name:
-            type: str
-        returns:
-          type: bool
+          feature_name: Name of feature.
+        returns: Whether a feature is active for the current module.
         """
         return feature_name in self._active_features
 
     def active_feature_names(self) -> tuple[str, ...]:
         """
         title: Return the active feature names.
-        returns:
-          type: tuple[str, Ellipsis]
+        returns: The active feature names.
         """
         return tuple(sorted(self._active_features))
 
@@ -262,10 +244,8 @@ class RuntimeFeatureState:
         """
         title: Return a registered feature by name.
         parameters:
-          feature_name:
-            type: str
-        returns:
-          type: RuntimeFeature
+          feature_name: Name of feature.
+        returns: A registered feature by name.
         """
         return self._registry.get(feature_name)
 
@@ -277,12 +257,9 @@ class RuntimeFeatureState:
         """
         title: Return whether one feature declares one symbol.
         parameters:
-          feature_name:
-            type: str
-          symbol_name:
-            type: str
-        returns:
-          type: bool
+          feature_name: Name of feature.
+          symbol_name: Name of symbol.
+        returns: Whether one feature declares one symbol.
         """
         return symbol_name in self.feature(feature_name).symbols
 
@@ -294,12 +271,10 @@ class RuntimeFeatureState:
         """
         title: Activate a feature and declare one of its external symbols.
         parameters:
-          feature_name:
-            type: str
-          symbol_name:
-            type: str
-        returns:
-          type: ir.Function
+          feature_name: Name of feature.
+          symbol_name: Name of symbol.
+        returns: 'Result of this operation: activate a feature and declare
+          one of its external symbols.'
         """
         self.activate(feature_name)
         cache_key = (feature_name, symbol_name)
@@ -336,8 +311,7 @@ class RuntimeFeatureState:
     def native_artifacts(self) -> tuple[NativeArtifact, ...]:
         """
         title: Return the native artifacts required by active features.
-        returns:
-          type: tuple[NativeArtifact, Ellipsis]
+        returns: The native artifacts required by active features.
         """
         artifacts: list[NativeArtifact] = []
         seen: set[tuple[str, str]] = set()
@@ -356,8 +330,7 @@ class RuntimeFeatureState:
     def linker_flags(self) -> tuple[str, ...]:
         """
         title: Return the linker flags required by active features.
-        returns:
-          type: tuple[str, Ellipsis]
+        returns: The linker flags required by active features.
         """
         flags: list[str] = []
         seen: set[str] = set()
@@ -378,8 +351,7 @@ class RuntimeFeatureState:
 def get_default_runtime_feature_registry() -> RuntimeFeatureRegistry:
     """
     title: Build the default runtime feature registry.
-    returns:
-      type: RuntimeFeatureRegistry
+    returns: Constructed the default runtime feature registry.
     """
     registry = RuntimeFeatureRegistry()
     registry.register(build_libc_runtime_feature())

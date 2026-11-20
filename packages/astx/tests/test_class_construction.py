@@ -39,8 +39,8 @@ def test_constructor_checks_all_collection_items() -> None:
 
 def test_namespace_constructor_keyword_model() -> None:
     """
-    title: >-
-      Method syntax preserves constructor keywords without granting meaning.
+    title: Method syntax preserves constructor keywords without granting
+      meaning.
     """
     keyword = astx.KeywordArgument("file", astx.LiteralString("x"))
     call = astx.MethodCall(
@@ -61,11 +61,10 @@ def test_namespace_constructor_keyword_model() -> None:
 @pytest.mark.parametrize("kind", ["static", "base"])
 def test_static_and_base_keywords(kind: str) -> None:
     """
-    title: >-
-      Named values survive static/base model rendering and type validation.
+    title: Named values survive static/base model rendering and type
+      validation.
     parameters:
-      kind:
-        type: str
+      kind: Kind of value or operation.
     """
     keywords = (astx.KeywordArgument("value", astx.LiteralInt32(1)),)
     if kind == "static":

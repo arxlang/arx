@@ -27,12 +27,9 @@ class LiteralDate(Literal):
     """
     title: LiteralDate data type class.
     attributes:
-      value:
-        type: str
-      type_:
-        type: Date
-      loc:
-        type: SourceLocation
+      value: Stored value.
+      type_: Type associated with this expression.
+      loc: Source coordinates attached to this node.
     """
 
     value: str
@@ -45,10 +42,8 @@ class LiteralDate(Literal):
         """
         title: Initialize LiteralDate.
         parameters:
-          value:
-            type: str
-          loc:
-            type: SourceLocation
+          value: Value to process.
+          loc: Source coordinates associated with the node.
         """
         super().__init__(loc)
         self.value = value
@@ -58,8 +53,7 @@ class LiteralDate(Literal):
     def __str__(self) -> str:
         """
         title: Return a string that represents the object.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         return f"LiteralDate[{self.value}]"
 
@@ -67,10 +61,8 @@ class LiteralDate(Literal):
         """
         title: Return the structure of the LiteralDate object.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         key = f"LiteralDate: {self.value}"
         return self._prepare_struct(key, self.value, simplified)
@@ -82,12 +74,9 @@ class LiteralTime(Literal):
     """
     title: LiteralTime data type class.
     attributes:
-      value:
-        type: str
-      type_:
-        type: Time
-      loc:
-        type: SourceLocation
+      value: Stored value.
+      type_: Type associated with this expression.
+      loc: Source coordinates attached to this node.
     """
 
     value: str
@@ -100,10 +89,8 @@ class LiteralTime(Literal):
         """
         title: Initialize LiteralTime.
         parameters:
-          value:
-            type: str
-          loc:
-            type: SourceLocation
+          value: Value to process.
+          loc: Source coordinates associated with the node.
         """
         super().__init__(loc)
         self.value = value
@@ -113,8 +100,7 @@ class LiteralTime(Literal):
     def __str__(self) -> str:
         """
         title: Return a string that represents the object.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         return f"LiteralTime[{self.value}]"
 
@@ -122,10 +108,8 @@ class LiteralTime(Literal):
         """
         title: Return the structure of the LiteralTime object.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         key = f"LiteralTime: {self.value}"
         return self._prepare_struct(key, self.value, simplified)
@@ -137,12 +121,9 @@ class LiteralTimestamp(Literal):
     """
     title: LiteralTimestamp data type class.
     attributes:
-      value:
-        type: str
-      type_:
-        type: Timestamp
-      loc:
-        type: SourceLocation
+      value: Stored value.
+      type_: Type associated with this expression.
+      loc: Source coordinates attached to this node.
     """
 
     value: str
@@ -155,10 +136,8 @@ class LiteralTimestamp(Literal):
         """
         title: Initialize LiteralTimestamp.
         parameters:
-          value:
-            type: str
-          loc:
-            type: SourceLocation
+          value: Value to process.
+          loc: Source coordinates associated with the node.
         """
         super().__init__(loc)
         self.value = value
@@ -168,8 +147,7 @@ class LiteralTimestamp(Literal):
     def __str__(self) -> str:
         """
         title: Return a string that represents the object.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         return f"LiteralTimestamp[{self.value}]"
 
@@ -177,10 +155,8 @@ class LiteralTimestamp(Literal):
         """
         title: Return the structure of the LiteralTimestamp object.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         key = f"LiteralTimestamp: {self.value}"
         return self._prepare_struct(key, self.value, simplified)
@@ -192,12 +168,9 @@ class LiteralDateTime(Literal):
     """
     title: LiteralDateTime data type class.
     attributes:
-      value:
-        type: str
-      type_:
-        type: DateTime
-      loc:
-        type: SourceLocation
+      value: Stored value.
+      type_: Type associated with this expression.
+      loc: Source coordinates attached to this node.
     """
 
     value: str
@@ -210,10 +183,8 @@ class LiteralDateTime(Literal):
         """
         title: Initialize LiteralDateTime.
         parameters:
-          value:
-            type: str
-          loc:
-            type: SourceLocation
+          value: Value to process.
+          loc: Source coordinates associated with the node.
         """
         super().__init__(loc)
         self.value = value
@@ -223,8 +194,7 @@ class LiteralDateTime(Literal):
     def __str__(self) -> str:
         """
         title: Return a string that represents the object.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         return f"LiteralDateTime[{self.value}]"
 
@@ -232,10 +202,8 @@ class LiteralDateTime(Literal):
         """
         title: Return the structure of the LiteralDateTime object.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         key = f"LiteralDateTime: {self.value}"
         return self._prepare_struct(key, self.value, simplified)

@@ -1,8 +1,7 @@
 """
 title: Type-computation helpers for semantic analysis.
-summary: >-
-  Compute expression result types for operators without embedding that logic
-  directly into the main semantic visitor.
+summary: Compute expression result types for operators without embedding
+  that logic directly into the main semantic visitor.
 """
 
 from __future__ import annotations
@@ -27,14 +26,10 @@ def binary_result_type(
     """
     title: Compute the semantic result type of a binary operator.
     parameters:
-      op_code:
-        type: str
-      lhs_type:
-        type: astx.DataType | None
-      rhs_type:
-        type: astx.DataType | None
-    returns:
-      type: astx.DataType | None
+      op_code: Operator spelling.
+      lhs_type: Type of left operand.
+      rhs_type: Type of right operand.
+    returns: Computed the semantic result type of a binary operator.
     """
     if op_code in {"<", ">", "<=", ">=", "==", "!="}:
         return astx.Boolean()
@@ -68,12 +63,9 @@ def unary_result_type(
     """
     title: Compute the semantic result type of a unary operator.
     parameters:
-      op_code:
-        type: str
-      operand_type:
-        type: astx.DataType | None
-    returns:
-      type: astx.DataType | None
+      op_code: Operator spelling.
+      operand_type: Type of operand.
+    returns: Computed the semantic result type of a unary operator.
     """
     if op_code == "!":
         if is_boolean_type(operand_type):

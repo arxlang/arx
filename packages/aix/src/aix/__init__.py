@@ -1,5 +1,10 @@
 """
 title: AIX package metadata.
+attributes:
+  version: Package version metadata.
+  __author__: Package author attribution.
+  __email__: Package author contact address.
+  __version__: Installed package version.
 """
 
 from importlib import metadata as importlib_metadata
@@ -10,8 +15,7 @@ _DISTRIBUTION_NAME = "airx"
 def get_version() -> str:
     """
     title: Return the installed package version.
-    returns:
-      type: str
+    returns: The installed package version.
     """
     try:
         return importlib_metadata.version(_DISTRIBUTION_NAME)

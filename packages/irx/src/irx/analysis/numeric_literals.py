@@ -26,15 +26,14 @@ def default_numeric_literal_type(
     node: astx.LiteralInteger | astx.LiteralFloat,
 ) -> astx.DataType:
     """
-    title: >-
-      Select the uncontextualized source default without checking its value.
-    summary: >-
-      Contextual typing and representability remain semantic responsibilities.
+    title: Select the uncontextualized source default without checking
+      its value.
+    summary: Contextual typing and representability remain semantic
+      responsibilities.
     parameters:
-      node:
-        type: astx.LiteralInteger | astx.LiteralFloat
-    returns:
-      type: astx.DataType
+      node: Syntax node to process.
+    returns: 'Result of this operation: select the uncontextualized
+      source default without checking its value.'
     """
     if isinstance(node, astx.LiteralFloat):
         return astx.Float32()
@@ -49,13 +48,11 @@ def contextualize_literal(
     value: astx.AST | None, target: astx.DataType | None
 ) -> None:
     """
-    title: >-
-      Record expected types for exact literals, never for typed computations.
+    title: Record expected types for exact literals, never for typed
+      computations.
     parameters:
-      value:
-        type: astx.AST | None
-      target:
-        type: astx.DataType | None
+      value: Value to process.
+      target: Destination of the operation.
     """
     from irx.analysis.types import contains_template_variables  # noqa: PLC0415
 
@@ -127,10 +124,9 @@ def literal_semantic(node: astx.AST) -> SemanticInfo:
     """
     title: Obtain a literal's semantic sidecar without modifying its payload.
     parameters:
-      node:
-        type: astx.AST
-    returns:
-      type: SemanticInfo
+      node: Syntax node to process.
+    returns: 'Result of this operation: obtain a literal''s semantic sidecar
+      without modifying its payload.'
     """
     info = getattr(node, "semantic", None)
     if not isinstance(info, SemanticInfo):
@@ -145,18 +141,17 @@ def resolve_numeric_literal(
     node: astx.AST, diagnostics: DiagnosticBag
 ) -> astx.DataType | None:
     """
-    title: Resolve exact or explicitly typed literals into semantic metadata.
-    summary: >-
-      Consume any expected type for this visit; stale prior resolutions never
-      determine a context-typed literal's default. Preserve original values and
-      declared types, including explicitly typed floating payloads.
+    title: Resolve exact or explicitly typed literals into semantic
+      metadata.
+    summary: Consume any expected type for this visit; stale prior
+      resolutions never determine a context-typed literal's default.
+      Preserve original values and declared types, including explicitly
+      typed floating payloads.
     parameters:
-      node:
-        type: astx.AST
-      diagnostics:
-        type: DiagnosticBag
-    returns:
-      type: astx.DataType | None
+      node: Syntax node to process.
+      diagnostics: Collected structured diagnostics.
+    returns: Resolved exact or explicitly typed literals into semantic
+      metadata.
     """
     if not isinstance(node, astx.Literal):
         return None
@@ -213,12 +208,12 @@ def resolve_numeric_literal(
 @typechecked
 def numeric_constant(node: astx.AST) -> int | float | None:
     """
-    title: Read an already analyzed constant without evaluating user functions.
+    title: Read an already analyzed constant without evaluating user
+      functions.
     parameters:
-      node:
-        type: astx.AST
-    returns:
-      type: int | float | None
+      node: Syntax node to process.
+    returns: Read an already analyzed constant without evaluating
+      user functions.
     """
     semantic = cast(SemanticInfo | None, getattr(node, "semantic", None))
     return semantic.numeric_constant if semantic is not None else None
@@ -232,15 +227,12 @@ def analyze_constant_operation(
     result_type: astx.DataType | None,
 ) -> None:
     """
-    title: >-
-      Diagnose evaluated literal integer operations with exact host integers.
+    title: Diagnose evaluated literal integer operations with exact host
+      integers.
     parameters:
-      node:
-        type: astx.BinaryOp | astx.UnaryOp
-      context:
-        type: SemanticContext
-      result_type:
-        type: astx.DataType | None
+      node: Syntax node to process.
+      context: Context for the operation.
+      result_type: Resolved result type.
     """
     if result_type is None:
         return
@@ -306,10 +298,8 @@ def analyze_constant_cast(node: astx.Cast, context: SemanticContext) -> None:
     """
     title: Check constant conversions using the same truncated integer domains.
     parameters:
-      node:
-        type: astx.Cast
-      context:
-        type: SemanticContext
+      node: Syntax node to process.
+      context: Context for the operation.
     """
     value = numeric_constant(node.value)
     if value is None:

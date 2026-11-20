@@ -1,6 +1,11 @@
 # ruff: noqa: RUF001
 """
 title: AIX recursive-descent parser.
+attributes:
+  _TYPE_MAP: Type map.
+  _BINARY_OPERATORS: Binary operators.
+  _EXPRESSION_TERMINATORS: Expression terminators.
+  _STATEMENT_STARTERS: Statement starters.
 """
 
 from __future__ import annotations
@@ -98,8 +103,7 @@ class Parser:
     """
     title: Parse AIX tokens into IRx/ASTx-compatible AST nodes.
     attributes:
-      tokens:
-        type: TokenList
+      tokens: Tokens in source order.
     """
 
     tokens: TokenList
@@ -108,8 +112,7 @@ class Parser:
         """
         title: Initialize parser state.
         parameters:
-          tokens:
-            type: TokenList | None
+          tokens: Tokens in source order.
         """
         self.tokens = tokens or TokenList([])
 
@@ -125,12 +128,9 @@ class Parser:
         """
         title: Parse a token stream into an AST module.
         parameters:
-          tokens:
-            type: TokenList
-          module_name:
-            type: str
-        returns:
-          type: astx.Module
+          tokens: Tokens in source order.
+          module_name: Module name to resolve.
+        returns: Parsed a token stream into an AST module.
         """
         self.tokens = tokens
         module = astx.Module(module_name)
@@ -171,8 +171,7 @@ class Parser:
         """
         title: Parse a top-level function or constant definition.
         visibility: internal
-        returns:
-          type: astx.AST
+        returns: Parsed a top-level function or constant definition.
         """
         self._consume(TokenKind.define, "∴")
         name_token = self._expect(TokenKind.identifier, "definition name")
@@ -195,12 +194,9 @@ class Parser:
         title: Parse a function declaration and body.
         visibility: internal
         parameters:
-          name:
-            type: str
-          name_token:
-            type: Token
-        returns:
-          type: astx.FunctionDef
+          name: Name identifying the declaration or operation.
+          name_token: Name token.
+        returns: Parsed a function declaration and body.
         """
         args = self._parse_parameter_block()
         return_type: astx.DataType = astx.NoneType()
@@ -224,12 +220,9 @@ class Parser:
         title: Parse a typed constant definition.
         visibility: internal
         parameters:
-          name:
-            type: str
-          name_token:
-            type: Token
-        returns:
-          type: astx.VariableDeclaration
+          name: Name identifying the declaration or operation.
+          name_token: Name token.
+        returns: Parsed a typed constant definition.
         """
         self._consume(TokenKind.colon, ":")
         type_ = self._parse_type_expression()
@@ -248,12 +241,10 @@ class Parser:
     def _parse_parameter_block(self) -> astx.Arguments:
         """
         title: Parse the function parameter block.
-        summary: >-
-          Parameters retain mutable local bindings independently of ASTx
-          defaults.
+        summary: Parameters retain mutable local bindings independently
+          of ASTx defaults.
         visibility: internal
-        returns:
-          type: astx.Arguments
+        returns: Parsed the function parameter block.
         """
         self._consume(TokenKind.semantic_lbracket, "⟦")
         args = astx.Arguments()
@@ -289,8 +280,7 @@ class Parser:
         """
         title: Parse a supported type expression.
         visibility: internal
-        returns:
-          type: astx.DataType
+        returns: Parsed a supported type expression.
         """
         token = self.tokens.cur_tok
         if token.kind == TokenKind.unit:
@@ -323,8 +313,7 @@ class Parser:
         """
         title: Parse an inline or delimited function body.
         visibility: internal
-        returns:
-          type: astx.Block
+        returns: Parsed an inline or delimited function body.
         """
         if self._at(TokenKind.lbrace):
             return self._parse_inline_block()
@@ -334,8 +323,7 @@ class Parser:
         """
         title: Parse an inline statement block.
         visibility: internal
-        returns:
-          type: astx.Block
+        returns: Parsed an inline statement block.
         """
         self._consume(TokenKind.lbrace, "{")
         block = astx.Block()
@@ -354,8 +342,7 @@ class Parser:
         """
         title: Parse statements until the block terminator.
         visibility: internal
-        returns:
-          type: astx.Block
+        returns: Parsed statements until the block terminator.
         """
         block = astx.Block()
         while not self._at(TokenKind.end):
@@ -375,8 +362,7 @@ class Parser:
         """
         title: Parse the next statement in a function body.
         visibility: internal
-        returns:
-          type: astx.AST
+        returns: Parsed the next statement in a function body.
         """
         if self._at(TokenKind.turnstile):
             return self._parse_branch_statement()
@@ -395,8 +381,7 @@ class Parser:
         """
         title: Parse a conditional branch and its alternatives.
         visibility: internal
-        returns:
-          type: astx.AST
+        returns: Parsed a conditional branch and its alternatives.
         """
         branch_token = self.tokens.cur_tok
         self._consume(TokenKind.turnstile, "⊢")
@@ -427,8 +412,7 @@ class Parser:
         """
         title: Parse a local variable binding.
         visibility: internal
-        returns:
-          type: astx.VariableDeclaration
+        returns: Parsed a local variable binding.
         """
         bind_token = self.tokens.cur_tok
         self._consume(TokenKind.bind, "⌁")
@@ -452,8 +436,7 @@ class Parser:
         """
         title: Parse a variable assignment.
         visibility: internal
-        returns:
-          type: astx.VariableAssignment
+        returns: Parsed a variable assignment.
         """
         name_token = self._expect(TokenKind.identifier, "assignment target")
         self._consume(TokenKind.assign, "≔")
@@ -468,8 +451,7 @@ class Parser:
         """
         title: Parse an emit statement.
         visibility: internal
-        returns:
-          type: astx.AST
+        returns: Parsed an emit statement.
         """
         self._consume(TokenKind.emit, "⟣")
         expr = cast(astx.Expr, self.parse_expression())
@@ -479,10 +461,8 @@ class Parser:
         """
         title: Parse an AIX expression.
         parameters:
-          min_precedence:
-            type: int
-        returns:
-          type: astx.AST
+          min_precedence: Min precedence.
+        returns: Parsed an AIX expression.
         """
         lhs = self._parse_unary()
 
@@ -511,8 +491,7 @@ class Parser:
         """
         title: Parse a unary expression or its operand.
         visibility: internal
-        returns:
-          type: astx.AST
+        returns: Parsed a unary expression or its operand.
         """
         token = self.tokens.cur_tok
         if token.kind == TokenKind.minus:
@@ -538,8 +517,7 @@ class Parser:
         """
         title: Parse postfix operators and call suffixes.
         visibility: internal
-        returns:
-          type: astx.AST
+        returns: Parsed postfix operators and call suffixes.
         """
         expr = self._parse_primary()
         while True:
@@ -562,10 +540,8 @@ class Parser:
         title: Parse arguments for a call to an existing callee.
         visibility: internal
         parameters:
-          callee:
-            type: astx.AST
-        returns:
-          type: astx.FunctionCall
+          callee: Callee.
+        returns: Parsed arguments for a call to an existing callee.
         """
         if not isinstance(callee, astx.Identifier):
             self._raise_here("only identifier function calls are supported")
@@ -588,8 +564,7 @@ class Parser:
         """
         title: Parse a primary expression.
         visibility: internal
-        returns:
-          type: astx.AST
+        returns: Parsed a primary expression.
         """
         token = self.tokens.cur_tok
         if token.kind in _EXPRESSION_TERMINATORS:
@@ -646,10 +621,9 @@ class Parser:
         title: Infer a supported literal type or return the unknown type.
         visibility: internal
         parameters:
-          value:
-            type: astx.Expr
-        returns:
-          type: astx.DataType
+          value: Value to process.
+        returns: 'Result of this operation: infer a supported literal type
+          or return the unknown type.'
         """
         if isinstance(value, astx.LiteralBoolean):
             return astx.Boolean()
@@ -676,10 +650,8 @@ class Parser:
         title: Check the current token kind.
         visibility: internal
         parameters:
-          kind:
-            type: TokenKind
-        returns:
-          type: bool
+          kind: Kind of value or operation.
+        returns: 'Result of this operation: check the current token kind.'
         """
         return self.tokens.cur_tok.kind == kind
 
@@ -688,10 +660,8 @@ class Parser:
         title: Read a token at an offset without advancing.
         visibility: internal
         parameters:
-          offset:
-            type: int
-        returns:
-          type: Token
+          offset: Offset within the data.
+        returns: Read a token at an offset without advancing.
         """
         index = self.tokens.position + offset
         if index >= len(self.tokens.tokens):
@@ -703,12 +673,10 @@ class Parser:
         title: Consume a required token with a literal display name.
         visibility: internal
         parameters:
-          kind:
-            type: TokenKind
-          display:
-            type: str
-        returns:
-          type: Token
+          kind: Kind of value or operation.
+          display: Display.
+        returns: 'Result of this operation: consume a required token with
+          a literal display name.'
         """
         token = self.tokens.cur_tok
         if token.kind != kind:
@@ -721,12 +689,10 @@ class Parser:
         title: Consume a required token with a descriptive diagnostic.
         visibility: internal
         parameters:
-          kind:
-            type: TokenKind
-          description:
-            type: str
-        returns:
-          type: Token
+          kind: Kind of value or operation.
+          description: Description.
+        returns: 'Result of this operation: consume a required token with
+          a descriptive diagnostic.'
         """
         token = self.tokens.cur_tok
         if token.kind != kind:
@@ -739,10 +705,7 @@ class Parser:
         title: Reject a reserved operator with its source location.
         visibility: internal
         parameters:
-          token:
-            type: Token
-        returns:
-          type: NoReturn
+          token: Token being processed.
         """
         raise ParserException(
             self._message_at(
@@ -758,10 +721,7 @@ class Parser:
         title: Raise a parser diagnostic at the current token.
         visibility: internal
         parameters:
-          message:
-            type: str
-        returns:
-          type: NoReturn
+          message: Diagnostic or output message.
         """
         raise ParserException(self._message_at(self.tokens.cur_tok, message))
 
@@ -770,12 +730,9 @@ class Parser:
         title: Format a parser diagnostic with the token location.
         visibility: internal
         parameters:
-          token:
-            type: Token
-          message:
-            type: str
-        returns:
-          type: str
+          token: Token being processed.
+          message: Diagnostic or output message.
+        returns: Formatted a parser diagnostic with the token location.
         """
         return (
             "AIX parser error at line "

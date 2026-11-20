@@ -49,18 +49,12 @@ def _borrowed_metadata(
     """
     title: Build borrowed buffer metadata.
     parameters:
-      data:
-        type: BufferHandle
-      dtype:
-        type: BufferHandle
-      shape:
-        type: tuple[int, Ellipsis]
-      strides:
-        type: tuple[int, Ellipsis]
-      mutability:
-        type: BufferMutability
-    returns:
-      type: BufferViewMetadata
+      data: Data to process.
+      dtype: Element data type.
+      shape: Declared dimensions or result shape.
+      strides: Strides.
+      mutability: Mutability.
+    returns: Constructed borrowed buffer metadata.
     """
     return BufferViewMetadata(
         data=data,
@@ -86,20 +80,13 @@ def _owned_metadata(
     """
     title: Build owned buffer metadata.
     parameters:
-      data:
-        type: BufferHandle
-      owner:
-        type: BufferHandle
-      dtype:
-        type: BufferHandle
-      shape:
-        type: tuple[int, Ellipsis]
-      strides:
-        type: tuple[int, Ellipsis]
-      mutability:
-        type: BufferMutability
-    returns:
-      type: BufferViewMetadata
+      data: Data to process.
+      owner: Owner keeping the resource alive.
+      dtype: Element data type.
+      shape: Declared dimensions or result shape.
+      strides: Strides.
+      mutability: Mutability.
+    returns: Constructed owned buffer metadata.
     """
     return BufferViewMetadata(
         data=data,
@@ -118,10 +105,9 @@ def _module_with_main(*nodes: astx.AST) -> astx.Module:
     title: Build an int32 main module.
     parameters:
       nodes:
-        type: astx.AST
         variadic: positional
-    returns:
-      type: astx.Module
+        description: Syntax nodes in source order.
+    returns: Constructed an int32 main module.
     """
     module = astx.Module()
     prototype = astx.FunctionPrototype(
@@ -142,10 +128,8 @@ def _descriptor(metadata: BufferViewMetadata) -> astx.BufferViewDescriptor:
     """
     title: Build one descriptor node.
     parameters:
-      metadata:
-        type: BufferViewMetadata
-    returns:
-      type: astx.BufferViewDescriptor
+      metadata: Metadata associated with the operation.
+    returns: Constructed one descriptor node.
     """
     return astx.BufferViewDescriptor(metadata)
 
@@ -340,10 +324,8 @@ def test_buffer_view_rejects_invalid_ownership(
     """
     title: Ownership state should be explicit and non-conflicting.
     parameters:
-      metadata:
-        type: BufferViewMetadata
-      match:
-        type: str
+      metadata: Metadata associated with the operation.
+      match: Match.
     """
     module = _module_with_main(
         astx.FunctionReturn(astx.BufferViewRetain(_descriptor(metadata)))
@@ -429,10 +411,8 @@ def test_buffer_view_rejects_invalid_shape_stride_metadata(
     """
     title: Static shape/stride descriptor errors should be semantic errors.
     parameters:
-      metadata:
-        type: BufferViewMetadata
-      match:
-        type: str
+      metadata: Metadata associated with the operation.
+      match: Match.
     """
     module = _module_with_main(
         astx.FunctionReturn(astx.BufferViewRetain(_descriptor(metadata)))
@@ -599,8 +579,7 @@ def test_buffer_lifetime_helpers_reject_borrowed_static_views(
     """
     title: Borrowed views should not allow explicit retain/release helpers.
     parameters:
-      node_factory:
-        type: type[astx.BufferViewRetain] | type[astx.BufferViewRelease]
+      node_factory: Node factory.
     """
     module = _module_with_main(
         astx.FunctionReturn(node_factory(_descriptor(_borrowed_metadata())))

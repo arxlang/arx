@@ -46,16 +46,11 @@ def test_if_else_stmt(
     """
     title: Test an If statement with an else branch.
     parameters:
-      action:
-        type: str
-      expected_file:
-        type: str
-      builder_class:
-        type: type[Builder]
-      int_type:
-        type: type
-      literal_type:
-        type: type
+      action: Action.
+      expected_file: File containing expected.
+      builder_class: Builder implementation under test.
+      int_type: Type of int.
+      literal_type: Literal type used by this case.
     """
     builder = builder_class()
     module = builder.module()
@@ -124,16 +119,11 @@ def test_if_only_stmt(
     """
     title: Test an If statement without an else branch.
     parameters:
-      action:
-        type: str
-      expected_file:
-        type: str
-      builder_class:
-        type: type[Builder]
-      int_type:
-        type: type
-      literal_type:
-        type: type
+      action: Action.
+      expected_file: File containing expected.
+      builder_class: Builder implementation under test.
+      int_type: Type of int.
+      literal_type: Literal type used by this case.
     """
     builder = builder_class()
     module = builder.module()
@@ -173,8 +163,7 @@ def test_if_both_branches_return(builder_class: type[Builder]) -> None:
     """
     title: Test IfStmt when both branches terminate with return.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     module = builder.module()
@@ -224,8 +213,7 @@ def test_if_one_branch_returns_other_falls_through(
     """
     title: Test IfStmt when one branch returns and the other continues.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     module = builder.module()
@@ -283,8 +271,7 @@ def test_if_recursive_fibonacci_with_returning_branches(
     """
     title: Test recursive fibonacci with IfStmt returning in both branches.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     module = builder.module()

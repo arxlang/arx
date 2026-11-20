@@ -29,6 +29,8 @@ from irx.typecheck import typechecked
 class CallLoweringServices(Protocol):
     """
     title: Only the value, checked-call, and lifetime services the pilot needs.
+    attributes:
+      builder: Builder generating the intermediate representation.
     """
 
     # Explicit stub bodies keep unused-parameter checks file-local.
@@ -37,8 +39,7 @@ class CallLoweringServices(Protocol):
     def builder(self) -> ir.IRBuilder:
         """
         title: Return the active function instruction builder.
-        returns:
-          type: ir.IRBuilder
+        returns: The active function instruction builder.
         """
         raise NotImplementedError
 
@@ -47,10 +48,9 @@ class CallLoweringServices(Protocol):
         """
         title: Intern a configuration string in the current LLVM module.
         parameters:
-          value:
-            type: str
-        returns:
-          type: ir.Value
+          value: Value to process.
+        returns: 'Result of this operation: intern a configuration string
+          in the current LLVM module.'
         """
         del value
         raise NotImplementedError
@@ -60,10 +60,9 @@ class CallLoweringServices(Protocol):
         """
         title: Evaluate once and pin aliases across later operand side effects.
         parameters:
-          node:
-            type: astx.AST
-        returns:
-          type: ir.Value
+          node: Syntax node to process.
+        returns: 'Result of this operation: evaluate once and pin aliases
+          across later operand side effects.'
         """
         del node
         raise NotImplementedError
@@ -71,16 +70,14 @@ class CallLoweringServices(Protocol):
     @abstractmethod
     def handle(self, node: astx.AST, value: ir.Value, index: int) -> ir.Value:
         """
-        title: Require a live class and load its semantically resolved handle.
+        title: Require a live class and load its semantically resolved
+          handle.
         parameters:
-          node:
-            type: astx.AST
-          value:
-            type: ir.Value
-          index:
-            type: int
-        returns:
-          type: ir.Value
+          node: Syntax node to process.
+          value: Value to process.
+          index: Index selecting the item.
+        returns: 'Result of this operation: require a live class and load
+          its semantically resolved handle.'
         """
         del node, value, index
         raise NotImplementedError
@@ -92,14 +89,11 @@ class CallLoweringServices(Protocol):
         """
         title: Emit the conversion selected by the resolved operand contract.
         parameters:
-          node:
-            type: astx.AST
-          value:
-            type: ir.Value
-          target:
-            type: astx.DataType
-        returns:
-          type: ir.Value
+          node: Syntax node to process.
+          value: Value to process.
+          target: Destination of the operation.
+        returns: 'Result of this operation: emit the conversion selected
+          by the resolved operand contract.'
         """
         del node, value, target
         raise NotImplementedError
@@ -109,10 +103,8 @@ class CallLoweringServices(Protocol):
         """
         title: Emit a closed compute plan through shared value services.
         parameters:
-          node:
-            type: astx.AST
-          plan:
-            type: ComputePlan
+          node: Syntax node to process.
+          plan: Resolved semantic execution plan.
         """
         del node, plan
         raise NotImplementedError
@@ -122,19 +114,15 @@ class CallLoweringServices(Protocol):
         self, node: astx.AST, feature: str, name: str, args: list[ir.Value]
     ) -> ir.Value:
         """
-        title: >-
-          Activate a registered symbol and read its output only on success.
+        title: Activate a registered symbol and read its output only
+          on success.
         parameters:
-          node:
-            type: astx.AST
-          feature:
-            type: str
-          name:
-            type: str
-          args:
-            type: list[ir.Value]
-        returns:
-          type: ir.Value
+          node: Syntax node to process.
+          feature: Feature.
+          name: Name identifying the declaration or operation.
+          args: Arguments supplied to the operation.
+        returns: 'Result of this operation: activate a registered
+          symbol and read its output only on success.'
         """
         del node, feature, name, args
         raise NotImplementedError
@@ -146,16 +134,12 @@ class CallLoweringServices(Protocol):
         """
         title: Register a temporary native handle for abrupt-exit cleanup.
         parameters:
-          node:
-            type: astx.AST
-          feature:
-            type: str
-          destroy:
-            type: str
-          value:
-            type: ir.Value
-        returns:
-          type: CleanupAction
+          node: Syntax node to process.
+          feature: Feature.
+          destroy: Destroy.
+          value: Value to process.
+        returns: 'Result of this operation: register a temporary native handle
+          for abrupt-exit cleanup.'
         """
         del node, feature, destroy, value
         raise NotImplementedError
@@ -165,8 +149,7 @@ class CallLoweringServices(Protocol):
         """
         title: Release a temporary and discharge its pending cleanup.
         parameters:
-          cleanup:
-            type: CleanupAction
+          cleanup: Cleanup.
         """
         del cleanup
         raise NotImplementedError
@@ -176,10 +159,8 @@ class CallLoweringServices(Protocol):
         """
         title: Register an owned Arrow result and produce exactly one value.
         parameters:
-          node:
-            type: astx.AST
-          value:
-            type: ir.Value
+          node: Syntax node to process.
+          value: Value to process.
         """
         del node, value
         raise NotImplementedError
@@ -191,12 +172,10 @@ class CallLoweringServices(Protocol):
         """
         title: Produce a class value using its resolved construction plan.
         parameters:
-          node:
-            type: astx.AST
-          resolution:
-            type: ResolvedClassConstruction
-        returns:
-          type: ir.Value
+          node: Syntax node to process.
+          resolution: Resolution.
+        returns: 'Result of this operation: produce a class value using its
+          resolved construction plan.'
         """
         del node, resolution
         raise NotImplementedError
@@ -209,10 +188,8 @@ class LoweringCall:
     """
     title: One lowering invocation with compilation-local backend services.
     attributes:
-      node:
-        type: astx.FunctionCall | astx.MethodCall
-      services:
-        type: CallLoweringServices
+      node: Syntax node to process.
+      services: Services.
     """
 
     node: astx.FunctionCall | astx.MethodCall
@@ -233,10 +210,8 @@ def validate_lowering_call(
     """
     title: Require a typed service implementation and valid call syntax.
     parameters:
-      node:
-        type: astx.FunctionCall | astx.MethodCall
-      services:
-        type: CallLoweringServices
+      node: Syntax node to process.
+      services: Services.
     """
 
 
@@ -253,10 +228,8 @@ class CallLoweringVisitor:
         """
         title: Emit a resolved compute plan without rediscovering its meaning.
         parameters:
-          plan:
-            type: ComputePlan
-          call:
-            type: LoweringCall
+          plan: Resolved semantic execution plan.
+          call: Call being processed.
         """
         call.services.compute(call.node, plan)
 
@@ -265,10 +238,8 @@ class CallLoweringVisitor:
         """
         title: Diagnose missing plan emission at the lowering boundary.
         parameters:
-          plan:
-            type: CallPlan
-          call:
-            type: LoweringCall
+          plan: Resolved semantic execution plan.
+          call: Call being processed.
         """
         raise_lowering_internal_error(
             f"no lowering handler for call plan {type(plan).__name__}",

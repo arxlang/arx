@@ -32,12 +32,9 @@ def parse_module(body: str, declarations: str = "") -> astx.Module:
     """
     title: Parse a documented module with a main body.
     parameters:
-      body:
-        type: str
-      declarations:
-        type: str
-    returns:
-      type: astx.Module
+      body: Statements forming the body.
+      declarations: Declarations.
+    returns: Parsed a documented module with a main body.
     """
     ArxIO.string_to_buffer(
         "```\ntitle: File I/O regression\n```\n"
@@ -55,14 +52,10 @@ def execute(
     """
     title: Build and execute an isolated native file-I/O test.
     parameters:
-      tmp_path:
-        type: Path
-      body:
-        type: str
-      declarations:
-        type: str
-    returns:
-      type: subprocess.CompletedProcess[str]
+      tmp_path: Temporary directory for this test.
+      body: Statements forming the body.
+      declarations: Declarations.
+    returns: Constructed and execute an isolated native file-I/O test.
     """
     if shutil.which("clang") is None:
         pytest.skip("clang is required for native open execution")
@@ -95,8 +88,7 @@ def test_open_parameters_and_translation(arguments: str) -> None:
     """
     title: Positional/default/keyword forms share resolved file metadata.
     parameters:
-      arguments:
-        type: str
+      arguments: Arguments supplied to the call.
     """
     module = parse_module(f"f: file = open({arguments})\nf.close()")
     llvm.parse_assembly(ArxBuilder().translate(module)).verify()
@@ -126,10 +118,8 @@ def test_open_rejects_unsupported_arguments(
     """
     title: Invalid arguments fail before native filesystem effects.
     parameters:
-      arguments:
-        type: str
-      message:
-        type: str
+      arguments: Arguments supplied to the call.
+      message: Diagnostic or output message.
     """
     with pytest.raises(SemanticError, match=message):
         analyze(parse_module(f"f: file = open({arguments})"))
@@ -145,8 +135,7 @@ def test_open_keyword_syntax_restrictions(call: str) -> None:
     """
     title: Keywords do not become assignments or generic call syntax.
     parameters:
-      call:
-        type: str
+      call: Call being processed.
     """
     with pytest.raises(ParserException):
         parse_module(call)
@@ -180,10 +169,8 @@ def test_open_native_roundtrip_and_cleanup(
     """
     title: Native text counts, independent reads, append, and cleanup.
     parameters:
-      tmp_path:
-        type: Path
-      factory:
-        type: str
+      tmp_path: Temporary directory for this test.
+      factory: Factory.
     """
     result = execute(
         tmp_path,
@@ -216,10 +203,8 @@ def test_open_native_reads(tmp_path: Path, content: bytes) -> None:
     """
     title: Compiled reads handle newlines, growth, and empty data.
     parameters:
-      tmp_path:
-        type: Path
-      content:
-        type: bytes
+      tmp_path: Temporary directory for this test.
+      content: Content to process.
     """
     (tmp_path / "data.txt").write_bytes(content)
     expected = content.replace(b"\r\n", b"\n").replace(b"\r", b"\n").decode()
@@ -236,10 +221,8 @@ def test_open_native_bad_text(tmp_path: Path, content: bytes) -> None:
     """
     title: Runtime read failures are structured and never publish bad strings.
     parameters:
-      tmp_path:
-        type: Path
-      content:
-        type: bytes
+      tmp_path: Temporary directory for this test.
+      content: Content to process.
     """
     (tmp_path / "bad").write_bytes(content)
     result = execute(tmp_path, 'f: file = open("bad")\nf.read()')
@@ -256,10 +239,8 @@ def test_open_runtime_mode_is_checked_before_truncation(
     """
     title: Runtime values are validated before calling fopen.
     parameters:
-      tmp_path:
-        type: Path
-      factory:
-        type: str
+      tmp_path: Temporary directory for this test.
+      factory: Factory.
     """
     (tmp_path / "keep").write_bytes(b"unchanged")
     result = execute(
@@ -275,10 +256,8 @@ def test_open_filesystem_failures(tmp_path: Path, arguments: str) -> None:
     """
     title: Missing paths and non-writable targets report checked open errors.
     parameters:
-      tmp_path:
-        type: Path
-      arguments:
-        type: str
+      tmp_path: Temporary directory for this test.
+      arguments: Arguments supplied to the call.
     """
     (tmp_path / "folder").mkdir()
     result = execute(tmp_path, f"f: file = open({arguments})")
@@ -293,10 +272,8 @@ def test_open_keyword_evaluation_order(tmp_path: Path, factory: str) -> None:
     """
     title: Source-order keyword evaluation survives ABI-slot reordering.
     parameters:
-      tmp_path:
-        type: Path
-      factory:
-        type: str
+      tmp_path: Temporary directory for this test.
+      factory: Factory.
     """
     declarations = """fn mode() -> str:
   print("mode")
@@ -318,8 +295,7 @@ def test_imported_module_can_open(tmp_path: Path) -> None:
     """
     title: Imported Arx modules reach the same native builtin and cleanup path.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     if shutil.which("clang") is None:
         pytest.skip("clang is required")
@@ -354,8 +330,7 @@ def test_file_scope_cleanup_on_early_return(tmp_path: Path) -> None:
     """
     title: Explicit returns release file owners before leaving the function.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     declarations = """fn early() -> i32:
   f: file = open("early", "w")
@@ -387,8 +362,7 @@ def test_deferred_file_forms_fail_in_analysis(body: str) -> None:
     """
     title: Unsupported operations fail before lowering, not in libc.
     parameters:
-      body:
-        type: str
+      body: Statements forming the body.
     """
     with pytest.raises(SemanticError):
         analyze(parse_module(body))
@@ -398,8 +372,7 @@ def test_closed_file_error_has_real_method_location(tmp_path: Path) -> None:
     """
     title: Native diagnostics preserve the method token's source location.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     result = execute(
         tmp_path, 'f: file = open("out", "w")\nf.close()\nf.read()'
@@ -418,8 +391,7 @@ def test_read_string_can_return_after_lexical_file_release(
     """
     title: File reads use the existing independently owned string return ABI.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     (tmp_path / "source").write_text("independent", encoding="utf-8")
     declarations = """fn load() -> str:
@@ -466,10 +438,8 @@ def test_binary_semantic_restrictions(body: str, match: str) -> None:
     """
     title: Reject unsafe coercion, mutation, aliases, and binary text options.
     parameters:
-      body:
-        type: str
-      match:
-        type: str
+      body: Statements forming the body.
+      match: Match.
     """
     with pytest.raises(SemanticError, match=match):
         analyze(parse_module(body))
@@ -480,10 +450,9 @@ def binary_failure_program(tmp_path_factory: pytest.TempPathFactory) -> Path:
     """
     title: Reuse one binary across recoverable constructor and File errors.
     parameters:
-      tmp_path_factory:
-        type: pytest.TempPathFactory
-    returns:
-      type: Path
+      tmp_path_factory: Factory for shared temporary test directories.
+    returns: 'Result of this operation: reuse one binary across recoverable
+      constructor and File errors.'
     """
     if shutil.which("clang") is None:
         pytest.skip("binary failure checks require clang")
@@ -557,14 +526,10 @@ def test_binary_failures_are_recoverable(
     """
     title: Check values, modes, bounds and filesystem failures before success.
     parameters:
-      binary_failure_program:
-        type: Path
-      tmp_path:
-        type: Path
-      scenario:
-        type: int
-      expected:
-        type: int
+      binary_failure_program: Binary failure program.
+      tmp_path: Temporary directory for this test.
+      scenario: Scenario.
+      expected: Expected result for this case.
     """
     (tmp_path / "keep").write_bytes(b"unchanged")
     (tmp_path / "directory").mkdir()
@@ -600,13 +565,11 @@ def test_binary_failures_are_recoverable(
 )
 def test_bytes_cannot_escape_ownership(declarations: str, match: str) -> None:
     """
-    title: >-
-      Reject unmodeled byte-buffer escapes and reuse after return transfer.
+    title: Reject unmodeled byte-buffer escapes and reuse after return
+      transfer.
     parameters:
-      declarations:
-        type: str
-      match:
-        type: str
+      declarations: Declarations.
+      match: Match.
     """
     with pytest.raises(SemanticError, match=match):
         analyze(parse_module("bytes()", declarations))

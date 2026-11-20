@@ -30,10 +30,8 @@ class Target(Expr):
     """
     title: Define the Architecture target for the program.
     attributes:
-      datalayout:
-        type: str
-      triple:
-        type: str
+      datalayout: Datalayout.
+      triple: Triple.
     """
 
     datalayout: str
@@ -43,10 +41,8 @@ class Target(Expr):
         """
         title: Initialize the AST instance.
         parameters:
-          datalayout:
-            type: str
-          triple:
-            type: str
+          datalayout: Datalayout.
+          triple: Triple.
         """
         super().__init__()
         self.datalayout = datalayout
@@ -56,10 +52,8 @@ class Target(Expr):
         """
         title: Return the AST structure of the object.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         key = "TARGET"
         value = f"{self.datalayout}, {self.triple}"
@@ -72,10 +66,9 @@ class Module(Block):
     """
     title: AST main expression class.
     attributes:
-      kind:
-        type: ASTKind
-      name:
-        type: str
+      kind: Kind of value or operation.
+      name: Name identifying this declaration.
+      block: Block of statements.
     """
 
     kind: ASTKind
@@ -90,10 +83,8 @@ class Module(Block):
         """
         title: Initialize the AST instance.
         parameters:
-          name:
-            type: str
-          loc:
-            type: SourceLocation
+          name: Name identifying the declaration or operation.
+          loc: Source coordinates associated with the node.
         """
         super().__init__(name=name, loc=loc)
         self.kind = ASTKind.ModuleKind
@@ -101,8 +92,7 @@ class Module(Block):
     def __str__(self) -> str:
         """
         title: Return the string representation of the object.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         return f"Module[{self.name}]"
 
@@ -110,8 +100,7 @@ class Module(Block):
     def block(self) -> list[AST]:
         """
         title: Define an alias for self.nodes.
-        returns:
-          type: list[AST]
+        returns: 'Result of this operation: define an alias for self.nodes.'
         """
         return self.nodes
 
@@ -119,10 +108,8 @@ class Module(Block):
         """
         title: Return the AST structure of the object.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         block_node = []
 
@@ -141,12 +128,9 @@ class Package(ASTNodes):
     """
     title: AST class for Package.
     attributes:
-      name:
-        type: str
-      modules:
-        type: list[Module]
-      packages:
-        type: list[Package]
+      name: Name identifying this declaration.
+      modules: Modules.
+      packages: Packages.
     """
 
     name: str
@@ -163,14 +147,10 @@ class Package(ASTNodes):
         """
         title: Initialize the AST instance.
         parameters:
-          name:
-            type: str
-          modules:
-            type: list[Module]
-          packages:
-            type: list[Package]
-          loc:
-            type: SourceLocation
+          name: Name identifying the declaration or operation.
+          modules: Modules.
+          packages: Packages.
+          loc: Source coordinates associated with the node.
         """
         super().__init__(loc=loc)
         self.name = name
@@ -180,8 +160,7 @@ class Package(ASTNodes):
     def __str__(self) -> str:
         """
         title: Return the string representation of the object.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         return f"PACKAGE[{self.name}]"
 
@@ -189,10 +168,8 @@ class Package(ASTNodes):
         """
         title: Return the AST structure of the object.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         packages = []
         modules = []
@@ -221,14 +198,10 @@ class Program(Package):
     """
     title: AST class for Program.
     attributes:
-      name:
-        type: str
-      modules:
-        type: list[Module]
-      packages:
-        type: list[Package]
-      target:
-        type: Target
+      name: Name identifying this declaration.
+      modules: Modules.
+      packages: Packages.
+      target: Destination of the operation.
     """
 
     target: Target
@@ -244,16 +217,11 @@ class Program(Package):
         """
         title: Initialize the AST instance.
         parameters:
-          name:
-            type: str
-          target:
-            type: Target
-          modules:
-            type: list[Module]
-          packages:
-            type: list[Package]
-          loc:
-            type: SourceLocation
+          name: Name identifying the declaration or operation.
+          target: Destination of the operation.
+          modules: Modules.
+          packages: Packages.
+          loc: Source coordinates associated with the node.
         """
         super().__init__(
             name=name, modules=modules, packages=packages, loc=loc
@@ -263,8 +231,7 @@ class Program(Package):
     def __str__(self) -> str:
         """
         title: Return the string representation of the object.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         return f"PROGRAM[{self.name}]"
 
@@ -275,12 +242,9 @@ class AliasExpr(Expr):
     """
     title: Represents an alias in an import statement.
     attributes:
-      kind:
-        type: ASTKind
-      name:
-        type: str
-      asname:
-        type: str
+      kind: Kind of value or operation.
+      name: Name identifying this declaration.
+      asname: Asname.
     """
 
     kind: ASTKind
@@ -298,14 +262,10 @@ class AliasExpr(Expr):
         """
         title: Initialize the alias expression.
         parameters:
-          name:
-            type: str
-          asname:
-            type: str
-          loc:
-            type: SourceLocation
-          parent:
-            type: Optional[ASTNodes]
+          name: Name identifying the declaration or operation.
+          asname: Asname.
+          loc: Source coordinates associated with the node.
+          parent: Parent node or enclosing scope.
         """
         super().__init__(loc=loc, parent=parent)
         self.name = name
@@ -315,8 +275,7 @@ class AliasExpr(Expr):
     def __str__(self) -> str:
         """
         title: Return a string representation of the alias.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         if self.asname:
             return f"{self.name} as {self.asname}"
@@ -327,10 +286,8 @@ class AliasExpr(Expr):
         """
         title: Return the AST structure of the alias.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         str_asname = f", {self.asname}" if self.asname else ""
         str_name_asname = f"[{self.name}{str_asname}]"
@@ -346,10 +303,8 @@ class ImportStmt(StatementType):
     """
     title: Represents an import statement.
     attributes:
-      kind:
-        type: ASTKind
-      names:
-        type: list[AliasExpr]
+      kind: Kind of value or operation.
+      names: Names.
     """
 
     kind: ASTKind
@@ -365,12 +320,9 @@ class ImportStmt(StatementType):
         """
         title: Initialize the import statement.
         parameters:
-          names:
-            type: list[AliasExpr]
-          loc:
-            type: SourceLocation
-          parent:
-            type: Optional[ASTNodes]
+          names: Names.
+          loc: Source coordinates associated with the node.
+          parent: Parent node or enclosing scope.
         """
         super().__init__(loc=loc, parent=parent)
         self.names = names
@@ -379,8 +331,7 @@ class ImportStmt(StatementType):
     def __str__(self) -> str:
         """
         title: Return a string representation of the import statement.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         names_str = ", ".join(str(name) for name in self.names)
         return f"import {names_str}"
@@ -389,10 +340,8 @@ class ImportStmt(StatementType):
         """
         title: Return the AST structure of the import statement.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         key = "ImportStmt"
         value = cast(
@@ -407,14 +356,10 @@ class ImportFromStmt(StatementType):
     """
     title: Represents an import-from statement.
     attributes:
-      kind:
-        type: ASTKind
-      module:
-        type: Optional[str]
-      names:
-        type: list[AliasExpr]
-      level:
-        type: int
+      kind: Kind of value or operation.
+      module: Module to process.
+      names: Names.
+      level: Level.
     """
 
     kind: ASTKind
@@ -434,16 +379,11 @@ class ImportFromStmt(StatementType):
         """
         title: Initialize the import-from statement.
         parameters:
-          names:
-            type: list[AliasExpr]
-          module:
-            type: str
-          level:
-            type: int
-          loc:
-            type: SourceLocation
-          parent:
-            type: Optional[ASTNodes]
+          names: Names.
+          module: Module to process.
+          level: Level.
+          loc: Source coordinates associated with the node.
+          parent: Parent node or enclosing scope.
         """
         super().__init__(loc=loc, parent=parent)
         self.module = module
@@ -454,8 +394,7 @@ class ImportFromStmt(StatementType):
     def __str__(self) -> str:
         """
         title: Return a string representation of the import-from statement.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         level_dots = "." * self.level
         module_str = (
@@ -468,10 +407,8 @@ class ImportFromStmt(StatementType):
         """
         title: Return the AST structure of the import-from statement.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         level_dots = "." * self.level
         module_str = (
@@ -492,10 +429,8 @@ class ImportExpr(Expr):
     """
     title: Represents an import operation as an expression.
     attributes:
-      kind:
-        type: ASTKind
-      names:
-        type: list[AliasExpr]
+      kind: Kind of value or operation.
+      names: Names.
     """
 
     kind: ASTKind
@@ -511,12 +446,9 @@ class ImportExpr(Expr):
         """
         title: Initialize the import expression.
         parameters:
-          names:
-            type: list[AliasExpr]
-          loc:
-            type: SourceLocation
-          parent:
-            type: Optional[ASTNodes]
+          names: Names.
+          loc: Source coordinates associated with the node.
+          parent: Parent node or enclosing scope.
         """
         super().__init__(loc=loc, parent=parent)
         self.names = names
@@ -525,8 +457,7 @@ class ImportExpr(Expr):
     def __str__(self) -> str:
         """
         title: Return a string representation of the import expression.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         names_str = ", ".join(str(name) for name in self.names)
         return f"import {names_str}"
@@ -535,10 +466,8 @@ class ImportExpr(Expr):
         """
         title: Return the AST structure of the import expression.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         key = "ImportExpr"
         value = cast(
@@ -553,14 +482,10 @@ class ImportFromExpr(Expr):
     """
     title: Represents a 'from ... import ...' operation as an expression.
     attributes:
-      kind:
-        type: ASTKind
-      module:
-        type: str
-      names:
-        type: list[AliasExpr]
-      level:
-        type: int
+      kind: Kind of value or operation.
+      module: Module to process.
+      names: Names.
+      level: Level.
     """
 
     kind: ASTKind
@@ -580,16 +505,11 @@ class ImportFromExpr(Expr):
         """
         title: Initialize the import-from expression.
         parameters:
-          names:
-            type: list[AliasExpr]
-          module:
-            type: str
-          level:
-            type: int
-          loc:
-            type: SourceLocation
-          parent:
-            type: Optional[ASTNodes]
+          names: Names.
+          module: Module to process.
+          level: Level.
+          loc: Source coordinates associated with the node.
+          parent: Parent node or enclosing scope.
         """
         super().__init__(loc=loc, parent=parent)
         self.names = names
@@ -600,8 +520,7 @@ class ImportFromExpr(Expr):
     def __str__(self) -> str:
         """
         title: Return a string representation of the import-from expression.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         level_dots = "." * self.level
         module_str = (
@@ -615,10 +534,8 @@ class ImportFromExpr(Expr):
         """
         title: Return the AST structure of the import-from expression.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         level_dots = "." * self.level
         module_str = (

@@ -30,10 +30,8 @@ def _semantic(node: astx.AST) -> SemanticInfo:
     """
     title: Return semantic sidecar information for a node.
     parameters:
-      node:
-        type: astx.AST
-    returns:
-      type: SemanticInfo
+      node: Syntax node to process.
+    returns: Semantic sidecar information for a node.
     """
     return cast(SemanticInfo, getattr(node, "semantic"))
 
@@ -41,8 +39,7 @@ def _semantic(node: astx.AST) -> SemanticInfo:
 def _number_bound() -> astx.UnionType:
     """
     title: Build the small Number template domain used in tests.
-    returns:
-      type: astx.UnionType
+    returns: Constructed the small Number template domain used in tests.
     """
     return astx.UnionType(
         (astx.Int32(), astx.Float64()),
@@ -53,8 +50,7 @@ def _number_bound() -> astx.UnionType:
 def _mixed_scalar_bound() -> astx.UnionType:
     """
     title: Build a small mixed bound with one unsupported member.
-    returns:
-      type: astx.UnionType
+    returns: Constructed a small mixed bound with one unsupported member.
     """
     return astx.UnionType(
         (astx.Int32(), astx.Boolean()),
@@ -66,10 +62,8 @@ def _generated_function_names(module: astx.Module) -> set[str]:
     """
     title: Return generated template function names for one module.
     parameters:
-      module:
-        type: astx.Module
-    returns:
-      type: set[str]
+      module: Module to process.
+    returns: Generated template function names for one module.
     """
     return {
         node.name
@@ -82,10 +76,8 @@ def _template_param(name: str = "T") -> astx.TemplateParam:
     """
     title: Build one Number-bounded template parameter.
     parameters:
-      name:
-        type: str
-    returns:
-      type: astx.TemplateParam
+      name: Name identifying the declaration or operation.
+    returns: Constructed one Number-bounded template parameter.
     """
     return astx.TemplateParam(name, _number_bound())
 
@@ -94,10 +86,8 @@ def _template_var(name: str = "T") -> astx.TemplateTypeVar:
     """
     title: Build one Number-bounded template type variable.
     parameters:
-      name:
-        type: str
-    returns:
-      type: astx.TemplateTypeVar
+      name: Name identifying the declaration or operation.
+    returns: Constructed one Number-bounded template type variable.
     """
     return astx.TemplateTypeVar(name, bound=_number_bound())
 
@@ -112,19 +102,14 @@ def _templated_function(
     """
     title: Build one templated function definition.
     parameters:
-      name:
-        type: str
-      return_value:
-        type: astx.AST
-      return_type:
-        type: astx.DataType | None
-      template_params:
-        type: tuple[astx.TemplateParam, Ellipsis] | None
+      name: Name identifying the declaration or operation.
+      return_value: Return value.
+      return_type: Declared result type.
+      template_params: Template parameters declared by the callable.
       args:
-        type: astx.Argument
         variadic: positional
-    returns:
-      type: astx.FunctionDef
+        description: Positional arguments.
+    returns: Constructed one templated function definition.
     """
     prototype = astx.FunctionPrototype(
         name,
@@ -148,17 +133,14 @@ def _templated_method(
     """
     title: Build one templated class method definition.
     parameters:
-      name:
-        type: str
-      return_value:
-        type: astx.AST
-      is_static:
-        type: bool
+      name: Name identifying the declaration or operation.
+      return_value: Return value.
+      is_static: Whether the member belongs to the class rather than
+        an instance.
       args:
-        type: astx.Argument
         variadic: positional
-    returns:
-      type: astx.FunctionDef
+        description: Positional arguments.
+    returns: Constructed one templated class method definition.
     """
     method = _templated_function(name, return_value, *args)
     if is_static:
@@ -170,10 +152,8 @@ def _main_returning(value: astx.AST) -> astx.FunctionDef:
     """
     title: Build a simple Int32-returning main function.
     parameters:
-      value:
-        type: astx.AST
-    returns:
-      type: astx.FunctionDef
+      value: Value to process.
+    returns: Constructed a simple Int32-returning main function.
     """
     body = astx.Block()
     body.append(astx.FunctionReturn(value))

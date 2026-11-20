@@ -26,12 +26,9 @@ class TypeCastExpr(Expr):
     """
     title: AST class for type casting expressions.
     attributes:
-      kind:
-        type: ASTKind
-      expr:
-        type: Expr
-      target_type:
-        type: DataType
+      kind: Kind of value or operation.
+      expr: Expression to process.
+      target_type: Destination type for the conversion.
     """
 
     kind: ASTKind
@@ -49,14 +46,10 @@ class TypeCastExpr(Expr):
         """
         title: Initialize the type-cast expression.
         parameters:
-          expr:
-            type: Expr
-          target_type:
-            type: DataType
-          loc:
-            type: SourceLocation
-          parent:
-            type: Optional[ASTNodes]
+          expr: Expression to process.
+          target_type: Destination type for the conversion.
+          loc: Source coordinates associated with the node.
+          parent: Parent node or enclosing scope.
         """
         super().__init__(loc=loc, parent=parent)
         self.expr = expr
@@ -66,8 +59,7 @@ class TypeCastExpr(Expr):
     def __str__(self) -> str:
         """
         title: Return a string representation of the TypeCast expression.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         return f"TypeCastExpr ({self.expr}, {self.target_type})"
 
@@ -75,10 +67,8 @@ class TypeCastExpr(Expr):
         """
         title: Return the AST structure of the TypeCast expression.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         key = "TypeCastExpr"
         value: ReprStruct = {

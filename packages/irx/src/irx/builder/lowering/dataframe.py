@@ -45,15 +45,10 @@ class DataFrameVisitorMixin(ClassVisitorMixin):
         """
         title: Call a checked facade and load its result only after success.
         parameters:
-          node:
-            type: astx.AST
-          function:
-            type: ir.Function
-          args:
-            type: list[ir.Value]
-        returns:
-          type: ir.Value
-          description: Value result, or the successful status for void APIs.
+          node: Syntax node to process.
+          function: Function to process.
+          args: Arguments supplied to the operation.
+        returns: Value result, or the successful status for void APIs.
         """
         contract = ARROW_API_SIGNATURES.get(function.name)
         if contract is None:
@@ -91,16 +86,11 @@ class DataFrameVisitorMixin(ClassVisitorMixin):
         """
         title: Translate typed native failures without parsing diagnostic text.
         parameters:
-          node:
-            type: astx.AST
-          status:
-            type: ir.Value
-          operation:
-            type: str
-          message:
-            type: ir.Value | None
-          feature:
-            type: str
+          node: Syntax node to process.
+          status: Native operation status.
+          operation: Operation to resolve or execute.
+          message: Diagnostic or output message.
+          feature: Feature.
         """
         function = self._llvm.ir_builder.function
         success = function.append_basic_block(operation + ".success")
@@ -153,16 +143,12 @@ class DataFrameVisitorMixin(ClassVisitorMixin):
         """
         title: Own a construction handle across later fallible native calls.
         parameters:
-          node:
-            type: astx.AST
-          feature:
-            type: str
-          destroy:
-            type: str
-          value:
-            type: ir.Value
-        returns:
-          type: CleanupAction
+          node: Syntax node to process.
+          feature: Feature.
+          destroy: Destroy.
+          value: Value to process.
+        returns: 'Result of this operation: own a construction handle across
+          later fallible native calls.'
         """
 
         def release() -> None:
@@ -184,8 +170,7 @@ class DataFrameVisitorMixin(ClassVisitorMixin):
         """
         title: Consume one tracked native handle on normal completion.
         parameters:
-          action:
-            type: CleanupAction
+          action: Action.
         """
         self.cleanup_stack.remove(action)
         action.emitter()
@@ -199,12 +184,9 @@ class DataFrameVisitorMixin(ClassVisitorMixin):
         """
         title: Append one lowered scalar value to an Arrow array builder.
         parameters:
-          builder_handle:
-            type: ir.Value
-          value_node:
-            type: astx.AST
-          target_type:
-            type: astx.DataType
+          builder_handle: Builder handle.
+          value_node: Value node.
+          target_type: Destination type for the conversion.
         """
         self.visit_child(value_node)
         value = safe_pop(self.result_stack)
@@ -277,16 +259,11 @@ class DataFrameVisitorMixin(ClassVisitorMixin):
         """
         title: Build one Arrow array handle from column values.
         parameters:
-          node:
-            type: astx.AST
-          column_name:
-            type: str
-          column_type:
-            type: astx.DataType
-          values:
-            type: tuple[astx.AST, Ellipsis]
-        returns:
-          type: ir.Value
+          node: Syntax node to process.
+          column_name: Name of column.
+          column_type: Type of column.
+          values: Values to process, in order.
+        returns: Constructed one Arrow array handle from column values.
         """
         type_id = dataframe_type_id(column_type)
         if type_id is None:
@@ -343,10 +320,8 @@ class DataFrameVisitorMixin(ClassVisitorMixin):
         """
         title: Return the statically resolved column index when available.
         parameters:
-          node:
-            type: astx.DataFrameColumnAccess
-        returns:
-          type: int | None
+          node: Syntax node to process.
+        returns: The statically resolved column index when available.
         """
         semantic = getattr(node, "semantic", None)
         extras = getattr(semantic, "extras", {})
@@ -360,8 +335,7 @@ class DataFrameVisitorMixin(ClassVisitorMixin):
         """
         title: Lower one DataFrame column access node.
         parameters:
-          node:
-            type: astx.DataFrameColumnAccess
+          node: Syntax node to process.
         """
         self.visit_child(node.base)
         table_handle = safe_pop(self.result_stack)
@@ -413,11 +387,10 @@ class DataFrameVisitorMixin(ClassVisitorMixin):
         self, node: astx.DataFrameLiteral
     ) -> None:
         """
-        title: >-
-          Build nullable/string/unsigned literals through the RecordBatch ABI.
+        title: Build nullable/string/unsigned literals through the RecordBatch
+          ABI.
         parameters:
-          node:
-            type: astx.DataFrameLiteral
+          node: Syntax node to process.
         """
         info = cast(SemanticInfo | None, getattr(node, "semantic", None))
         ids = cast(
@@ -577,8 +550,7 @@ class DataFrameVisitorMixin(ClassVisitorMixin):
         """
         title: Visit DataFrameLiteral nodes.
         parameters:
-          node:
-            type: astx.DataFrameLiteral
+          node: Syntax node to process.
         """
         info = getattr(node, "semantic", None)
         payload = (
@@ -741,8 +713,7 @@ class DataFrameVisitorMixin(ClassVisitorMixin):
         """
         title: Visit DataFrameColumnAccess nodes.
         parameters:
-          node:
-            type: astx.DataFrameColumnAccess
+          node: Syntax node to process.
         """
         self._lower_dataframe_column_access(node)
 
@@ -751,8 +722,7 @@ class DataFrameVisitorMixin(ClassVisitorMixin):
         """
         title: Visit DataFrameStringColumnAccess nodes.
         parameters:
-          node:
-            type: astx.DataFrameStringColumnAccess
+          node: Syntax node to process.
         """
         self._lower_dataframe_column_access(node)
 
@@ -761,8 +731,7 @@ class DataFrameVisitorMixin(ClassVisitorMixin):
         """
         title: Visit DataFrameRowCount nodes.
         parameters:
-          node:
-            type: astx.DataFrameRowCount
+          node: Syntax node to process.
         """
         self.visit_child(node.base)
         table_handle = safe_pop(self.result_stack)
@@ -781,8 +750,7 @@ class DataFrameVisitorMixin(ClassVisitorMixin):
         """
         title: Visit DataFrameColumnCount nodes.
         parameters:
-          node:
-            type: astx.DataFrameColumnCount
+          node: Syntax node to process.
         """
         self.visit_child(node.base)
         table_handle = safe_pop(self.result_stack)
@@ -801,8 +769,7 @@ class DataFrameVisitorMixin(ClassVisitorMixin):
         """
         title: Visit DataFrameRetain nodes.
         parameters:
-          node:
-            type: astx.DataFrameRetain
+          node: Syntax node to process.
         """
         self.visit_child(node.base)
         table_handle = safe_pop(self.result_stack)
@@ -820,8 +787,7 @@ class DataFrameVisitorMixin(ClassVisitorMixin):
         """
         title: Visit DataFrameRelease nodes.
         parameters:
-          node:
-            type: astx.DataFrameRelease
+          node: Syntax node to process.
         """
         self.visit_child(node.base)
         table_handle = safe_pop(self.result_stack)
@@ -838,8 +804,7 @@ class DataFrameVisitorMixin(ClassVisitorMixin):
         """
         title: Visit SeriesRetain nodes.
         parameters:
-          node:
-            type: astx.SeriesRetain
+          node: Syntax node to process.
         """
         self.visit_child(node.base)
         column_handle = safe_pop(self.result_stack)
@@ -857,8 +822,7 @@ class DataFrameVisitorMixin(ClassVisitorMixin):
         """
         title: Visit SeriesRelease nodes.
         parameters:
-          node:
-            type: astx.SeriesRelease
+          node: Syntax node to process.
         """
         self.visit_child(node.base)
         column_handle = safe_pop(self.result_stack)

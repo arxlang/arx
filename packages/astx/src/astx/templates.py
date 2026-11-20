@@ -1,8 +1,7 @@
 """
 title: ASTx template AST helpers.
-summary: >-
-  Provide semantic-facing template metadata for compile-time specialization
-  without requiring parser-level syntax support.
+summary: Provide semantic-facing template metadata for compile-time
+  specialization without requiring parser-level syntax support.
 """
 
 from __future__ import annotations
@@ -26,16 +25,12 @@ _GENERATED_TEMPLATE_NODES_ATTR = "astx_generated_template_nodes"
 class TemplateParam:
     """
     title: One compile-time template parameter.
-    summary: >-
-      Describe one bounded template variable attached to a function or method
-      declaration.
+    summary: Describe one bounded template variable attached to a function
+      or method declaration.
     attributes:
-      name:
-        type: str
-      bound:
-        type: astx.DataType
-      loc:
-        type: astx.SourceLocation
+      name: Name identifying this declaration.
+      bound: Names bound in the function scope.
+      loc: Source coordinates attached to this node.
     """
 
     name: str
@@ -51,10 +46,8 @@ def set_template_params(
     """
     title: Attach template parameters to one AST node.
     parameters:
-      node:
-        type: astx.AST
-      params:
-        type: Iterable[TemplateParam]
+      node: Syntax node to process.
+      params: Params.
     """
     setattr(node, _TEMPLATE_PARAMS_ATTR, tuple(params))
 
@@ -64,10 +57,8 @@ def get_template_params(node: astx.AST) -> tuple[TemplateParam, ...]:
     """
     title: Return the template parameters attached to one AST node.
     parameters:
-      node:
-        type: astx.AST
-    returns:
-      type: tuple[TemplateParam, Ellipsis]
+      node: Syntax node to process.
+    returns: The template parameters attached to one AST node.
     """
     value = getattr(node, _TEMPLATE_PARAMS_ATTR, ())
     return tuple(value)
@@ -78,10 +69,8 @@ def is_template_node(node: astx.AST) -> bool:
     """
     title: Return whether one AST node carries template parameters.
     parameters:
-      node:
-        type: astx.AST
-    returns:
-      type: bool
+      node: Syntax node to process.
+    returns: Whether one AST node carries template parameters.
     """
     return bool(get_template_params(node))
 
@@ -94,10 +83,8 @@ def set_template_args(
     """
     title: Attach explicit template arguments to one call-like AST node.
     parameters:
-      node:
-        type: astx.AST
-      args:
-        type: Iterable[astx.DataType] | None
+      node: Syntax node to process.
+      args: Arguments supplied to the operation.
     """
     if args is None:
         setattr(node, _TEMPLATE_ARGS_ATTR, None)
@@ -110,10 +97,8 @@ def get_template_args(node: astx.AST) -> tuple[astx.DataType, ...] | None:
     """
     title: Return the explicit template arguments attached to one AST node.
     parameters:
-      node:
-        type: astx.AST
-    returns:
-      type: tuple[astx.DataType, Ellipsis] | None
+      node: Syntax node to process.
+    returns: The explicit template arguments attached to one AST node.
     """
     value = getattr(node, _TEMPLATE_ARGS_ATTR, None)
     if value is None:
@@ -129,10 +114,8 @@ def mark_template_specialization(
     """
     title: Mark one AST node as a generated template specialization.
     parameters:
-      node:
-        type: astx.AST
-      specialization_name:
-        type: str
+      node: Syntax node to process.
+      specialization_name: Name of specialization.
     """
     setattr(node, _TEMPLATE_SPECIALIZATION_ATTR, specialization_name)
 
@@ -142,10 +125,8 @@ def template_specialization_name(node: astx.AST) -> str | None:
     """
     title: Return the generated specialization name for one AST node.
     parameters:
-      node:
-        type: astx.AST
-    returns:
-      type: str | None
+      node: Syntax node to process.
+    returns: The generated specialization name for one AST node.
     """
     value = getattr(node, _TEMPLATE_SPECIALIZATION_ATTR, None)
     return value if isinstance(value, str) else None
@@ -156,10 +137,8 @@ def is_template_specialization(node: astx.AST) -> bool:
     """
     title: Return whether one AST node is a generated specialization.
     parameters:
-      node:
-        type: astx.AST
-    returns:
-      type: bool
+      node: Syntax node to process.
+    returns: Whether one AST node is a generated specialization.
     """
     return template_specialization_name(node) is not None
 
@@ -172,10 +151,8 @@ def add_generated_template_node(
     """
     title: Attach one generated template node to a module.
     parameters:
-      module:
-        type: astx.Module
-      node:
-        type: astx.AST
+      module: Module to process.
+      node: Syntax node to process.
     """
     nodes = list(getattr(module, _GENERATED_TEMPLATE_NODES_ATTR, ()))
     nodes.append(node)
@@ -187,8 +164,7 @@ def clear_generated_template_nodes(module: astx.Module) -> None:
     """
     title: Remove generated template nodes attached to one module.
     parameters:
-      module:
-        type: astx.Module
+      module: Module to process.
     """
     setattr(module, _GENERATED_TEMPLATE_NODES_ATTR, ())
 
@@ -198,10 +174,8 @@ def generated_template_nodes(module: astx.Module) -> tuple[astx.AST, ...]:
     """
     title: Return the generated template nodes attached to a module.
     parameters:
-      module:
-        type: astx.Module
-    returns:
-      type: tuple[astx.AST, Ellipsis]
+      module: Module to process.
+    returns: The generated template nodes attached to a module.
     """
     value = getattr(module, _GENERATED_TEMPLATE_NODES_ATTR, ())
     return tuple(value)

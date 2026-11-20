@@ -23,10 +23,9 @@ def source_main_ir(ir_text: str) -> str:
     """
     title: Inspect the generated source main separately from C ABI wrappers.
     parameters:
-      ir_text:
-        type: str
-    returns:
-      type: str
+      ir_text: IR text.
+    returns: 'Result of this operation: inspect the generated source main
+      separately from C ABI wrappers.'
     """
     module = llvm.parse_assembly(ir_text)
     return str(module.get_function("irx.entry.main"))
@@ -37,10 +36,9 @@ def _boolean_main_module(*nodes: astx.AST) -> astx.Module:
     title: Build a module with one Boolean-returning main function.
     parameters:
       nodes:
-        type: astx.AST
         variadic: positional
-    returns:
-      type: astx.Module
+        description: Syntax nodes in source order.
+    returns: Constructed a module with one Boolean-returning main function.
     """
     return make_main_module(*nodes, return_type=astx.Boolean())
 
@@ -50,10 +48,9 @@ def _int_main_module(*nodes: astx.AST) -> astx.Module:
     title: Build a module with one int32-returning main function.
     parameters:
       nodes:
-        type: astx.AST
         variadic: positional
-    returns:
-      type: astx.Module
+        description: Syntax nodes in source order.
+    returns: Constructed a module with one int32-returning main function.
     """
     return make_main_module(*nodes, return_type=astx.Int32())
 
@@ -65,8 +62,7 @@ def test_boolean_literal_declaration_and_assignment(
     """
     title: Boolean locals should round-trip through declaration and assignment.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     module = _boolean_main_module(
@@ -97,11 +93,10 @@ def test_function_accepts_boolean_parameter_and_returns_boolean(
     builder_class: type[Builder],
 ) -> None:
     """
-    title: >-
-      Boolean params and returns should lower cleanly as first-class values.
+    title: Boolean params and returns should lower cleanly as first-class
+      values.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     module = builder.module()
@@ -147,8 +142,7 @@ def test_comparison_result_assigns_to_boolean_variable(
     """
     title: Comparison results should assign into Boolean locals.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     module = _boolean_main_module(
@@ -180,8 +174,7 @@ def test_comparison_result_returns_from_function(
     """
     title: Comparison results should return directly from Boolean functions.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     module = builder.module()
@@ -237,8 +230,7 @@ def test_boolean_condition_in_if(builder_class: type[Builder]) -> None:
     """
     title: If statements should accept Boolean conditions only.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     then_block = astx.Block()
@@ -271,8 +263,7 @@ def test_boolean_condition_in_while(builder_class: type[Builder]) -> None:
     """
     title: While statements should branch on Boolean locals.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     body = astx.Block()
@@ -311,8 +302,7 @@ def test_boolean_condition_in_for_count_loop(
     """
     title: For-count loops should branch on Boolean conditions.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     loop_body = astx.Block()
@@ -367,10 +357,8 @@ def test_boolean_logical_binary_operations(
     """
     title: Logical binary operators should accept only Boolean operands.
     parameters:
-      builder_class:
-        type: type[Builder]
-      op:
-        type: str
+      builder_class: Builder implementation under test.
+      op: Op.
     """
     builder = builder_class()
     module = _boolean_main_module(
@@ -395,8 +383,7 @@ def test_boolean_logical_not(builder_class: type[Builder]) -> None:
     """
     title: Logical not should operate on Boolean values and return Boolean.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     module = _boolean_main_module(
@@ -414,11 +401,10 @@ def test_boolean_if_condition_branches_without_truthiness_compare(
     builder_class: type[Builder],
 ) -> None:
     """
-    title: >-
-      Boolean conditions should branch directly on i1 without zero compares.
+    title: Boolean conditions should branch directly on i1 without
+      zero compares.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     then_block = astx.Block()

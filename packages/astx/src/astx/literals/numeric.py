@@ -42,12 +42,9 @@ class LiteralInt8(Literal):
     """
     title: LiteralInt8 data type class.
     attributes:
-      type_:
-        type: Int8
-      loc:
-        type: SourceLocation
-      value:
-        type: int
+      type_: Type associated with this expression.
+      loc: Source coordinates attached to this node.
+      value: Stored value.
     """
 
     type_: Int8
@@ -61,10 +58,8 @@ class LiteralInt8(Literal):
         """
         title: Initialize LiteralInt8.
         parameters:
-          value:
-            type: int
-          loc:
-            type: SourceLocation
+          value: Value to process.
+          loc: Source coordinates associated with the node.
         """
         super().__init__(loc)
         self.value = value
@@ -78,12 +73,9 @@ class LiteralInt16(Literal):
     """
     title: LiteralInt16 data type class.
     attributes:
-      type_:
-        type: Int16
-      loc:
-        type: SourceLocation
-      value:
-        type: int
+      type_: Type associated with this expression.
+      loc: Source coordinates attached to this node.
+      value: Stored value.
     """
 
     type_: Int16
@@ -97,10 +89,8 @@ class LiteralInt16(Literal):
         """
         title: Initialize LiteralInt16.
         parameters:
-          value:
-            type: int
-          loc:
-            type: SourceLocation
+          value: Value to process.
+          loc: Source coordinates associated with the node.
         """
         super().__init__(loc)
         self.value = value
@@ -114,12 +104,9 @@ class LiteralInt32(Literal):
     """
     title: LiteralInt32 data type class.
     attributes:
-      type_:
-        type: Int32
-      loc:
-        type: SourceLocation
-      value:
-        type: int
+      type_: Type associated with this expression.
+      loc: Source coordinates attached to this node.
+      value: Stored value.
     """
 
     type_: Int32
@@ -133,10 +120,8 @@ class LiteralInt32(Literal):
         """
         title: Initialize LiteralInt32.
         parameters:
-          value:
-            type: int
-          loc:
-            type: SourceLocation
+          value: Value to process.
+          loc: Source coordinates associated with the node.
         """
         super().__init__(loc)
         self.value = value
@@ -150,12 +135,9 @@ class LiteralInt64(Literal):
     """
     title: LiteralInt64 data type class.
     attributes:
-      type_:
-        type: Int64
-      loc:
-        type: SourceLocation
-      value:
-        type: int
+      type_: Type associated with this expression.
+      loc: Source coordinates attached to this node.
+      value: Stored value.
     """
 
     type_: Int64
@@ -169,10 +151,8 @@ class LiteralInt64(Literal):
         """
         title: Initialize LiteralInt64.
         parameters:
-          value:
-            type: int
-          loc:
-            type: SourceLocation
+          value: Value to process.
+          loc: Source coordinates associated with the node.
         """
         super().__init__(loc)
         self.value = value
@@ -186,12 +166,9 @@ class LiteralInt128(Literal):
     """
     title: LiteralInt128 data type class.
     attributes:
-      type_:
-        type: Int128
-      loc:
-        type: SourceLocation
-      value:
-        type: int
+      type_: Type associated with this expression.
+      loc: Source coordinates attached to this node.
+      value: Stored value.
     """
 
     type_: Int128
@@ -205,10 +182,8 @@ class LiteralInt128(Literal):
         """
         title: Initialize LiteralInt128.
         parameters:
-          value:
-            type: int
-          loc:
-            type: SourceLocation
+          value: Value to process.
+          loc: Source coordinates associated with the node.
         """
         super().__init__(loc)
         self.value = value
@@ -222,12 +197,9 @@ class LiteralUInt8(Literal):
     """
     title: LiteralUInt8 data type class.
     attributes:
-      type_:
-        type: UInt8
-      loc:
-        type: SourceLocation
-      value:
-        type: int
+      type_: Type associated with this expression.
+      loc: Source coordinates attached to this node.
+      value: Stored value.
     """
 
     type_: UInt8
@@ -241,10 +213,8 @@ class LiteralUInt8(Literal):
         """
         title: Initialize LiteralUInt8.
         parameters:
-          value:
-            type: int
-          loc:
-            type: SourceLocation
+          value: Value to process.
+          loc: Source coordinates associated with the node.
         """
         super().__init__(loc)
         self.value = value
@@ -258,12 +228,9 @@ class LiteralUInt16(Literal):
     """
     title: LiteralUInt16 data type class.
     attributes:
-      type_:
-        type: UInt16
-      loc:
-        type: SourceLocation
-      value:
-        type: int
+      type_: Type associated with this expression.
+      loc: Source coordinates attached to this node.
+      value: Stored value.
     """
 
     type_: UInt16
@@ -277,10 +244,8 @@ class LiteralUInt16(Literal):
         """
         title: Initialize LiteralUInt16.
         parameters:
-          value:
-            type: int
-          loc:
-            type: SourceLocation
+          value: Value to process.
+          loc: Source coordinates associated with the node.
         """
         super().__init__(loc)
         self.value = value
@@ -294,12 +259,9 @@ class LiteralUInt32(Literal):
     """
     title: LiteralUInt32 data type class.
     attributes:
-      type_:
-        type: UInt32
-      loc:
-        type: SourceLocation
-      value:
-        type: int
+      type_: Type associated with this expression.
+      loc: Source coordinates attached to this node.
+      value: Stored value.
     """
 
     type_: UInt32
@@ -313,10 +275,8 @@ class LiteralUInt32(Literal):
         """
         title: Initialize LiteralUInt32.
         parameters:
-          value:
-            type: int
-          loc:
-            type: SourceLocation
+          value: Value to process.
+          loc: Source coordinates associated with the node.
         """
         super().__init__(loc)
         self.value = value
@@ -330,12 +290,9 @@ class LiteralUInt64(Literal):
     """
     title: LiteralUInt64 data type class.
     attributes:
-      type_:
-        type: UInt64
-      loc:
-        type: SourceLocation
-      value:
-        type: int
+      type_: Type associated with this expression.
+      loc: Source coordinates attached to this node.
+      value: Stored value.
     """
 
     type_: UInt64
@@ -349,10 +306,8 @@ class LiteralUInt64(Literal):
         """
         title: Initialize LiteralUInt64.
         parameters:
-          value:
-            type: int
-          loc:
-            type: SourceLocation
+          value: Value to process.
+          loc: Source coordinates associated with the node.
         """
         super().__init__(loc)
         self.value = value
@@ -366,12 +321,9 @@ class LiteralUInt128(Literal):
     """
     title: LiteralUInt128 data type class.
     attributes:
-      type_:
-        type: UInt128
-      loc:
-        type: SourceLocation
-      value:
-        type: int
+      type_: Type associated with this expression.
+      loc: Source coordinates attached to this node.
+      value: Stored value.
     """
 
     type_: UInt128
@@ -385,10 +337,8 @@ class LiteralUInt128(Literal):
         """
         title: Initialize LiteralUInt128.
         parameters:
-          value:
-            type: int
-          loc:
-            type: SourceLocation
+          value: Value to process.
+          loc: Source coordinates associated with the node.
         """
         super().__init__(loc)
         self.value = value
@@ -402,12 +352,9 @@ class LiteralFloat16(Literal):
     """
     title: LiteralFloat16 data type class.
     attributes:
-      type_:
-        type: Float16
-      loc:
-        type: SourceLocation
-      value:
-        type: float
+      type_: Type associated with this expression.
+      loc: Source coordinates attached to this node.
+      value: Stored value.
     """
 
     type_: Float16
@@ -421,10 +368,8 @@ class LiteralFloat16(Literal):
         """
         title: Initialize LiteralFloat16.
         parameters:
-          value:
-            type: float
-          loc:
-            type: SourceLocation
+          value: Value to process.
+          loc: Source coordinates associated with the node.
         """
         super().__init__(loc)
         self.value = value
@@ -438,12 +383,9 @@ class LiteralFloat32(Literal):
     """
     title: LiteralFloat32 data type class.
     attributes:
-      type_:
-        type: Float32
-      loc:
-        type: SourceLocation
-      value:
-        type: float
+      type_: Type associated with this expression.
+      loc: Source coordinates attached to this node.
+      value: Stored value.
     """
 
     type_: Float32
@@ -457,10 +399,8 @@ class LiteralFloat32(Literal):
         """
         title: Initialize LiteralFloat32.
         parameters:
-          value:
-            type: float
-          loc:
-            type: SourceLocation
+          value: Value to process.
+          loc: Source coordinates associated with the node.
         """
         super().__init__(loc)
         self.value = value
@@ -474,12 +414,9 @@ class LiteralFloat64(Literal):
     """
     title: LiteralFloat64 data type class.
     attributes:
-      type_:
-        type: Float64
-      loc:
-        type: SourceLocation
-      value:
-        type: float
+      type_: Type associated with this expression.
+      loc: Source coordinates attached to this node.
+      value: Stored value.
     """
 
     type_: Float64
@@ -493,10 +430,8 @@ class LiteralFloat64(Literal):
         """
         title: Initialize LiteralFloat64.
         parameters:
-          value:
-            type: float
-          loc:
-            type: SourceLocation
+          value: Value to process.
+          loc: Source coordinates associated with the node.
         """
         super().__init__(loc)
         self.value = value
@@ -510,10 +445,8 @@ class LiteralComplex(Literal):
     """
     title: Base class for literal complex numbers.
     attributes:
-      type_:
-        type: Complex
-      value:
-        type: tuple[float, float]
+      type_: Type associated with this expression.
+      value: Stored value.
     """
 
     type_: Complex
@@ -528,12 +461,9 @@ class LiteralComplex(Literal):
         """
         title: Initialize a generic complex number.
         parameters:
-          real:
-            type: float
-          imag:
-            type: float
-          loc:
-            type: SourceLocation
+          real: Real.
+          imag: Imag.
+          loc: Source coordinates associated with the node.
         """
         super().__init__(loc)
         self.value = real, imag
@@ -541,8 +471,7 @@ class LiteralComplex(Literal):
     def __str__(self) -> str:
         """
         title: Return a string that represents the object.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         return f"LiteralComplex({self.value[0]} + {self.value[1]}j)"
 
@@ -550,10 +479,8 @@ class LiteralComplex(Literal):
         """
         title: Return the AST representation for the complex literal.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         key = f"{self.__class__.__name__}: {self.value}"
         value: ReprStruct = {
@@ -569,10 +496,8 @@ class LiteralComplex32(LiteralComplex):
     """
     title: LiteralComplex32 data type class.
     attributes:
-      value:
-        type: tuple[float, float]
-      type_:
-        type: Complex32
+      value: Stored value.
+      type_: Type associated with this expression.
     """
 
     type_: Complex32
@@ -586,12 +511,9 @@ class LiteralComplex32(LiteralComplex):
         """
         title: Initialize LiteralComplex32.
         parameters:
-          real:
-            type: float
-          imag:
-            type: float
-          loc:
-            type: SourceLocation
+          real: Real.
+          imag: Imag.
+          loc: Source coordinates associated with the node.
         """
         super().__init__(real, imag, loc)
         self.type_ = Complex32()
@@ -603,10 +525,8 @@ class LiteralComplex64(LiteralComplex):
     """
     title: LiteralComplex64 data type class.
     attributes:
-      value:
-        type: tuple[float, float]
-      type_:
-        type: Complex64
+      value: Stored value.
+      type_: Type associated with this expression.
     """
 
     type_: Complex64
@@ -620,12 +540,9 @@ class LiteralComplex64(LiteralComplex):
         """
         title: Initialize LiteralComplex64.
         parameters:
-          real:
-            type: float
-          imag:
-            type: float
-          loc:
-            type: SourceLocation
+          real: Real.
+          imag: Imag.
+          loc: Source coordinates associated with the node.
         """
         super().__init__(real, imag, loc)
         self.type_ = Complex64()
@@ -636,14 +553,12 @@ class LiteralComplex64(LiteralComplex):
 class LiteralInteger(Literal):
     """
     title: Exact integer literal awaiting semantic contextualization.
-    summary: >-
-      No concrete width is declared. Analysis must preserve value and record
-      the chosen type and converted constant separately in semantic metadata.
+    summary: No concrete width is declared. Analysis must preserve value
+      and record the chosen type and converted constant separately in semantic
+      metadata.
     attributes:
-      value:
-        type: int
-      type_:
-        type: DataType
+      value: Stored value.
+      type_: Type associated with this expression.
     """
 
     value: int
@@ -655,10 +570,8 @@ class LiteralInteger(Literal):
         """
         title: Preserve the mathematical integer, without truncating its width.
         parameters:
-          value:
-            type: int
-          loc:
-            type: SourceLocation
+          value: Value to process.
+          loc: Source coordinates associated with the node.
         raises:
           TypeError: If value is Boolean rather than an integer literal.
         """
@@ -674,17 +587,14 @@ class LiteralInteger(Literal):
 class LiteralFloat(Literal):
     """
     title: Exact decimal floating literal awaiting semantic contextualization.
-    summary: >-
-      Accept decimal text or Decimal, never an already-rounded Python float.
-      The finite Decimal payload is independent of the active decimal context.
-      Analysis must preserve it and record the chosen binary format and rounded
-      constant in semantic metadata. Typed LiteralFloat32 and related nodes
-      instead express an explicitly chosen binary format.
+    summary: Accept decimal text or Decimal, never an already-rounded Python
+      float. The finite Decimal payload is independent of the active decimal
+      context. Analysis must preserve it and record the chosen binary format
+      and rounded constant in semantic metadata. Typed LiteralFloat32 and
+      related nodes instead express an explicitly chosen binary format.
     attributes:
-      value:
-        type: Decimal
-      type_:
-        type: DataType
+      value: Stored value.
+      type_: Type associated with this expression.
     """
 
     value: Decimal
@@ -696,10 +606,8 @@ class LiteralFloat(Literal):
         """
         title: Preserve an exact finite decimal value without binary rounding.
         parameters:
-          value:
-            type: str | Decimal
-          loc:
-            type: SourceLocation
+          value: Value to process.
+          loc: Source coordinates associated with the node.
         raises:
           ValueError: If the value is malformed or nonfinite.
         """
@@ -721,10 +629,8 @@ class LiteralFloat(Literal):
         """
         title: Represent the exact value without introducing a JSON float.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         return self._prepare_struct(
             "LiteralFloat", str(self.value), simplified

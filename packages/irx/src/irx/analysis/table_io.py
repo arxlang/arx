@@ -41,8 +41,7 @@ class TableOperation(CallOperation):
     """
     title: Trusted host operation identity independent of local source names.
     attributes:
-      name:
-        type: TableIOOperation
+      name: Name identifying this declaration.
     """
 
     name: TableIOOperation
@@ -60,8 +59,7 @@ def validate_operation(name: TableIOOperation) -> None:
     """
     title: Validate generated operation constructor arguments.
     parameters:
-      name:
-        type: TableIOOperation
+      name: Name identifying the declaration or operation.
     """
 
 
@@ -71,8 +69,7 @@ class ReadTableOperation(TableOperation):
     """
     title: Nominal read operation dispatch key.
     attributes:
-      name:
-        type: TableIOOperation
+      name: Name identifying this declaration.
     """
 
 
@@ -82,8 +79,7 @@ class WriteTableOperation(TableOperation):
     """
     title: Nominal write operation dispatch key.
     attributes:
-      name:
-        type: TableIOOperation
+      name: Name identifying this declaration.
     """
 
 
@@ -93,8 +89,7 @@ class AuxiliaryTableOperation(TableOperation):
     """
     title: Existing predicate and streaming operations.
     attributes:
-      name:
-        type: TableIOOperation
+      name: Name identifying this declaration.
     """
 
 
@@ -104,10 +99,8 @@ def table_operation(name: TableIOOperation) -> TableOperation:
     """
     title: Construct meaning only from a validated host capability.
     parameters:
-      name:
-        type: TableIOOperation
-    returns:
-      type: TableOperation
+      name: Name identifying the declaration or operation.
+    returns: Constructed meaning only from a validated host capability.
     """
     if name.startswith("read_"):
         return ReadTableOperation(name)
@@ -170,16 +163,11 @@ class TableIOArgument:
     """
     title: One source-order operand with a validated lowering contract.
     attributes:
-      name:
-        type: str
-      expression:
-        type: astx.AST
-      kind:
-        type: str
-      handle_index:
-        type: int | None
-      literals:
-        type: tuple[str | int, Ellipsis]
+      name: Name identifying this declaration.
+      expression: Expression to process.
+      kind: Kind of value or operation.
+      handle_index: Index selecting handle.
+      literals: Literals.
     """
 
     name: str
@@ -208,14 +196,10 @@ class TableIOCall(CallPlan):
     """
     title: Complete I/O plan with omission and native identities.
     attributes:
-      operation:
-        type: TableIOOperation
-      arguments:
-        type: tuple[TableIOArgument, Ellipsis]
-      construction:
-        type: astx.ClassConstruct | None
-      result_handle_index:
-        type: int | None
+      operation: Operation to resolve or execute.
+      arguments: Arguments supplied to the call.
+      construction: Construction.
+      result_handle_index: Index selecting result handle.
     """
 
     operation: TableIOOperation
@@ -225,8 +209,8 @@ class TableIOCall(CallPlan):
 
     def __post_init__(self) -> None:
         """
-        title: >-
-          Validate generated record constructors including collection items.
+        title: Validate generated record constructors including collection
+          items.
         """
         self.validate()
 
@@ -243,11 +227,10 @@ class TableIOCall(CallPlan):
 
     def dependencies(self) -> tuple[astx.AST, ...]:
         """
-        title: >-
-          Expose operands and generated construction to declaration
+        title: Expose operands and generated construction to declaration
           reachability.
-        returns:
-          type: tuple[astx.AST, Ellipsis]
+        returns: 'Result of this operation: expose operands and generated
+          construction to declaration reachability.'
         """
         expressions = tuple(argument.expression for argument in self.arguments)
         if self.construction is None:
@@ -258,8 +241,7 @@ class TableIOCall(CallPlan):
         """
         title: Clear table-owned companion facts before a new analysis attempt.
         parameters:
-          node:
-            type: astx.AST
+          node: Syntax node to process.
         """
         info = getattr(node, "semantic", None)
         if isinstance(info, SemanticInfo):
@@ -279,14 +261,10 @@ def validate_table_plan(
     """
     title: Validate nested table plan records at attachment boundaries.
     parameters:
-      operation:
-        type: TableIOOperation
-      arguments:
-        type: tuple[TableIOArgument, Ellipsis]
-      construction:
-        type: astx.ClassConstruct | None
-      result_handle_index:
-        type: int | None
+      operation: Operation to resolve or execute.
+      arguments: Arguments supplied to the call.
+      construction: Construction.
+      result_handle_index: Index selecting result handle.
     """
     for argument in arguments:
         validate_table_argument(
@@ -312,16 +290,11 @@ def validate_table_argument(
     """
     title: Check every collection member in a resolved operand.
     parameters:
-      name:
-        type: str
-      expression:
-        type: astx.AST
-      kind:
-        type: str
-      handle_index:
-        type: int | None
-      literals:
-        type: tuple[str | int, Ellipsis]
+      name: Name identifying the declaration or operation.
+      expression: Expression to process.
+      kind: Kind of value or operation.
+      handle_index: Index selecting handle.
+      literals: Literals.
     """
     if kind not in {
         "text",
@@ -358,16 +331,12 @@ def arrow_handle_index(
     """
     title: Require a canonical host-registered Arrow owner, never a lookalike.
     parameters:
-      services:
-        type: CallAnalysisServices
-      type_:
-        type: astx.DataType | None
-      role:
-        type: str
-      node:
-        type: astx.AST
-    returns:
-      type: int | None
+      services: Services.
+      type_: Type expression to process.
+      role: Role.
+      node: Syntax node to process.
+    returns: 'Result of this operation: require a canonical host-registered
+      Arrow owner, never a lookalike.'
     """
     if not isinstance(type_, astx.ClassType):
         return None
@@ -400,10 +369,8 @@ def resolve_table_io(
     """
     title: Bind a resolved operation through explicit narrow analysis services.
     parameters:
-      operation_key:
-        type: TableOperation
-      call:
-        type: AnalysisCall
+      operation_key: Operation key.
+      call: Call being processed.
     """
     operation = operation_key.name
     node, function, info = call.node, call.function, call.info
@@ -435,10 +402,8 @@ def resolve_table_io(
         """
         title: Diagnose invalid I/O inputs at their trustworthy source node.
         parameters:
-          message:
-            type: str
-          location:
-            type: astx.AST
+          message: Diagnostic or output message.
+          location: Source coordinates associated with the operation.
         """
         nonlocal valid
         valid = False
@@ -607,11 +572,7 @@ class TableIOAnalysisVisitor(CallAnalysisVisitor):
         """
         title: Resolve the closed table family with its shared contract.
         parameters:
-          operation:
-            type: >-
-              ReadTableOperation | WriteTableOperation |
-              AuxiliaryTableOperation
-          call:
-            type: AnalysisCall
+          operation: Operation to resolve or execute.
+          call: Call being processed.
         """
         resolve_table_io(operation, call)

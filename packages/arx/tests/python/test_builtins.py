@@ -54,10 +54,8 @@ def test_file_import_resolver_loads_builtins_from_packaged_resources(
     """
     title: Internal builtin resolution loads packaged compiler resources.
     parameters:
-      tmp_path:
-        type: Path
-      monkeypatch:
-        type: pytest.MonkeyPatch
+      tmp_path: Temporary directory for this test.
+      monkeypatch: Fixture for temporarily replacing dependencies and settings.
     """
     monkeypatch.chdir(tmp_path)
     source = tmp_path / "main.x"
@@ -95,10 +93,8 @@ def test_file_import_resolver_keeps_intrinsic_range_for_user_modules(
     """
     title: Imported project modules need no source range implementation.
     parameters:
-      tmp_path:
-        type: Path
-      monkeypatch:
-        type: pytest.MonkeyPatch
+      tmp_path: Temporary directory for this test.
+      monkeypatch: Fixture for temporarily replacing dependencies and settings.
     """
     monkeypatch.chdir(tmp_path)
     source = tmp_path / "main.x"
@@ -161,8 +157,7 @@ def test_arxmain_compiles_program_using_ambient_range_and_stdlib(
     """
     title: Ambient builtins and stdlib remain distinct during compilation.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     source = tmp_path / "main.x"
     source.write_text(
@@ -212,10 +207,8 @@ def test_arxmain_rejects_public_builtin_imports(
     """
     title: User modules cannot import internal compiler builtins directly.
     parameters:
-      tmp_path:
-        type: Path
-      source_text:
-        type: str
+      tmp_path: Temporary directory for this test.
+      source_text: Source text.
     """
     source = tmp_path / "main.x"
     source.write_text(source_text, encoding="utf-8")
@@ -237,8 +230,7 @@ def test_arxmain_compiles_imported_module_using_ambient_range(
     """
     title: Imported project modules can call ambient range without imports.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     helper = tmp_path / "helper.x"
     helper.write_text(
@@ -284,8 +276,7 @@ def test_arxmain_compiles_range_list_creation_with_variable_stop(
     """
     title: Range list creation supports a non-literal stop expression.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     source = tmp_path / "main.x"
     source.write_text(
@@ -323,8 +314,7 @@ def test_arxmain_compiles_for_in_over_list_variable(
     """
     title: For-in loops compile over list variables produced by range.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     source = tmp_path / "main.x"
     source.write_text(
@@ -361,8 +351,7 @@ def test_arxmain_compiles_for_in_over_list_literal(
     """
     title: For-in loops compile over literal lists.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     source = tmp_path / "main.x"
     source.write_text(
@@ -398,8 +387,7 @@ def test_arxmain_rejects_namespaced_range_reference_in_for_loop(
     """
     title: Builtin range is still not available through a user namespace path.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     source = tmp_path / "main.x"
     source.write_text(
@@ -434,8 +422,7 @@ def test_ambient_builtin_injection_allows_local_range_definition(
     """
     title: Local top-level definitions can override ambient builtin names.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     source = tmp_path / "main.x"
     source.write_text(
@@ -485,8 +472,7 @@ def test_ambient_builtin_injection_allows_imported_range_binding(
     """
     title: Imported top-level names can override ambient builtin names.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     helper = tmp_path / "helper.x"
     helper.write_text(
@@ -539,8 +525,7 @@ def test_arxmain_rejects_local_builtin_shadowing(tmp_path: Path) -> None:
     """
     title: Local user modules cannot shadow the reserved builtin namespace.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     local_builtins = tmp_path / "builtins"
     local_builtins.mkdir()
@@ -592,8 +577,7 @@ def test_range_builtin_rejects_zero_step_at_runtime(
     """
     title: Zero step is rejected when executing the builtin range helper.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     entry = tmp_path / "test_range_zero_step.x"
     entry.write_text(
