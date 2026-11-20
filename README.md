@@ -15,7 +15,6 @@ encoding those containers directly in LLVM IR.
 - Documentation: <https://arxlang.org>
 - Issue tracker: <https://github.com/arxlang/arx/issues>
 - License: Apache-2.0
-- Maintained by: [SciStitch](https://scistitch.com) and the ArxLang community
 
 ## Ecosystem
 
@@ -117,3 +116,21 @@ and lockstep versions.
 - [ASTx](https://arxlang.org/astx/)
 - [IRx](https://arxlang.org/irx/)
 - [Roadmap](https://arxlang.org/roadmap.html)
+
+## Support & Acknowledgments
+
+### Help build the next generation of open compiler tools
+
+ArxLang brings language design, compiler infrastructure, and native Apache Arrow support into one open ecosystem. Advancing a compiler is long-term engineering work: every improvement needs careful testing, documentation, and attention to the libraries and platforms it depends on. Financial contributions help sustain that work, improve developer tooling, and make it easier for new contributors to participate.
+
+**[Support ArxLang development on Open Collective](https://opencollective.com/osl/projects/arxlang/donate?interval=month&amount=20&name=&legalName=&email=)**. Whether you give once or every month, your support helps make continued progress possible.
+
+### Built with the community
+
+ArxLang is a community-led, community-governed open-source project. Development and maintenance work is carried out through [SciStitch](https://scistitch.com/) in collaboration with the wider ArxLang community; this credit does not change the project's governance. We thank [Open Science Labs (OSL)](https://opensciencelabs.org/) for its institutional support, and all contributors and users for their code, reviews, testing, ideas, and feedback.
+
+<p>
+  <a href="https://scistitch.com/"><img src="https://scistitch.com/images/logo/wordmark-color.svg" alt="SciStitch" width="160"></a>
+  &nbsp;&nbsp;
+  <a href="https://opensciencelabs.org/"><img src="https://scistitch.com/assets/osl-logo.svg" alt="Open Science Labs" width="128"></a>
+</p>
