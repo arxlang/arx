@@ -31,22 +31,21 @@ from irx.typecheck import typechecked
 if TYPE_CHECKING:
     from irx.builder.protocols import VisitorProtocol
 
-COMPUTE_ABI_VERSION = 1
+COMPUTE_ABI_VERSION = 2
 
 # Return type first; the flat ABI never embeds Arrow or descriptor layouts.
 COMPUTE_SIGNATURES: dict[str, tuple[str, ...]] = {
     "irx_arrow_compute_abi_version": ("i32",),
-    "irx_arrow_compute_supports": ("i32",) * 7,
+    "irx_arrow_compute_supports": ("i32",) * 8,
     "irx_arrow_compute": (
-        "i32",
-        "i32",
-        "i32",
-        "i32",
-        "i32",
+        *("i32",) * 8,
+        "p",
+        "i64",
         "i32",
         "i32",
         "p",
         "i64",
+        "i32",
         "i32",
         "pp",
         "i64p",

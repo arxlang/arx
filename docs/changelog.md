@@ -15,6 +15,15 @@
 
 ## Unreleased
 
+- **Breaking (native ABI):** Arrow Compute revision 2 replaces the unary-only
+  revision 1 and removes `irx_arrow_column_compute` / `_promoted`. Rebuild native
+  consumers with the updated header: typed operation/operand/result IDs now
+  share one dispatcher for math and nullable/Series operators and reductions.
+  Managed integer failures now raise `OverflowError` or `ZeroDivisionError`;
+  floating division uses IEEE results like primitive scalars. Existing eager,
+  strict-null Boolean operators are unchanged. Analyzed scalar and Series
+  promotions both use Arrow safe casts.
+
 - `stdlib.math.sqrt` and `exp` execute f64 scalar, nullable and Series calls
   through shared Arrow Compute, including imports from `.x`-only libraries.
   IEEE domain results and null propagation apply; no options or implicit

@@ -49,36 +49,65 @@ BUILTIN_RUNTIME_FEATURES = frozenset(
 
 @private
 @typechecked
-def read_compute_catalog() -> Mapping[str, tuple[int, int]]:
+@dataclass(frozen=True)
+class ComputeCapability:
     """
-    title: Read the shared closed native operation IDs and numerical bounds.
+    title: One closed shared semantic/native compute contract.
+    attributes:
+      operation_id:
+        type: int
+      arity:
+        type: int
+      domain:
+        type: str
+      result:
+        type: str
+      max_ulps:
+        type: int
+    """
+
+    operation_id: int
+    arity: int
+    domain: str
+    result: str
+    max_ulps: int
+
+
+@private
+@typechecked
+def read_compute_catalog() -> Mapping[str, ComputeCapability]:
+    """
+    title: Read and validate the native operation table without loading LLVM.
     returns:
-      type: Mapping[str, tuple[int, int]]
+      type: Mapping[str, ComputeCapability]
     """
     path = (
         Path(__file__).parent
         / "builder/runtime/arrow/native"
         / "irx_arrow_compute_catalog.h"
     )
-    operations: dict[str, tuple[int, int]] = {}
+    operations: dict[str, ComputeCapability] = {}
     for line in path.read_text(encoding="utf-8").splitlines():
         if not line or line.startswith("//"):
             continue
         match = re.fullmatch(
-            r"IRX_COMPUTE_OPERATION\(([A-Z]+), ([1-9][0-9]*), "
-            r"([a-z]+), ([1-9][0-9]*)\)",
+            r"IRX_COMPUTE_OPERATION\(([A-Z_]+), ([1-9][0-9]*), "
+            r"([a-z_]+), ([12]), (F64|NUMERIC|PRIMITIVE|BOOL|ANY), "
+            r"(SAME|BOOL|SUM|MINMAX|MEAN|COUNT|BOOL_REDUCE), ([0-9]+)\)",
             line,
         )
         if match is None:
             raise ValueError("invalid native compute catalog entry")
-        symbol, identifier, name, ulps = match.groups()
+        symbol, identifier, name, arity, domain, result, ulps = match.groups()
         if symbol != name.upper() or name in operations:
             raise ValueError("duplicate or mismatched compute operation")
         if int(identifier) > 2**31 - 1:
             raise ValueError("compute operation ID exceeds the native ABI")
-        operations[name] = (int(identifier), int(ulps))
-    identifiers = [value[0] for value in operations.values()]
-    if set(operations) != set(get_args(ComputeKernel)) or len(
+        operations[name] = ComputeCapability(
+            int(identifier), int(arity), domain, result, int(ulps)
+        )
+    identifiers = [value.operation_id for value in operations.values()]
+    if not set(get_args(ComputeKernel)).issubset(operations) or len(
         identifiers
     ) != len(set(identifiers)):
         raise ValueError("native compute catalog disagrees with semantic API")
@@ -97,7 +126,7 @@ def validate_compute_kernel(kernel: ComputeKernel) -> None:
       kernel:
         type: ComputeKernel
     """
-    if kernel not in COMPUTE_CATALOG:
+    if kernel not in get_args(ComputeKernel):
         raise ValueError("unsupported compute kernel")
 
 

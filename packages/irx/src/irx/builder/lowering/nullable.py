@@ -7,8 +7,6 @@ title: Lower resolved nullable operations through focused Arrow primitives.
 
 from __future__ import annotations
 
-from typing import cast
-
 import astx
 
 from llvmlite import ir
@@ -20,7 +18,6 @@ from irx.builder.diagnostics import (
     require_lowered_value,
     require_semantic_metadata,
 )
-from irx.builder.lowering.control_flow import ControlFlowVisitorMixin
 from irx.builder.lowering.dataframe import DataFrameVisitorMixin
 from irx.builder.runtime import safe_pop
 from irx.builder.runtime.arrow_compute import COMPUTE_ABI_VERSION
@@ -164,18 +161,64 @@ class NullableVisitorMixin(DataFrameVisitorMixin):
           plan:
             type: ComputePlan
         """
+        self.emit_compute(
+            node,
+            plan.operation.operation_id,
+            plan.operation.arrow_type_id,
+            plan.operation.arrow_type_id,
+            plan.result_type,
+            (plan.argument,),
+            (plan.operation.arrow_type_id,),
+        )
+
+    def emit_compute(
+        self,
+        node: astx.AST,
+        operation_id: int,
+        input_id: int,
+        result_id: int,
+        result_type: astx.DataType,
+        arguments: tuple[astx.AST, ...],
+        operand_ids: tuple[int, ...],
+    ) -> None:
+        """
+        title: Emit one versioned call from resolved operands and conversions.
+        parameters:
+          node:
+            type: astx.AST
+          operation_id:
+            type: int
+          input_id:
+            type: int
+          result_id:
+            type: int
+          result_type:
+            type: astx.DataType
+          arguments:
+            type: tuple[astx.AST, Ellipsis]
+          operand_ids:
+            type: tuple[int, Ellipsis]
+        """
         builder = self._llvm.ir_builder
         integer = ir.IntType(32)
-        zero, one = ir.Constant(integer, 0), ir.Constant(integer, 1)
-        series = plan.shape == "series"
-        target = plan.conversion.target_type
-        if isinstance(target, astx.NullableType):
-            target = target.value_type
-        operand = self.column_operand(
-            plan.argument, None if series else target
-        )
-        if series:
-            operand[2] = zero
+        zero = ir.Constant(integer, 0)
+        series = isinstance(result_type, astx.SeriesType)
+        operands: list[ir.Value] = []
+        for argument, type_id in zip(arguments, operand_ids, strict=True):
+            operand = self.column_operand(argument)
+            # A Series descriptor has no scalar payload/validity.
+            if isinstance(self._resolved_ast_type(argument), astx.SeriesType):
+                operand[2] = zero
+            operands.extend([ir.Constant(integer, type_id), *operand])
+        if len(arguments) == 1:
+            operands.extend(
+                [
+                    zero,
+                    ir.Constant(self._llvm.CHUNKED_ARRAY_HANDLE_TYPE, None),
+                    ir.Constant(ir.IntType(64), 0),
+                    zero,
+                ]
+            )
         abi = ir.Constant(integer, COMPUTE_ABI_VERSION)
         version = builder.call(
             self.require_runtime_symbol(
@@ -199,12 +242,13 @@ class NullableVisitorMixin(DataFrameVisitorMixin):
             self.require_runtime_symbol("arrow_compute", "irx_arrow_compute"),
             [
                 abi,
-                ir.Constant(integer, plan.operation.operation_id),
-                one,
+                ir.Constant(integer, operation_id),
+                ir.Constant(integer, len(arguments)),
                 zero,
-                ir.Constant(integer, plan.operation.arrow_type_id),
+                ir.Constant(integer, input_id),
                 ir.Constant(integer, 2 if series else 1),
-                *operand,
+                *operands,
+                ir.Constant(integer, result_id),
                 output,
                 bits,
                 valid,
@@ -218,7 +262,7 @@ class NullableVisitorMixin(DataFrameVisitorMixin):
             self.arrow_temporary(node, column)
             self.result_stack.append(column)
             return
-        self.column_result(node, plan.result_type, bits, valid)
+        self.column_result(node, result_type, bits, valid)
 
     def lower_column_operation(self, node: astx.AST) -> bool:
         """
@@ -237,12 +281,16 @@ class NullableVisitorMixin(DataFrameVisitorMixin):
         if isinstance(node, astx.BinaryOp) and plan.kernel == "set":
             self.lower_series_store(node, plan)
             return True
-        bits = self.create_entry_block_alloca("column_bits", ir.IntType(64))
-        valid = self.create_entry_block_alloca("column_valid", ir.IntType(32))
         if isinstance(node, astx.SubscriptExpr) and plan.kernel == "slice":
             self.lower_series_slice(node)
             return True
         if isinstance(node, astx.SubscriptExpr):
+            bits = self.create_entry_block_alloca(
+                "column_bits", ir.IntType(64)
+            )
+            valid = self.create_entry_block_alloca(
+                "column_valid", ir.IntType(32)
+            )
             operand = self.column_operand(node.value)
             self.visit_child(node.index)
             index = require_lowered_value(
@@ -270,56 +318,15 @@ class NullableVisitorMixin(DataFrameVisitorMixin):
             self.check_arrow_status(node, status, "series_index")
             self.column_result(node, plan.result, bits, valid)
             return True
-        if isinstance(node, astx.BinaryOp):
-            lhs, rhs = (
-                self.column_operand(node.lhs, plan.input_type),
-                self.column_operand(node.rhs, plan.input_type),
-            )
-        elif isinstance(node, astx.NullFill):
-            lhs, rhs = (
-                self.column_operand(node.value),
-                self.column_operand(node.replacement),
-            )
-        elif isinstance(
-            node, (astx.NullCheck, astx.SeriesReduction, astx.UnaryOp)
-        ):
-            lhs = self.column_operand(
-                node.operand if isinstance(node, astx.UnaryOp) else node.value
-            )
-            rhs = [
-                ir.Constant(self._llvm.CHUNKED_ARRAY_HANDLE_TYPE, None),
-                ir.Constant(ir.IntType(64), 0),
-                ir.Constant(ir.IntType(32), 0),
-            ]
-        else:
-            raise TypeError("invalid column operation metadata")
-        output = self.create_entry_block_alloca(
-            "column_output", self._llvm.CHUNKED_ARRAY_HANDLE_TYPE
+        self.emit_compute(
+            node,
+            plan.operation_id,
+            plan.arrow_type_id,
+            plan.result_arrow_type_id,
+            plan.result,
+            plan.arguments,
+            plan.operand_arrow_type_ids,
         )
-        kernel = cast(
-            ControlFlowVisitorMixin, self
-        )._constant_c_string_pointer(plan.kernel, name_hint="column_kernel")
-        status = builder.call(
-            self.require_runtime_symbol(
-                "dataframe", "irx_arrow_column_compute_promoted"
-            ),
-            [
-                kernel,
-                ir.Constant(ir.IntType(32), plan.type_id),
-                *lhs,
-                *rhs,
-                output,
-                bits,
-                valid,
-            ],
-        )
-        self.check_arrow_status(node, status, "column_compute")
-        if isinstance(plan.result, astx.SeriesType):
-            column = builder.load(output)
-            self.arrow_temporary(node, column)
-            self.result_stack.append(column)
-        else:
-            self.column_result(node, plan.result, bits, valid)
         return True
 
     @VisitorCore.visit.dispatch

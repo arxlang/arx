@@ -12,7 +12,7 @@ import pytest
 
 from .test_arrow_interop import import_batch, native  # noqa: F401
 from .test_dataframe_conversion import import_schema
-from .test_nullable_kernels import bind_kernels, compute
+from .test_nullable_kernels import bind_kernels, compute, invoke_compute
 
 
 @contextmanager
@@ -234,7 +234,8 @@ def test_checked_sum(
             ctypes.c_uint64(123),
             ctypes.c_int32(123),
         )
-        result = native.irx_arrow_column_compute(
+        result = invoke_compute(
+            native,
             b"sum",
             4,
             column,

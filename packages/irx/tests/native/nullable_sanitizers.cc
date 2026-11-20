@@ -38,7 +38,7 @@ static void check_compute_abi() {
     irx_arrow_chunked_array_handle* output = nullptr;
     uint64_t bits = 123;
     int32_t valid = 123;
-    assert(irx_arrow_compute(1, operation, 1, 0, 12, 2, input, 0, 0,
+    assert(irx_arrow_compute(IRX_COMPUTE_ABI_VERSION, operation, 1, 0, 12, 2, 12, input, 0, 0, 0, nullptr, 0, 0, 12,
                             &output, &bits, &valid) == IRX_OK);
     assert(output && bits == 0 && valid == 0);
     irx_arrow_chunked_array_release(input);
@@ -55,30 +55,34 @@ static void check_compute_abi() {
     for (int missing = 0; missing < 3; ++missing) {
       output = reinterpret_cast<irx_arrow_chunked_array_handle*>(1);
       bits = valid = 123;
-      assert(irx_arrow_compute(1, operation, 1, 0, 12, 1, nullptr, 0, 1,
+      assert(irx_arrow_compute(IRX_COMPUTE_ABI_VERSION, operation, 1, 0, 12, 1, 12, nullptr, 0, 1, 0, nullptr, 0, 0, 12,
           missing == 0 ? nullptr : &output, missing == 1 ? nullptr : &bits,
           missing == 2 ? nullptr : &valid) == IRX_ERR_NULLPTR);
       if (missing != 0) assert(output == nullptr);
       if (missing != 1) assert(bits == 0);
       if (missing != 2) assert(valid == 0);
     }
-    assert(irx_arrow_compute(99, operation, 1, 0, 12, 2,
-        reinterpret_cast<irx_arrow_chunked_array_handle*>(1), 0, 0,
+    assert(irx_arrow_compute(99, operation, 1, 0, 12, 2, 12,
+        reinterpret_cast<irx_arrow_chunked_array_handle*>(1), 0, 0, 0, nullptr, 0, 0, 12,
         &output, &bits, &valid) == IRX_ERR_INVALID);
     assert(!output && bits == 0 && valid == 0);
     irx_arrow_chunked_array_handle wrong_tag;
     wrong_tag.tag = 0;
-    assert(irx_arrow_compute(1, operation, 1, 0, 12, 2, &wrong_tag, 0, 0,
+    assert(irx_arrow_compute(IRX_COMPUTE_ABI_VERSION, operation, 1, 0, 12, 2, 12, &wrong_tag, 0, 0, 0, nullptr, 0, 0, 12,
                             &output, &bits, &valid) == IRX_ERR_TYPE);
     assert(!output && bits == 0 && valid == 0);
     wrong_tag.tag = irx_arrow_chunked_array_handle::tag_value;
     wrong_tag.refcount = 1;
     wrong_tag.column = arrow::ChunkedArray::MakeEmpty(arrow::int32()).ValueOrDie();
-    assert(irx_arrow_compute(1, operation, 1, 0, 12, 2, &wrong_tag, 0, 0,
+    assert(irx_arrow_compute(IRX_COMPUTE_ABI_VERSION, operation, 1, 0, 12, 2, 12, &wrong_tag, 0, 0, 0, nullptr, 0, 0, 12,
                             &output, &bits, &valid) == IRX_ERR_TYPE);
     assert(!output && bits == 0 && valid == 0);
+    assert(irx_arrow_compute(IRX_COMPUTE_ABI_VERSION, operation, 1, 0,
+        12, 1, 12, nullptr, 0, 1, 12, nullptr, 0, 1, 12,
+        &output, &bits, &valid) == IRX_ERR_INVALID);
+    assert(!output && !bits && !valid);
     fail_allocation = true;
-    assert(irx_arrow_compute(1, operation, 1, 0, 12, 1, nullptr, 0, 1,
+    assert(irx_arrow_compute(IRX_COMPUTE_ABI_VERSION, operation, 1, 0, 12, 1, 12, nullptr, 0, 1, 0, nullptr, 0, 0, 12,
                             &output, &bits, &valid) == IRX_ERR_ALLOC);
     assert(!fail_allocation && !output && bits == 0 && valid == 0);
   }
@@ -88,6 +92,61 @@ static void check_compute_abi() {
   assert(irx::record_batch_status(arrow::Status::TypeError("test")) == IRX_ERR_TYPE);
   assert(irx::record_batch_status(arrow::Status::IOError("test")) == IRX_ERR_IO);
   assert(irx::native_exception_status(std::overflow_error("test")) == IRX_ERR_OVERFLOW);
+}
+
+static void check_compute_promotion() {
+  arrow::Int32Builder builder;
+  assert(builder.AppendValues({99, -1}).ok());
+  auto first = builder.Finish().ValueOrDie()->Slice(1);
+  assert(builder.AppendNull().ok());
+  auto second = builder.Finish().ValueOrDie();
+  auto* input = new irx_arrow_chunked_array_handle();
+  input->refcount = 1;
+  input->column = std::make_shared<arrow::ChunkedArray>(arrow::ArrayVector{first, second});
+  irx_arrow_chunked_array_handle* output = nullptr;
+  uint64_t bits = 123; int32_t valid = 123;
+  // Explicit i32 -> i64 promotion, chunk/slice validity and exact >2^53 bits.
+  const uint64_t offset = (uint64_t(1) << 63) - 1;
+  assert(irx_arrow_compute(IRX_COMPUTE_ABI_VERSION, IRX_COMPUTE_ADD_CHECKED,
+      2, 0, arrow::Type::INT64, IRX_COMPUTE_SERIES,
+      arrow::Type::INT32, input, 0, 0,
+      arrow::Type::INT64, nullptr, offset, 1, arrow::Type::INT64,
+      &output, &bits, &valid) == IRX_OK);
+  assert(output && bits == 0 && valid == 0);
+  assert(output->column->GetScalar(0).ValueOrDie()->ToString() == "9223372036854775806");
+  assert(output->column->null_count() == 1 && output->column->length() == 2);
+  irx_arrow_chunked_array_release(output);
+  // Wrong physical/declared source type, result dtype and binary length reject
+  // without publishing outputs or mutating the sliced input.
+  assert(irx_arrow_compute(IRX_COMPUTE_ABI_VERSION, IRX_COMPUTE_ADD_CHECKED,
+      2, 0, arrow::Type::INT64, IRX_COMPUTE_SERIES,
+      arrow::Type::INT64, input, 0, 0,
+      arrow::Type::INT64, nullptr, 1, 1, arrow::Type::INT64,
+      &output, &bits, &valid) == IRX_ERR_TYPE);
+  assert(!output && !bits && !valid);
+  assert(irx_arrow_compute(IRX_COMPUTE_ABI_VERSION, IRX_COMPUTE_ADD_CHECKED,
+      2, 0, arrow::Type::INT32, IRX_COMPUTE_SERIES,
+      arrow::Type::INT32, input, 0, 0,
+      arrow::Type::INT32, nullptr, 1, 1, arrow::Type::DOUBLE,
+      &output, &bits, &valid) == IRX_ERR_TYPE);
+  irx_arrow_chunked_array_handle empty;
+  empty.refcount = 1;
+  empty.column = arrow::ChunkedArray::MakeEmpty(arrow::int32()).ValueOrDie();
+  assert(irx_arrow_compute(IRX_COMPUTE_ABI_VERSION, IRX_COMPUTE_ADD_CHECKED,
+      2, 0, arrow::Type::INT32, IRX_COMPUTE_SERIES,
+      arrow::Type::INT32, input, 0, 0,
+      arrow::Type::INT32, &empty, 0, 0, arrow::Type::INT32,
+      &output, &bits, &valid) == IRX_ERR_TYPE);
+  assert(!output && !bits && !valid);
+  assert(irx_arrow_compute(IRX_COMPUTE_ABI_VERSION, IRX_COMPUTE_ADD_CHECKED,
+      2, 0, arrow::Type::INT32, IRX_COMPUTE_SERIES,
+      arrow::Type::INT32, &empty, 0, 0,
+      arrow::Type::INT32, nullptr, 1, 1, arrow::Type::INT32,
+      &output, &bits, &valid) == IRX_OK);
+  assert(output && output->column->length() == 0 && !bits && !valid);
+  irx_arrow_chunked_array_release(output);
+  assert(input->column->GetScalar(0).ValueOrDie()->ToString() == "-1");
+  irx_arrow_chunked_array_release(input);
 }
 
 static void release_tensor_context(void* context) {
@@ -130,6 +189,7 @@ static void check_tensor_lifetimes() {
 
 int main() {
   check_compute_abi();
+  check_compute_promotion();
   check_tensor_lifetimes();
   for (int repeat = 0; repeat < 16; ++repeat) {
     IrxRbSchema* schema = nullptr;
@@ -155,8 +215,8 @@ int main() {
     assert(bits == 0 && valid == 0);
     assert(irx_arrow_series_index(column, -1, IRX_ARROW_TYPE_INT32, &bits, &valid) != 0);
     irx_arrow_chunked_array_handle* sum = nullptr;
-    assert(irx_arrow_column_compute("add_checked", IRX_ARROW_TYPE_INT32,
-        column, 0, 1, column, 0, 1, &sum, &bits, &valid) == 0);
+    assert(irx_arrow_compute(IRX_COMPUTE_ABI_VERSION, IRX_COMPUTE_ADD_CHECKED, 2, 0, 7, 2,
+        7, column, 0, 0, 7, column, 0, 0, 7, &sum, &bits, &valid) == 0);
     irx_arrow_chunked_array_handle* slice = nullptr;
     assert(irx_arrow_series_slice(column, 0, 0, -1, 0, &slice) == 0);
     assert(irx_arrow_series_set(column, 1, IRX_ARROW_TYPE_INT32, 9, 1, 1) == 0);
@@ -164,8 +224,8 @@ int main() {
     assert(valid == 0);
     assert(irx_arrow_series_set(column, -1, IRX_ARROW_TYPE_INT32, 9, 1, 1) != 0);
     irx_arrow_chunked_array_handle* reduced = nullptr;
-    assert(irx_arrow_column_compute("sum", IRX_ARROW_TYPE_INT32,
-        column, 0, 1, nullptr, 0, 0, &reduced, &bits, &valid) == 0);
+    assert(irx_arrow_compute(IRX_COMPUTE_ABI_VERSION, IRX_COMPUTE_SUM, 1, 0, 7, 1,
+        7, column, 0, 0, 0, nullptr, 0, 0, 9, &reduced, &bits, &valid) == 0);
     assert(reduced == nullptr && bits == 14 && valid == 1);
     irx_arrow_chunked_array_release(slice);
     irx_arrow_chunked_array_release(column);
@@ -173,8 +233,8 @@ int main() {
     assert(bits == 10 && valid == 1);
     irx_arrow_chunked_array_release(sum);
     sum = nullptr;
-    assert(irx_arrow_column_compute("add_checked", IRX_ARROW_TYPE_INT32,
-        nullptr, std::numeric_limits<int32_t>::max(), 1, nullptr, 1, 1,
+    assert(irx_arrow_compute(IRX_COMPUTE_ABI_VERSION, IRX_COMPUTE_ADD_CHECKED, 2, 0, 7, 1,
+        7, nullptr, std::numeric_limits<int32_t>::max(), 1, 7, nullptr, 1, 1, 7,
         &sum, &bits, &valid) != 0);
     assert(sum == nullptr && bits == 0 && valid == 0);
 

@@ -67,15 +67,6 @@ int irx_arrow_series_set(irx_arrow_chunked_array_handle* column, int64_t index,
  * Defaults, negative bounds and clamping follow Python slicing semantics. */
 int irx_arrow_series_slice(const irx_arrow_chunked_array_handle*, int64_t,
     int64_t, int64_t, int32_t, irx_arrow_chunked_array_handle**);
-int irx_arrow_column_compute(const char*, int32_t,
-    const irx_arrow_chunked_array_handle*, uint64_t, int32_t,
-    const irx_arrow_chunked_array_handle*, uint64_t, int32_t,
-    irx_arrow_chunked_array_handle**, uint64_t*, int32_t*);
-/* As above, with checked casts to the semantically resolved common type. */
-int irx_arrow_column_compute_promoted(const char*, int32_t,
-    const irx_arrow_chunked_array_handle*, uint64_t, int32_t,
-    const irx_arrow_chunked_array_handle*, uint64_t, int32_t,
-    irx_arrow_chunked_array_handle**, uint64_t*, int32_t*);
 
 int irx_arrow_schema_import_copy(
     const struct ArrowSchema* schema,

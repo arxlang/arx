@@ -81,6 +81,7 @@ class ExpressionDataFrameVisitorMixin(SemanticVisitorMixinBase):
             "is_null",
             scalar_type(source),
             result,
+            (node.value,),
         )
 
     @SemanticAnalyzerCore.visit.dispatch
@@ -113,7 +114,12 @@ class ExpressionDataFrameVisitorMixin(SemanticVisitorMixinBase):
             else inner
         )
         set_operation(
-            cast(SemanticAnalyzerCore, self), node, "coalesce", inner, result
+            cast(SemanticAnalyzerCore, self),
+            node,
+            "coalesce",
+            inner,
+            result,
+            (node.value, node.replacement),
         )
 
     @SemanticAnalyzerCore.visit.dispatch

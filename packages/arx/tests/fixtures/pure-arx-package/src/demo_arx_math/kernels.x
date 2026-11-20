@@ -11,3 +11,6 @@ fn rooted(value: T) -> T:
 @<T: f64 | nullable[f64] | series[f64] | series[nullable[f64]]>
 fn exponentiated(value: T) -> T:
   return arrow_exp(value)
+
+fn shifted(values: series[nullable[i32]], offset: i64) -> series[nullable[i64]]:
+  return values + offset

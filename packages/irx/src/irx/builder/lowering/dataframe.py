@@ -127,6 +127,7 @@ class DataFrameVisitorMixin(ClassVisitorMixin):
             (-5, "OSError"),
             (-6, "ValueError"),
             (-8, "OverflowError"),
+            (-9, "ZeroDivisionError"),
         ):
             block = function.append_basic_block("arrow." + role)
             switch.add_case(ir.Constant(status.type, code), block)
