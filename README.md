@@ -130,7 +130,7 @@ ArxLang brings language design, compiler infrastructure, and native Apache Arrow
 ArxLang is a community-led, community-governed open-source project. Development and maintenance work is carried out through [SciStitch](https://scistitch.com/) in collaboration with the wider ArxLang community; this credit does not change the project's governance. We thank [Open Science Labs (OSL)](https://opensciencelabs.org/) for its institutional support, and all contributors and users for their code, reviews, testing, ideas, and feedback.
 
 <p>
-  <a href="https://scistitch.com/"><img src="https://scistitch.com/images/logo/wordmark-color.svg" alt="SciStitch" width="160"></a>
+  <a href="https://scistitch.com/"><img src="https://scistitch.com/images/logo/wordmark-color.svg" alt="SciStitch" width="160" style="background: #fff; border-radius: 6px; padding: 6px 8px;"></a>
   &nbsp;&nbsp;
-  <a href="https://opensciencelabs.org/"><img src="https://scistitch.com/assets/osl-logo.svg" alt="Open Science Labs" width="128"></a>
+  <a href="https://opensciencelabs.org/"><img src="https://scistitch.com/assets/osl-logo.svg" alt="Open Science Labs" width="128" style="background: #fff; border-radius: 6px; padding: 6px 8px;"></a>
 </p>
