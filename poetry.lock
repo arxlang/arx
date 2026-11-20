@@ -1246,14 +1246,14 @@ typer = ">=0.9"
 
 [[package]]
 name = "doukimd"
-version = "1.4.5"
+version = "1.4.6"
 description = "Markdown documentation with first-class Douki API references"
 optional = false
 python-versions = "<4,>=3.11"
 groups = ["dev"]
 files = [
-    {file = "doukimd-1.4.5-py3-none-any.whl", hash = "sha256:7653c08d6f9818865ab6e999395ed45b7304c94ec79529d113dfb42be8eb6af3"},
-    {file = "doukimd-1.4.5.tar.gz", hash = "sha256:9a7d4dbf7b259fb48aa95611ab8859fe84fa62a90939b03c1238399510c702de"},
+    {file = "doukimd-1.4.6-py3-none-any.whl", hash = "sha256:75bbaf57cde4e0bba04842d7041da8844c517116848d54a528a6da5b69e9acc3"},
+    {file = "doukimd-1.4.6.tar.gz", hash = "sha256:924997507193f6d7c8b91965cd87a0a5c17e8a78efc34a43198d210b98527312"},
 ]
 
 [package.dependencies]
@@ -4766,4 +4766,4 @@ test = ["coverage (>=5.3.1)", "prompt-toolkit (>=3.0.29)", "pygments (>=2.2)", "
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11,<4"
-content-hash = "b0d758d24cc00c588ec43756d0a646991c8da86f541d796f671263f4689364a8"
+content-hash = "bc2dd8d82268b1aaca4c475bfa65a3970da0574719cfc8b97f88214167fad748"
