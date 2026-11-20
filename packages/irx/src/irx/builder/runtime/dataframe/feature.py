@@ -82,13 +82,6 @@ def build_dataframe_runtime_feature() -> RuntimeFeature:
             "irx_arrow_series_index": ExternalSymbolSpec(
                 "irx_arrow_series_index", declare_series_index
             ),
-            "irx_arrow_column_compute_promoted": ExternalSymbolSpec(
-                "irx_arrow_column_compute_promoted",
-                declare_column_compute_promoted,
-            ),
-            "irx_arrow_column_compute": ExternalSymbolSpec(
-                "irx_arrow_column_compute", declare_column_compute
-            ),
             "irx_arrow_table_new_from_arrays": ExternalSymbolSpec(
                 "irx_arrow_table_new_from_arrays",
                 _declare_table_new_from_arrays,
@@ -422,39 +415,6 @@ def declare_series_index(visitor: VisitorProtocol) -> ir.Function:
 
 @private
 @typechecked
-def declare_column_compute(visitor: VisitorProtocol) -> ir.Function:
-    """
-    title: Declare a focused, checked Arrow scalar/Series kernel primitive.
-    parameters:
-      visitor:
-        type: VisitorProtocol
-    returns:
-      type: ir.Function
-    """
-    i32, i64 = ir.IntType(32), ir.IntType(64)
-    column = visitor._llvm.CHUNKED_ARRAY_HANDLE_TYPE
-    return _declare_function(
-        visitor,
-        "irx_arrow_column_compute",
-        i32,
-        [
-            visitor._llvm.ASCII_STRING_TYPE,
-            i32,
-            column,
-            i64,
-            i32,
-            column,
-            i64,
-            i32,
-            column.as_pointer(),
-            i64.as_pointer(),
-            i32.as_pointer(),
-        ],
-    )
-
-
-@private
-@typechecked
 def declare_series_slice(visitor: VisitorProtocol) -> ir.Function:
     """
     title: >-
@@ -478,25 +438,6 @@ def declare_series_slice(visitor: VisitorProtocol) -> ir.Function:
             ir.IntType(32),
             column.as_pointer(),
         ],
-    )
-
-
-@private
-@typechecked
-def declare_column_compute_promoted(visitor: VisitorProtocol) -> ir.Function:
-    """
-    title: Declare checked conversion to the semantic common operand type.
-    parameters:
-      visitor:
-        type: VisitorProtocol
-    returns:
-      type: ir.Function
-    """
-    original = declare_column_compute(visitor)
-    return declare_external_function(
-        visitor._llvm.module,
-        "irx_arrow_column_compute_promoted",
-        original.function_type,
     )
 
 

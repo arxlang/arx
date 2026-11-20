@@ -111,7 +111,9 @@ class ComputeOperation(CallOperation):
         """
         validate_compute_kernel(kernel)
         object.__setattr__(self, "kernel", kernel)
-        object.__setattr__(self, "operation_id", COMPUTE_CATALOG[kernel][0])
+        object.__setattr__(
+            self, "operation_id", COMPUTE_CATALOG[kernel].operation_id
+        )
         object.__setattr__(self, "arrow_version", "26.0.1")
         object.__setattr__(
             self, "arrow_type_id", column_arrow_type(astx.Float64()).id
@@ -121,7 +123,7 @@ class ComputeOperation(CallOperation):
         )
         object.__setattr__(self, "null_policy", "propagate")
         object.__setattr__(self, "domain_policy", "ieee")
-        object.__setattr__(self, "max_ulps", COMPUTE_CATALOG[kernel][1])
+        object.__setattr__(self, "max_ulps", COMPUTE_CATALOG[kernel].max_ulps)
 
 
 @private

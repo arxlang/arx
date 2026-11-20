@@ -11,4 +11,5 @@
 #define IRX_ERR_INVALID -6
 #define IRX_ERR_ALLOC -7
 #define IRX_ERR_OVERFLOW -8
+#define IRX_ERR_DIVZERO -9
 #endif

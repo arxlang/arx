@@ -26,6 +26,7 @@ from arxpy import (
     Diagnostic,
     DiagnosticSeverity,
 )
+from irx.native import COMPUTE_CATALOG
 from llvmlite import binding as llvm
 
 SCRIPT_PATH = (
@@ -135,7 +136,10 @@ def test_installed_pure_arx_library(
         if instruction.opcode == "call"
         and tuple(instruction.operands)[-1].name == "irx_arrow_compute"
     }
-    assert operations == {1, 2}
+    assert operations == {
+        COMPUTE_CATALOG[name].operation_id
+        for name in ("sqrt", "exp", "add_checked", "is_null", "coalesce")
+    }
     assert "llvm.sqrt" not in artifact.llvm_ir
     assert 'call double @"sqrt"' not in artifact.llvm_ir
 

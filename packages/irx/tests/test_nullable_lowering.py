@@ -3,12 +3,15 @@ title: Frontend-independent nullable semantic plans and LLVM lowering.
 """
 
 from collections.abc import Callable
+from dataclasses import replace
 
 import astx
 import pytest
 
 from irx.analysis import ParsedModule, SemanticError, analyze
+from irx.analysis.nullable import ColumnOperation
 from irx.builder import Builder
+from irx.native import COMPUTE_CATALOG
 
 from .conftest import (
     StaticImportResolver,
@@ -82,8 +85,14 @@ def test_integer_lowering(literal: Callable[[int], astx.DataType]) -> None:
     )
     text = Builder().translate(module)
     assert_ir_parses(text)
-    assert "irx_arrow_column_compute" in text
+    assert "irx_arrow_compute" in text
     assert "irx_arrow_series_index" in text
+    plan = result.semantic.extras["column_operation"]
+    assert isinstance(plan, ColumnOperation)
+    assert plan.operation_id == COMPUTE_CATALOG["add_checked"].operation_id
+    assert plan.arguments == (result.lhs, result.rhs)
+    with pytest.raises(ValueError, match="compute plan"):
+        replace(plan, operation_id=999)
 
 
 @pytest.mark.parametrize(
@@ -390,7 +399,7 @@ def test_reduction_lowering(operation: str) -> None:
     )
     text = Builder().translate(module)
     assert_ir_parses(text)
-    assert "irx_arrow_column_compute_promoted" in text
+    assert "irx_arrow_compute" in text
 
 
 @pytest.mark.parametrize("operation", ["any", "all"])

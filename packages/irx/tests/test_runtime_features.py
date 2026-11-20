@@ -198,8 +198,10 @@ int main(void) {
     int32_t valid;
     double value = 0.0, result;
     memcpy(&input_bits, &value, sizeof(value));
-    assert(irx_arrow_compute(1, op, 1, 0, IRX_COMPUTE_F64,
-        IRX_COMPUTE_SCALAR, 0, input_bits, 1, &output,
+    assert(irx_arrow_compute(IRX_COMPUTE_ABI_VERSION, op, 1, 0,
+        IRX_COMPUTE_F64,
+        IRX_COMPUTE_SCALAR, IRX_COMPUTE_F64, 0, input_bits, 1,
+        0, 0, 0, 0, IRX_COMPUTE_F64, &output,
         &output_bits, &valid) == IRX_OK);
     memcpy(&result, &output_bits, sizeof(result));
     assert(!output && valid == 1);

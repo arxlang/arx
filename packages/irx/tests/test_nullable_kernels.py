@@ -6,10 +6,18 @@ import ctypes
 import math
 import struct
 
+from typing import get_args
+
 import pyarrow as pa
 import pytest
 
-from irx.builder.runtime.arrow_compute import COMPUTE_SIGNATURES
+from irx.builder.runtime.arrow_compute import (
+    COMPUTE_ABI_VERSION,
+    COMPUTE_SIGNATURES,
+)
+from irx.builtins.collections.array_primitives import (
+    ARRAY_PRIMITIVE_TYPE_SPECS,
+)
 from irx.native import COMPUTE_CATALOG, ComputeKernel
 
 from .test_arrow_interop import import_batch, native  # noqa: F401
@@ -20,6 +28,9 @@ from .test_arrow_math_contract import (
     decimal_reference,
 )
 from .test_dataframe_conversion import import_schema
+
+IRX_ERR_OVERFLOW = -8
+IRX_ERR_DIVZERO = -9
 
 
 def bind_kernels(native: ctypes.CDLL) -> None:
@@ -43,20 +54,6 @@ def bind_kernels(native: ctypes.CDLL) -> None:
         function = getattr(native, name)
         function.restype = types[signature[0]]
         function.argtypes = [types[item] for item in signature[1:]]
-    native.irx_arrow_column_compute.argtypes = [
-        ctypes.c_char_p,
-        ctypes.c_int32,
-        pointer,
-        ctypes.c_uint64,
-        ctypes.c_int32,
-        pointer,
-        ctypes.c_uint64,
-        ctypes.c_int32,
-        ctypes.POINTER(pointer),
-        ctypes.POINTER(ctypes.c_uint64),
-        ctypes.POINTER(ctypes.c_int32),
-    ]
-    native.irx_arrow_column_compute.restype = ctypes.c_int
     native.irx_arrow_series_index.argtypes = [
         pointer,
         ctypes.c_int64,
@@ -76,7 +73,7 @@ def bind_kernels(native: ctypes.CDLL) -> None:
         getattr(native, name).restype = None
 
 
-@pytest.mark.parametrize("kernel", tuple(COMPUTE_CATALOG))
+@pytest.mark.parametrize("kernel", get_args(ComputeKernel))
 def test_versioned_math_abi(
     native: ctypes.CDLL, kernel: ComputeKernel
 ) -> None:
@@ -89,9 +86,11 @@ def test_versioned_math_abi(
         type: ComputeKernel
     """
     bind_kernels(native)
-    assert native.irx_arrow_compute_abi_version() == 1
-    operation = COMPUTE_CATALOG[kernel][0]
-    assert native.irx_arrow_compute_supports(1, operation, 1, 0, 12, 1) == 0
+    assert native.irx_arrow_compute_abi_version() == COMPUTE_ABI_VERSION
+    operation = COMPUTE_CATALOG[kernel].operation_id
+    assert (
+        native.irx_arrow_compute_supports(2, operation, 1, 0, 12, 1, 12) == 0
+    )
     vectors = [
         (arguments, decimal_reference(kernel, arguments))
         for arguments in FINITE[kernel]
@@ -106,15 +105,21 @@ def test_versioned_math_abi(
         bits, valid = ctypes.c_uint64(123), ctypes.c_int32(123)
         assert (
             native.irx_arrow_compute(
-                1,
+                2,
                 operation,
                 1,
                 0,
                 12,
                 1,
+                12,
                 None,
                 payload,
                 int(value is not None),
+                0,
+                None,
+                0,
+                0,
+                12,
                 ctypes.byref(column),
                 ctypes.byref(bits),
                 ctypes.byref(valid),
@@ -132,7 +137,7 @@ def test_versioned_math_abi(
             assert bits.value == 0
 
 
-@pytest.mark.parametrize("kernel", tuple(COMPUTE_CATALOG))
+@pytest.mark.parametrize("kernel", get_args(ComputeKernel))
 @pytest.mark.parametrize("rows", [[], [None, None], [0.0, None, 4.0]])
 def test_math_series_ownership(
     native: ctypes.CDLL, kernel: ComputeKernel, rows: list[float | None]
@@ -167,15 +172,21 @@ def test_math_series_ownership(
     try:
         assert (
             native.irx_arrow_compute(
-                1,
-                COMPUTE_CATALOG[kernel][0],
+                2,
+                COMPUTE_CATALOG[kernel].operation_id,
                 1,
                 0,
                 12,
                 2,
+                12,
                 column,
                 0,
                 0,
+                0,
+                None,
+                0,
+                0,
+                12,
                 ctypes.byref(result),
                 ctypes.byref(bits),
                 ctypes.byref(valid),
@@ -211,15 +222,15 @@ def test_math_series_ownership(
 @pytest.mark.parametrize(
     "abi,operation,arity,options,dtype,shape,column,bits,valid,status",
     [
-        (2, 1, 1, 0, 12, 2, 1, 0, 0, -6),  # ABI before pointer access.
-        (1, 999, 1, 0, 12, 1, None, 0, 1, -6),
-        (1, 1, 2, 0, 12, 1, None, 0, 1, -6),
-        (1, 1, 1, 1, 12, 1, None, 0, 1, -6),
-        (1, 1, 1, 0, 10, 1, None, 0, 1, -4),  # Legacy ID is not f64.
-        (1, 1, 1, 0, 12, 3, None, 0, 1, -4),
-        (1, 1, 1, 0, 12, 1, None, 0, 2, -6),
-        (1, 1, 1, 0, 12, 1, 1, 0, 1, -6),
-        (1, 1, 1, 0, 12, 2, None, 0, 0, -2),
+        (3, 1, 1, 0, 12, 2, 1, 0, 0, -6),  # ABI before pointer access.
+        (2, 999, 1, 0, 12, 1, None, 0, 1, -6),
+        (2, 1, 2, 0, 12, 1, None, 0, 1, -6),
+        (2, 1, 1, 1, 12, 1, None, 0, 1, -6),
+        (2, 1, 1, 0, 10, 1, None, 0, 1, -4),  # Legacy ID is not f64.
+        (2, 1, 1, 0, 12, 3, None, 0, 1, -4),
+        (2, 1, 1, 0, 12, 1, None, 0, 2, -4),
+        (2, 1, 1, 0, 12, 1, 1, 0, 1, -4),
+        (2, 1, 1, 0, 12, 2, None, 0, 0, -4),
     ],
 )
 def test_math_abi_fail_closed(
@@ -272,9 +283,15 @@ def test_math_abi_fail_closed(
             options,
             dtype,
             shape,
+            dtype,
             column,
             bits,
             valid,
+            0,
+            None,
+            0,
+            0,
+            12,
             ctypes.byref(output),
             ctypes.byref(out_bits),
             ctypes.byref(out_valid),
@@ -282,6 +299,110 @@ def test_math_abi_fail_closed(
         == status
     )
     assert (output.value, out_bits.value, out_valid.value) == (None, 0, 0)
+
+
+def invoke_compute(
+    native: ctypes.CDLL,
+    kernel: bytes,
+    storage_id: int,
+    lhs: ctypes.c_void_p | None,
+    lhs_bits: int,
+    lhs_valid: int,
+    rhs: ctypes.c_void_p | None,
+    rhs_bits: int,
+    rhs_valid: int,
+    output: object,
+    bits: object,
+    valid: object,
+) -> int:
+    """
+    title: Run existing storage/index vectors through the typed compute ABI.
+    parameters:
+      native:
+        type: ctypes.CDLL
+      kernel:
+        type: bytes
+      storage_id:
+        type: int
+      lhs:
+        type: ctypes.c_void_p | None
+      lhs_bits:
+        type: int
+      lhs_valid:
+        type: int
+      rhs:
+        type: ctypes.c_void_p | None
+      rhs_bits:
+        type: int
+      rhs_valid:
+        type: int
+      output:
+        type: object
+      bits:
+        type: object
+      valid:
+        type: object
+    returns:
+      type: int
+    """
+    capability = COMPUTE_CATALOG.get(kernel.decode())
+    primitive = next(
+        (
+            pa.type_for_alias(spec.name)
+            for spec in ARRAY_PRIMITIVE_TYPE_SPECS.values()
+            if spec.type_id == storage_id
+        ),
+        None,
+    )
+    dtype = primitive.id if primitive is not None else storage_id
+    arity = capability.arity if capability else 2
+    binary = arity != 1
+    result_kind = capability.result if capability else "SAME"
+    reduction = result_kind in {
+        "SUM",
+        "MINMAX",
+        "MEAN",
+        "COUNT",
+        "BOOL_REDUCE",
+    }
+    result_dtype = {
+        "BOOL": pa.bool_().id,
+        "BOOL_REDUCE": pa.bool_().id,
+        "COUNT": pa.int64().id,
+        "MEAN": pa.float64().id,
+    }.get(result_kind, dtype)
+    if result_kind == "SUM":
+        assert primitive is not None
+        if pa.types.is_integer(primitive):
+            result_dtype = (
+                pa.uint64().id
+                if pa.types.is_unsigned_integer(primitive)
+                else pa.int64().id
+            )
+        else:
+            result_dtype = pa.float64().id
+    return int(
+        native.irx_arrow_compute(
+            COMPUTE_ABI_VERSION,
+            capability.operation_id if capability else 0,
+            arity,
+            0,
+            dtype,
+            1 if reduction or not (lhs or rhs) else 2,
+            dtype,
+            lhs,
+            lhs_bits,
+            0 if lhs else lhs_valid,
+            dtype if binary else 0,
+            rhs if binary else None,
+            rhs_bits if binary else 0,
+            (0 if rhs else rhs_valid) if binary else 0,
+            result_dtype,
+            output,
+            bits,
+            valid,
+        )
+    )
 
 
 def compute(
@@ -316,7 +437,8 @@ def compute(
     bind_kernels(native)
     output = ctypes.c_void_p(123)
     bits, valid = ctypes.c_uint64(123), ctypes.c_int32(123)
-    status = native.irx_arrow_column_compute(
+    status = invoke_compute(
+        native,
         kernel,
         type_id,
         None,
@@ -364,13 +486,15 @@ def test_integer_kernels(
     assert compute(native, b"add_checked", type_id, 2, 3) == (0, 5, 1)
     maximum = 2 ** (width - int(signed)) - 1
     status, bits, valid = compute(native, b"add_checked", type_id, maximum, 1)
-    assert status != 0 and bits == 0 and valid == 0
+    assert status == IRX_ERR_OVERFLOW and bits == 0 and valid == 0
     assert compute(native, b"add_checked", type_id, maximum, 1, False) == (
         0,
         0,
         0,
     )
-    assert compute(native, b"divide_checked", type_id, 1, 0)[0] != 0
+    assert (
+        compute(native, b"divide_checked", type_id, 1, 0)[0] == IRX_ERR_DIVZERO
+    )
     assert compute(native, b"divide_checked", type_id, 1, 0, False) == (
         0,
         0,
@@ -458,7 +582,8 @@ def test_missing_compute_outputs(native: ctypes.CDLL, missing: str) -> None:
     bind_kernels(native)
     column = ctypes.c_void_p(123)
     bits, valid = ctypes.c_uint64(123), ctypes.c_int32(123)
-    status = native.irx_arrow_column_compute(
+    status = invoke_compute(
+        native,
         b"add_checked",
         1,
         None,
@@ -547,7 +672,8 @@ def test_series_index_lifetime(
             )
         doubled = ctypes.c_void_p()
         assert (
-            native.irx_arrow_column_compute(
+            invoke_compute(
+                native,
                 b"add_checked",
                 1,
                 column,

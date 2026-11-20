@@ -100,7 +100,7 @@ PURE_ARX_MODULE = """```
 title: Installed pure-Arx package and shared Arrow compute smoke
 summary: Typed library calls, escaped owners and Arrow IPC interchange.
 ```
-import (rooted as package_sqrt, exponentiated) from demo_arx_math
+import (rooted as package_sqrt, exponentiated, shifted) from demo_arx_math
 import sqrt as direct_sqrt from stdlib.math
 import (Schema, BatchBuilder, IPCReader, IPCWriter) from stdlib.arrow
 
@@ -123,6 +123,12 @@ fn main() -> i32:
   assert package_sqrt(value=value) == direct_sqrt(value)
   assert sqrt(value) == -1.0
   assert exponentiated(cast(0.0, f64)) == 1.0
+  integers: dataframe[value:i32 | none] = dataframe({value:[1, none, 3]})
+  offset: i64 = 2147483647
+  shifted_values: series[i64 | none] = shifted(integers.value, offset)
+  assert fill_null(shifted_values[0], 0) == cast(2147483647, i64) + 1
+  assert is_null(shifted_values[1])
+  assert fill_null(integers.value[0], 0) == 1
   result: series[f64] = escaped()
   assert result[0] == 0.0
   assert result[1] == 1.0
@@ -462,11 +468,13 @@ for name, signature in COMPUTE_SIGNATURES.items():
     function = getattr(native, name)
     function.restype = types[signature[0]]
     function.argtypes = [types[item] for item in signature[1:]]
-assert native.irx_arrow_compute_abi_version() == 1
-for name, (operation, _) in COMPUTE_CATALOG.items():
+assert native.irx_arrow_compute_abi_version() == 2
+for name in ("sqrt", "exp"):
+    operation = COMPUTE_CATALOG[name].operation_id
     output, bits, valid = pointer(), ctypes.c_uint64(), ctypes.c_int32()
     assert native.irx_arrow_compute(
-        1, operation, 1, 0, 12, 1, None, 0, 1,
+        2, operation, 1, 0, 12, 1, 12, None, 0, 1,
+        0, None, 0, 0, 12,
         ctypes.byref(output), ctypes.byref(bits), ctypes.byref(valid),
     ) == 0
     result = struct.unpack("=d", struct.pack("=Q", bits.value))[0]

@@ -147,17 +147,21 @@ uint32_t __wrap_irx_arrow_compute_abi_version(void) {
       __real_irx_arrow_compute_abi_version();
 }
 int32_t __real_irx_arrow_compute(uint32_t, int32_t, int32_t, int32_t,
-    int32_t, int32_t, const irx_arrow_chunked_array_handle*, uint64_t,
+    int32_t, int32_t, int32_t, const irx_arrow_chunked_array_handle*, uint64_t,
+    int32_t, int32_t, const irx_arrow_chunked_array_handle*, uint64_t, int32_t,
     int32_t, irx_arrow_chunked_array_handle**, uint64_t*, int32_t*);
 int32_t __wrap_irx_arrow_compute(uint32_t abi, int32_t op, int32_t arity,
-    int32_t options, int32_t dtype, int32_t shape,
+    int32_t options, int32_t dtype, int32_t shape, int32_t lhs_type,
     const irx_arrow_chunked_array_handle* input, uint64_t bits, int32_t valid,
+    int32_t rhs_type, const irx_arrow_chunked_array_handle* rhs,
+    uint64_t rhs_bits, int32_t rhs_valid, int32_t result_type,
     irx_arrow_chunked_array_handle** output, uint64_t* out_bits,
     int32_t* out_valid) {
   int fail = shape == IRX_COMPUTE_SERIES &&
       ++series_calls == 3 && mode("type");
   int status = __real_irx_arrow_compute(abi, op, arity, options,
-      fail ? -1 : dtype, shape, input, bits, valid,
+      fail ? -1 : dtype, shape, lhs_type, input, bits, valid,
+      rhs_type, rhs, rhs_bits, rhs_valid, result_type,
       output, out_bits, out_valid);
   if (fail) { // Prove lowering never reads/publishes outputs after failure.
     *output = (irx_arrow_chunked_array_handle*)1;
@@ -251,7 +255,7 @@ def test_compute_transport_and_cleanup(
     if mode == "abi":
         assert report.message == "incompatible Arrow compute ABI revision"
     else:
-        assert "compute requires Arrow f64" in report.message
+        assert "unsupported compute input dtype" in report.message
 
 
 @pytest.fixture(scope="module")
@@ -1187,7 +1191,7 @@ def test_nullable_series_translate_verifies() -> None:
     )
     text = ArxBuilder().translate(Parser().parse(Lexer().lex()))
     llvm.parse_assembly(text).verify()
-    assert "irx_arrow_column_compute" in text
+    assert "irx_arrow_compute" in text
     assert "irx_arrow_series_index" in text
     assert "column_valid" in text
 

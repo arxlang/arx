@@ -28,6 +28,7 @@ from irx.builtins.collections.column_types import (
 )
 from irx.builtins.collections.dataframe import dataframe_type_id
 from irx.diagnostics import DiagnosticCodes
+from irx.native import COMPUTE_CATALOG
 from irx.typecheck import typechecked
 
 KERNELS = {
@@ -54,7 +55,7 @@ COMPARISONS = {"==", "!=", "<", "<=", ">", ">="}
 @dataclass(frozen=True)
 class ColumnOperation:
     """
-    title: Fully resolved kernel name, input storage and output type.
+    title: Closed compute identity, conversions and result storage contract.
     attributes:
       kernel:
         type: str
@@ -64,12 +65,46 @@ class ColumnOperation:
         type: astx.DataType
       input_type:
         type: astx.DataType | None
+      operation_id:
+        type: int
+      arrow_type_id:
+        type: int
+      result_arrow_type_id:
+        type: int
+      arguments:
+        type: tuple[astx.AST, Ellipsis]
+      operand_arrow_type_ids:
+        type: tuple[int, Ellipsis]
     """
 
     kernel: str
     type_id: int
     result: astx.DataType
     input_type: astx.DataType | None = None
+    operation_id: int = 0
+    arrow_type_id: int = 0
+    result_arrow_type_id: int = 0
+    arguments: tuple[astx.AST, ...] = ()
+    operand_arrow_type_ids: tuple[int, ...] = ()
+
+    def __post_init__(self) -> None:
+        """
+        title: Reject unknown or incomplete compute plans before lowering.
+        """
+        if self.kernel in {"slice", "index", "set"}:
+            if self.operation_id or self.arguments:
+                raise ValueError("invalid Series access plan")
+            return
+        capability = COMPUTE_CATALOG.get(self.kernel)
+        if (
+            capability is None
+            or self.operation_id != capability.operation_id
+            or len(self.arguments) != capability.arity
+            or len(self.operand_arrow_type_ids) != capability.arity
+            or not self.result_arrow_type_id
+            or (not self.arrow_type_id and capability.domain != "ANY")
+        ):
+            raise ValueError("incomplete or unsupported compute plan")
 
 
 @private
@@ -118,6 +153,7 @@ def set_operation(
     kernel: str,
     input_type: astx.DataType | None,
     result: astx.DataType,
+    arguments: tuple[astx.AST, ...] = (),
 ) -> None:
     """
     title: Record one checked operation and its owned Series result.
@@ -132,6 +168,8 @@ def set_operation(
         type: astx.DataType | None
       result:
         type: astx.DataType
+      arguments:
+        type: tuple[astx.AST, Ellipsis]
     """
     type_id = dataframe_type_id(input_type)
     if type_id is None and kernel not in {"slice", "is_null", "count"}:
@@ -142,8 +180,33 @@ def set_operation(
             "types; retain other columns as Series/RecordBatch",
         )
         return
+    capability = COMPUTE_CATALOG.get(kernel)
+    common_id = 0
+    if type_id:
+        assert input_type is not None
+        common_id = column_arrow_type(input_type).id
+    output = scalar_type(result)
+    result_id = 0
+    if capability:
+        assert output is not None
+        result_id = column_arrow_type(output).id
+    operand_ids: list[int] = []
+    for argument in arguments:
+        inner = scalar_type(analyzer._expr_type(argument))
+        operand_id = common_id
+        if inner is not None and dataframe_type_id(inner) is not None:
+            operand_id = column_arrow_type(inner).id
+        operand_ids.append(operand_id)
     analyzer._semantic(node).extras["column_operation"] = ColumnOperation(
-        kernel, type_id or 0, result, input_type
+        kernel,
+        type_id or 0,
+        result,
+        input_type,
+        capability.operation_id if capability else 0,
+        common_id,
+        result_id,
+        arguments,
+        tuple(operand_ids),
     )
     analyzer._set_type(node, result)
     if isinstance(result, astx.SeriesType):
@@ -219,7 +282,9 @@ def resolve_column_binary(
     result: astx.DataType = astx.NullableType(output) if nullable else output
     if isinstance(left, astx.SeriesType) or isinstance(right, astx.SeriesType):
         result = astx.SeriesType(output, nullable=nullable)
-    set_operation(analyzer, node, kernel, promoted, result)
+    set_operation(
+        analyzer, node, kernel, promoted, result, (node.lhs, node.rhs)
+    )
     return True
 
 
@@ -396,7 +461,7 @@ def resolve_column_unary(
             "cast unsigned values explicitly",
         )
         return True
-    set_operation(analyzer, node, kernel, inner, source)
+    set_operation(analyzer, node, kernel, inner, source, (node.operand,))
     return True
 
 
@@ -447,7 +512,7 @@ def resolve_series_reduction(
         elif operation == "sum":
             output = astx.UInt64() if is_unsigned_type(inner) else astx.Int64()
     result = output if operation == "count" else astx.NullableType(output)
-    set_operation(analyzer, node, operation, inner, result)
+    set_operation(analyzer, node, operation, inner, result, (node.value,))
 
 
 @private
