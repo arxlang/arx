@@ -16,6 +16,7 @@ from irx.analysis import (
     analyze_modules,
 )
 from irx.analysis.resolved_nodes import SemanticInfo
+from irx.analysis.types import same_type
 
 from ..conftest import (
     StaticImportResolver,
@@ -234,6 +235,55 @@ def test_analyze_template_function_uses_explicit_template_args() -> None:
     assert resolved_function.name == "identity__Float64"
     assert isinstance(resolved_call.result_type, astx.Float64)
     assert isinstance(resolved_call.resolved_argument_types[0], astx.Float64)
+
+
+def test_series_template_specializations_preserve_nullability() -> None:
+    """
+    title: Series bounds preserve validity in type identity and cached calls.
+    """
+    types = (
+        astx.SeriesType(astx.Float64()),
+        astx.SeriesType(astx.Float64(), nullable=True),
+    )
+    assert not same_type(*types)
+    bound = astx.UnionType(types)
+    variable = astx.TemplateTypeVar("T", bound=bound)
+    template_fn = _templated_function(
+        "accept",
+        astx.LiteralInt32(0),
+        astx.Argument("value", variable),
+        return_type=astx.Int32(),
+        template_params=(astx.TemplateParam("T", bound),),
+    )
+    calls = []
+    probes = []
+    for index, type_ in enumerate(types):
+        call = astx.FunctionCall("accept", [astx.Identifier("value")])
+        calls.append(call)
+        body = astx.Block()
+        body.append(astx.FunctionReturn(call))
+        probes.append(
+            astx.FunctionDef(
+                astx.FunctionPrototype(
+                    f"probe_{index}",
+                    astx.Arguments(astx.Argument("value", type_)),
+                    astx.Int32(),
+                ),
+                body,
+            )
+        )
+    analyze(make_module("app.main", template_fn, *probes))
+    keys = []
+    for call, expected in zip(calls, types):
+        function = _semantic(call).resolved_function
+        assert function is not None
+        actual = function.signature.parameters[0].type_
+        assert isinstance(actual, astx.SeriesType)
+        assert same_type(actual, expected)
+        assert actual.nullable is expected.nullable
+        assert function.specialization_key is not None
+        keys.append(function.specialization_key)
+    assert keys[0] != keys[1]
 
 
 def test_analyze_template_function_rejects_out_of_bound_explicit_arg() -> None:

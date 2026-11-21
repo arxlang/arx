@@ -14,6 +14,7 @@ from arx.io import ArxIO
 from arx.lexer import Lexer
 from arx.parser import Parser
 from irx.analysis import SemanticError, analyze
+from irx.diagnostics import DiagnosticCodes
 
 
 def test_parse_template_extern_requires_semantic_capability() -> None:
@@ -145,6 +146,28 @@ def test_parse_composed_alias_bounds() -> None:
         assert len(params) == 1
         assert isinstance(params[0].bound, astx.UnionType)
         assert [type(member) for member in params[0].bound.members] == members
+
+
+def test_template_bound_diagnostic_keeps_nullable_series() -> None:
+    """
+    title: Template diagnostics show four distinct scalar and Series choices.
+    """
+    module = _parse(
+        "```\ntitle: Nullable Series template bound\n```\n"
+        "@<T: f64 | nullable[f64] | series[f64] | "
+        "series[nullable[f64]]>\n"
+        "fn identity(value: T) -> T:\n  return value\n"
+        "fn main() -> i32:\n  identity(true)\n  return 0\n"
+    )
+    with pytest.raises(SemanticError) as error:
+        analyze(module)
+    (diagnostic,) = error.value.diagnostics.diagnostics
+    assert diagnostic.code == DiagnosticCodes.SEMANTIC_TYPE_MISMATCH
+    assert diagnostic.message == (
+        "Template argument 'Boolean' does not satisfy bound "
+        "'Float64 | nullable[Float64] | SeriesType[Float64] | "
+        "SeriesType[nullable[Float64]]' for parameter 'T' in 'identity'"
+    )
 
 
 def test_parse_template_method_with_inline_modifiers() -> None:

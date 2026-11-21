@@ -511,6 +511,7 @@ def clone_type(type_: astx.DataType) -> astx.DataType:
 def display_type_name(type_: astx.DataType | None) -> str:
     """
     title: Return one stable human-facing type name.
+    summary: Include Series element nullability alongside its optional size.
     parameters:
       type_: Type expression to process.
     returns: One stable human-facing type name.
@@ -596,6 +597,8 @@ def display_type_name(type_: astx.DataType | None) -> str:
         if type_.element_type is None:
             return "SeriesType"
         parts = [display_type_name(type_.element_type)]
+        if type_.nullable:
+            parts[0] = f"nullable[{parts[0]}]"
         if type_.size is not None:
             parts.append(str(type_.size))
         return "SeriesType[" + ", ".join(parts) + "]"
