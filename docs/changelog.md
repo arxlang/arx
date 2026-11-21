@@ -1,6 +1,28 @@
 # Release Notes
 ---
 
+# [1.29.0](https://github.com/arxlang/arx/compare/1.28.0...1.29.0) (2026-11-21)
+
+
+### Bug Fixes
+
+* **arx:** unify dataframe metadata call diagnostics ([#187](https://github.com/arxlang/arx/issues/187)) ([fbd98b7](https://github.com/arxlang/arx/commit/fbd98b77998bf52e0afecb94f1877ea2e5496f55))
+* **irx:** enforce lexical statement-body scopes ([#196](https://github.com/arxlang/arx/issues/196)) ([b631d90](https://github.com/arxlang/arx/commit/b631d9075569b78ed9fac5b336b6a9aaf2726e35))
+* Update douki ([#205](https://github.com/arxlang/arx/issues/205)) ([6fd2147](https://github.com/arxlang/arx/commit/6fd2147b775be324943e497177a4a3980c6c39d5))
+
+
+### Features
+
+* **arx:** add checked resource scopes ([#189](https://github.com/arxlang/arx/issues/189)) ([3c8cd6e](https://github.com/arxlang/arx/commit/3c8cd6e88e15299fac013862ec3f269ed7ad00bb))
+* **arx:** add lazy integer ranges and closed cursors ([#190](https://github.com/arxlang/arx/issues/190)) ([11ea32f](https://github.com/arxlang/arx/commit/11ea32f89e0e60a13a6e3308d5da3936d447cc4f))
+* **arx:** complete M1 Arrow math semantic integration ([#200](https://github.com/arxlang/arx/issues/200)) ([14475ab](https://github.com/arxlang/arx/commit/14475abe902c9862cfea3bda9d459563e3b2680b))
+* **arx:** support break and continue in source loops ([#188](https://github.com/arxlang/arx/issues/188)) ([61d6480](https://github.com/arxlang/arx/commit/61d648024de37f8782e758379b6b8e363ea1094d))
+* establish Arrow-first M0 contracts on Arrow 26.0.1 ([#198](https://github.com/arxlang/arx/issues/198)) ([9179ff5](https://github.com/arxlang/arx/commit/9179ff531379005ca8267b7095049a3479ebc1ab))
+* **irx:** add typed Arrow math semantic plans ([#199](https://github.com/arxlang/arx/issues/199)) ([ddc6b52](https://github.com/arxlang/arx/commit/ddc6b52d76de540a687f43174ab728f0213bda6e))
+* **irx:** add versioned Arrow compute runtime ([#201](https://github.com/arxlang/arx/issues/201)) ([d022b89](https://github.com/arxlang/arx/commit/d022b890fc446e71ce9b6a7034644e166788bc28))
+* **irx:** execute typed Arrow math compute plans ([#202](https://github.com/arxlang/arx/issues/202)) ([6628c9f](https://github.com/arxlang/arx/commit/6628c9f72a80134fa868365cbbc4948ff7ead0de))
+* **irx:** unify typed Arrow compute dispatch ([#204](https://github.com/arxlang/arx/issues/204)) ([4c3049e](https://github.com/arxlang/arx/commit/4c3049e583c08fc5cf3dc8d5584b622ff362f4ae))
+
 # [1.28.0](https://github.com/arxlang/arx/compare/1.27.1...1.28.0) (2026-11-09)
 
 
