@@ -3,14 +3,42 @@ name: native-runtime-design
 description: Design and review IRx native runtime features, Arrow opaque C ABI, statuses, ownership, cleanup and sanitizer verification. Use for native features.
 ---
 
-# Native runtime and ABI safety
+# Native feature and C ABI implementation
 
-Use when changing IRx native features, Arrow C++ glue, linking, FFI, allocation, or released artifact dependencies. Follow [arrow-first-design](../arrow-first-design/SKILL.md) and [cpp-code-style](../cpp-code-style/SKILL.md).
+**Use for Arrow C++ glue, resource lifetimes, C ABI, linker/native feature changes.** Read [cpp-code-style](../cpp-code-style/SKILL.md), [arrow-first-design](../arrow-first-design/SKILL.md).
 
-Only activate native code via registered runtime features. Never embed Arrow C++ layouts in LLVM: use opaque handles behind existing `irx_arrow_*` and `irx_rb_*` C ABI APIs. Reuse typed operation catalogs and the shared dispatcher rather than adding a new handwritten wrapper for each kernel.
+## Work backward from the call contract
 
-For every native call specify: which party owns each input/output, whether a handle is borrowed/transferred, its permitted lifetime, how it is released on success/failure, status codes, output-slot initialization and success-only reads. Treat C++ exceptions and failure statuses explicitly at the ABI boundary; preserve cleanup and avoid use-after-free or double releases.
+Find one existing typed native operation in the IRx runtime, its analyzed plan, feature registration, LLVM call site and C++ symbol. Before changing signatures write down:
 
-A new operation must account for relevant null/empty cases, type and shape mismatch, overflow, validities, and PyArrow interchange. Reuse the existing native tests; for affected ownership and UB cases run `makim irx.test-sanitizers` where toolchain permits. Verify IR and linked execution for new feature dependencies.
+| Contract | Questions to resolve |
+| --- | --- |
+| Inputs | Type/shape/nullable? borrowed or owned? valid until when? |
+| Return status | What codes mean success/error? Is there a diagnostic channel? |
+| Outputs | Initial state on failure? when may caller read it? who releases? |
+| Transfer | What consumes ownership? when is hand-off committed? |
+| Cleanup | On every error path, who releases each native handle? |
+| Version | Which exact Arrow C++ headers, libs, PyArrow and source artifact match? |
+| Linking | Which registered runtime feature provides the symbol? |
 
-Never rewrite unrelated native build wiring, update the lockfile by hand, introduce implicit toolchain requirements, or claim a new Arrow version is deployed without checking the current manifests.
+## Implementation boundaries
+
+1. Make the semantic plan *closed* in `irx.analysis` (call identity, exact conversions/options, null/overflow/error contract, required feature).
+2. Use the registered feature mechanism. Do not add implicit C++ dependencies to general lowering.
+3. Keep Arrow C++ behind opaque handles and stable `irx_arrow_*` / `irx_rb_*` C ABI functions. LLVM passes addresses/status/results; it never models Arrow `std::` types or object offsets.
+4. Prefer typed catalog and existing compute dispatcher instead of a new wrapper per operation; C Data/C Stream exchanges data, not arbitrary C++ method calls.
+5. Initialize output slots; check call status before loading any output. Handle C++ exceptions at ABI boundary, release resources deterministically, and prevent use-after-free/double-free.
+6. Match any changed producer signature with **all** LLVM/Python/native consumers and release packaging.
+
+## Failure probes
+
+- Null handle and empty array, null element in valid array.
+- Wrong dtype, width/shape mismatch and unsupported options.
+- Arithmetic overflow or IEEE special-value behavior.
+- Native failure *before* output initialization, partial allocation failure, and cleanup after status error.
+- Transfer, escaped owner, repeated release and concurrent usage where relevant.
+- PyArrow interchange and independently installed consumers where public data path is affected.
+
+Use existing native tests and `makim irx.test-sanitizers` with appropriate Clang prerequisites. Verify LLVM module parsing and linked execution. Run only affected tests first; expand when ABI change reaches multiple packages. Do not create a generalized FFI or Arrow compatibility framework by default.
+
+**Exit:** documented ownership/status contract in code, working feature registration, verified producer/consumer, and precise report of sanitizer/ABI checks run.
