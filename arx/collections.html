@@ -28,7 +28,7 @@
       <a class="site-brand" href="../index.html">
         <img class="brand-logo" src="../images/arx-logo-terracotta.png" alt="ArxLang">
         <span class="brand-name">ArxLang</span>
-        <span class="version badge rounded-pill">1.27.0</span>
+        <span class="version badge rounded-pill">1.29.0</span>
       </a>
       
       <nav class="site-navbar" aria-label="Primary">
@@ -365,6 +365,8 @@
             <summary><span class="nav-label">arrow_stdlib</span></summary>
             <ul class="api-members">
               <li class="api-overview"><a href="../api/python/arx/arx.arrow_stdlib.html" aria-label="arrow_stdlib module overview">Module overview</a></li>
+              
+              <li><a href="../api/python/arx/arx.arrow_stdlib.COMPUTE_FUNCTIONS.html"><span class="nav-label">COMPUTE_FUNCTIONS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
               
               <li><a href="../api/python/arx/arx.arrow_stdlib.IO_FUNCTIONS.html"><span class="nav-label">IO_FUNCTIONS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
               
@@ -926,11 +928,13 @@
             <ul class="api-members">
               <li class="api-overview"><a href="../api/python/arx/arx.parser.state.html" aria-label="parser.state module overview">Module overview</a></li>
               
+              <li><a href="../api/python/arx/arx.parser.state.BINDING_MUTABILITY_MODIFIERS.html"><span class="nav-label">BINDING_MUTABILITY_MODIFIERS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
+              
               <li><a href="../api/python/arx/arx.parser.state.CLASS_ALLOWED_MODIFIERS.html"><span class="nav-label">CLASS_ALLOWED_MODIFIERS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
               
               <li><a href="../api/python/arx/arx.parser.state.FIELD_ALLOWED_MODIFIERS.html"><span class="nav-label">FIELD_ALLOWED_MODIFIERS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
               
-              <li><a href="../api/python/arx/arx.parser.state.FIELD_MUTABILITY_MODIFIERS.html"><span class="nav-label">FIELD_MUTABILITY_MODIFIERS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
+              <li><a href="../api/python/arx/arx.parser.state.FUNCTION_ALLOWED_MODIFIERS.html"><span class="nav-label">FUNCTION_ALLOWED_MODIFIERS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
               
               <li><a href="../api/python/arx/arx.parser.state.INDENT_SIZE.html"><span class="nav-label">INDENT_SIZE</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
               
@@ -1205,8 +1209,7 @@
         
         
         <h1 id="collections-and-apache-arrow">Collections and Apache Arrow</h1>
-<p>Arx exposes four built-in collection families with deliberately different
-semantics:</p>
+<p>Arx collection families have deliberately different semantics:</p>
 <table>
 <thead>
 <tr>
@@ -1217,8 +1220,13 @@ semantics:</p>
 </thead>
 <tbody>
 <tr>
+<td><code>range</code></td>
+<td>Immutable lazy integer progressions</td>
+<td>Inline fixed-size value</td>
+</tr>
+<tr>
 <td><code>list[T]</code></td>
-<td>General ordered values and builtin <code>range</code> results</td>
+<td>General owned ordered values</td>
 <td>IRx dynamic-list runtime</td>
 </tr>
 <tr>
@@ -1242,10 +1250,10 @@ semantics:</p>
 provided by IRx's native Arrow C++ runtime.</p>
 <h2 id="lists">Lists</h2>
 <pre class="highlight"><code>fn sum_values() -&gt; i32:
-  var values: list[i32] = [0, 1, 2 + 1]
+  values: list[i32] = [0, 1, 2 + 1]
   values.append(4)
   assert len(values) == 4
-  var total: i32 = 0
+  total: i32 = 0
   for value in values:
     total = total + value
   return total
@@ -1269,14 +1277,15 @@ still moves it to the caller.</p>
 an explicit fixed-shape tensor target selects tensor storage. An explicit list
 target types fresh literal elements first. Otherwise all elements must have a
 common lossless domain, independent of order. Empty lists need a target, for
-example <code>var values: list[i64] = []</code>. Nested owned lists remain unsupported.</p>
+example <code>values: list[i64] = []</code>. Nested owned lists remain unsupported.</p>
 <p><code>len(values)</code> returns <code>i64</code>; narrowing it requires a checked <code>cast</code>. String
 insertion copies the bytes, and indexing or iterating a string list produces
 independent strings that survive list replacement. Failed construction drops
 initialized elements without replacing an existing destination. See the
 <a href="../irx/runtime-ownership.html#enforced-scalar-dynamic-list-contract">enforced list contract</a>.
-<code>range</code> still materializes a list, not a lazy iterator. Rank-one numeric tensors
-and typed Series also support <code>len</code>.</p>
+Ranges are allocation-free values; see
+<a href="control-flow.html#for-loop-for-in-style">range workflows</a>. Rank-one numeric
+tensors and typed Series also support <code>len</code>.</p>
 <h2 id="read-only-numeric-consumers">Read-only numeric consumers</h2>
 <p><code>sequence[T]</code> is a <strong>parameter-only borrow</strong>, not a new owning container. Like
 Python's <code>collections.abc.Sequence</code>, it offers ordered iteration, integer
@@ -1287,39 +1296,44 @@ elements are signed/unsigned 8-64-bit integers or <code>f32</code>/<code>f64</co
 fn first(values: sequence[T]) -&gt; T:
   return values[0]
 </code></pre>
-<p>Pass a matching <code>list[T]</code> (including <code>range</code>), rank-one static/runtime tensor,
-or typed numeric Series directly. No flattening or conversion to <code>f64</code> occurs;
-large integers remain exact. Nullable Series require <code>sequence[nullable[T]]</code>:
-explicitly fill or filter nulls for a nonnullable consumer. NaN and infinity
-remain floating values; algorithms needing finite input must check them. See the
-executable <code>examples/numeric-sequences.x</code> for inferred/explicit calls, nested
-template types, and nullable input.</p>
+<p>Pass a matching <code>list[T]</code>, rank-one static/runtime tensor, or typed numeric
+Series directly. No flattening or conversion to <code>f64</code> occurs; large integers
+remain exact. Nullable Series require <code>sequence[nullable[T]]</code>: explicitly fill
+or filter nulls for a nonnullable consumer. NaN and infinity remain floating
+values; algorithms needing finite input must check them. See the executable
+<code>examples/numeric-sequences.x</code> for inferred/explicit calls, nested template
+types, and nullable input. Ranges are not contiguous borrowed storage;
+materialize them explicitly with <code>list(range(...), max_items=N)</code> for these
+calls.</p>
 <p>Adapters live through the call or iteration, including exceptional exits. Lists
 borrow their owner; tensors pin their owner and preserve strides; Series retain
 independent zero-copy chunk snapshots so subsequent alias replacement does not
 invalidate the view. Sequence descriptors cannot be returned, stored, captured
 by a generator, reassigned, or used to mutate the source. Materialize an owned
 result instead:</p>
-<pre class="highlight"><code>var owned: list[i64] = list(values, max_items=1000)
+<pre class="highlight"><code>owned: list[i64] = list(values, max_items=1000)
 </code></pre>
-<p><code>list(input, max_items=N)</code> copies nonnullable numeric values once. Sized inputs
-may omit the bound; exceeding a supplied nonnegative bound raises <code>ValueError</code>
-without publishing a truncated list. Allocation sizes remain overflow-checked.
-Nullable storage is deliberately not supported in owned lists; fill/filter
-first.</p>
+<p><code>list(input, max_items=N)</code> copies nonnullable numeric values once, including
+lazy ranges. Sized inputs may omit the bound; exceeding a supplied nonnegative
+bound raises <code>ValueError</code> without publishing a truncated list. Allocation sizes
+remain overflow-checked. Nullable storage is deliberately not supported in owned
+lists; fill/filter first.</p>
 <p>IRx single-pass generators are <strong>not</strong> sequences and require <code>max_items</code>.
 Materialization probes at most <code>N + 1</code> items to detect excess, releasing partial
 output and owned temporary frames on failure. Consumption is not rolled back.
-Named iterators are borrowed from their lexical owner and remain advanced after
-failure. Arx source-level generator declarations are still unsupported; this
-iterator workflow is available to ASTx/IRx hosts, not new Arx <code>yield</code> syntax.</p>
+Named frames remain owned by their lexical owner, but the acquired cursor is
+closed on success, early transfer, or failure. A second acquisition, including
+nested consumption, raises <code>RuntimeError</code>; an acquisition failure caught inside
+an active loop does not close that loop's cursor. Arx source-level generator
+declarations are still unsupported; this iterator workflow is available to
+ASTx/IRx hosts, not new Arx <code>yield</code> syntax.</p>
 <h2 id="tensors">Tensors</h2>
 <p>Fixed-shape tensors use one or more integer dimensions:</p>
 <pre class="highlight"><code>fn pick(grid: tensor[i32, 2, 2]) -&gt; i32:
   return grid[1, 0]
 
 fn main() -&gt; i32:
-  var grid: tensor[i32, 2, 2] = [[1, 2], [3, 4]]
+  grid: tensor[i32, 2, 2] = [[1, 2], [3, 4]]
   return pick(grid)
 </code></pre>
 <p>Rules:</p>
@@ -1341,12 +1355,12 @@ Rank mismatch and invalid metadata fail before reading; byte-offset arithmetic
 is overflow-checked. Rank-one tensors also support <code>len</code> and ordered iteration.</p>
 <h2 id="dataframes-and-series">DataFrames and Series</h2>
 <pre class="highlight"><code>fn main() -&gt; i32:
-  var rows: dataframe[id: i32, score: f64] = dataframe({
+  rows: dataframe[id: i32, score: f64] = dataframe({
     id: [1, 2, 3],
     score: [0.5, 0.8, 1.0],
   })
-  var scores: series[f64] = rows.score
-  var ids: series[i32] = rows[&quot;id&quot;]
+  scores: series[f64] = rows.score
+  ids: series[i32] = rows["id"]
   print(rows.ncols())
   return cast(rows.nrows(), i32)
 </code></pre>
@@ -1407,14 +1421,14 @@ zero-based; negative or out-of-range indices fail at runtime.</p>
 title: Nullable column expressions
 ```
 fn main() -&gt; i32:
-  var frame: dataframe[x:i32 | none] = dataframe({x:[1, none, 3]})
-  var doubled: series[i32 | none] = frame.x + frame.x
-  var missing: nullable[i32] = doubled[1]
+  frame: dataframe[x:i32 | none] = dataframe({x:[1, none, 3]})
+  doubled: series[i32 | none] = frame.x + frame.x
+  missing: nullable[i32] = doubled[1]
   assert is_null(missing)
   assert fill_null(doubled[2], 0) == 6
-  var filled: series[i32] = fill_null(doubled, 7)
+  filled: series[i32] = fill_null(doubled, 7)
   assert filled[1] == 7
-  var empty: nullable[i32] = none
+  empty: nullable[i32] = none
   assert is_null(empty)
   return 0
 </code></pre>

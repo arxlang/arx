@@ -28,7 +28,7 @@
       <a class="site-brand" href="../../../index.html">
         <img class="brand-logo" src="../../../images/arx-logo-terracotta.png" alt="ArxLang">
         <span class="brand-name">ArxLang</span>
-        <span class="version badge rounded-pill">1.27.0</span>
+        <span class="version badge rounded-pill">1.29.0</span>
       </a>
       
       <nav class="site-navbar" aria-label="Primary">
@@ -263,7 +263,7 @@
             <ul class="api-members">
               <li class="api-overview"><a href="arxpy.typecheck.html" aria-label="typecheck module overview">Module overview</a></li>
               
-              <li><a href="arxpy.typecheck.typechecked.html"><span class="nav-label">typechecked</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
+              <li><a href="arxpy.typecheck.typechecked.html"><span class="nav-label">typechecked</span><span class="api-kind api-kind--function">function</span></a></li>
               
             </ul>
           </details>
@@ -292,27 +292,27 @@
         
         
         <h1 id="compile"><span class="api-kind api-kind--method">method</span> compile</h1>
-<pre class="highlight"><code><span class="nb">compile</span><span class="p">(</span><span class="n">program</span><span class="p">:</span> <span class="n">ParsedProgram</span> <span class="o">|</span> <span class="n">CheckedProgram</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">kind</span><span class="p">:</span> <span class="n">ArtifactKind</span> <span class="o">=</span> <span class="n">ArtifactKind</span><span class="o">.</span><span class="n">AUTO</span><span class="p">,</span> <span class="n">output</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">link_mode</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s1">&#39;auto&#39;</span><span class="p">,</span> <span class="s1">&#39;pie&#39;</span><span class="p">,</span> <span class="s1">&#39;no-pie&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;auto&#39;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">CompilationArtifact</span>
+<pre class="highlight"><code><span class="nb">compile</span><span class="p">(</span><span class="n">program</span><span class="p">:</span> <span class="n">ParsedProgram</span> <span class="o">|</span> <span class="n">CheckedProgram</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">kind</span><span class="p">:</span> <span class="n">ArtifactKind</span> <span class="o">=</span> <span class="n">ArtifactKind</span><span class="o">.</span><span class="n">AUTO</span><span class="p">,</span> <span class="n">output</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">link_mode</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s1">'auto'</span><span class="p">,</span> <span class="s1">'pie'</span><span class="p">,</span> <span class="s1">'no-pie'</span><span class="p">]</span> <span class="o">=</span> <span class="s1">'auto'</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">CompilationArtifact</span>
 </code></pre>
-<p>Source: packages/arxpy/src/arxpy/compiler.py:566</p>
+<p>Source: packages/arxpy/src/arxpy/compiler.py:516</p>
 <p>Lower a program and optionally materialize a host artifact.</p>
 <h3 id="parameters">Parameters</h3>
 <ul>
 <li>
-<p><strong>program</strong> — <strong>Type:</strong> ParsedProgram | CheckedProgram</p>
+<p><strong>program</strong> — Program.; <strong>Type:</strong> ParsedProgram | CheckedProgram</p>
 </li>
 <li>
-<p><strong>kind</strong> — <strong>Type:</strong> ArtifactKind</p>
+<p><strong>kind</strong> — Kind of value or operation.; <strong>Type:</strong> ArtifactKind</p>
 </li>
 <li>
-<p><strong>output</strong> — <strong>Type:</strong> str | Path | None</p>
+<p><strong>output</strong> — Output destination or generated result.; <strong>Type:</strong> str | Path | None</p>
 </li>
 <li>
-<p><strong>link_mode</strong> — <strong>Type:</strong> Literal[auto, pie, no-pie]</p>
+<p><strong>link_mode</strong> — Link mode.; <strong>Type:</strong> Literal['auto', 'pie', 'no-pie']</p>
 </li>
 </ul>
 <h3 id="returns">Returns</h3>
-<p><strong>Type:</strong> CompilationArtifact</p>
+<p>Lowered a program and optionally materialize a host artifact.; <strong>Type:</strong> CompilationArtifact</p>
 
       </main>
       

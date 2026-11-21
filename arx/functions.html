@@ -28,7 +28,7 @@
       <a class="site-brand" href="../index.html">
         <img class="brand-logo" src="../images/arx-logo-terracotta.png" alt="ArxLang">
         <span class="brand-name">ArxLang</span>
-        <span class="version badge rounded-pill">1.27.0</span>
+        <span class="version badge rounded-pill">1.29.0</span>
       </a>
       
       <nav class="site-navbar" aria-label="Primary">
@@ -365,6 +365,8 @@
             <summary><span class="nav-label">arrow_stdlib</span></summary>
             <ul class="api-members">
               <li class="api-overview"><a href="../api/python/arx/arx.arrow_stdlib.html" aria-label="arrow_stdlib module overview">Module overview</a></li>
+              
+              <li><a href="../api/python/arx/arx.arrow_stdlib.COMPUTE_FUNCTIONS.html"><span class="nav-label">COMPUTE_FUNCTIONS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
               
               <li><a href="../api/python/arx/arx.arrow_stdlib.IO_FUNCTIONS.html"><span class="nav-label">IO_FUNCTIONS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
               
@@ -926,11 +928,13 @@
             <ul class="api-members">
               <li class="api-overview"><a href="../api/python/arx/arx.parser.state.html" aria-label="parser.state module overview">Module overview</a></li>
               
+              <li><a href="../api/python/arx/arx.parser.state.BINDING_MUTABILITY_MODIFIERS.html"><span class="nav-label">BINDING_MUTABILITY_MODIFIERS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
+              
               <li><a href="../api/python/arx/arx.parser.state.CLASS_ALLOWED_MODIFIERS.html"><span class="nav-label">CLASS_ALLOWED_MODIFIERS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
               
               <li><a href="../api/python/arx/arx.parser.state.FIELD_ALLOWED_MODIFIERS.html"><span class="nav-label">FIELD_ALLOWED_MODIFIERS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
               
-              <li><a href="../api/python/arx/arx.parser.state.FIELD_MUTABILITY_MODIFIERS.html"><span class="nav-label">FIELD_MUTABILITY_MODIFIERS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
+              <li><a href="../api/python/arx/arx.parser.state.FUNCTION_ALLOWED_MODIFIERS.html"><span class="nav-label">FUNCTION_ALLOWED_MODIFIERS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
               
               <li><a href="../api/python/arx/arx.parser.state.INDENT_SIZE.html"><span class="nav-label">INDENT_SIZE</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
               
@@ -1205,8 +1209,23 @@
         
         
         <h1 id="functions">Functions</h1>
-<p>Functions are defined with <code>fn</code>, a name, parameters in <code>()</code>, and a body after
-<code>:</code> with indentation.</p>
+<p>Functions keep <code>fn name(parameters) -&gt; return_type:</code>. Optional declaration
+modifiers precede the return type:
+<code>fn calculate(value: i32) -&gt; private :: i32:</code>. The modifier group describes the
+function, not its returned value. Omission means <code>public</code>; explicit <code>public ::</code>
+is equivalent. <code>private</code> restricts access to the defining Arx module, including
+from-imports and namespace calls; it does not change native symbol linkage or
+the extern ABI. <code>protected</code>, <code>static</code>, <code>abstract</code>, and inline <code>extern</code> are
+method-only policies.</p>
+<p>Parameter bindings are separate: <code>value: const :: i32</code> prevents callee-side
+rebinding without restricting the caller's binding or freezing an object.
+Omitted parameter modifiers mean <code>var</code>. Callable names do not accept <code>var</code> or
+<code>const</code>, and return types remain explicit.</p>
+<p>Signatures may wrap parameters, modifiers, and the return type across lines,
+including placing the final <code>:</code> on its own line. Header continuation does not
+open a block; body indentation is relative to the <code>fn</code> declaration. This does
+not introduce general multiline expressions or new wrapping rules inside type
+expressions. See the template example below for a complete wrapped program.</p>
 <h2 id="definition-syntax">Definition Syntax</h2>
 <pre class="highlight"><code>```
 title: Function definition
@@ -1265,8 +1284,9 @@ then dispatch positional values to the override.</p>
 <p>Fixed extern parameter names can be used; any existing C variadic tail stays
 positional and uses existing promotions. Keywords do not enable unsupported FFI
 types. Parser intrinsics and collection operations without a named-call schema
-still reject keywords. Signature-backed bundled functions such as
-<code>range(start=0, stop=3)</code> use their declared parameters, not Python overloads.</p>
+still reject keywords. The range intrinsic accepts named <code>start</code>, <code>stop</code>, and
+<code>step</code>; a single positional operand denotes <code>stop</code> unless <code>stop</code> is supplied by
+name. See <a href="control-flow.html#for-loop-for-in-style">range workflows</a>.</p>
 <h2 id="default-parameter-values">Default Parameter Values</h2>
 <p>Function, method, and extern parameters can declare trailing default values with
 <code>=</code>. Calls may omit defaulted parameters, including a middle default when a
@@ -1290,11 +1310,12 @@ fn main() -&gt; i32:
   return add_offset(4)
 </code></pre>
 <h2 id="template-functions">Template Functions</h2>
-<p>Function templates use an <code>@&lt;...&gt;</code> block on the line immediately before <code>fn</code>.
-Each template parameter must declare a bound, and bounds may be a single type or
-a <code>|</code> union of concrete types. Module-local type aliases can name and compose
-these bounds; importing aliases from another module is not supported. Explicit
-template arguments are written between the callee name and <code>(</code>.</p>
+<p>Function templates use an <code>@&lt;...&gt;</code> block on the line immediately before the
+function declaration. Each template parameter must declare a bound, and bounds
+may be a single type or a <code>|</code> union of concrete types. Module-local type aliases
+can name and compose these bounds; importing aliases from another module is not
+supported. Explicit template arguments are written between the callee name and
+<code>(</code>.</p>
 <pre class="highlight"><code>```
 title: Template function example
 summary: Uses one bounded template parameter with inferred and explicit calls.
@@ -1304,14 +1325,18 @@ type Float = f32 | f64
 type Real = SignedInteger | Float
 
 @&lt;T: Real&gt;
-fn add(x: T, y: T) -&gt; T:
+fn add(x: T, y: T) -&gt; private :: T:
   ```
   title: add
   summary: Adds two values that share one template-bound type.
   ```
   return x + y
 
-fn main() -&gt; i32:
+fn main(
+) -&gt;
+  public ::
+  i32
+:
   ```
   title: main
   summary: Calls template specializations through inference and explicit args.

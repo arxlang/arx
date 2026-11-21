@@ -28,7 +28,7 @@
       <a class="site-brand" href="../../../index.html">
         <img class="brand-logo" src="../../../images/arx-logo-terracotta.png" alt="ArxLang">
         <span class="brand-name">ArxLang</span>
-        <span class="version badge rounded-pill">1.27.0</span>
+        <span class="version badge rounded-pill">1.29.0</span>
       </a>
       
       <nav class="site-navbar" aria-label="Primary">
@@ -387,18 +387,18 @@
         <h1 id="jitfunction"><span class="api-kind api-kind--class">class</span> JitFunction</h1>
 <pre class="highlight"><code><span class="n">JitFunction</span><span class="p">(</span><span class="n">py_func</span><span class="p">:</span> <span class="n">PyFunc</span><span class="p">,</span> <span class="n">signature</span><span class="p">:</span> <span class="n">Signature</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">cache</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span>
 </code></pre>
-<p>Source: packages/arxjit/src/arxjit/core.py:21</p>
+<p>Source: packages/arxjit/src/arxjit/core.py:20</p>
 <p>A callable wrapper around a @jit-decorated function.</p>
 <h3 id="attributes">Attributes</h3>
 <ul>
 <li>
-<p><strong>py_func</strong> — The original, undecorated Python function.</p>
+<p><strong>py_func</strong> — The original, undecorated Python function.; <strong>Type:</strong> PyFunc</p>
 </li>
 <li>
-<p><strong>signature</strong> — The explicit signature, or None when not given.</p>
+<p><strong>signature</strong> — The explicit signature, or None when not given.; <strong>Type:</strong> Signature | None</p>
 </li>
 <li>
-<p><strong>cache</strong> — Whether compiled artifacts should be cached.</p>
+<p><strong>cache</strong> — Whether compiled artifacts should be cached.; <strong>Type:</strong> bool</p>
 </li>
 </ul>
 <h2 id="methods">Methods</h2>

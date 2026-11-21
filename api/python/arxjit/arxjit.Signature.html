@@ -28,7 +28,7 @@
       <a class="site-brand" href="../../../index.html">
         <img class="brand-logo" src="../../../images/arx-logo-terracotta.png" alt="ArxLang">
         <span class="brand-name">ArxLang</span>
-        <span class="version badge rounded-pill">1.27.0</span>
+        <span class="version badge rounded-pill">1.29.0</span>
       </a>
       
       <nav class="site-navbar" aria-label="Primary">
@@ -387,16 +387,16 @@
         <h1 id="signature"><span class="api-kind api-kind--class">class</span> Signature</h1>
 <pre class="highlight"><code><span class="n">Signature</span><span class="p">(</span><span class="n">return_type</span><span class="p">:</span> <span class="n">SigType</span><span class="p">,</span> <span class="n">arg_types</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">SigType</span><span class="p">,</span> <span class="o">...</span><span class="p">])</span>
 </code></pre>
-<p>Source: packages/arxjit/src/arxjit/types.py:56</p>
+<p>Source: packages/arxjit/src/arxjit/types.py:47</p>
 <p>Declared as: python:arxjit:arxjit.types.Signature</p>
 <p>A compiled-function signature (return type and argument types).</p>
 <h3 id="attributes">Attributes</h3>
 <ul>
 <li>
-<p><strong>return_type</strong> — <strong>Type:</strong> SigType; The type returned by the compiled function.</p>
+<p><strong>return_type</strong> — The type returned by the compiled function.; <strong>Type:</strong> SigType</p>
 </li>
 <li>
-<p><strong>arg_types</strong> — <strong>Type:</strong> tuple[SigType, Ellipsis]; The positional argument types, in order.</p>
+<p><strong>arg_types</strong> — The positional argument types, in order.; <strong>Type:</strong> tuple[SigType, ...]</p>
 </li>
 </ul>
 <h2 id="methods">Methods</h2>

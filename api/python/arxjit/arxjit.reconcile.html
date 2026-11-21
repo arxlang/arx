@@ -28,7 +28,7 @@
       <a class="site-brand" href="../../../index.html">
         <img class="brand-logo" src="../../../images/arx-logo-terracotta.png" alt="ArxLang">
         <span class="brand-name">ArxLang</span>
-        <span class="version badge rounded-pill">1.27.0</span>
+        <span class="version badge rounded-pill">1.29.0</span>
       </a>
       
       <nav class="site-navbar" aria-label="Primary">
@@ -390,6 +390,10 @@
 <p>Source: packages/arxjit/src/arxjit/reconcile.py:1</p>
 <p>Signature reconciliation for arxjit.</p>
 <p>Third stage of the arxjit pipeline: decide which Signature a validated function will be compiled against. An explicit signature= passed to @jit is the source of truth and wins outright; otherwise the signature is derived from the function's Python annotations; a function with neither is reported and stays interpreted. Annotations are read from the ast rather than from <strong>annotations</strong> so that a module using &quot;from <strong>future</strong> import annotations&quot; behaves identically, and so every diagnostic can point at the exact annotation that caused it. Following from that, <code>int</code>, <code>float</code> and <code>bool</code> are reserved annotation spellings in a @jit function: they select i64, f64 and bool_ by name, independently of Python name resolution, so what those names are bound to where the function was defined does not change what the compiler is asked for. See _annotation_type for why resolving them through the defining namespace cannot be made sound.</p>
+<h3 id="attributes">Attributes</h3>
+<ul>
+<li><strong>_ANNOTATION_TYPES</strong> — Annotation types.; <strong>Type:</strong> dict[str, SigType]</li>
+</ul>
 <h2 id="functions">Functions</h2>
 <ul>
 <li><a href="arxjit.reconcile.resolve_signature.html">resolve_signature</a> — Decide the Signature a validated function compiles against.</li>
@@ -401,6 +405,8 @@
         <div class="toc-panel">
           <strong>On this page</strong>
           <ul>
+            
+            <li class="toc-h3"><a href="#attributes">Attributes</a></li>
             
             <li class="toc-h2"><a href="#functions">Functions</a></li>
             

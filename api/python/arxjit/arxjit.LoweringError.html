@@ -28,7 +28,7 @@
       <a class="site-brand" href="../../../index.html">
         <img class="brand-logo" src="../../../images/arx-logo-terracotta.png" alt="ArxLang">
         <span class="brand-name">ArxLang</span>
-        <span class="version badge rounded-pill">1.27.0</span>
+        <span class="version badge rounded-pill">1.29.0</span>
       </a>
       
       <nav class="site-navbar" aria-label="Primary">
@@ -385,13 +385,13 @@
         
         
         <h1 id="loweringerror"><span class="api-kind api-kind--class">class</span> LoweringError</h1>
-<p>Source: packages/arxjit/src/arxjit/errors.py:76</p>
+<p>Source: packages/arxjit/src/arxjit/errors.py:70</p>
 <p>Declared as: python:arxjit:arxjit.errors.LoweringError</p>
 <p>Raised when a validated function cannot be lowered to astx.</p>
 <p>Lowering runs on a function validation has already accepted, so this reports a disagreement between the two stages rather than a mistake by the user: a construct the subset admits that the lowerer has no astx mapping for. It stays a distinct error because the fix is a change to arxjit, not to the decorated function.</p>
 <h3 id="attributes">Attributes</h3>
 <ul>
-<li><strong>diagnostics</strong> — <strong>Type:</strong> list[Diagnostic]</li>
+<li><strong>diagnostics</strong> — Collected structured diagnostics.; <strong>Type:</strong> list[Diagnostic]</li>
 </ul>
 
       </main>

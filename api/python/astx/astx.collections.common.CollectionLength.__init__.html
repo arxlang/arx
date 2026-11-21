@@ -28,7 +28,7 @@
       <a class="site-brand" href="../../../index.html">
         <img class="brand-logo" src="../../../images/arx-logo-terracotta.png" alt="ArxLang">
         <span class="brand-name">ArxLang</span>
-        <span class="version badge rounded-pill">1.27.0</span>
+        <span class="version badge rounded-pill">1.29.0</span>
       </a>
       
       <nav class="site-navbar" aria-label="Primary">
@@ -502,6 +502,8 @@
               
               <li><a href="astx.ImportStmt.html"><span class="nav-label">ImportStmt</span><span class="api-kind api-kind--class">class</span></a></li>
               
+              <li><a href="astx.InferredType.html"><span class="nav-label">InferredType</span><span class="api-kind api-kind--class">class</span></a></li>
+              
               <li><a href="astx.InlineVariableDeclaration.html"><span class="nav-label">InlineVariableDeclaration</span><span class="api-kind api-kind--class">class</span></a></li>
               
               <li><a href="astx.Int16.html"><span class="nav-label">Int16</span><span class="api-kind api-kind--class">class</span></a></li>
@@ -659,6 +661,8 @@
               <li><a href="astx.PrintExpr.html"><span class="nav-label">PrintExpr</span><span class="api-kind api-kind--class">class</span></a></li>
               
               <li><a href="astx.Program.html"><span class="nav-label">Program</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.RangeType.html"><span class="nav-label">RangeType</span><span class="api-kind api-kind--class">class</span></a></li>
               
               <li><a href="astx.SPECIALIZED_BINARY_OP_EXTRA.html"><span class="nav-label">SPECIALIZED_BINARY_OP_EXTRA</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
               
@@ -1788,7 +1792,7 @@
             <ul class="api-members">
               <li class="api-overview"><a href="astx.tools.typing.html" aria-label="tools.typing module overview">Module overview</a></li>
               
-              <li><a href="astx.tools.typing.typechecked.html"><span class="nav-label">typechecked</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
+              <li><a href="astx.tools.typing.typechecked.html"><span class="nav-label">typechecked</span><span class="api-kind api-kind--function">function</span></a></li>
               
             </ul>
           </details>
@@ -1840,6 +1844,8 @@
               
               <li><a href="astx.types.GeneratorType.html"><span class="nav-label">GeneratorType</span><span class="api-kind api-kind--class">class</span></a></li>
               
+              <li><a href="astx.types.InferredType.html"><span class="nav-label">InferredType</span><span class="api-kind api-kind--class">class</span></a></li>
+              
               <li><a href="astx.types.Int16.html"><span class="nav-label">Int16</span><span class="api-kind api-kind--class">class</span></a></li>
               
               <li><a href="astx.types.Int32.html"><span class="nav-label">Int32</span><span class="api-kind api-kind--class">class</span></a></li>
@@ -1863,6 +1869,8 @@
               <li><a href="astx.types.Number.html"><span class="nav-label">Number</span><span class="api-kind api-kind--class">class</span></a></li>
               
               <li><a href="astx.types.OrOp.html"><span class="nav-label">OrOp</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.types.RangeType.html"><span class="nav-label">RangeType</span><span class="api-kind api-kind--class">class</span></a></li>
               
               <li><a href="astx.types.SequenceType.html"><span class="nav-label">SequenceType</span><span class="api-kind api-kind--class">class</span></a></li>
               
@@ -1918,6 +1926,8 @@
               
               <li><a href="astx.types.base.AnyType.html"><span class="nav-label">AnyType</span><span class="api-kind api-kind--class">class</span></a></li>
               
+              <li><a href="astx.types.base.InferredType.html"><span class="nav-label">InferredType</span><span class="api-kind api-kind--class">class</span></a></li>
+              
               <li><a href="astx.types.base.NoneType.html"><span class="nav-label">NoneType</span><span class="api-kind api-kind--class">class</span></a></li>
               
             </ul>
@@ -1959,6 +1969,8 @@
               <li><a href="astx.types.collections.DictType.html"><span class="nav-label">DictType</span><span class="api-kind api-kind--class">class</span></a></li>
               
               <li><a href="astx.types.collections.ListType.html"><span class="nav-label">ListType</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.types.collections.RangeType.html"><span class="nav-label">RangeType</span><span class="api-kind api-kind--class">class</span></a></li>
               
               <li><a href="astx.types.collections.SequenceType.html"><span class="nav-label">SequenceType</span><span class="api-kind api-kind--class">class</span></a></li>
               
@@ -2237,12 +2249,14 @@
         <h1 id="_-_init-_-_"><span class="api-kind api-kind--method">method</span> __init__</h1>
 <pre class="highlight"><code><span class="fm">__init__</span><span class="p">(</span><span class="n">base</span><span class="p">:</span> <span class="n">astx</span><span class="o">.</span><span class="n">AST</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
 </code></pre>
-<p>Source: packages/astx/src/astx/collections/common.py:35</p>
+<p>Source: packages/astx/src/astx/collections/common.py:31</p>
 <p>Initialize one collection length query.</p>
 <h3 id="parameters">Parameters</h3>
 <ul>
-<li><strong>base</strong> — <strong>Type:</strong> astx.AST</li>
+<li><strong>base</strong> — Base value or declaration.; <strong>Type:</strong> astx.AST</li>
 </ul>
+<h3 id="returns">Returns</h3>
+<p><strong>Type:</strong> None</p>
 
       </main>
       
@@ -2252,6 +2266,8 @@
           <ul>
             
             <li class="toc-h3"><a href="#parameters">Parameters</a></li>
+            
+            <li class="toc-h3"><a href="#returns">Returns</a></li>
             
           </ul>
         </div>

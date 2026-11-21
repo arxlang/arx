@@ -28,7 +28,7 @@
       <a class="site-brand" href="../../../index.html">
         <img class="brand-logo" src="../../../images/arx-logo-terracotta.png" alt="ArxLang">
         <span class="brand-name">ArxLang</span>
-        <span class="version badge rounded-pill">1.27.0</span>
+        <span class="version badge rounded-pill">1.29.0</span>
       </a>
       
       <nav class="site-navbar" aria-label="Primary">
@@ -263,7 +263,7 @@
             <ul class="api-members">
               <li class="api-overview"><a href="arxpy.typecheck.html" aria-label="typecheck module overview" aria-current="page">Module overview</a></li>
               
-              <li><a href="arxpy.typecheck.typechecked.html"><span class="nav-label">typechecked</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
+              <li><a href="arxpy.typecheck.typechecked.html"><span class="nav-label">typechecked</span><span class="api-kind api-kind--function">function</span></a></li>
               
             </ul>
           </details>
@@ -296,10 +296,10 @@
 </code></pre>
 <p>Source: packages/arxpy/src/arxpy/typecheck.py:1</p>
 <p>Runtime type-checking helpers for ArxPy.</p>
-<p>Configure Typeguard to validate every item in public collection arguments and return values throughout the programmatic compiler API.</p>
-<h2 id="attributes">Attributes</h2>
+<p>Reuse ASTx's import-time runtime-checking policy. Tests enable validation of arguments, return values, and every collection item; regular usage does not instrument the programmatic compiler API.</p>
+<h2 id="functions">Functions</h2>
 <ul>
-<li><a href="arxpy.typecheck.typechecked.html">typechecked</a> —</li>
+<li><a href="arxpy.typecheck.typechecked.html">typechecked</a> — Instrument a function or class when runtime checking is enabled.</li>
 </ul>
 
       </main>
@@ -309,7 +309,7 @@
           <strong>On this page</strong>
           <ul>
             
-            <li class="toc-h2"><a href="#attributes">Attributes</a></li>
+            <li class="toc-h2"><a href="#functions">Functions</a></li>
             
           </ul>
         </div>

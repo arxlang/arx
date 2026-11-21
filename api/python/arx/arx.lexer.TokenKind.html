@@ -28,7 +28,7 @@
       <a class="site-brand" href="../../../index.html">
         <img class="brand-logo" src="../../../images/arx-logo-terracotta.png" alt="ArxLang">
         <span class="brand-name">ArxLang</span>
-        <span class="version badge rounded-pill">1.27.0</span>
+        <span class="version badge rounded-pill">1.29.0</span>
       </a>
       
       <nav class="site-navbar" aria-label="Primary">
@@ -365,6 +365,8 @@
             <summary><span class="nav-label">arrow_stdlib</span></summary>
             <ul class="api-members">
               <li class="api-overview"><a href="arx.arrow_stdlib.html" aria-label="arrow_stdlib module overview">Module overview</a></li>
+              
+              <li><a href="arx.arrow_stdlib.COMPUTE_FUNCTIONS.html"><span class="nav-label">COMPUTE_FUNCTIONS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
               
               <li><a href="arx.arrow_stdlib.IO_FUNCTIONS.html"><span class="nav-label">IO_FUNCTIONS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
               
@@ -926,11 +928,13 @@
             <ul class="api-members">
               <li class="api-overview"><a href="arx.parser.state.html" aria-label="parser.state module overview">Module overview</a></li>
               
+              <li><a href="arx.parser.state.BINDING_MUTABILITY_MODIFIERS.html"><span class="nav-label">BINDING_MUTABILITY_MODIFIERS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
+              
               <li><a href="arx.parser.state.CLASS_ALLOWED_MODIFIERS.html"><span class="nav-label">CLASS_ALLOWED_MODIFIERS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
               
               <li><a href="arx.parser.state.FIELD_ALLOWED_MODIFIERS.html"><span class="nav-label">FIELD_ALLOWED_MODIFIERS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
               
-              <li><a href="arx.parser.state.FIELD_MUTABILITY_MODIFIERS.html"><span class="nav-label">FIELD_MUTABILITY_MODIFIERS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
+              <li><a href="arx.parser.state.FUNCTION_ALLOWED_MODIFIERS.html"><span class="nav-label">FUNCTION_ALLOWED_MODIFIERS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
               
               <li><a href="arx.parser.state.INDENT_SIZE.html"><span class="nav-label">INDENT_SIZE</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
               
@@ -1205,7 +1209,7 @@
         
         
         <h1 id="tokenkind"><span class="api-kind api-kind--class">class</span> TokenKind</h1>
-<p>Source: packages/arx/src/arx/lexer/core.py:28</p>
+<p>Source: packages/arx/src/arx/lexer/core.py:30</p>
 <p>Declared as: python:arx:arx.lexer.core.TokenKind</p>
 <p>TokenKind enumeration for known variables returned by the lexer.</p>
 <h2 id="enum-values">Enum values</h2>
@@ -1244,10 +1248,16 @@
 <p><a href="arx.lexer.TokenKind.kw_assert.html">kw_assert</a> —</p>
 </li>
 <li>
+<p><a href="arx.lexer.TokenKind.kw_break.html">kw_break</a> —</p>
+</li>
+<li>
 <p><a href="arx.lexer.TokenKind.kw_class.html">kw_class</a> —</p>
 </li>
 <li>
 <p><a href="arx.lexer.TokenKind.kw_const.html">kw_const</a> —</p>
+</li>
+<li>
+<p><a href="arx.lexer.TokenKind.kw_continue.html">kw_continue</a> —</p>
 </li>
 <li>
 <p><a href="arx.lexer.TokenKind.kw_elif.html">kw_elif</a> —</p>
@@ -1296,6 +1306,9 @@
 </li>
 <li>
 <p><a href="arx.lexer.TokenKind.kw_while.html">kw_while</a> —</p>
+</li>
+<li>
+<p><a href="arx.lexer.TokenKind.kw_with.html">kw_with</a> —</p>
 </li>
 <li>
 <p><a href="arx.lexer.TokenKind.none_literal.html">none_literal</a> —</p>

@@ -28,7 +28,7 @@
       <a class="site-brand" href="../../../index.html">
         <img class="brand-logo" src="../../../images/arx-logo-terracotta.png" alt="ArxLang">
         <span class="brand-name">ArxLang</span>
-        <span class="version badge rounded-pill">1.27.0</span>
+        <span class="version badge rounded-pill">1.29.0</span>
       </a>
       
       <nav class="site-navbar" aria-label="Primary">
@@ -365,6 +365,8 @@
             <summary><span class="nav-label">arrow_stdlib</span></summary>
             <ul class="api-members">
               <li class="api-overview"><a href="arx.arrow_stdlib.html" aria-label="arrow_stdlib module overview">Module overview</a></li>
+              
+              <li><a href="arx.arrow_stdlib.COMPUTE_FUNCTIONS.html"><span class="nav-label">COMPUTE_FUNCTIONS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
               
               <li><a href="arx.arrow_stdlib.IO_FUNCTIONS.html"><span class="nav-label">IO_FUNCTIONS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
               
@@ -926,11 +928,13 @@
             <ul class="api-members">
               <li class="api-overview"><a href="arx.parser.state.html" aria-label="parser.state module overview">Module overview</a></li>
               
+              <li><a href="arx.parser.state.BINDING_MUTABILITY_MODIFIERS.html"><span class="nav-label">BINDING_MUTABILITY_MODIFIERS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
+              
               <li><a href="arx.parser.state.CLASS_ALLOWED_MODIFIERS.html"><span class="nav-label">CLASS_ALLOWED_MODIFIERS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
               
               <li><a href="arx.parser.state.FIELD_ALLOWED_MODIFIERS.html"><span class="nav-label">FIELD_ALLOWED_MODIFIERS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
               
-              <li><a href="arx.parser.state.FIELD_MUTABILITY_MODIFIERS.html"><span class="nav-label">FIELD_MUTABILITY_MODIFIERS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
+              <li><a href="arx.parser.state.FUNCTION_ALLOWED_MODIFIERS.html"><span class="nav-label">FUNCTION_ALLOWED_MODIFIERS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
               
               <li><a href="arx.parser.state.INDENT_SIZE.html"><span class="nav-label">INDENT_SIZE</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
               
@@ -1205,8 +1209,53 @@
         
         
         <h1 id="expressionparsermixin"><span class="api-kind api-kind--class">class</span> ExpressionParserMixin</h1>
-<p>Source: packages/arx/src/arx/parser/expressions.py:34</p>
+<p>Source: packages/arx/src/arx/parser/expressions.py:33</p>
 <p>Expression parser mixin.</p>
+<h3 id="attributes">Attributes</h3>
+<ul>
+<li>
+<p><strong>bin_op_precedence</strong> — <strong>Type:</strong> dict[str, int]</p>
+</li>
+<li>
+<p><strong>indent_level</strong> — <strong>Type:</strong> int</p>
+</li>
+<li>
+<p><strong>list_scopes</strong> — <strong>Type:</strong> list[set[str]]</p>
+</li>
+<li>
+<p><strong>known_class_names</strong> — <strong>Type:</strong> set[str]</p>
+</li>
+<li>
+<p><strong>imported_type_names</strong> — <strong>Type:</strong> set[str]</p>
+</li>
+<li>
+<p><strong>namespace_roots</strong> — <strong>Type:</strong> set[str]</p>
+</li>
+<li>
+<p><strong>builtin_type_bindings</strong> — <strong>Type:</strong> dict[str, astx.DataType]</p>
+</li>
+<li>
+<p><strong>tensor_scopes</strong> — <strong>Type:</strong> list[dict[str, TensorBinding | None]]</p>
+</li>
+<li>
+<p><strong>dataframe_scopes</strong> — <strong>Type:</strong> list[dict[str, DataFrameBinding | None]]</p>
+</li>
+<li>
+<p><strong>return_type_scopes</strong> — <strong>Type:</strong> list[astx.DataType]</p>
+</li>
+<li>
+<p><strong>template_type_scopes</strong> — <strong>Type:</strong> list[dict[str, astx.DataType]]</p>
+</li>
+<li>
+<p><strong>type_aliases</strong> — <strong>Type:</strong> dict[str, astx.DataType]</p>
+</li>
+<li>
+<p><strong>value_scopes</strong> — <strong>Type:</strong> list[set[str]]</p>
+</li>
+<li>
+<p><strong>tokens</strong> — <strong>Type:</strong> TokenList</p>
+</li>
+</ul>
 <h2 id="methods">Methods</h2>
 <ul>
 <li>
@@ -1292,6 +1341,8 @@
         <div class="toc-panel">
           <strong>On this page</strong>
           <ul>
+            
+            <li class="toc-h3"><a href="#attributes">Attributes</a></li>
             
             <li class="toc-h2"><a href="#methods">Methods</a></li>
             

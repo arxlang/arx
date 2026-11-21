@@ -28,7 +28,7 @@
       <a class="site-brand" href="../../../index.html">
         <img class="brand-logo" src="../../../images/arx-logo-terracotta.png" alt="ArxLang">
         <span class="brand-name">ArxLang</span>
-        <span class="version badge rounded-pill">1.27.0</span>
+        <span class="version badge rounded-pill">1.29.0</span>
       </a>
       
       <nav class="site-navbar" aria-label="Primary">
@@ -365,6 +365,8 @@
             <summary><span class="nav-label">arrow_stdlib</span></summary>
             <ul class="api-members">
               <li class="api-overview"><a href="arx.arrow_stdlib.html" aria-label="arrow_stdlib module overview">Module overview</a></li>
+              
+              <li><a href="arx.arrow_stdlib.COMPUTE_FUNCTIONS.html"><span class="nav-label">COMPUTE_FUNCTIONS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
               
               <li><a href="arx.arrow_stdlib.IO_FUNCTIONS.html"><span class="nav-label">IO_FUNCTIONS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
               
@@ -926,11 +928,13 @@
             <ul class="api-members">
               <li class="api-overview"><a href="arx.parser.state.html" aria-label="parser.state module overview">Module overview</a></li>
               
+              <li><a href="arx.parser.state.BINDING_MUTABILITY_MODIFIERS.html"><span class="nav-label">BINDING_MUTABILITY_MODIFIERS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
+              
               <li><a href="arx.parser.state.CLASS_ALLOWED_MODIFIERS.html"><span class="nav-label">CLASS_ALLOWED_MODIFIERS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
               
               <li><a href="arx.parser.state.FIELD_ALLOWED_MODIFIERS.html"><span class="nav-label">FIELD_ALLOWED_MODIFIERS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
               
-              <li><a href="arx.parser.state.FIELD_MUTABILITY_MODIFIERS.html"><span class="nav-label">FIELD_MUTABILITY_MODIFIERS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
+              <li><a href="arx.parser.state.FUNCTION_ALLOWED_MODIFIERS.html"><span class="nav-label">FUNCTION_ALLOWED_MODIFIERS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
               
               <li><a href="arx.parser.state.INDENT_SIZE.html"><span class="nav-label">INDENT_SIZE</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
               
@@ -1205,23 +1209,23 @@
         
         
         <h1 id="arxmain"><span class="api-kind api-kind--class">class</span> ArxMain</h1>
-<pre class="highlight"><code><span class="n">ArxMain</span><span class="p">(</span><span class="n">input_files</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(),</span> <span class="n">output_file</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">is_lib</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="n">link_mode</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s1">&#39;auto&#39;</span><span class="p">,</span> <span class="s1">&#39;pie&#39;</span><span class="p">,</span> <span class="s1">&#39;no-pie&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;auto&#39;</span><span class="p">)</span>
+<pre class="highlight"><code><span class="n">ArxMain</span><span class="p">(</span><span class="n">input_files</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(),</span> <span class="n">output_file</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">''</span><span class="p">,</span> <span class="n">is_lib</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="n">link_mode</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s1">'auto'</span><span class="p">,</span> <span class="s1">'pie'</span><span class="p">,</span> <span class="s1">'no-pie'</span><span class="p">]</span> <span class="o">=</span> <span class="s1">'auto'</span><span class="p">)</span>
 </code></pre>
-<p>Source: packages/arx/src/arx/main.py:869</p>
+<p>Source: packages/arx/src/arx/main.py:817</p>
 <p>The main class for calling Arx compiler.</p>
 <h3 id="attributes">Attributes</h3>
 <ul>
 <li>
-<p><strong>input_files</strong> — <strong>Type:</strong> list[str]</p>
+<p><strong>input_files</strong> — Input files.; <strong>Type:</strong> list[str]</p>
 </li>
 <li>
-<p><strong>output_file</strong> — <strong>Type:</strong> str</p>
+<p><strong>output_file</strong> — Destination file for generated output.; <strong>Type:</strong> str</p>
 </li>
 <li>
-<p><strong>is_lib</strong> — <strong>Type:</strong> bool</p>
+<p><strong>is_lib</strong> — Whether is lib.; <strong>Type:</strong> bool</p>
 </li>
 <li>
-<p><strong>link_mode</strong> — <strong>Type:</strong> Literal[auto, pie, no-pie]</p>
+<p><strong>link_mode</strong> — Link mode.; <strong>Type:</strong> Literal['auto', 'pie', 'no-pie']</p>
 </li>
 </ul>
 <h2 id="methods">Methods</h2>

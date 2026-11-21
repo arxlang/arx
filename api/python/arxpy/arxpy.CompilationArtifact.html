@@ -28,7 +28,7 @@
       <a class="site-brand" href="../../../index.html">
         <img class="brand-logo" src="../../../images/arx-logo-terracotta.png" alt="ArxLang">
         <span class="brand-name">ArxLang</span>
-        <span class="version badge rounded-pill">1.27.0</span>
+        <span class="version badge rounded-pill">1.29.0</span>
       </a>
       
       <nav class="site-navbar" aria-label="Primary">
@@ -263,7 +263,7 @@
             <ul class="api-members">
               <li class="api-overview"><a href="arxpy.typecheck.html" aria-label="typecheck module overview">Module overview</a></li>
               
-              <li><a href="arxpy.typecheck.typechecked.html"><span class="nav-label">typechecked</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
+              <li><a href="arxpy.typecheck.typechecked.html"><span class="nav-label">typechecked</span><span class="api-kind api-kind--function">function</span></a></li>
               
             </ul>
           </details>
@@ -294,19 +294,19 @@
         <h1 id="compilationartifact"><span class="api-kind api-kind--class">class</span> CompilationArtifact</h1>
 <pre class="highlight"><code><span class="n">CompilationArtifact</span><span class="p">(</span><span class="n">kind</span><span class="p">:</span> <span class="n">ArtifactKind</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span> <span class="n">llvm_ir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span>
 </code></pre>
-<p>Source: packages/arxpy/src/arxpy/compiler.py:143</p>
+<p>Source: packages/arxpy/src/arxpy/compiler.py:129</p>
 <p>Declared as: python:arxpy:arxpy.compiler.CompilationArtifact</p>
 <p>Materialized compiler output.</p>
 <h3 id="attributes">Attributes</h3>
 <ul>
 <li>
-<p><strong>kind</strong> — <strong>Type:</strong> ArtifactKind</p>
+<p><strong>kind</strong> — Kind of value or operation.; <strong>Type:</strong> ArtifactKind</p>
 </li>
 <li>
-<p><strong>path</strong> — <strong>Type:</strong> Path | None</p>
+<p><strong>path</strong> — Path to the input or output resource.; <strong>Type:</strong> Path | None</p>
 </li>
 <li>
-<p><strong>llvm_ir</strong> — <strong>Type:</strong> str | None</p>
+<p><strong>llvm_ir</strong> — LLVM IR.; <strong>Type:</strong> str | None</p>
 </li>
 </ul>
 <h2 id="methods">Methods</h2>

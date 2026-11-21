@@ -28,7 +28,7 @@
       <a class="site-brand" href="../../index.html">
         <img class="brand-logo" src="../../images/arx-logo-terracotta.png" alt="ArxLang">
         <span class="brand-name">ArxLang</span>
-        <span class="version badge rounded-pill">1.27.0</span>
+        <span class="version badge rounded-pill">1.29.0</span>
       </a>
       
       <nav class="site-navbar" aria-label="Primary">
@@ -502,6 +502,8 @@
               
               <li><a href="../../api/python/astx/astx.ImportStmt.html"><span class="nav-label">ImportStmt</span><span class="api-kind api-kind--class">class</span></a></li>
               
+              <li><a href="../../api/python/astx/astx.InferredType.html"><span class="nav-label">InferredType</span><span class="api-kind api-kind--class">class</span></a></li>
+              
               <li><a href="../../api/python/astx/astx.InlineVariableDeclaration.html"><span class="nav-label">InlineVariableDeclaration</span><span class="api-kind api-kind--class">class</span></a></li>
               
               <li><a href="../../api/python/astx/astx.Int16.html"><span class="nav-label">Int16</span><span class="api-kind api-kind--class">class</span></a></li>
@@ -659,6 +661,8 @@
               <li><a href="../../api/python/astx/astx.PrintExpr.html"><span class="nav-label">PrintExpr</span><span class="api-kind api-kind--class">class</span></a></li>
               
               <li><a href="../../api/python/astx/astx.Program.html"><span class="nav-label">Program</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="../../api/python/astx/astx.RangeType.html"><span class="nav-label">RangeType</span><span class="api-kind api-kind--class">class</span></a></li>
               
               <li><a href="../../api/python/astx/astx.SPECIALIZED_BINARY_OP_EXTRA.html"><span class="nav-label">SPECIALIZED_BINARY_OP_EXTRA</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
               
@@ -1788,7 +1792,7 @@
             <ul class="api-members">
               <li class="api-overview"><a href="../../api/python/astx/astx.tools.typing.html" aria-label="tools.typing module overview">Module overview</a></li>
               
-              <li><a href="../../api/python/astx/astx.tools.typing.typechecked.html"><span class="nav-label">typechecked</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
+              <li><a href="../../api/python/astx/astx.tools.typing.typechecked.html"><span class="nav-label">typechecked</span><span class="api-kind api-kind--function">function</span></a></li>
               
             </ul>
           </details>
@@ -1840,6 +1844,8 @@
               
               <li><a href="../../api/python/astx/astx.types.GeneratorType.html"><span class="nav-label">GeneratorType</span><span class="api-kind api-kind--class">class</span></a></li>
               
+              <li><a href="../../api/python/astx/astx.types.InferredType.html"><span class="nav-label">InferredType</span><span class="api-kind api-kind--class">class</span></a></li>
+              
               <li><a href="../../api/python/astx/astx.types.Int16.html"><span class="nav-label">Int16</span><span class="api-kind api-kind--class">class</span></a></li>
               
               <li><a href="../../api/python/astx/astx.types.Int32.html"><span class="nav-label">Int32</span><span class="api-kind api-kind--class">class</span></a></li>
@@ -1863,6 +1869,8 @@
               <li><a href="../../api/python/astx/astx.types.Number.html"><span class="nav-label">Number</span><span class="api-kind api-kind--class">class</span></a></li>
               
               <li><a href="../../api/python/astx/astx.types.OrOp.html"><span class="nav-label">OrOp</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="../../api/python/astx/astx.types.RangeType.html"><span class="nav-label">RangeType</span><span class="api-kind api-kind--class">class</span></a></li>
               
               <li><a href="../../api/python/astx/astx.types.SequenceType.html"><span class="nav-label">SequenceType</span><span class="api-kind api-kind--class">class</span></a></li>
               
@@ -1918,6 +1926,8 @@
               
               <li><a href="../../api/python/astx/astx.types.base.AnyType.html"><span class="nav-label">AnyType</span><span class="api-kind api-kind--class">class</span></a></li>
               
+              <li><a href="../../api/python/astx/astx.types.base.InferredType.html"><span class="nav-label">InferredType</span><span class="api-kind api-kind--class">class</span></a></li>
+              
               <li><a href="../../api/python/astx/astx.types.base.NoneType.html"><span class="nav-label">NoneType</span><span class="api-kind api-kind--class">class</span></a></li>
               
             </ul>
@@ -1959,6 +1969,8 @@
               <li><a href="../../api/python/astx/astx.types.collections.DictType.html"><span class="nav-label">DictType</span><span class="api-kind api-kind--class">class</span></a></li>
               
               <li><a href="../../api/python/astx/astx.types.collections.ListType.html"><span class="nav-label">ListType</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="../../api/python/astx/astx.types.collections.RangeType.html"><span class="nav-label">RangeType</span><span class="api-kind api-kind--class">class</span></a></li>
               
               <li><a href="../../api/python/astx/astx.types.collections.SequenceType.html"><span class="nav-label">SequenceType</span><span class="api-kind api-kind--class">class</span></a></li>
               
@@ -2247,7 +2259,7 @@
 <div class="notebook-cell notebook-cell--code">
 <div class="notebook-prompt">In [2]</div>
 <pre class="highlight"><code><span class="kn">import</span><span class="w"> </span><span class="nn">warnings</span>
-<span class="n">warnings</span><span class="o">.</span><span class="n">filterwarnings</span><span class="p">(</span><span class="s2">&quot;ignore&quot;</span><span class="p">)</span>
+<span class="n">warnings</span><span class="o">.</span><span class="n">filterwarnings</span><span class="p">(</span><span class="s2">"ignore"</span><span class="p">)</span>
 </code></pre>
 </div>
 <p>With ASTx imported, we're now ready to explore the different types of loops it supports.</p>
@@ -2257,7 +2269,7 @@
 <div class="notebook-prompt">In [3]</div>
 <pre class="highlight"><code><span class="c1"># Declare a loop variable</span>
 <span class="n">decl_a</span> <span class="o">=</span> <span class="n">astx</span><span class="o">.</span><span class="n">InlineVariableDeclaration</span><span class="p">(</span>
-    <span class="s2">&quot;a&quot;</span><span class="p">,</span>
+    <span class="s2">"a"</span><span class="p">,</span>
     <span class="n">type_</span><span class="o">=</span><span class="n">astx</span><span class="o">.</span><span class="n">Int32</span><span class="p">(),</span>
 <span class="p">)</span>
 
@@ -2265,8 +2277,8 @@
 <span class="n">body_for</span> <span class="o">=</span> <span class="n">astx</span><span class="o">.</span><span class="n">Block</span><span class="p">()</span>
 <span class="n">body_for</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
     <span class="n">astx</span><span class="o">.</span><span class="n">VariableAssignment</span><span class="p">(</span>
-        <span class="n">name</span><span class="o">=</span><span class="s2">&quot;x&quot;</span><span class="p">,</span>
-        <span class="n">value</span><span class="o">=</span><span class="n">astx</span><span class="o">.</span><span class="n">Variable</span><span class="p">(</span><span class="s2">&quot;a&quot;</span><span class="p">)</span> <span class="o">+</span> <span class="n">astx</span><span class="o">.</span><span class="n">LiteralInt32</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">name</span><span class="o">=</span><span class="s2">"x"</span><span class="p">,</span>
+        <span class="n">value</span><span class="o">=</span><span class="n">astx</span><span class="o">.</span><span class="n">Variable</span><span class="p">(</span><span class="s2">"a"</span><span class="p">)</span> <span class="o">+</span> <span class="n">astx</span><span class="o">.</span><span class="n">LiteralInt32</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
     <span class="p">)</span>
 <span class="p">)</span>
 
@@ -2290,8 +2302,8 @@
 <div class="notebook-cell notebook-cell--code">
 <div class="notebook-prompt">In [4]</div>
 <pre class="highlight"><code><span class="c1"># Declare and initialize the loop variable</span>
-<span class="n">decl_a</span> <span class="o">=</span> <span class="n">astx</span><span class="o">.</span><span class="n">InlineVariableDeclaration</span><span class="p">(</span><span class="s2">&quot;a&quot;</span><span class="p">,</span> <span class="n">type_</span><span class="o">=</span><span class="n">astx</span><span class="o">.</span><span class="n">Int32</span><span class="p">(),</span> <span class="n">value</span><span class="o">=</span><span class="n">astx</span><span class="o">.</span><span class="n">LiteralInt32</span><span class="p">(</span><span class="mi">0</span><span class="p">))</span>
-<span class="n">var_a</span> <span class="o">=</span> <span class="n">astx</span><span class="o">.</span><span class="n">Variable</span><span class="p">(</span><span class="s2">&quot;a&quot;</span><span class="p">)</span>
+<span class="n">decl_a</span> <span class="o">=</span> <span class="n">astx</span><span class="o">.</span><span class="n">InlineVariableDeclaration</span><span class="p">(</span><span class="s2">"a"</span><span class="p">,</span> <span class="n">type_</span><span class="o">=</span><span class="n">astx</span><span class="o">.</span><span class="n">Int32</span><span class="p">(),</span> <span class="n">value</span><span class="o">=</span><span class="n">astx</span><span class="o">.</span><span class="n">LiteralInt32</span><span class="p">(</span><span class="mi">0</span><span class="p">))</span>
+<span class="n">var_a</span> <span class="o">=</span> <span class="n">astx</span><span class="o">.</span><span class="n">Variable</span><span class="p">(</span><span class="s2">"a"</span><span class="p">)</span>
 
 <span class="c1"># Create a block for loop body</span>
 <span class="n">body_for</span> <span class="o">=</span> <span class="n">astx</span><span class="o">.</span><span class="n">Block</span><span class="p">()</span>
@@ -2300,7 +2312,7 @@
 <span class="n">for_counter</span> <span class="o">=</span> <span class="n">astx</span><span class="o">.</span><span class="n">ForCountLoopStmt</span><span class="p">(</span>
     <span class="n">initializer</span><span class="o">=</span><span class="n">decl_a</span><span class="p">,</span>
     <span class="n">condition</span><span class="o">=</span><span class="n">var_a</span> <span class="o">&lt;</span> <span class="n">astx</span><span class="o">.</span><span class="n">LiteralInt32</span><span class="p">(</span><span class="mi">10</span><span class="p">),</span>
-    <span class="n">update</span><span class="o">=</span><span class="n">astx</span><span class="o">.</span><span class="n">UnaryOp</span><span class="p">(</span><span class="s2">&quot;++&quot;</span><span class="p">,</span> <span class="n">var_a</span><span class="p">),</span>
+    <span class="n">update</span><span class="o">=</span><span class="n">astx</span><span class="o">.</span><span class="n">UnaryOp</span><span class="p">(</span><span class="s2">"++"</span><span class="p">,</span> <span class="n">var_a</span><span class="p">),</span>
     <span class="n">body</span><span class="o">=</span><span class="n">body_for</span>
 <span class="p">)</span>
 

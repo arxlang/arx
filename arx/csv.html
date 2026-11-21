@@ -28,7 +28,7 @@
       <a class="site-brand" href="../index.html">
         <img class="brand-logo" src="../images/arx-logo-terracotta.png" alt="ArxLang">
         <span class="brand-name">ArxLang</span>
-        <span class="version badge rounded-pill">1.27.0</span>
+        <span class="version badge rounded-pill">1.29.0</span>
       </a>
       
       <nav class="site-navbar" aria-label="Primary">
@@ -365,6 +365,8 @@
             <summary><span class="nav-label">arrow_stdlib</span></summary>
             <ul class="api-members">
               <li class="api-overview"><a href="../api/python/arx/arx.arrow_stdlib.html" aria-label="arrow_stdlib module overview">Module overview</a></li>
+              
+              <li><a href="../api/python/arx/arx.arrow_stdlib.COMPUTE_FUNCTIONS.html"><span class="nav-label">COMPUTE_FUNCTIONS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
               
               <li><a href="../api/python/arx/arx.arrow_stdlib.IO_FUNCTIONS.html"><span class="nav-label">IO_FUNCTIONS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
               
@@ -926,11 +928,13 @@
             <ul class="api-members">
               <li class="api-overview"><a href="../api/python/arx/arx.parser.state.html" aria-label="parser.state module overview">Module overview</a></li>
               
+              <li><a href="../api/python/arx/arx.parser.state.BINDING_MUTABILITY_MODIFIERS.html"><span class="nav-label">BINDING_MUTABILITY_MODIFIERS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
+              
               <li><a href="../api/python/arx/arx.parser.state.CLASS_ALLOWED_MODIFIERS.html"><span class="nav-label">CLASS_ALLOWED_MODIFIERS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
               
               <li><a href="../api/python/arx/arx.parser.state.FIELD_ALLOWED_MODIFIERS.html"><span class="nav-label">FIELD_ALLOWED_MODIFIERS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
               
-              <li><a href="../api/python/arx/arx.parser.state.FIELD_MUTABILITY_MODIFIERS.html"><span class="nav-label">FIELD_MUTABILITY_MODIFIERS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
+              <li><a href="../api/python/arx/arx.parser.state.FUNCTION_ALLOWED_MODIFIERS.html"><span class="nav-label">FUNCTION_ALLOWED_MODIFIERS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
               
               <li><a href="../api/python/arx/arx.parser.state.INDENT_SIZE.html"><span class="nav-label">INDENT_SIZE</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
               
@@ -1218,8 +1222,8 @@ fn main() -&gt; i32:
   ```
   title: Read every row and finalize the output
   ```
-  var frame: dataframe[...] = read_csv(&quot;input.csv&quot;)
-  write_csv(frame, &quot;output.csv&quot;)
+  frame: dataframe[...] = read_csv("input.csv")
+  write_csv(frame, "output.csv")
   return 0
 </code></pre>
 <p>These eager functions close their internal session before returning. Reads
@@ -1253,10 +1257,10 @@ and nullability; they control parsing rather than merely asserting types.</p>
 import read_csv from stdlib.csv
 
 # Inside a function:
-var schema: Schema = Schema()
-schema.add(&quot;id&quot;, &quot;int64&quot;, nullable=false)
-var loaded: dataframe[...] = read_csv(&quot;ids.csv&quot;, schema=schema)
-var ids: dataframe[id:i64] = cast(loaded, dataframe[id:i64])
+schema: Schema = Schema()
+schema.add("id", "int64", nullable=false)
+loaded: dataframe[...] = read_csv("ids.csv", schema=schema)
+ids: dataframe[id:i64] = cast(loaded, dataframe[id:i64])
 </code></pre>
 <p>Runtime schemas do not infer compile-time column types. The cast above asserts
 an exact schema; it does not project or coerce data. See the shared
@@ -1272,10 +1276,10 @@ into a DataFrame. It supports either read or write mode.</p>
 <pre class="highlight"><code>import CSVStream from stdlib.csv
 
 # Inside a function:
-var source: CSVStream = CSVStream()
-source.open_read(&quot;large.csv&quot;)
+source: CSVStream = CSVStream()
+source.open_read("large.csv")
 while source.next():
-  var chunk: dataframe[...] = source.frame()
+  chunk: dataframe[...] = source.frame()
   print(chunk.nrows())
 source.close()
 </code></pre>
@@ -1317,8 +1321,8 @@ exceptions. CSV row positions are not invented as Arx source locations.</li>
 <h2 id="python-integration">Python integration</h2>
 <pre class="highlight"><code><span class="kn">from</span><span class="w"> </span><span class="nn">irx.table_io</span><span class="w"> </span><span class="kn">import</span> <span class="n">read_csv</span><span class="p">,</span> <span class="n">write_csv</span>
 
-<span class="n">frame</span> <span class="o">=</span> <span class="n">read_csv</span><span class="p">(</span><span class="s2">&quot;input.tsv&quot;</span><span class="p">,</span> <span class="n">delimiter</span><span class="o">=</span><span class="s2">&quot;</span><span class="se">\t</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">,</span> <span class="s2">&quot;name&quot;</span><span class="p">])</span>
-<span class="n">write_csv</span><span class="p">(</span><span class="n">frame</span><span class="p">,</span> <span class="s2">&quot;output.csv&quot;</span><span class="p">)</span>
+<span class="n">frame</span> <span class="o">=</span> <span class="n">read_csv</span><span class="p">(</span><span class="s2">"input.tsv"</span><span class="p">,</span> <span class="n">delimiter</span><span class="o">=</span><span class="s2">"</span><span class="se">\t</span><span class="s2">"</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">"id"</span><span class="p">,</span> <span class="s2">"name"</span><span class="p">])</span>
+<span class="n">write_csv</span><span class="p">(</span><span class="n">frame</span><span class="p">,</span> <span class="s2">"output.csv"</span><span class="p">)</span>
 </code></pre>
 <p>These functions return/accept <code>pyarrow.Table</code>, accept string or <code>PathLike</code>
 paths, and use IRx native sessions/C Stream interchange, not Python format

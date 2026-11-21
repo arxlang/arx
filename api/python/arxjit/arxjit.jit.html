@@ -28,7 +28,7 @@
       <a class="site-brand" href="../../../index.html">
         <img class="brand-logo" src="../../../images/arx-logo-terracotta.png" alt="ArxLang">
         <span class="brand-name">ArxLang</span>
-        <span class="version badge rounded-pill">1.27.0</span>
+        <span class="version badge rounded-pill">1.29.0</span>
       </a>
       
       <nav class="site-navbar" aria-label="Primary">
@@ -387,24 +387,24 @@
         <h1 id="jit"><span class="api-kind api-kind--function">function</span> jit</h1>
 <pre class="highlight"><code><span class="n">jit</span><span class="p">(</span><span class="n">fn</span><span class="p">:</span> <span class="n">PyFunc</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">signature</span><span class="p">:</span> <span class="n">Signature</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">cache</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">JitFunction</span> <span class="o">|</span> <span class="n">functools</span><span class="o">.</span><span class="n">partial</span><span class="p">[</span><span class="n">JitFunction</span><span class="p">]</span>
 </code></pre>
-<p>Source: packages/arxjit/src/arxjit/core.py:75</p>
+<p>Source: packages/arxjit/src/arxjit/core.py:67</p>
 <p>Declared as: python:arxjit:arxjit.core.jit</p>
 <p>Compile a pure Python function through the Arx stack.</p>
-<p>Usable bare as <code>@jit</code> or with options as <code>@jit(signature=i64(i64, i64), cache=True)</code>. Records the requested signature and returns a callable wrapper. When called with options it returns a partial that wraps the function next.</p>
+<p>Use <code>@jit</code> directly or supply <code>signature</code> and <code>cache</code> options. Records the requested signature and returns a callable wrapper. When called with options it returns a partial that wraps the function next.</p>
 <h3 id="parameters">Parameters</h3>
 <ul>
 <li>
-<p><strong>fn</strong> — <strong>Type:</strong> PyFunc | None; The function to wrap, when used as a bare decorator.</p>
+<p><strong>fn</strong> — The function to wrap, when used as a bare decorator.; <strong>Type:</strong> PyFunc | None</p>
 </li>
 <li>
-<p><strong>signature</strong> — <strong>Type:</strong> Signature | None; The explicit call signature.</p>
+<p><strong>signature</strong> — The explicit call signature.; <strong>Type:</strong> Signature | None</p>
 </li>
 <li>
-<p><strong>cache</strong> — <strong>Type:</strong> bool; Whether to cache compiled artifacts.</p>
+<p><strong>cache</strong> — Whether to cache compiled artifacts.; <strong>Type:</strong> bool</p>
 </li>
 </ul>
 <h3 id="returns">Returns</h3>
-<p><strong>Type:</strong> JitFunction | functools.partial[JitFunction]</p>
+<p>Wrapped function, or a decorator awaiting a function when options are supplied.; <strong>Type:</strong> JitFunction | functools.partial[JitFunction]</p>
 
       </main>
       

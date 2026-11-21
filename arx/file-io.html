@@ -28,7 +28,7 @@
       <a class="site-brand" href="../index.html">
         <img class="brand-logo" src="../images/arx-logo-terracotta.png" alt="ArxLang">
         <span class="brand-name">ArxLang</span>
-        <span class="version badge rounded-pill">1.27.0</span>
+        <span class="version badge rounded-pill">1.29.0</span>
       </a>
       
       <nav class="site-navbar" aria-label="Primary">
@@ -365,6 +365,8 @@
             <summary><span class="nav-label">arrow_stdlib</span></summary>
             <ul class="api-members">
               <li class="api-overview"><a href="../api/python/arx/arx.arrow_stdlib.html" aria-label="arrow_stdlib module overview">Module overview</a></li>
+              
+              <li><a href="../api/python/arx/arx.arrow_stdlib.COMPUTE_FUNCTIONS.html"><span class="nav-label">COMPUTE_FUNCTIONS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
               
               <li><a href="../api/python/arx/arx.arrow_stdlib.IO_FUNCTIONS.html"><span class="nav-label">IO_FUNCTIONS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
               
@@ -926,11 +928,13 @@
             <ul class="api-members">
               <li class="api-overview"><a href="../api/python/arx/arx.parser.state.html" aria-label="parser.state module overview">Module overview</a></li>
               
+              <li><a href="../api/python/arx/arx.parser.state.BINDING_MUTABILITY_MODIFIERS.html"><span class="nav-label">BINDING_MUTABILITY_MODIFIERS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
+              
               <li><a href="../api/python/arx/arx.parser.state.CLASS_ALLOWED_MODIFIERS.html"><span class="nav-label">CLASS_ALLOWED_MODIFIERS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
               
               <li><a href="../api/python/arx/arx.parser.state.FIELD_ALLOWED_MODIFIERS.html"><span class="nav-label">FIELD_ALLOWED_MODIFIERS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
               
-              <li><a href="../api/python/arx/arx.parser.state.FIELD_MUTABILITY_MODIFIERS.html"><span class="nav-label">FIELD_MUTABILITY_MODIFIERS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
+              <li><a href="../api/python/arx/arx.parser.state.FUNCTION_ALLOWED_MODIFIERS.html"><span class="nav-label">FUNCTION_ALLOWED_MODIFIERS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
               
               <li><a href="../api/python/arx/arx.parser.state.INDENT_SIZE.html"><span class="nav-label">INDENT_SIZE</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
               
@@ -1233,17 +1237,29 @@ fn main() -&gt; i32:
   ```
   title: main
   ```
-  var output: File = File(&quot;message.txt&quot;, mode=&quot;w&quot;, encoding=&quot;utf-8&quot;)
-  var alias: file = output
-  assert alias.write(&quot;hello\n&quot;) == 6
-  output.close()
-  alias.close()
-  var source: file = open(file=&quot;message.txt&quot;)
-  var text: str = source.read()
-  source.close()
-  print(text)
+  with open("message.txt", mode="w", encoding="utf-8") as output:
+    assert output.write("hello\n") == 6
+  with open(file="message.txt") as source:
+    print(source.read())
   return 0
 </code></pre>
+<h2 id="checked-resource-scopes">Checked resource scopes</h2>
+<p>Inside a function, <code>with manager [as name]:</code> evaluates one manager once. A
+successful <code>__enter__</code> is followed by exactly one <code>__exit__</code> on fallthrough,
+return, loop transfer, or failure. Failed acquisition does not call exit. The
+optional name is scoped to the body and cannot be rebound; it does not freeze
+the referenced object. Multiple managers and destructuring targets are
+unsupported; nest scopes instead.</p>
+<p>File entry returns the same reference and rejects an already-closed stream
+without reading, writing, or flushing it. Exit performs checked close, including
+buffered write errors; all retained aliases then refer to a closed stream.
+Rebinding the original manager does not change which object gets closed.
+Explicit close inside the body is safe because close is idempotent.</p>
+<p>If both the body and implicit exit fail, the body error stays primary and the
+exit error is retained as a secondary diagnostic. An exit-only failure is
+catchable. Exit cannot suppress errors, unlike Python's protocol, and does not
+have explicit <code>finally</code>'s completion-replacement behavior. Closure is not
+rollback, atomic publication, or durability: writes may already be visible.</p>
 <h2 id="bounded-binary-workflow">Bounded binary workflow</h2>
 <p>Use <code>bytes([0, 255, 13, 10])</code> for octets, then <code>output.write_bytes(data)</code> on a
 binary stream. <code>source.read_bytes(size)</code> reads at most a nonnegative <code>i64</code> byte
@@ -1256,8 +1272,8 @@ creates/truncates <code>binary-output.dat</code> and <code>binary-empty.dat</cod
 scratch directory. Byte lengths and write counts are bytes, not characters.
 Short writes that make progress are retried; no progress and I/O errors are
 failures. Failure may leave a partially modified external file: there is no
-rollback, atomicity, or durability promise. Explicit flush/close still matter
-for buffered errors.</p>
+rollback, atomicity, or durability promise. Checked scope exit or explicit
+flush/close still matter for buffered errors.</p>
 <p>See <a href="built-in-types.html#byte-values">byte values</a> for immutable-buffer ownership.</p>
 <h2 id="text-and-lifetime-safety">Text and lifetime safety</h2>
 <p>Reads consume all remaining text (not a size-limited chunk), returning an
@@ -1289,9 +1305,9 @@ handle-freeing destructor.</p>
 exceptions (including <code>OSError</code> for operating-system failures). Class checks use
 <code>ARX-RUNTIME-CLASS-001</code>; allocation failure remains unrecoverable. Failed
 creation preserves constructor rollback and completed-base cleanup. See the
-<a href="../support-matrix.html#exception-capability-boundary">exception boundary</a>.
-Explicit close/flush are recommended to observe write errors before later work.
-<code>with</code>, iteration, seek/tell, and extra file properties are deferred.</p>
+<a href="../support-matrix.html#exception-capability-boundary">exception boundary</a>. Use
+checked scope exit or explicit close/flush to observe write errors before later
+work. Iteration, seek/tell, and extra file properties are deferred.</p>
 <p>For explicit imports, use <code>import File as TextFile from builtins.files</code> or
 <code>import builtins.files as io</code> followed by <code>io.File(...)</code>. These resolve the same
 canonical class, not an unrelated class with the same name. Existing user or
@@ -1312,6 +1328,8 @@ non-callable <code>open</code> shadows the builtin and produces an error when ca
           <ul>
             
             <li class="toc-h2"><a href="#example">Example</a></li>
+            
+            <li class="toc-h2"><a href="#checked-resource-scopes">Checked resource scopes</a></li>
             
             <li class="toc-h2"><a href="#bounded-binary-workflow">Bounded binary workflow</a></li>
             

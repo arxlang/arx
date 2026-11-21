@@ -28,7 +28,7 @@
       <a class="site-brand" href="../../../index.html">
         <img class="brand-logo" src="../../../images/arx-logo-terracotta.png" alt="ArxLang">
         <span class="brand-name">ArxLang</span>
-        <span class="version badge rounded-pill">1.27.0</span>
+        <span class="version badge rounded-pill">1.29.0</span>
       </a>
       
       <nav class="site-navbar" aria-label="Primary">
@@ -263,7 +263,7 @@
             <ul class="api-members">
               <li class="api-overview"><a href="arxpy.typecheck.html" aria-label="typecheck module overview">Module overview</a></li>
               
-              <li><a href="arxpy.typecheck.typechecked.html"><span class="nav-label">typechecked</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
+              <li><a href="arxpy.typecheck.typechecked.html"><span class="nav-label">typechecked</span><span class="api-kind api-kind--function">function</span></a></li>
               
             </ul>
           </details>
@@ -292,25 +292,25 @@
         
         
         <h1 id="parse-_string"><span class="api-kind api-kind--method">method</span> parse_string</h1>
-<pre class="highlight"><code><span class="n">parse_string</span><span class="p">(</span><span class="n">source</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">filename</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;&lt;string&gt;&#39;</span><span class="p">,</span> <span class="n">module_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;main&#39;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ParsedProgram</span>
+<pre class="highlight"><code><span class="n">parse_string</span><span class="p">(</span><span class="n">source</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">filename</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">'&lt;string&gt;'</span><span class="p">,</span> <span class="n">module_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">'main'</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ParsedProgram</span>
 </code></pre>
-<p>Source: packages/arxpy/src/arxpy/compiler.py:448</p>
+<p>Source: packages/arxpy/src/arxpy/compiler.py:405</p>
 <p>Declared as: python:arxpy:arxpy.compiler.Compiler.parse_string</p>
 <p>Parse Arx source text.</p>
 <h3 id="parameters">Parameters</h3>
 <ul>
 <li>
-<p><strong>source</strong> — <strong>Type:</strong> str</p>
+<p><strong>source</strong> — Source input to process.; <strong>Type:</strong> str</p>
 </li>
 <li>
-<p><strong>filename</strong> — <strong>Type:</strong> str</p>
+<p><strong>filename</strong> — Source or resource filename.; <strong>Type:</strong> str</p>
 </li>
 <li>
-<p><strong>module_name</strong> — <strong>Type:</strong> str</p>
+<p><strong>module_name</strong> — Module name to resolve.; <strong>Type:</strong> str</p>
 </li>
 </ul>
 <h3 id="returns">Returns</h3>
-<p><strong>Type:</strong> ParsedProgram</p>
+<p>Parsed arx source text.; <strong>Type:</strong> ParsedProgram</p>
 
       </main>
       

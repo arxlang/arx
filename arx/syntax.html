@@ -28,7 +28,7 @@
       <a class="site-brand" href="../index.html">
         <img class="brand-logo" src="../images/arx-logo-terracotta.png" alt="ArxLang">
         <span class="brand-name">ArxLang</span>
-        <span class="version badge rounded-pill">1.27.0</span>
+        <span class="version badge rounded-pill">1.29.0</span>
       </a>
       
       <nav class="site-navbar" aria-label="Primary">
@@ -365,6 +365,8 @@
             <summary><span class="nav-label">arrow_stdlib</span></summary>
             <ul class="api-members">
               <li class="api-overview"><a href="../api/python/arx/arx.arrow_stdlib.html" aria-label="arrow_stdlib module overview">Module overview</a></li>
+              
+              <li><a href="../api/python/arx/arx.arrow_stdlib.COMPUTE_FUNCTIONS.html"><span class="nav-label">COMPUTE_FUNCTIONS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
               
               <li><a href="../api/python/arx/arx.arrow_stdlib.IO_FUNCTIONS.html"><span class="nav-label">IO_FUNCTIONS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
               
@@ -926,11 +928,13 @@
             <ul class="api-members">
               <li class="api-overview"><a href="../api/python/arx/arx.parser.state.html" aria-label="parser.state module overview">Module overview</a></li>
               
+              <li><a href="../api/python/arx/arx.parser.state.BINDING_MUTABILITY_MODIFIERS.html"><span class="nav-label">BINDING_MUTABILITY_MODIFIERS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
+              
               <li><a href="../api/python/arx/arx.parser.state.CLASS_ALLOWED_MODIFIERS.html"><span class="nav-label">CLASS_ALLOWED_MODIFIERS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
               
               <li><a href="../api/python/arx/arx.parser.state.FIELD_ALLOWED_MODIFIERS.html"><span class="nav-label">FIELD_ALLOWED_MODIFIERS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
               
-              <li><a href="../api/python/arx/arx.parser.state.FIELD_MUTABILITY_MODIFIERS.html"><span class="nav-label">FIELD_MUTABILITY_MODIFIERS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
+              <li><a href="../api/python/arx/arx.parser.state.FUNCTION_ALLOWED_MODIFIERS.html"><span class="nav-label">FUNCTION_ALLOWED_MODIFIERS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
               
               <li><a href="../api/python/arx/arx.parser.state.INDENT_SIZE.html"><span class="nav-label">INDENT_SIZE</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
               
@@ -1249,9 +1253,9 @@ alphanumeric characters or <code>_</code>.</p>
 <p>The exact Unicode categories currently follow the Python runtime. Matching is
 case-sensitive.</p>
 <h2 id="reserved-forms">Reserved forms</h2>
-<p>Lexical reservation does not promise parsing or lowering. In particular, general
-<code>const</code>, <code>then</code>, and operator declarations remain unavailable even though their
-spellings are recognized.</p>
+<p>Lexical reservation does not promise parsing or lowering. In particular, <code>then</code>
+and operator declarations remain unavailable even though their spellings are
+recognized.</p>
 <h2 id="numeric-literals">Numeric literals</h2>
 <p>Supported forms:</p>
 <ul>
@@ -1307,12 +1311,49 @@ The lexer recognizes these escapes:</p>
 <p>Raw strings, triple-quoted strings, and interpolation are not supported. Triple
 backticks are reserved for Douki docstrings, not ordinary string values.</p>
 <h2 id="structural-forms">Structural forms</h2>
-<h3 id="declaration-modifiers">Declaration modifiers</h3>
-<pre class="highlight"><code>@[public, static, constant]
-version: i32 = 1
+<h3 id="declarations-and-modifiers">Declarations and modifiers</h3>
+<p>Declarations put the name first. Omitted modifiers use context-specific
+defaults; writing the default explicitly has the same meaning:</p>
+<pre class="highlight"><code>count: i32 = 1
+explicit_count: var :: i32 = 1
+limit: const :: i32 = 10
+inferred_count: auto = 1
 </code></pre>
-<p>Recognized modifiers are <code>public</code>, <code>private</code>, <code>protected</code>, <code>static</code>, <code>constant</code>,
-<code>mutable</code>, <code>abstract</code>, and <code>extern</code>.</p>
+<p><code>var</code> permits reassignment. <code>const</code> requires initialization and prevents binding
+reassignment, compound assignment, and increment/decrement. It does not freeze a
+referenced object, change ownership, or require compile-time evaluation. Locals
+initialize on each call. Module declarations still obey the
+<a href="modules.html">module storage restrictions</a>.</p>
+<p><code>auto</code> infers one fixed type from an initializer; it is not dynamic typing.
+Uncontextualized numeric literals use the existing numeric defaults. Inference
+is available for initialized variables, literal-initialized fields, and
+count-loop initializers, not parameters, returns, aliases, or nested type
+arguments. Untyped <code>none</code> and ambiguous empty containers need an explicit type.
+Dataframe and tensor literals still need the type context required by their
+constructors; resolved typed function results can be inferred without losing
+their schema or shape.</p>
+<p>A variable/parameter modifier group is whitespace-separated and ends with <code>::</code>.
+Duplicate, conflicting, unsupported, and target-inappropriate modifiers are
+errors. Fields also support their existing visibility/storage policies through
+inline groups. Only classes retain modifier annotation prefixes. See
+<a href="classes.html">classes</a>.</p>
+<p>Functions remain keyword-first: <code>fn name(...) -&gt; [modifiers ::] T:</code>. The
+optional group controls the callable declaration, not the return type. Module
+functions accept <code>public</code> (the default) or <code>private</code>; method-only policies are
+described in <a href="classes.html">classes</a>. Argument binding modifiers remain separate,
+for example <code>fn distance(record: const :: str) -&gt; private :: i64:</code>. Externs keep
+<code>extern name(...) -&gt; [public|private ::] T</code> without a body.</p>
+<p>Callable signatures may wrap parameters, modifier groups, the return type, and
+the closing body colon across lines. Continuation indentation does not change
+block indentation, which remains relative to the <code>fn</code> declaration. This is
+signature layout support, not general multiline expression support.</p>
+<p><strong>Migration:</strong> leading <code>var name: T</code> declarations were removed; use <code>name: T</code> or
+<code>name: var :: T</code>. Field modifiers move into inline groups, replacing
+<code>constant</code>/<code>mutable</code> with <code>const</code>/<code>var</code>. Method annotations move after <code>-&gt;</code>, for
+example <code>fn make() -&gt; public static :: Counter:</code>. Class annotations and template
+prefixes stay unchanged. The mistaken <code>name: fn(...)</code> form is not supported.
+Read-only references, immutable objects, compile-time evaluation, rebindable
+function values, and closures are not introduced by these changes.</p>
 <h3 id="templates">Templates</h3>
 <pre class="highlight"><code>@&lt;T: i32 | f64&gt;
 fn identity(value: T) -&gt; T:
@@ -1361,7 +1402,7 @@ signatures, not lexical privilege based on the callee's spelling.</p>
             
             <li class="toc-h2"><a href="#structural-forms">Structural forms</a></li>
             
-            <li class="toc-h3"><a href="#declaration-modifiers">Declaration modifiers</a></li>
+            <li class="toc-h3"><a href="#declarations-and-modifiers">Declarations and modifiers</a></li>
             
             <li class="toc-h3"><a href="#templates">Templates</a></li>
             

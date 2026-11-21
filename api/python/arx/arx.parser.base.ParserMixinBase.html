@@ -28,7 +28,7 @@
       <a class="site-brand" href="../../../index.html">
         <img class="brand-logo" src="../../../images/arx-logo-terracotta.png" alt="ArxLang">
         <span class="brand-name">ArxLang</span>
-        <span class="version badge rounded-pill">1.27.0</span>
+        <span class="version badge rounded-pill">1.29.0</span>
       </a>
       
       <nav class="site-navbar" aria-label="Primary">
@@ -365,6 +365,8 @@
             <summary><span class="nav-label">arrow_stdlib</span></summary>
             <ul class="api-members">
               <li class="api-overview"><a href="arx.arrow_stdlib.html" aria-label="arrow_stdlib module overview">Module overview</a></li>
+              
+              <li><a href="arx.arrow_stdlib.COMPUTE_FUNCTIONS.html"><span class="nav-label">COMPUTE_FUNCTIONS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
               
               <li><a href="arx.arrow_stdlib.IO_FUNCTIONS.html"><span class="nav-label">IO_FUNCTIONS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
               
@@ -926,11 +928,13 @@
             <ul class="api-members">
               <li class="api-overview"><a href="arx.parser.state.html" aria-label="parser.state module overview">Module overview</a></li>
               
+              <li><a href="arx.parser.state.BINDING_MUTABILITY_MODIFIERS.html"><span class="nav-label">BINDING_MUTABILITY_MODIFIERS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
+              
               <li><a href="arx.parser.state.CLASS_ALLOWED_MODIFIERS.html"><span class="nav-label">CLASS_ALLOWED_MODIFIERS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
               
               <li><a href="arx.parser.state.FIELD_ALLOWED_MODIFIERS.html"><span class="nav-label">FIELD_ALLOWED_MODIFIERS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
               
-              <li><a href="arx.parser.state.FIELD_MUTABILITY_MODIFIERS.html"><span class="nav-label">FIELD_MUTABILITY_MODIFIERS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
+              <li><a href="arx.parser.state.FUNCTION_ALLOWED_MODIFIERS.html"><span class="nav-label">FUNCTION_ALLOWED_MODIFIERS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
               
               <li><a href="arx.parser.state.INDENT_SIZE.html"><span class="nav-label">INDENT_SIZE</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
               
@@ -1205,51 +1209,51 @@
         
         
         <h1 id="parsermixinbase"><span class="api-kind api-kind--class">class</span> ParserMixinBase</h1>
-<p>Source: packages/arx/src/arx/parser/base.py:22</p>
+<p>Source: packages/arx/src/arx/parser/base.py:21</p>
 <p>Shared parser mixin contract.</p>
 <h3 id="attributes">Attributes</h3>
 <ul>
 <li>
-<p><strong>bin_op_precedence</strong> — <strong>Type:</strong> dict[str, int]</p>
+<p><strong>bin_op_precedence</strong> — Bin op precedence.; <strong>Type:</strong> dict[str, int]</p>
 </li>
 <li>
-<p><strong>indent_level</strong> — <strong>Type:</strong> int</p>
+<p><strong>indent_level</strong> — Indent level.; <strong>Type:</strong> int</p>
 </li>
 <li>
-<p><strong>list_scopes</strong> — <strong>Type:</strong> list[set[str]]</p>
+<p><strong>list_scopes</strong> — List scopes.; <strong>Type:</strong> list[set[str]]</p>
 </li>
 <li>
-<p><strong>known_class_names</strong> — <strong>Type:</strong> set[str]</p>
+<p><strong>known_class_names</strong> — Known class names.; <strong>Type:</strong> set[str]</p>
 </li>
 <li>
-<p><strong>imported_type_names</strong> — <strong>Type:</strong> set[str]</p>
+<p><strong>imported_type_names</strong> — Imported type names.; <strong>Type:</strong> set[str]</p>
 </li>
 <li>
-<p><strong>namespace_roots</strong> — <strong>Type:</strong> set[str]</p>
+<p><strong>namespace_roots</strong> — Namespace roots.; <strong>Type:</strong> set[str]</p>
 </li>
 <li>
-<p><strong>builtin_type_bindings</strong> — <strong>Type:</strong> dict[str, astx.DataType]</p>
+<p><strong>builtin_type_bindings</strong> — Builtin type bindings.; <strong>Type:</strong> dict[str, astx.DataType]</p>
 </li>
 <li>
-<p><strong>tensor_scopes</strong> — <strong>Type:</strong> list[dict[str, TensorBinding | None]]</p>
+<p><strong>tensor_scopes</strong> — Tensor scopes.; <strong>Type:</strong> list[dict[str, TensorBinding | None]]</p>
 </li>
 <li>
-<p><strong>dataframe_scopes</strong> — <strong>Type:</strong> list[dict[str, DataFrameBinding | None]]</p>
+<p><strong>dataframe_scopes</strong> — Dataframe scopes.; <strong>Type:</strong> list[dict[str, DataFrameBinding | None]]</p>
 </li>
 <li>
-<p><strong>return_type_scopes</strong> — <strong>Type:</strong> list[astx.DataType]</p>
+<p><strong>return_type_scopes</strong> — Return type scopes.; <strong>Type:</strong> list[astx.DataType]</p>
 </li>
 <li>
-<p><strong>template_type_scopes</strong> — <strong>Type:</strong> list[dict[str, astx.DataType]]</p>
+<p><strong>template_type_scopes</strong> — Template type scopes.; <strong>Type:</strong> list[dict[str, astx.DataType]]</p>
 </li>
 <li>
-<p><strong>type_aliases</strong> — <strong>Type:</strong> dict[str, astx.DataType]</p>
+<p><strong>type_aliases</strong> — Type aliases.; <strong>Type:</strong> dict[str, astx.DataType]</p>
 </li>
 <li>
-<p><strong>value_scopes</strong> — <strong>Type:</strong> list[set[str]]</p>
+<p><strong>value_scopes</strong> — Value scopes.; <strong>Type:</strong> list[set[str]]</p>
 </li>
 <li>
-<p><strong>tokens</strong> — <strong>Type:</strong> TokenList</p>
+<p><strong>tokens</strong> — Tokens in source order.; <strong>Type:</strong> TokenList</p>
 </li>
 </ul>
 <h2 id="methods">Methods</h2>
@@ -1280,6 +1284,9 @@
 </li>
 <li>
 <p><a href="arx.parser.base.ParserMixinBase._default_value_for_type.html">_default_value_for_type</a> — Build one default initializer for one typed declaration.</p>
+</li>
+<li>
+<p><a href="arx.parser.base.ParserMixinBase._has_modifier.html">_has_modifier</a> — Return whether one modifier is present.</p>
 </li>
 <li>
 <p><a href="arx.parser.base.ParserMixinBase._is_dataframe_name.html">_is_dataframe_name</a> — Return whether one visible name is declared as a DataFrame.</p>
@@ -1345,7 +1352,13 @@
 <p><a href="arx.parser.base.ParserMixinBase._token_starts_expression.html">_token_starts_expression</a> — Return whether one token can start one expression.</p>
 </li>
 <li>
+<p><a href="arx.parser.base.ParserMixinBase._validate_modifier_target.html">_validate_modifier_target</a> — Validate one modifier list against a declaration target.</p>
+</li>
+<li>
 <p><a href="arx.parser.base.ParserMixinBase.get_tok_precedence.html">get_tok_precedence</a> — Get the precedence of the pending binary operator token.</p>
+</li>
+<li>
+<p><a href="arx.parser.base.ParserMixinBase.is_declaration_start.html">is_declaration_start</a> — Recognize a same-line name-first declaration.</p>
 </li>
 <li>
 <p><a href="arx.parser.base.ParserMixinBase.is_type_alias_decl_start.html">is_type_alias_decl_start</a> — Return whether the current token starts a type alias.</p>
@@ -1366,31 +1379,43 @@
 <p><a href="arx.parser.base.ParserMixinBase.parse_class_decl.html">parse_class_decl</a> — Parse one class declaration.</p>
 </li>
 <li>
+<p><a href="arx.parser.base.ParserMixinBase.parse_declaration_head.html">parse_declaration_head</a> — Consume a declaration name, colon, and optional modifier group.</p>
+</li>
+<li>
 <p><a href="arx.parser.base.ParserMixinBase.parse_declaration_prefixes.html">parse_declaration_prefixes</a> — Parse declaration prefixes before one declaration.</p>
 </li>
 <li>
 <p><a href="arx.parser.base.ParserMixinBase.parse_expression.html">parse_expression</a> — Parse one expression.</p>
 </li>
 <li>
-<p><a href="arx.parser.base.ParserMixinBase.parse_extern.html">parse_extern</a> — Parse one extern declaration.</p>
+<p><a href="arx.parser.base.ParserMixinBase.parse_extern.html">parse_extern</a> — Parse an extern declaration.</p>
 </li>
 <li>
-<p><a href="arx.parser.base.ParserMixinBase.parse_for_stmt.html">parse_for_stmt</a> — Parse one for-loop expression.</p>
+<p><a href="arx.parser.base.ParserMixinBase.parse_for_stmt.html">parse_for_stmt</a> — Parse a for statement.</p>
 </li>
 <li>
-<p><a href="arx.parser.base.ParserMixinBase.parse_function.html">parse_function</a> — Parse one function definition.</p>
+<p><a href="arx.parser.base.ParserMixinBase.parse_function.html">parse_function</a> — Parse a function definition.</p>
 </li>
 <li>
-<p><a href="arx.parser.base.ParserMixinBase.parse_if_stmt.html">parse_if_stmt</a> — Parse one if expression.</p>
+<p><a href="arx.parser.base.ParserMixinBase.parse_if_stmt.html">parse_if_stmt</a> — Parse an if statement.</p>
 </li>
 <li>
 <p><a href="arx.parser.base.ParserMixinBase.parse_import_stmt.html">parse_import_stmt</a> — Parse one import statement.</p>
 </li>
 <li>
-<p><a href="arx.parser.base.ParserMixinBase.parse_prototype.html">parse_prototype</a> — Parse one function or extern prototype.</p>
+<p><a href="arx.parser.base.ParserMixinBase.parse_inline_modifiers.html">parse_inline_modifiers</a> — Parse optional whitespace-separated declaration modifiers.</p>
 </li>
 <li>
-<p><a href="arx.parser.base.ParserMixinBase.parse_return_function.html">parse_return_function</a> — Parse one return expression.</p>
+<p><a href="arx.parser.base.ParserMixinBase.parse_loop_transfer.html">parse_loop_transfer</a> — Parse a statement-only transfer to the enclosing loop.</p>
+</li>
+<li>
+<p><a href="arx.parser.base.ParserMixinBase.parse_named_declaration.html">parse_named_declaration</a> — Parse a name-first variable declaration without function syntax.</p>
+</li>
+<li>
+<p><a href="arx.parser.base.ParserMixinBase.parse_prototype.html">parse_prototype</a> — Parse function/extern prototypes.</p>
+</li>
+<li>
+<p><a href="arx.parser.base.ParserMixinBase.parse_return_function.html">parse_return_function</a> — Parse a return statement.</p>
 </li>
 <li>
 <p><a href="arx.parser.base.ParserMixinBase.parse_statement.html">parse_statement</a> — Parse a statement without admitting it as an expression operand.</p>
@@ -1405,10 +1430,19 @@
 <p><a href="arx.parser.base.ParserMixinBase.parse_type_alias_decl.html">parse_type_alias_decl</a> — Parse one top-level type alias declaration.</p>
 </li>
 <li>
-<p><a href="arx.parser.base.ParserMixinBase.parse_var_expr.html">parse_var_expr</a> — Parse one typed variable declaration.</p>
+<p><a href="arx.parser.base.ParserMixinBase.parse_var_expr.html">parse_var_expr</a> — Parse typed variable declarations.</p>
 </li>
 <li>
-<p><a href="arx.parser.base.ParserMixinBase.parse_while_stmt.html">parse_while_stmt</a> — Parse one while expression.</p>
+<p><a href="arx.parser.base.ParserMixinBase.parse_while_stmt.html">parse_while_stmt</a> — Parse a while statement.</p>
+</li>
+<li>
+<p><a href="arx.parser.base.ParserMixinBase.parse_with_stmt.html">parse_with_stmt</a> — Parse a resource scope with an optional entered-value binding.</p>
+</li>
+<li>
+<p><a href="arx.parser.base.ParserMixinBase.resolve_binding_mutability.html">resolve_binding_mutability</a> — Resolve Arx binding mutability for variables, fields, and parameters.</p>
+</li>
+<li>
+<p><a href="arx.parser.base.ParserMixinBase.validate_type_declaration_name.html">validate_type_declaration_name</a> — Reject inference markers as names of declared types.</p>
 </li>
 </ul>
 <h2 id="attributes-1">Attributes</h2>

@@ -28,7 +28,7 @@
       <a class="site-brand" href="../index.html">
         <img class="brand-logo" src="../images/arx-logo-terracotta.png" alt="ArxLang">
         <span class="brand-name">ArxLang</span>
-        <span class="version badge rounded-pill">1.27.0</span>
+        <span class="version badge rounded-pill">1.29.0</span>
       </a>
       
       <nav class="site-navbar" aria-label="Primary">
@@ -365,6 +365,8 @@
             <summary><span class="nav-label">arrow_stdlib</span></summary>
             <ul class="api-members">
               <li class="api-overview"><a href="../api/python/arx/arx.arrow_stdlib.html" aria-label="arrow_stdlib module overview">Module overview</a></li>
+              
+              <li><a href="../api/python/arx/arx.arrow_stdlib.COMPUTE_FUNCTIONS.html"><span class="nav-label">COMPUTE_FUNCTIONS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
               
               <li><a href="../api/python/arx/arx.arrow_stdlib.IO_FUNCTIONS.html"><span class="nav-label">IO_FUNCTIONS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
               
@@ -926,11 +928,13 @@
             <ul class="api-members">
               <li class="api-overview"><a href="../api/python/arx/arx.parser.state.html" aria-label="parser.state module overview">Module overview</a></li>
               
+              <li><a href="../api/python/arx/arx.parser.state.BINDING_MUTABILITY_MODIFIERS.html"><span class="nav-label">BINDING_MUTABILITY_MODIFIERS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
+              
               <li><a href="../api/python/arx/arx.parser.state.CLASS_ALLOWED_MODIFIERS.html"><span class="nav-label">CLASS_ALLOWED_MODIFIERS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
               
               <li><a href="../api/python/arx/arx.parser.state.FIELD_ALLOWED_MODIFIERS.html"><span class="nav-label">FIELD_ALLOWED_MODIFIERS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
               
-              <li><a href="../api/python/arx/arx.parser.state.FIELD_MUTABILITY_MODIFIERS.html"><span class="nav-label">FIELD_MUTABILITY_MODIFIERS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
+              <li><a href="../api/python/arx/arx.parser.state.FUNCTION_ALLOWED_MODIFIERS.html"><span class="nav-label">FUNCTION_ALLOWED_MODIFIERS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
               
               <li><a href="../api/python/arx/arx.parser.state.INDENT_SIZE.html"><span class="nav-label">INDENT_SIZE</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
               
@@ -1220,8 +1224,8 @@ caller updates and concise migration notes.</p>
 <tbody>
 <tr>
 <td><a href="functions.html">Functions</a> and <a href="datatypes.html">types</a></td>
-<td>Explicit annotations, defaults, named calls, bounded templates, finite numeric unions</td>
-<td>No inferred local declarations, argument unpacking, or keyword-only declarations; no runtime tagged unions</td>
+<td>Name-first variables, parameter binding modifiers, initializer inference, named calls, bounded templates</td>
+<td>No parameter/return inference, first-class function values, closures, argument unpacking, or runtime tagged unions</td>
 </tr>
 <tr>
 <td><a href="specification.html#fixed-width-integer-overflow">Numeric safety</a></td>
@@ -1230,8 +1234,8 @@ caller updates and concise migration notes.</p>
 </tr>
 <tr>
 <td><a href="control-flow.html">Control flow</a></td>
-<td><code>if</code>/<code>elif</code>/<code>else</code>, <code>while</code>, count loops, scalar-list <code>for ... in</code>, <code>try</code>/<code>except</code>/<code>else</code>/<code>finally</code></td>
-<td>No Arx <code>break</code>, <code>continue</code>, general generators, or <code>with</code>; see the <a href="../support-matrix.html#exception-capability-boundary">exception boundary</a></td>
+<td><code>if</code>/<code>elif</code>/<code>else</code>, <code>while</code>, count loops, lazy-range/scalar-list <code>for ... in</code>, <code>break</code>/<code>continue</code>, <code>try</code>/<code>except</code>/<code>else</code>/<code>finally</code>, checked <code>with</code></td>
+<td>No Arx general generators or context-exit suppression; see the <a href="../support-matrix.html#exception-capability-boundary">exception boundary</a></td>
 </tr>
 <tr>
 <td><a href="modules.html">Modules</a> and <a href="projects.html">projects</a></td>
@@ -1250,8 +1254,8 @@ caller updates and concise migration notes.</p>
 </tr>
 <tr>
 <td><a href="collections.html#tensors">Tensors</a></td>
-<td>Readonly fixed-shape numeric values; runtime-shaped parameters</td>
-<td>No dynamic indexing or general runtime-shaped returns</td>
+<td>Readonly fixed-shape numeric values; runtime-shaped parameters with checked rank-one indexing</td>
+<td>No general runtime shape calculus or runtime-shaped returns</td>
 </tr>
 <tr>
 <td><a href="collections.html#dataframes-and-series">DataFrames and Series</a></td>
@@ -1276,7 +1280,7 @@ caller updates and concise migration notes.</p>
 <tr>
 <td><a href="docstrings.html">Docstrings</a> and <a href="syntax.html">lexical syntax</a></td>
 <td>Douki validation, UTF-8 source limits, Unicode locations</td>
-<td>Docstrings are omitted from AST/IR; <code>const</code>, <code>then</code>, and operator declarations remain reserved</td>
+<td>Docstrings are omitted from AST/IR; <code>then</code> and operator declarations remain reserved; readonly/immutable/comptime modifiers are unsupported</td>
 </tr>
 </tbody>
 </table>

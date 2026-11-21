@@ -28,7 +28,7 @@
       <a class="site-brand" href="../index.html">
         <img class="brand-logo" src="../images/arx-logo-terracotta.png" alt="ArxLang">
         <span class="brand-name">ArxLang</span>
-        <span class="version badge rounded-pill">1.27.0</span>
+        <span class="version badge rounded-pill">1.29.0</span>
       </a>
       
       <nav class="site-navbar" aria-label="Primary">
@@ -365,6 +365,8 @@
             <summary><span class="nav-label">arrow_stdlib</span></summary>
             <ul class="api-members">
               <li class="api-overview"><a href="../api/python/arx/arx.arrow_stdlib.html" aria-label="arrow_stdlib module overview">Module overview</a></li>
+              
+              <li><a href="../api/python/arx/arx.arrow_stdlib.COMPUTE_FUNCTIONS.html"><span class="nav-label">COMPUTE_FUNCTIONS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
               
               <li><a href="../api/python/arx/arx.arrow_stdlib.IO_FUNCTIONS.html"><span class="nav-label">IO_FUNCTIONS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
               
@@ -926,11 +928,13 @@
             <ul class="api-members">
               <li class="api-overview"><a href="../api/python/arx/arx.parser.state.html" aria-label="parser.state module overview">Module overview</a></li>
               
+              <li><a href="../api/python/arx/arx.parser.state.BINDING_MUTABILITY_MODIFIERS.html"><span class="nav-label">BINDING_MUTABILITY_MODIFIERS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
+              
               <li><a href="../api/python/arx/arx.parser.state.CLASS_ALLOWED_MODIFIERS.html"><span class="nav-label">CLASS_ALLOWED_MODIFIERS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
               
               <li><a href="../api/python/arx/arx.parser.state.FIELD_ALLOWED_MODIFIERS.html"><span class="nav-label">FIELD_ALLOWED_MODIFIERS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
               
-              <li><a href="../api/python/arx/arx.parser.state.FIELD_MUTABILITY_MODIFIERS.html"><span class="nav-label">FIELD_MUTABILITY_MODIFIERS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
+              <li><a href="../api/python/arx/arx.parser.state.FUNCTION_ALLOWED_MODIFIERS.html"><span class="nav-label">FUNCTION_ALLOWED_MODIFIERS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
               
               <li><a href="../api/python/arx/arx.parser.state.INDENT_SIZE.html"><span class="nav-label">INDENT_SIZE</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
               
@@ -1218,8 +1222,8 @@ fn main() -&gt; i32:
   ```
   title: Filter exact rows and finalize the destination
   ```
-  var frame: dataframe[...] = read_parquet(&quot;events.parquet&quot;, columns=[&quot;name&quot;], filters=where(&quot;id&quot;, &quot;&gt;&quot;, 10))
-  write_parquet(frame, &quot;selected.parquet&quot;, compression=&quot;zstd&quot;, atomic=true)
+  frame: dataframe[...] = read_parquet("events.parquet", columns=["name"], filters=where("id", "&gt;", 10))
+  write_parquet(frame, "selected.parquet", compression="zstd", atomic=true)
   return 0
 </code></pre>
 <p>Reads eagerly return an independently owned, chunked DataFrame and close the
@@ -1245,9 +1249,9 @@ existing dataset/Hive policy instead of enabling discovery automatically.</p>
 <pre class="highlight"><code>import (ParquetFilter, ParquetOptions, where) from stdlib.parquet
 
 # Inside a function; minimum_id may be a runtime signed integer:
-var predicate: ParquetFilter = where(&quot;id&quot;, &quot;&gt;=&quot;, minimum_id)
-var both: ParquetFilter = predicate.and_where(&quot;active&quot;, &quot;==&quot;, true)
-var options: ParquetOptions = ParquetOptions(atomic=true, durable=true)
+predicate: ParquetFilter = where("id", "&gt;=", minimum_id)
+both: ParquetFilter = predicate.and_where("active", "==", true)
+options: ParquetOptions = ParquetOptions(atomic=true, durable=true)
 </code></pre>
 <p>Comparisons are <code>==</code>, <code>!=</code>, <code>&lt;</code>, <code>&lt;=</code>, <code>&gt;</code>, <code>&gt;=</code>, with string, signed integer,
 floating or Boolean values. <code>where(&quot;name&quot;, &quot;is_null&quot;)</code> and <code>is_valid</code> omit the
@@ -1282,11 +1286,11 @@ at open; later mutations do not change an active session:</p>
 <pre class="highlight"><code>import (ParquetStream, ParquetOptions, where) from stdlib.parquet
 
 # Inside a function:
-var options: ParquetOptions = ParquetOptions(batch_size=1024)
-options.set_text(&quot;column&quot;, &quot;name&quot;)
-options.set_filters(where(&quot;id&quot;, &quot;&gt;&quot;, 10))
-var source: ParquetStream = ParquetStream()
-source.open_read_options(&quot;input.parquet&quot;, options)
+options: ParquetOptions = ParquetOptions(batch_size=1024)
+options.set_text("column", "name")
+options.set_filters(where("id", "&gt;", 10))
+source: ParquetStream = ParquetStream()
+source.open_read_options("input.parquet", options)
 </code></pre>
 <p>Use <code>open_write_options(path, schema, options)</code> for writes. Unknown settings and
 wrong-mode settings fail rather than being ignored. Python accepts an immutable
@@ -1438,9 +1442,9 @@ still apply when those frames are written to Parquet.</p>
 <pre class="highlight"><code><span class="kn">from</span><span class="w"> </span><span class="nn">irx.table_io</span><span class="w"> </span><span class="kn">import</span> <span class="n">read_parquet</span><span class="p">,</span> <span class="n">write_parquet</span><span class="p">,</span> <span class="n">where</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">irx.record_batch</span><span class="w"> </span><span class="kn">import</span> <span class="n">ParquetOptions</span>
 
-<span class="n">frame</span> <span class="o">=</span> <span class="n">read_parquet</span><span class="p">(</span><span class="s2">&quot;input.parquet&quot;</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">],</span>
-                     <span class="n">filters</span><span class="o">=</span><span class="n">where</span><span class="p">(</span><span class="s2">&quot;id&quot;</span><span class="p">,</span> <span class="s2">&quot;&gt;&quot;</span><span class="p">,</span> <span class="mi">10</span><span class="p">))</span>
-<span class="n">write_parquet</span><span class="p">(</span><span class="n">frame</span><span class="p">,</span> <span class="s2">&quot;output.parquet&quot;</span><span class="p">,</span> <span class="n">compression</span><span class="o">=</span><span class="s2">&quot;zstd&quot;</span><span class="p">,</span>
+<span class="n">frame</span> <span class="o">=</span> <span class="n">read_parquet</span><span class="p">(</span><span class="s2">"input.parquet"</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">"name"</span><span class="p">],</span>
+                     <span class="n">filters</span><span class="o">=</span><span class="n">where</span><span class="p">(</span><span class="s2">"id"</span><span class="p">,</span> <span class="s2">"&gt;"</span><span class="p">,</span> <span class="mi">10</span><span class="p">))</span>
+<span class="n">write_parquet</span><span class="p">(</span><span class="n">frame</span><span class="p">,</span> <span class="s2">"output.parquet"</span><span class="p">,</span> <span class="n">compression</span><span class="o">=</span><span class="s2">"zstd"</span><span class="p">,</span>
               <span class="n">options</span><span class="o">=</span><span class="n">ParquetOptions</span><span class="p">(</span><span class="n">atomic</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
 </code></pre>
 <p>These helpers return/accept <code>pyarrow.Table</code>, accept <code>PathLike</code> paths and

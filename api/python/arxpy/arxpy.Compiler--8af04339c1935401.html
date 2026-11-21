@@ -28,7 +28,7 @@
       <a class="site-brand" href="../../../index.html">
         <img class="brand-logo" src="../../../images/arx-logo-terracotta.png" alt="ArxLang">
         <span class="brand-name">ArxLang</span>
-        <span class="version badge rounded-pill">1.27.0</span>
+        <span class="version badge rounded-pill">1.29.0</span>
       </a>
       
       <nav class="site-navbar" aria-label="Primary">
@@ -263,7 +263,7 @@
             <ul class="api-members">
               <li class="api-overview"><a href="arxpy.typecheck.html" aria-label="typecheck module overview">Module overview</a></li>
               
-              <li><a href="arxpy.typecheck.typechecked.html"><span class="nav-label">typechecked</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
+              <li><a href="arxpy.typecheck.typechecked.html"><span class="nav-label">typechecked</span><span class="api-kind api-kind--function">function</span></a></li>
               
             </ul>
           </details>
@@ -292,7 +292,7 @@
         
         
         <h1 id="compiler"><span class="api-kind api-kind--class">class</span> Compiler</h1>
-<p>Source: packages/arxpy/src/arxpy/compiler.py:435</p>
+<p>Source: packages/arxpy/src/arxpy/compiler.py:392</p>
 <p>Declared as: python:arxpy:arxpy.compiler.Compiler</p>
 <p>Reusable facade for parse, check, compile, and run operations.</p>
 <p>Operations are safe to repeat and serialized across Compiler instances while the frontend uses its process-wide input buffer. The facade never creates an implicit temporary artifact: callers provide an output path for in-memory compilation, while file compilation defaults beside the source. Unknown internal exceptions are not hidden as user diagnostics.</p>

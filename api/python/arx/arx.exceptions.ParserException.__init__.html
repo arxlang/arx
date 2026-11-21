@@ -28,7 +28,7 @@
       <a class="site-brand" href="../../../index.html">
         <img class="brand-logo" src="../../../images/arx-logo-terracotta.png" alt="ArxLang">
         <span class="brand-name">ArxLang</span>
-        <span class="version badge rounded-pill">1.27.0</span>
+        <span class="version badge rounded-pill">1.29.0</span>
       </a>
       
       <nav class="site-navbar" aria-label="Primary">
@@ -365,6 +365,8 @@
             <summary><span class="nav-label">arrow_stdlib</span></summary>
             <ul class="api-members">
               <li class="api-overview"><a href="arx.arrow_stdlib.html" aria-label="arrow_stdlib module overview">Module overview</a></li>
+              
+              <li><a href="arx.arrow_stdlib.COMPUTE_FUNCTIONS.html"><span class="nav-label">COMPUTE_FUNCTIONS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
               
               <li><a href="arx.arrow_stdlib.IO_FUNCTIONS.html"><span class="nav-label">IO_FUNCTIONS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
               
@@ -926,11 +928,13 @@
             <ul class="api-members">
               <li class="api-overview"><a href="arx.parser.state.html" aria-label="parser.state module overview">Module overview</a></li>
               
+              <li><a href="arx.parser.state.BINDING_MUTABILITY_MODIFIERS.html"><span class="nav-label">BINDING_MUTABILITY_MODIFIERS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
+              
               <li><a href="arx.parser.state.CLASS_ALLOWED_MODIFIERS.html"><span class="nav-label">CLASS_ALLOWED_MODIFIERS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
               
               <li><a href="arx.parser.state.FIELD_ALLOWED_MODIFIERS.html"><span class="nav-label">FIELD_ALLOWED_MODIFIERS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
               
-              <li><a href="arx.parser.state.FIELD_MUTABILITY_MODIFIERS.html"><span class="nav-label">FIELD_MUTABILITY_MODIFIERS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
+              <li><a href="arx.parser.state.FUNCTION_ALLOWED_MODIFIERS.html"><span class="nav-label">FUNCTION_ALLOWED_MODIFIERS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
               
               <li><a href="arx.parser.state.INDENT_SIZE.html"><span class="nav-label">INDENT_SIZE</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
               
@@ -1205,22 +1209,24 @@
         
         
         <h1 id="_-_init-_-_"><span class="api-kind api-kind--method">method</span> __init__</h1>
-<pre class="highlight"><code><span class="fm">__init__</span><span class="p">(</span><span class="n">message</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">location</span><span class="p">:</span> <span class="n">SourceLocation</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">code</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;ARX-PARSE-001&#39;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
+<pre class="highlight"><code><span class="fm">__init__</span><span class="p">(</span><span class="n">message</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">location</span><span class="p">:</span> <span class="n">SourceLocation</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">code</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">'ARX-PARSE-001'</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
 </code></pre>
-<p>Source: packages/arx/src/arx/exceptions.py:62</p>
+<p>Source: packages/arx/src/arx/exceptions.py:54</p>
 <p>Initialize ParserException.</p>
 <h3 id="parameters">Parameters</h3>
 <ul>
 <li>
-<p><strong>message</strong> — <strong>Type:</strong> str</p>
+<p><strong>message</strong> — Diagnostic or output message.; <strong>Type:</strong> str</p>
 </li>
 <li>
-<p><strong>location</strong> — <strong>Type:</strong> SourceLocation | None</p>
+<p><strong>location</strong> — Source coordinates associated with the operation.; <strong>Type:</strong> SourceLocation | None</p>
 </li>
 <li>
-<p><strong>code</strong> — <strong>Type:</strong> str</p>
+<p><strong>code</strong> — Source code or diagnostic identifier.; <strong>Type:</strong> str</p>
 </li>
 </ul>
+<h3 id="returns">Returns</h3>
+<p><strong>Type:</strong> None</p>
 
       </main>
       
@@ -1230,6 +1236,8 @@
           <ul>
             
             <li class="toc-h3"><a href="#parameters">Parameters</a></li>
+            
+            <li class="toc-h3"><a href="#returns">Returns</a></li>
             
           </ul>
         </div>

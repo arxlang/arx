@@ -28,7 +28,7 @@
       <a class="site-brand" href="../../../index.html">
         <img class="brand-logo" src="../../../images/arx-logo-terracotta.png" alt="ArxLang">
         <span class="brand-name">ArxLang</span>
-        <span class="version badge rounded-pill">1.27.0</span>
+        <span class="version badge rounded-pill">1.29.0</span>
       </a>
       
       <nav class="site-navbar" aria-label="Primary">
@@ -387,21 +387,21 @@
         <h1 id="resolve-_signature"><span class="api-kind api-kind--function">function</span> resolve_signature</h1>
 <pre class="highlight"><code><span class="n">resolve_signature</span><span class="p">(</span><span class="n">extracted</span><span class="p">:</span> <span class="n">ExtractedSource</span><span class="p">,</span> <span class="n">explicit</span><span class="p">:</span> <span class="n">Signature</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Signature</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="n">Diagnostic</span><span class="p">]]</span>
 </code></pre>
-<p>Source: packages/arxjit/src/arxjit/reconcile.py:320</p>
+<p>Source: packages/arxjit/src/arxjit/reconcile.py:334</p>
 <p>Declared as: python:arxjit:arxjit.reconcile.resolve_signature</p>
 <p>Decide the Signature a validated function compiles against.</p>
 <p>An explicit signature decides the argument and return <em>types</em> outright and the annotations are not even read, so a function may annotate freely (or not at all) without having to agree with it; there is deliberately no type-mismatch error. It does not override the structure of the definition: the argument shape and the number of parameters are checked against the function first, on both paths, because those are facts rather than choices. Without an explicit signature, the annotations are used; int, float and bool are reserved spellings there, so see _annotation_type for why they are not resolved through the defining namespace. The returned signature is None exactly when the returned diagnostics are non- empty, which is the caller's signal that the function cannot be compiled.</p>
 <h3 id="parameters">Parameters</h3>
 <ul>
 <li>
-<p><strong>extracted</strong> — <strong>Type:</strong> ExtractedSource; A function that has already passed validation.</p>
+<p><strong>extracted</strong> — A function that has already passed validation.; <strong>Type:</strong> ExtractedSource</p>
 </li>
 <li>
-<p><strong>explicit</strong> — <strong>Type:</strong> Signature | None; The signature= passed to @jit, when given.</p>
+<p><strong>explicit</strong> — The signature= passed to @jit, when given.; <strong>Type:</strong> Signature | None</p>
 </li>
 </ul>
 <h3 id="returns">Returns</h3>
-<p><strong>Type:</strong> tuple[Signature | None, list[Diagnostic]]</p>
+<p>Result of this operation: decide the Signature a validated function compiles against.; <strong>Type:</strong> tuple[Signature | None, list[Diagnostic]]</p>
 
       </main>
       

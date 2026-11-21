@@ -28,7 +28,7 @@
       <a class="site-brand" href="../index.html">
         <img class="brand-logo" src="../images/arx-logo-terracotta.png" alt="ArxLang">
         <span class="brand-name">ArxLang</span>
-        <span class="version badge rounded-pill">1.27.0</span>
+        <span class="version badge rounded-pill">1.29.0</span>
       </a>
       
       <nav class="site-navbar" aria-label="Primary">
@@ -365,6 +365,8 @@
             <summary><span class="nav-label">arrow_stdlib</span></summary>
             <ul class="api-members">
               <li class="api-overview"><a href="../api/python/arx/arx.arrow_stdlib.html" aria-label="arrow_stdlib module overview">Module overview</a></li>
+              
+              <li><a href="../api/python/arx/arx.arrow_stdlib.COMPUTE_FUNCTIONS.html"><span class="nav-label">COMPUTE_FUNCTIONS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
               
               <li><a href="../api/python/arx/arx.arrow_stdlib.IO_FUNCTIONS.html"><span class="nav-label">IO_FUNCTIONS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
               
@@ -926,11 +928,13 @@
             <ul class="api-members">
               <li class="api-overview"><a href="../api/python/arx/arx.parser.state.html" aria-label="parser.state module overview">Module overview</a></li>
               
+              <li><a href="../api/python/arx/arx.parser.state.BINDING_MUTABILITY_MODIFIERS.html"><span class="nav-label">BINDING_MUTABILITY_MODIFIERS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
+              
               <li><a href="../api/python/arx/arx.parser.state.CLASS_ALLOWED_MODIFIERS.html"><span class="nav-label">CLASS_ALLOWED_MODIFIERS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
               
               <li><a href="../api/python/arx/arx.parser.state.FIELD_ALLOWED_MODIFIERS.html"><span class="nav-label">FIELD_ALLOWED_MODIFIERS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
               
-              <li><a href="../api/python/arx/arx.parser.state.FIELD_MUTABILITY_MODIFIERS.html"><span class="nav-label">FIELD_MUTABILITY_MODIFIERS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
+              <li><a href="../api/python/arx/arx.parser.state.FUNCTION_ALLOWED_MODIFIERS.html"><span class="nav-label">FUNCTION_ALLOWED_MODIFIERS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
               
               <li><a href="../api/python/arx/arx.parser.state.INDENT_SIZE.html"><span class="nav-label">INDENT_SIZE</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
               
@@ -1229,9 +1233,9 @@ null-propagating operations rather than scalar short-circuiting.</p>
 <h3 id="prefix-increment-and-decrement">Prefix increment and decrement</h3>
 <p>Use <code>++value</code> or <code>--value</code> to update a mutable numeric variable by one. Both
 expressions yield the <strong>updated</strong> value:</p>
-<pre class="highlight"><code>var value: i32 = 3
-var increased: i32 = ++value  # value and increased are now 4
-var decreased: i32 = --value  # value and decreased are now 3
+<pre class="highlight"><code>value: i32 = 3
+increased: i32 = ++value  # value and increased are now 4
+decreased: i32 = --value  # value and decreased are now 3
 </code></pre>
 <p>Postfix <code>value++</code> and <code>value--</code> are not supported. Use prefix mutation or an
 ordinary assignment such as <code>value = value + 1</code> or <code>value = value - 1</code>. Integer
@@ -1239,8 +1243,8 @@ mutation follows the <a href="#fixed-width-integer-overflow">checked overflow ru
 below.</p>
 <h3 id="compound-assignment">Compound assignment</h3>
 <p><code>+=</code>, <code>-=</code>, <code>*=</code>, <code>/=</code>, and <code>%=</code> update a declared mutable numeric variable:</p>
-<pre class="highlight"><code>var start: i32 = 207
-var amount: i32 = 5
+<pre class="highlight"><code>start: i32 = 207
+amount: i32 = 5
 start -= amount
 start %= 100  # start is now 2
 </code></pre>
@@ -1328,9 +1332,9 @@ exits, not process-lifetime allocations. Shared class references follow a
 different model. Use the <a href="classes.html">class lifecycle guide</a> for construction
 and field ownership, and the <a href="file-io.html">file guide</a> for shared cursor and
 close behavior.</p>
-<p>IRx cleanup paths for <code>break</code>/<code>continue</code> or generators do not establish Arx
-source support for those constructs. Fatal errors do not generally unwind caller
-frames. Do not depend on automatic cleanup to confirm successful writer
+<p>Source <code>break</code>/<code>continue</code> use lexical exit cleanup; IRx generator support does
+not establish source-level generators. Fatal errors do not generally unwind
+caller frames. Do not depend on automatic cleanup to confirm successful writer
 finalization; follow the <a href="csv.html">CSV</a> or <a href="parquet.html">Parquet</a> close contract.</p>
 <h2 id="modules-and-failures">Modules and failures</h2>
 <h3 id="module-graph-failures">Module graph failures</h3>

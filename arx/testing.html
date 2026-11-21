@@ -28,7 +28,7 @@
       <a class="site-brand" href="../index.html">
         <img class="brand-logo" src="../images/arx-logo-terracotta.png" alt="ArxLang">
         <span class="brand-name">ArxLang</span>
-        <span class="version badge rounded-pill">1.27.0</span>
+        <span class="version badge rounded-pill">1.29.0</span>
       </a>
       
       <nav class="site-navbar" aria-label="Primary">
@@ -365,6 +365,8 @@
             <summary><span class="nav-label">arrow_stdlib</span></summary>
             <ul class="api-members">
               <li class="api-overview"><a href="../api/python/arx/arx.arrow_stdlib.html" aria-label="arrow_stdlib module overview">Module overview</a></li>
+              
+              <li><a href="../api/python/arx/arx.arrow_stdlib.COMPUTE_FUNCTIONS.html"><span class="nav-label">COMPUTE_FUNCTIONS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
               
               <li><a href="../api/python/arx/arx.arrow_stdlib.IO_FUNCTIONS.html"><span class="nav-label">IO_FUNCTIONS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
               
@@ -926,11 +928,13 @@
             <ul class="api-members">
               <li class="api-overview"><a href="../api/python/arx/arx.parser.state.html" aria-label="parser.state module overview">Module overview</a></li>
               
+              <li><a href="../api/python/arx/arx.parser.state.BINDING_MUTABILITY_MODIFIERS.html"><span class="nav-label">BINDING_MUTABILITY_MODIFIERS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
+              
               <li><a href="../api/python/arx/arx.parser.state.CLASS_ALLOWED_MODIFIERS.html"><span class="nav-label">CLASS_ALLOWED_MODIFIERS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
               
               <li><a href="../api/python/arx/arx.parser.state.FIELD_ALLOWED_MODIFIERS.html"><span class="nav-label">FIELD_ALLOWED_MODIFIERS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
               
-              <li><a href="../api/python/arx/arx.parser.state.FIELD_MUTABILITY_MODIFIERS.html"><span class="nav-label">FIELD_MUTABILITY_MODIFIERS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
+              <li><a href="../api/python/arx/arx.parser.state.FUNCTION_ALLOWED_MODIFIERS.html"><span class="nav-label">FUNCTION_ALLOWED_MODIFIERS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
               
               <li><a href="../api/python/arx/arx.parser.state.INDENT_SIZE.html"><span class="nav-label">INDENT_SIZE</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
               
@@ -1228,7 +1232,7 @@ fn test_square() -&gt; none:
   assert math.square(3) == 9
 
 fn test_clamp() -&gt; none:
-  assert math.clamp(0 - 3, 0, 2) == 0, &quot;lower bound&quot;
+  assert math.clamp(0 - 3, 0, 2) == 0, "lower bound"
 </code></pre>
 <h2 id="run-tests">Run tests</h2>
 <pre class="highlight"><code>arx<span class="w"> </span><span class="nb">test</span>
@@ -1242,10 +1246,10 @@ exclusion, and artifact retention.</p>
 <h2 id="project-configuration">Project configuration</h2>
 <p>Configure default discovery in <code>.arxproject.toml</code>:</p>
 <pre class="highlight"><code><span class="k">[tests]</span>
-<span class="n">paths</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;tests&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;integration&quot;</span><span class="p">]</span>
-<span class="n">exclude</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;tests/experimental_*.x&quot;</span><span class="p">]</span>
-<span class="n">file_pattern</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;test_*.x&quot;</span>
-<span class="n">function_pattern</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;test_*&quot;</span>
+<span class="n">paths</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">"tests"</span><span class="p">,</span><span class="w"> </span><span class="s2">"integration"</span><span class="p">]</span>
+<span class="n">exclude</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">"tests/experimental_*.x"</span><span class="p">]</span>
+<span class="n">file_pattern</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"test_*.x"</span>
+<span class="n">function_pattern</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"test_*"</span>
 </code></pre>
 <p>CLI flags take precedence over project settings.</p>
 <h2 id="execution-model">Execution model</h2>
@@ -1256,11 +1260,13 @@ protocol and converted into test results.</p>
 <p>Use <code>--keep-artifacts</code> when inspecting generated wrappers or compiler output for
 a failing test.</p>
 <h2 id="arrow-and-parquet-ci-coverage">Arrow and Parquet CI coverage</h2>
-<p>CI collects the complete package suites and compiled-language tests on Python
-3.10–3.14. Native prerequisites are checked explicitly in Arx/IRx jobs so
-missing compilers or expected codecs cannot silently omit those integration
-paths. Installed-wheel smoke tests run in clean environments on Python 3.10 and
-3.14, including the nullable Series native header and compiled kernel calls.</p>
+<p>CI collects package suites and compiled-language tests on the interpreters
+selected by the
+<a href="https://github.com/arxlang/arx/blob/main/.github/workflows/main.yaml">CI workflow</a>.
+Native prerequisites are checked explicitly in Arx/IRx jobs so missing compilers
+or expected codecs cannot silently omit those integration paths. Installed-wheel
+smoke tests run in clean environments on the workflow's wheel matrix, including
+the nullable Series native header and compiled kernel calls.</p>
 <p>A separate Linux job runs <code>makim irx.test-sanitizers</code>: registered Arrow and
 Parquet runtime artifacts are compiled with AddressSanitizer and UBSan. Its
 standalone harness exercises ownership/release, nullable scalar and Series

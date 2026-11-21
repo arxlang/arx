@@ -28,7 +28,7 @@
       <a class="site-brand" href="../../../index.html">
         <img class="brand-logo" src="../../../images/arx-logo-terracotta.png" alt="ArxLang">
         <span class="brand-name">ArxLang</span>
-        <span class="version badge rounded-pill">1.27.0</span>
+        <span class="version badge rounded-pill">1.29.0</span>
       </a>
       
       <nav class="site-navbar" aria-label="Primary">
@@ -390,6 +390,21 @@
 <p>Source: packages/arxjit/src/arxjit/lowering.py:1</p>
 <p>Python AST to ASTx lowering for arxjit.</p>
 <p>Fourth stage of the arxjit pipeline: turn the ast node of a validated function, plus the Signature reconciliation settled on, into the astx module IRx compiles. Dispatch is by node type via plum, matching the visitor convention used across the Arx packages. What is lowered so far is the function shell — the prototype and its typed arguments — and straight-line expressions: literals, parameter reads, arithmetic and unary operators, and single comparisons. Boolean operators and chained comparisons fail closed until control-flow lowering can preserve their short-circuit behavior. Where an expression is not lowered at a type its context declares, the type is inferred from the expression itself, over a scope holding the parameters. Local assignments and control flow follow in later stages, and until then any other construct fails closed with LoweringError. The decorator does not call this stage yet, so nothing here changes what @jit does; that wiring lands once the lowerer covers the whole validated subset.</p>
+<h3 id="attributes">Attributes</h3>
+<ul>
+<li>
+<p><strong>SCALARS</strong> — Scalars.; <strong>Type:</strong> dict[str, Scalar]</p>
+</li>
+<li>
+<p><strong>BINARY_OPS</strong> — Binary ops.; <strong>Type:</strong> dict[type[ast.operator], str]</p>
+</li>
+<li>
+<p><strong>UNARY_OPS</strong> — Unary ops.; <strong>Type:</strong> dict[type[ast.unaryop], str]</p>
+</li>
+<li>
+<p><strong>COMPARE_OPS</strong> — Compare ops.; <strong>Type:</strong> dict[type[ast.cmpop], str]</p>
+</li>
+</ul>
 <h2 id="functions">Functions</h2>
 <ul>
 <li><a href="arxjit.lowering.lower.html">lower</a> — Lower a validated function into a single-function astx module.</li>
@@ -401,6 +416,8 @@
         <div class="toc-panel">
           <strong>On this page</strong>
           <ul>
+            
+            <li class="toc-h3"><a href="#attributes">Attributes</a></li>
             
             <li class="toc-h2"><a href="#functions">Functions</a></li>
             

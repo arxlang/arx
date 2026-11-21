@@ -28,7 +28,7 @@
       <a class="site-brand" href="../../../index.html">
         <img class="brand-logo" src="../../../images/arx-logo-terracotta.png" alt="ArxLang">
         <span class="brand-name">ArxLang</span>
-        <span class="version badge rounded-pill">1.27.0</span>
+        <span class="version badge rounded-pill">1.29.0</span>
       </a>
       
       <nav class="site-navbar" aria-label="Primary">
@@ -139,7 +139,7 @@
       </div>
     </header>
     
-    <div class="layout layout--no-toc">
+    <div class="layout">
       
       <nav aria-label="Documentation">
         <details class="navigation-panel" id="docs-navigation" open>
@@ -263,7 +263,7 @@
             <ul class="api-members">
               <li class="api-overview"><a href="arxpy.typecheck.html" aria-label="typecheck module overview">Module overview</a></li>
               
-              <li><a href="arxpy.typecheck.typechecked.html" aria-current="page"><span class="nav-label">typechecked</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
+              <li><a href="arxpy.typecheck.typechecked.html" aria-current="page"><span class="nav-label">typechecked</span><span class="api-kind api-kind--function">function</span></a></li>
               
             </ul>
           </details>
@@ -291,12 +291,34 @@
         </div>
         
         
-        <h1 id="typechecked"><span class="api-kind api-kind--attribute">attribute</span> typechecked</h1>
-<pre class="highlight"><code><span class="n">typechecked</span> <span class="o">=</span> <span class="n">typeguard_typechecked</span><span class="p">(</span><span class="n">forward_ref_policy</span><span class="o">=</span><span class="p">(</span><span class="n">ForwardRefPolicy</span><span class="o">.</span><span class="n">IGNORE</span><span class="p">),</span> <span class="n">collection_check_strategy</span><span class="o">=</span><span class="p">(</span><span class="n">CollectionCheckStrategy</span><span class="o">.</span><span class="n">ALL_ITEMS</span><span class="p">))</span>
+        <h1 id="typechecked"><span class="api-kind api-kind--function">function</span> typechecked</h1>
+<pre class="highlight"><code><span class="n">typechecked</span><span class="p">(</span><span class="n">target</span><span class="p">:</span> <span class="n">TypecheckedTarget</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">TypecheckedTarget</span>
 </code></pre>
-<p>Source: packages/arxpy/src/arxpy/typecheck.py:17</p>
+<p>Source: packages/astx/src/astx/tools/typing.py:65</p>
+<p>Declared as: python:astx:astx.tools.typing.typechecked</p>
+<p>Instrument a function or class when runtime checking is enabled.</p>
+<p>ARX_RUNTIME_TYPECHECK=1 at import enables argument, return, and all-item collection checks. Otherwise return the original target without runtime instrumentation or a call wrapper. Compiler semantic validation is independent of this developer-only setting.</p>
+<h3 id="parameters">Parameters</h3>
+<ul>
+<li><strong>target</strong> — Destination of the operation.; <strong>Type:</strong> TypecheckedTarget</li>
+</ul>
+<h3 id="returns">Returns</h3>
+<p>Result of this operation: instrument a function or class when runtime checking is enabled.; <strong>Type:</strong> TypecheckedTarget</p>
 
       </main>
+      
+      <aside aria-label="On this page">
+        <div class="toc-panel">
+          <strong>On this page</strong>
+          <ul>
+            
+            <li class="toc-h3"><a href="#parameters">Parameters</a></li>
+            
+            <li class="toc-h3"><a href="#returns">Returns</a></li>
+            
+          </ul>
+        </div>
+      </aside>
       
     </div>
     

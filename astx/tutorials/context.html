@@ -28,7 +28,7 @@
       <a class="site-brand" href="../../index.html">
         <img class="brand-logo" src="../../images/arx-logo-terracotta.png" alt="ArxLang">
         <span class="brand-name">ArxLang</span>
-        <span class="version badge rounded-pill">1.27.0</span>
+        <span class="version badge rounded-pill">1.29.0</span>
       </a>
       
       <nav class="site-navbar" aria-label="Primary">
@@ -502,6 +502,8 @@
               
               <li><a href="../../api/python/astx/astx.ImportStmt.html"><span class="nav-label">ImportStmt</span><span class="api-kind api-kind--class">class</span></a></li>
               
+              <li><a href="../../api/python/astx/astx.InferredType.html"><span class="nav-label">InferredType</span><span class="api-kind api-kind--class">class</span></a></li>
+              
               <li><a href="../../api/python/astx/astx.InlineVariableDeclaration.html"><span class="nav-label">InlineVariableDeclaration</span><span class="api-kind api-kind--class">class</span></a></li>
               
               <li><a href="../../api/python/astx/astx.Int16.html"><span class="nav-label">Int16</span><span class="api-kind api-kind--class">class</span></a></li>
@@ -659,6 +661,8 @@
               <li><a href="../../api/python/astx/astx.PrintExpr.html"><span class="nav-label">PrintExpr</span><span class="api-kind api-kind--class">class</span></a></li>
               
               <li><a href="../../api/python/astx/astx.Program.html"><span class="nav-label">Program</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="../../api/python/astx/astx.RangeType.html"><span class="nav-label">RangeType</span><span class="api-kind api-kind--class">class</span></a></li>
               
               <li><a href="../../api/python/astx/astx.SPECIALIZED_BINARY_OP_EXTRA.html"><span class="nav-label">SPECIALIZED_BINARY_OP_EXTRA</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
               
@@ -1788,7 +1792,7 @@
             <ul class="api-members">
               <li class="api-overview"><a href="../../api/python/astx/astx.tools.typing.html" aria-label="tools.typing module overview">Module overview</a></li>
               
-              <li><a href="../../api/python/astx/astx.tools.typing.typechecked.html"><span class="nav-label">typechecked</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
+              <li><a href="../../api/python/astx/astx.tools.typing.typechecked.html"><span class="nav-label">typechecked</span><span class="api-kind api-kind--function">function</span></a></li>
               
             </ul>
           </details>
@@ -1840,6 +1844,8 @@
               
               <li><a href="../../api/python/astx/astx.types.GeneratorType.html"><span class="nav-label">GeneratorType</span><span class="api-kind api-kind--class">class</span></a></li>
               
+              <li><a href="../../api/python/astx/astx.types.InferredType.html"><span class="nav-label">InferredType</span><span class="api-kind api-kind--class">class</span></a></li>
+              
               <li><a href="../../api/python/astx/astx.types.Int16.html"><span class="nav-label">Int16</span><span class="api-kind api-kind--class">class</span></a></li>
               
               <li><a href="../../api/python/astx/astx.types.Int32.html"><span class="nav-label">Int32</span><span class="api-kind api-kind--class">class</span></a></li>
@@ -1863,6 +1869,8 @@
               <li><a href="../../api/python/astx/astx.types.Number.html"><span class="nav-label">Number</span><span class="api-kind api-kind--class">class</span></a></li>
               
               <li><a href="../../api/python/astx/astx.types.OrOp.html"><span class="nav-label">OrOp</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="../../api/python/astx/astx.types.RangeType.html"><span class="nav-label">RangeType</span><span class="api-kind api-kind--class">class</span></a></li>
               
               <li><a href="../../api/python/astx/astx.types.SequenceType.html"><span class="nav-label">SequenceType</span><span class="api-kind api-kind--class">class</span></a></li>
               
@@ -1918,6 +1926,8 @@
               
               <li><a href="../../api/python/astx/astx.types.base.AnyType.html"><span class="nav-label">AnyType</span><span class="api-kind api-kind--class">class</span></a></li>
               
+              <li><a href="../../api/python/astx/astx.types.base.InferredType.html"><span class="nav-label">InferredType</span><span class="api-kind api-kind--class">class</span></a></li>
+              
               <li><a href="../../api/python/astx/astx.types.base.NoneType.html"><span class="nav-label">NoneType</span><span class="api-kind api-kind--class">class</span></a></li>
               
             </ul>
@@ -1959,6 +1969,8 @@
               <li><a href="../../api/python/astx/astx.types.collections.DictType.html"><span class="nav-label">DictType</span><span class="api-kind api-kind--class">class</span></a></li>
               
               <li><a href="../../api/python/astx/astx.types.collections.ListType.html"><span class="nav-label">ListType</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="../../api/python/astx/astx.types.collections.RangeType.html"><span class="nav-label">RangeType</span><span class="api-kind api-kind--class">class</span></a></li>
               
               <li><a href="../../api/python/astx/astx.types.collections.SequenceType.html"><span class="nav-label">SequenceType</span><span class="api-kind api-kind--class">class</span></a></li>
               
@@ -2248,7 +2260,7 @@
 <div class="notebook-prompt">In [2]</div>
 <pre class="highlight"><code><span class="c1"># skip warnings</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">warnings</span>
-<span class="n">warnings</span><span class="o">.</span><span class="n">filterwarnings</span><span class="p">(</span><span class="s2">&quot;ignore&quot;</span><span class="p">)</span>
+<span class="n">warnings</span><span class="o">.</span><span class="n">filterwarnings</span><span class="p">(</span><span class="s2">"ignore"</span><span class="p">)</span>
 </code></pre>
 </div>
 <h2 id="example-setup">Example Setup</h2>
@@ -2260,18 +2272,18 @@
 <pre class="highlight"><code><span class="c1"># Initialize the ASTx module</span>
 <span class="n">module</span> <span class="o">=</span> <span class="n">astx</span><span class="o">.</span><span class="n">Module</span><span class="p">()</span>
 
-<span class="c1"># Declare variables &#39;a&#39;, &#39;b&#39;, and &#39;c&#39; with initial values</span>
-<span class="n">decl_a</span> <span class="o">=</span> <span class="n">astx</span><span class="o">.</span><span class="n">VariableDeclaration</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;a&quot;</span><span class="p">,</span> <span class="n">type_</span><span class="o">=</span><span class="n">astx</span><span class="o">.</span><span class="n">Int32</span><span class="p">(),</span> <span class="n">value</span><span class="o">=</span><span class="n">astx</span><span class="o">.</span><span class="n">LiteralInt32</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span>
-<span class="n">decl_b</span> <span class="o">=</span> <span class="n">astx</span><span class="o">.</span><span class="n">VariableDeclaration</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;b&quot;</span><span class="p">,</span> <span class="n">type_</span><span class="o">=</span><span class="n">astx</span><span class="o">.</span><span class="n">Int32</span><span class="p">(),</span> <span class="n">value</span><span class="o">=</span><span class="n">astx</span><span class="o">.</span><span class="n">LiteralInt32</span><span class="p">(</span><span class="mi">2</span><span class="p">))</span>
-<span class="n">decl_c</span> <span class="o">=</span> <span class="n">astx</span><span class="o">.</span><span class="n">VariableDeclaration</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;c&quot;</span><span class="p">,</span> <span class="n">type_</span><span class="o">=</span><span class="n">astx</span><span class="o">.</span><span class="n">Int32</span><span class="p">(),</span> <span class="n">value</span><span class="o">=</span><span class="n">astx</span><span class="o">.</span><span class="n">LiteralInt32</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span>
+<span class="c1"># Declare variables 'a', 'b', and 'c' with initial values</span>
+<span class="n">decl_a</span> <span class="o">=</span> <span class="n">astx</span><span class="o">.</span><span class="n">VariableDeclaration</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">"a"</span><span class="p">,</span> <span class="n">type_</span><span class="o">=</span><span class="n">astx</span><span class="o">.</span><span class="n">Int32</span><span class="p">(),</span> <span class="n">value</span><span class="o">=</span><span class="n">astx</span><span class="o">.</span><span class="n">LiteralInt32</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span>
+<span class="n">decl_b</span> <span class="o">=</span> <span class="n">astx</span><span class="o">.</span><span class="n">VariableDeclaration</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">"b"</span><span class="p">,</span> <span class="n">type_</span><span class="o">=</span><span class="n">astx</span><span class="o">.</span><span class="n">Int32</span><span class="p">(),</span> <span class="n">value</span><span class="o">=</span><span class="n">astx</span><span class="o">.</span><span class="n">LiteralInt32</span><span class="p">(</span><span class="mi">2</span><span class="p">))</span>
+<span class="n">decl_c</span> <span class="o">=</span> <span class="n">astx</span><span class="o">.</span><span class="n">VariableDeclaration</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">"c"</span><span class="p">,</span> <span class="n">type_</span><span class="o">=</span><span class="n">astx</span><span class="o">.</span><span class="n">Int32</span><span class="p">(),</span> <span class="n">value</span><span class="o">=</span><span class="n">astx</span><span class="o">.</span><span class="n">LiteralInt32</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span>
 
-<span class="c1"># Reassign a new value to variable &#39;c&#39;</span>
-<span class="n">assign_c</span> <span class="o">=</span> <span class="n">astx</span><span class="o">.</span><span class="n">VariableAssignment</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;c&quot;</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="n">astx</span><span class="o">.</span><span class="n">LiteralInt32</span><span class="p">(</span><span class="mi">3</span><span class="p">))</span>
+<span class="c1"># Reassign a new value to variable 'c'</span>
+<span class="n">assign_c</span> <span class="o">=</span> <span class="n">astx</span><span class="o">.</span><span class="n">VariableAssignment</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">"c"</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="n">astx</span><span class="o">.</span><span class="n">LiteralInt32</span><span class="p">(</span><span class="mi">3</span><span class="p">))</span>
 
 <span class="c1"># Create ASTx Variable objects</span>
-<span class="n">a</span> <span class="o">=</span> <span class="n">astx</span><span class="o">.</span><span class="n">Variable</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;a&quot;</span><span class="p">)</span>
-<span class="n">b</span> <span class="o">=</span> <span class="n">astx</span><span class="o">.</span><span class="n">Variable</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;b&quot;</span><span class="p">)</span>
-<span class="n">c</span> <span class="o">=</span> <span class="n">astx</span><span class="o">.</span><span class="n">Variable</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;c&quot;</span><span class="p">)</span>
+<span class="n">a</span> <span class="o">=</span> <span class="n">astx</span><span class="o">.</span><span class="n">Variable</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">"a"</span><span class="p">)</span>
+<span class="n">b</span> <span class="o">=</span> <span class="n">astx</span><span class="o">.</span><span class="n">Variable</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">"b"</span><span class="p">)</span>
+<span class="n">c</span> <span class="o">=</span> <span class="n">astx</span><span class="o">.</span><span class="n">Variable</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">"c"</span><span class="p">)</span>
 
 <span class="c1"># Create a literal integer</span>
 <span class="n">lit_1</span> <span class="o">=</span> <span class="n">astx</span><span class="o">.</span><span class="n">LiteralInt32</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
@@ -2281,7 +2293,7 @@
 
 <span class="c1"># Define the main function prototype</span>
 <span class="n">main_proto</span> <span class="o">=</span> <span class="n">astx</span><span class="o">.</span><span class="n">FunctionPrototype</span><span class="p">(</span>
-    <span class="n">name</span><span class="o">=</span><span class="s2">&quot;main&quot;</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="n">astx</span><span class="o">.</span><span class="n">Arguments</span><span class="p">(),</span> <span class="n">return_type</span><span class="o">=</span><span class="n">astx</span><span class="o">.</span><span class="n">Int32</span><span class="p">()</span>
+    <span class="n">name</span><span class="o">=</span><span class="s2">"main"</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="n">astx</span><span class="o">.</span><span class="n">Arguments</span><span class="p">(),</span> <span class="n">return_type</span><span class="o">=</span><span class="n">astx</span><span class="o">.</span><span class="n">Int32</span><span class="p">()</span>
 <span class="p">)</span>
 
 <span class="c1"># Create a block of code and append variable declarations and operations</span>
@@ -2313,23 +2325,23 @@
 
 <span class="c1"># Define the main function prototype</span>
 <span class="n">main_proto</span> <span class="o">=</span> <span class="n">astx</span><span class="o">.</span><span class="n">FunctionPrototype</span><span class="p">(</span>
-    <span class="n">name</span><span class="o">=</span><span class="s2">&quot;main&quot;</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="n">astx</span><span class="o">.</span><span class="n">Arguments</span><span class="p">(),</span> <span class="n">return_type</span><span class="o">=</span><span class="n">astx</span><span class="o">.</span><span class="n">Int32</span><span class="p">()</span>
+    <span class="n">name</span><span class="o">=</span><span class="s2">"main"</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="n">astx</span><span class="o">.</span><span class="n">Arguments</span><span class="p">(),</span> <span class="n">return_type</span><span class="o">=</span><span class="n">astx</span><span class="o">.</span><span class="n">Int32</span><span class="p">()</span>
 <span class="p">)</span>
 <span class="c1"># Define the main function with its body</span>
 <span class="n">main_fn</span> <span class="o">=</span> <span class="n">astx</span><span class="o">.</span><span class="n">FunctionDef</span><span class="p">(</span><span class="n">prototype</span><span class="o">=</span><span class="n">main_proto</span><span class="p">,</span> <span class="n">body</span><span class="o">=</span><span class="n">main_block</span><span class="p">,</span> <span class="n">parent</span><span class="o">=</span><span class="n">module</span><span class="p">)</span>
 
-<span class="c1"># Declare variables &#39;a&#39;, &#39;b&#39;, and &#39;c&#39; with initial values</span>
-<span class="n">decl_a</span> <span class="o">=</span> <span class="n">astx</span><span class="o">.</span><span class="n">VariableDeclaration</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;a&quot;</span><span class="p">,</span> <span class="n">type_</span><span class="o">=</span><span class="n">astx</span><span class="o">.</span><span class="n">Int32</span><span class="p">(),</span> <span class="n">value</span><span class="o">=</span><span class="n">astx</span><span class="o">.</span><span class="n">LiteralInt32</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span> <span class="n">parent</span><span class="o">=</span><span class="n">main_block</span><span class="p">)</span>
-<span class="n">decl_b</span> <span class="o">=</span> <span class="n">astx</span><span class="o">.</span><span class="n">VariableDeclaration</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;b&quot;</span><span class="p">,</span> <span class="n">type_</span><span class="o">=</span><span class="n">astx</span><span class="o">.</span><span class="n">Int32</span><span class="p">(),</span> <span class="n">value</span><span class="o">=</span><span class="n">astx</span><span class="o">.</span><span class="n">LiteralInt32</span><span class="p">(</span><span class="mi">2</span><span class="p">),</span> <span class="n">parent</span><span class="o">=</span><span class="n">main_block</span><span class="p">)</span>
-<span class="n">decl_c</span> <span class="o">=</span> <span class="n">astx</span><span class="o">.</span><span class="n">VariableDeclaration</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;c&quot;</span><span class="p">,</span> <span class="n">type_</span><span class="o">=</span><span class="n">astx</span><span class="o">.</span><span class="n">Int32</span><span class="p">(),</span> <span class="n">value</span><span class="o">=</span><span class="n">astx</span><span class="o">.</span><span class="n">LiteralInt32</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span> <span class="n">parent</span><span class="o">=</span><span class="n">main_block</span><span class="p">)</span>
+<span class="c1"># Declare variables 'a', 'b', and 'c' with initial values</span>
+<span class="n">decl_a</span> <span class="o">=</span> <span class="n">astx</span><span class="o">.</span><span class="n">VariableDeclaration</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">"a"</span><span class="p">,</span> <span class="n">type_</span><span class="o">=</span><span class="n">astx</span><span class="o">.</span><span class="n">Int32</span><span class="p">(),</span> <span class="n">value</span><span class="o">=</span><span class="n">astx</span><span class="o">.</span><span class="n">LiteralInt32</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span> <span class="n">parent</span><span class="o">=</span><span class="n">main_block</span><span class="p">)</span>
+<span class="n">decl_b</span> <span class="o">=</span> <span class="n">astx</span><span class="o">.</span><span class="n">VariableDeclaration</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">"b"</span><span class="p">,</span> <span class="n">type_</span><span class="o">=</span><span class="n">astx</span><span class="o">.</span><span class="n">Int32</span><span class="p">(),</span> <span class="n">value</span><span class="o">=</span><span class="n">astx</span><span class="o">.</span><span class="n">LiteralInt32</span><span class="p">(</span><span class="mi">2</span><span class="p">),</span> <span class="n">parent</span><span class="o">=</span><span class="n">main_block</span><span class="p">)</span>
+<span class="n">decl_c</span> <span class="o">=</span> <span class="n">astx</span><span class="o">.</span><span class="n">VariableDeclaration</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">"c"</span><span class="p">,</span> <span class="n">type_</span><span class="o">=</span><span class="n">astx</span><span class="o">.</span><span class="n">Int32</span><span class="p">(),</span> <span class="n">value</span><span class="o">=</span><span class="n">astx</span><span class="o">.</span><span class="n">LiteralInt32</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span> <span class="n">parent</span><span class="o">=</span><span class="n">main_block</span><span class="p">)</span>
 
-<span class="c1"># Reassign a new value to variable &#39;c&#39;</span>
-<span class="n">assign_c</span> <span class="o">=</span> <span class="n">astx</span><span class="o">.</span><span class="n">VariableAssignment</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;c&quot;</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="n">astx</span><span class="o">.</span><span class="n">LiteralInt32</span><span class="p">(</span><span class="mi">3</span><span class="p">),</span> <span class="n">parent</span><span class="o">=</span><span class="n">main_block</span><span class="p">)</span>
+<span class="c1"># Reassign a new value to variable 'c'</span>
+<span class="n">assign_c</span> <span class="o">=</span> <span class="n">astx</span><span class="o">.</span><span class="n">VariableAssignment</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">"c"</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="n">astx</span><span class="o">.</span><span class="n">LiteralInt32</span><span class="p">(</span><span class="mi">3</span><span class="p">),</span> <span class="n">parent</span><span class="o">=</span><span class="n">main_block</span><span class="p">)</span>
 
 <span class="c1"># Create ASTx Variable objects</span>
-<span class="n">a</span> <span class="o">=</span> <span class="n">astx</span><span class="o">.</span><span class="n">Variable</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;a&quot;</span><span class="p">)</span>
-<span class="n">b</span> <span class="o">=</span> <span class="n">astx</span><span class="o">.</span><span class="n">Variable</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;b&quot;</span><span class="p">)</span>
-<span class="n">c</span> <span class="o">=</span> <span class="n">astx</span><span class="o">.</span><span class="n">Variable</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;c&quot;</span><span class="p">)</span>
+<span class="n">a</span> <span class="o">=</span> <span class="n">astx</span><span class="o">.</span><span class="n">Variable</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">"a"</span><span class="p">)</span>
+<span class="n">b</span> <span class="o">=</span> <span class="n">astx</span><span class="o">.</span><span class="n">Variable</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">"b"</span><span class="p">)</span>
+<span class="n">c</span> <span class="o">=</span> <span class="n">astx</span><span class="o">.</span><span class="n">Variable</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">"c"</span><span class="p">)</span>
 
 <span class="c1"># Create a literal integer</span>
 <span class="n">lit_1</span> <span class="o">=</span> <span class="n">astx</span><span class="o">.</span><span class="n">LiteralInt32</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>

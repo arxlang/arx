@@ -28,7 +28,7 @@
       <a class="site-brand" href="../../../index.html">
         <img class="brand-logo" src="../../../images/arx-logo-terracotta.png" alt="ArxLang">
         <span class="brand-name">ArxLang</span>
-        <span class="version badge rounded-pill">1.27.0</span>
+        <span class="version badge rounded-pill">1.29.0</span>
       </a>
       
       <nav class="site-navbar" aria-label="Primary">
@@ -365,6 +365,8 @@
             <summary><span class="nav-label">arrow_stdlib</span></summary>
             <ul class="api-members">
               <li class="api-overview"><a href="arx.arrow_stdlib.html" aria-label="arrow_stdlib module overview">Module overview</a></li>
+              
+              <li><a href="arx.arrow_stdlib.COMPUTE_FUNCTIONS.html"><span class="nav-label">COMPUTE_FUNCTIONS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
               
               <li><a href="arx.arrow_stdlib.IO_FUNCTIONS.html" aria-current="page"><span class="nav-label">IO_FUNCTIONS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
               
@@ -926,11 +928,13 @@
             <ul class="api-members">
               <li class="api-overview"><a href="arx.parser.state.html" aria-label="parser.state module overview">Module overview</a></li>
               
+              <li><a href="arx.parser.state.BINDING_MUTABILITY_MODIFIERS.html"><span class="nav-label">BINDING_MUTABILITY_MODIFIERS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
+              
               <li><a href="arx.parser.state.CLASS_ALLOWED_MODIFIERS.html"><span class="nav-label">CLASS_ALLOWED_MODIFIERS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
               
               <li><a href="arx.parser.state.FIELD_ALLOWED_MODIFIERS.html"><span class="nav-label">FIELD_ALLOWED_MODIFIERS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
               
-              <li><a href="arx.parser.state.FIELD_MUTABILITY_MODIFIERS.html"><span class="nav-label">FIELD_MUTABILITY_MODIFIERS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
+              <li><a href="arx.parser.state.FUNCTION_ALLOWED_MODIFIERS.html"><span class="nav-label">FUNCTION_ALLOWED_MODIFIERS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
               
               <li><a href="arx.parser.state.INDENT_SIZE.html"><span class="nav-label">INDENT_SIZE</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
               
@@ -1205,9 +1209,9 @@
         
         
         <h1 id="io-_functions"><span class="api-kind api-kind--attribute">attribute</span> IO_FUNCTIONS</h1>
-<pre class="highlight"><code><span class="n">IO_FUNCTIONS</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">TableIOOperation</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;stdlib.csv&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;read_csv&#39;</span><span class="p">:</span> <span class="s1">&#39;read_csv&#39;</span><span class="p">,</span> <span class="s1">&#39;write_csv&#39;</span><span class="p">:</span> <span class="s1">&#39;write_csv&#39;</span><span class="p">,</span> <span class="s1">&#39;irx_rb_api_csv_frame&#39;</span><span class="p">:</span> <span class="s1">&#39;csv_frame&#39;</span><span class="p">,</span> <span class="s1">&#39;irx_rb_api_csv_write_frame&#39;</span><span class="p">:</span> <span class="s1">&#39;csv_write_frame&#39;</span><span class="p">},</span> <span class="s1">&#39;stdlib.parquet&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;read_parquet&#39;</span><span class="p">:</span> <span class="s1">&#39;read_parquet&#39;</span><span class="p">,</span> <span class="s1">&#39;write_parquet&#39;</span><span class="p">:</span> <span class="s1">&#39;write_parquet&#39;</span><span class="p">,</span> <span class="s1">&#39;where&#39;</span><span class="p">:</span> <span class="s1">&#39;where&#39;</span><span class="p">,</span> <span class="s1">&#39;irx_rb_api_parquet_frame&#39;</span><span class="p">:</span> <span class="s1">&#39;parquet_frame&#39;</span><span class="p">,</span> <span class="s1">&#39;irx_rb_api_parquet_write_frame&#39;</span><span class="p">:</span> <span class="s1">&#39;parquet_write_frame&#39;</span><span class="p">}}</span>
+<pre class="highlight"><code><span class="n">IO_FUNCTIONS</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">TableIOOperation</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{</span><span class="s1">'stdlib.csv'</span><span class="p">:</span> <span class="p">{</span><span class="s1">'read_csv'</span><span class="p">:</span> <span class="s1">'read_csv'</span><span class="p">,</span> <span class="s1">'write_csv'</span><span class="p">:</span> <span class="s1">'write_csv'</span><span class="p">,</span> <span class="s1">'irx_rb_api_csv_frame'</span><span class="p">:</span> <span class="s1">'csv_frame'</span><span class="p">,</span> <span class="s1">'irx_rb_api_csv_write_frame'</span><span class="p">:</span> <span class="s1">'csv_write_frame'</span><span class="p">},</span> <span class="s1">'stdlib.parquet'</span><span class="p">:</span> <span class="p">{</span><span class="s1">'read_parquet'</span><span class="p">:</span> <span class="s1">'read_parquet'</span><span class="p">,</span> <span class="s1">'write_parquet'</span><span class="p">:</span> <span class="s1">'write_parquet'</span><span class="p">,</span> <span class="s1">'where'</span><span class="p">:</span> <span class="s1">'where'</span><span class="p">,</span> <span class="s1">'irx_rb_api_parquet_frame'</span><span class="p">:</span> <span class="s1">'parquet_frame'</span><span class="p">,</span> <span class="s1">'irx_rb_api_parquet_write_frame'</span><span class="p">:</span> <span class="s1">'parquet_write_frame'</span><span class="p">}}</span>
 </code></pre>
-<p>Source: packages/arx/src/arx/arrow_stdlib.py:20</p>
+<p>Source: packages/arx/src/arx/arrow_stdlib.py:26</p>
 
       </main>
       

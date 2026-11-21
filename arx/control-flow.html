@@ -28,7 +28,7 @@
       <a class="site-brand" href="../index.html">
         <img class="brand-logo" src="../images/arx-logo-terracotta.png" alt="ArxLang">
         <span class="brand-name">ArxLang</span>
-        <span class="version badge rounded-pill">1.27.0</span>
+        <span class="version badge rounded-pill">1.29.0</span>
       </a>
       
       <nav class="site-navbar" aria-label="Primary">
@@ -365,6 +365,8 @@
             <summary><span class="nav-label">arrow_stdlib</span></summary>
             <ul class="api-members">
               <li class="api-overview"><a href="../api/python/arx/arx.arrow_stdlib.html" aria-label="arrow_stdlib module overview">Module overview</a></li>
+              
+              <li><a href="../api/python/arx/arx.arrow_stdlib.COMPUTE_FUNCTIONS.html"><span class="nav-label">COMPUTE_FUNCTIONS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
               
               <li><a href="../api/python/arx/arx.arrow_stdlib.IO_FUNCTIONS.html"><span class="nav-label">IO_FUNCTIONS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
               
@@ -926,11 +928,13 @@
             <ul class="api-members">
               <li class="api-overview"><a href="../api/python/arx/arx.parser.state.html" aria-label="parser.state module overview">Module overview</a></li>
               
+              <li><a href="../api/python/arx/arx.parser.state.BINDING_MUTABILITY_MODIFIERS.html"><span class="nav-label">BINDING_MUTABILITY_MODIFIERS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
+              
               <li><a href="../api/python/arx/arx.parser.state.CLASS_ALLOWED_MODIFIERS.html"><span class="nav-label">CLASS_ALLOWED_MODIFIERS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
               
               <li><a href="../api/python/arx/arx.parser.state.FIELD_ALLOWED_MODIFIERS.html"><span class="nav-label">FIELD_ALLOWED_MODIFIERS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
               
-              <li><a href="../api/python/arx/arx.parser.state.FIELD_MUTABILITY_MODIFIERS.html"><span class="nav-label">FIELD_MUTABILITY_MODIFIERS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
+              <li><a href="../api/python/arx/arx.parser.state.FUNCTION_ALLOWED_MODIFIERS.html"><span class="nav-label">FUNCTION_ALLOWED_MODIFIERS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
               
               <li><a href="../api/python/arx/arx.parser.state.INDENT_SIZE.html"><span class="nav-label">INDENT_SIZE</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
               
@@ -1206,6 +1210,18 @@
         
         <h1 id="control-flow">Control Flow</h1>
 <p>Arx supports <code>if</code>/<code>elif</code>/<code>else</code>, <code>while</code>, and two <code>for</code> loop styles.</p>
+<h2 id="declaration-scopes">Declaration Scopes</h2>
+<p>Each <code>if</code>, <code>elif</code>, or <code>else</code> arm and each loop body has a lexical declaration
+scope. A declaration is visible only in its enclosing scope and nested bodies;
+it cannot be read after that scope ends, even if that body always executes.
+Sibling bodies may reuse a name, and inner declarations may shadow outer ones.
+Assignment without a declaration updates the nearest visible binding instead.
+This differs from Python's function-wide local declarations.</p>
+<p>Declaring the same name twice in one scope is an error. Function parameters and
+the top-level function body share a scope; a loop target and its body also share
+their loop scope. Leaving a body releases its local owners on fallthrough or
+control transfer, without releasing shadowed outer owners. See the
+<a href="../irx/runtime-ownership.html">ownership contract</a> for resource-specific rules.</p>
 <h2 id="if-elif-else">If / Elif / Else</h2>
 <p>Conditions must be Boolean and are evaluated in order, stopping at the first
 match. A chain may have any number of <code>elif</code> clauses and an optional final
@@ -1236,15 +1252,15 @@ fn count_to_ten() -&gt; i32:
   title: count_to_ten
   summary: Increments value until it reaches ten.
   ```
-  var a: i32 = 0
+  a: i32 = 0
   while a &lt; 10:
     a = a + 1
   return a
 </code></pre>
 <h2 id="for-loop-for-in-style">For Loop (For-In Style)</h2>
-<p>For-in loops iterate over list-valued expressions, including builtin
-<code>range(start, stop[, step])</code>, list literals, and list variables:</p>
-<p><code>for i in &lt;list-expression&gt;:</code></p>
+<p>For-in loops iterate over ranges and supported sequences, including list
+literals and list variables:</p>
+<p><code>for i in &lt;iterable-expression&gt;:</code></p>
 <pre class="highlight"><code>```
 title: Range-style for loop
 summary: Iterates from start to end with the builtin range helper.
@@ -1254,11 +1270,21 @@ fn range_loop(n: i32) -&gt; i32:
   title: range_loop
   summary: Sums values produced by a range loop.
   ```
-  var total: i32 = 0
+  total: i32 = 0
   for i in range(0, n):
     total = total + i
   return total
 </code></pre>
+<p><code>range(stop)</code> and <code>range(start, stop[, step])</code> produce immutable <code>range</code> values,
+not lists. Named <code>start</code>, <code>stop</code>, and <code>step</code> are supported. Endpoints and
+elements are <code>i32</code>; internal arithmetic and <code>len</code> use <code>i64</code>. Storage is
+constant-size, and each iteration has an independent cursor. Rebinding the input
+does not replace an active cursor's snapshot. Integer indexing is checked;
+negative indices and slicing are unsupported. Zero step raises <code>AssertionError</code>,
+even for an empty interval.</p>
+<p>Request list storage explicitly with <code>list(values, max_items=N)</code>; exceeding the
+bound raises <code>ValueError</code> without publishing a truncated prefix. There is no
+implicit allocation when passing a range to a list or numeric-sequence consumer.</p>
 <p>You can also iterate over a list literal or a list variable:</p>
 <pre class="highlight"><code>```
 title: List for-in loop
@@ -1269,8 +1295,8 @@ fn list_loop() -&gt; i32:
   title: list_loop
   summary: Sums values from two list-valued loop inputs.
   ```
-  var values: list[i32] = range(0, 3)
-  var total: i32 = 0
+  values: list[i32] = list(range(3))
+  total: i32 = 0
   for value in values:
     total = total + value
   for value in [3, 4]:
@@ -1278,10 +1304,10 @@ fn list_loop() -&gt; i32:
   return total
 </code></pre>
 <p>The old colon range header syntax was removed. Use builtin <code>range(...)</code> or any
-other list-valued expression instead.</p>
+other supported iterable expression instead.</p>
 <h2 id="for-loop-count-style">For Loop (Count Style)</h2>
 <p>Count-style loops follow:</p>
-<p><code>for var i: type = init; condition; update:</code></p>
+<p><code>for i: type = init; condition; update:</code></p>
 <pre class="highlight"><code>```
 title: Count-style for loop
 summary: Uses initializer, condition, and update expressions.
@@ -1291,14 +1317,37 @@ fn count_loop() -&gt; i32:
   title: count_loop
   summary: Sums numbers from 0 to 4.
   ```
-  var total: i32 = 0
-  for var i: i32 = 0; i &lt; 5; i += 1:
+  total: i32 = 0
+  for i: i32 = 0; i &lt; 5; i += 1:
     total += i
   return total
 </code></pre>
 <p>Compound updates write the induction variable themselves. Ordinary expression
 updates such as <code>i + 1</code> remain supported; the loop stores their result into <code>i</code>.
 See the <a href="specification.html#compound-assignment">compound assignment contract</a>.</p>
+<h2 id="break-and-continue">Break and Continue</h2>
+<p><code>break</code> exits the nearest enclosing loop. <code>continue</code> starts its next iteration;
+in a count loop it runs the update first. Both are operand-free statements and
+are rejected outside loops. They work in <code>while</code>, count, and supported for-in
+loops, including nested loops.</p>
+<pre class="highlight"><code>```
+title: Skip values and stop early
+```
+fn main() -&gt; i32:
+  total: i32 = 0
+  for value in range(1000000):
+    if value == 0:
+      continue
+    if value == 4:
+      break
+    total += value
+  assert total == 6
+  return 0
+</code></pre>
+<p>Loop transfers release exited-scope owners and run <code>finally</code> before advancing or
+leaving the loop. A cleanup failure cancels the transfer and propagates as an
+exception; an explicit finalizer can replace it with another transfer, return,
+or exception. Active iteration borrows end when their loop is exited.</p>
 <h2 id="return-statements">Return Statements</h2>
 <ul>
 <li><code>return expr</code> returns a value from the current function.</li>
@@ -1319,6 +1368,8 @@ the return statement entirely.</li>
           <strong>On this page</strong>
           <ul>
             
+            <li class="toc-h2"><a href="#declaration-scopes">Declaration Scopes</a></li>
+            
             <li class="toc-h2"><a href="#if-elif-else">If / Elif / Else</a></li>
             
             <li class="toc-h2"><a href="#while-loop">While Loop</a></li>
@@ -1326,6 +1377,8 @@ the return statement entirely.</li>
             <li class="toc-h2"><a href="#for-loop-for-in-style">For Loop (For-In Style)</a></li>
             
             <li class="toc-h2"><a href="#for-loop-count-style">For Loop (Count Style)</a></li>
+            
+            <li class="toc-h2"><a href="#break-and-continue">Break and Continue</a></li>
             
             <li class="toc-h2"><a href="#return-statements">Return Statements</a></li>
             

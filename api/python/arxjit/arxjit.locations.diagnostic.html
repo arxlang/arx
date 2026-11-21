@@ -28,7 +28,7 @@
       <a class="site-brand" href="../../../index.html">
         <img class="brand-logo" src="../../../images/arx-logo-terracotta.png" alt="ArxLang">
         <span class="brand-name">ArxLang</span>
-        <span class="version badge rounded-pill">1.27.0</span>
+        <span class="version badge rounded-pill">1.29.0</span>
       </a>
       
       <nav class="site-navbar" aria-label="Primary">
@@ -387,26 +387,26 @@
         <h1 id="diagnostic"><span class="api-kind api-kind--function">function</span> diagnostic</h1>
 <pre class="highlight"><code><span class="n">diagnostic</span><span class="p">(</span><span class="n">extracted</span><span class="p">:</span> <span class="n">ExtractedSource</span><span class="p">,</span> <span class="n">node</span><span class="p">:</span> <span class="n">ast</span><span class="o">.</span><span class="n">AST</span><span class="p">,</span> <span class="n">message</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">severity</span><span class="p">:</span> <span class="n">DiagnosticSeverity</span> <span class="o">=</span> <span class="n">DiagnosticSeverity</span><span class="o">.</span><span class="n">ERROR</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Diagnostic</span>
 </code></pre>
-<p>Source: packages/arxjit/src/arxjit/locations.py:42</p>
+<p>Source: packages/arxjit/src/arxjit/locations.py:37</p>
 <p>Build a diagnostic located at an ast node.</p>
 <p>Reads the node's lineno/col_offset when present and converts the column to the one-based character contract via char_column; falls back to no location when the node carries none. node.lineno is a real file line number (extract_source already shifted it), while extracted.source is indexed from its own first line, so the node's line is looked up at splitlines()[lineno - extracted.lineno] rather than lineno - 1.</p>
 <h3 id="parameters">Parameters</h3>
 <ul>
 <li>
-<p><strong>extracted</strong> — <strong>Type:</strong> ExtractedSource</p>
+<p><strong>extracted</strong> — Extracted Python source and syntax.; <strong>Type:</strong> ExtractedSource</p>
 </li>
 <li>
-<p><strong>node</strong> — <strong>Type:</strong> ast.AST</p>
+<p><strong>node</strong> — Syntax node to process.; <strong>Type:</strong> ast.AST</p>
 </li>
 <li>
-<p><strong>message</strong> — <strong>Type:</strong> str</p>
+<p><strong>message</strong> — Diagnostic or output message.; <strong>Type:</strong> str</p>
 </li>
 <li>
-<p><strong>severity</strong> — <strong>Type:</strong> DiagnosticSeverity; Defaults to ERROR, the severity of a rejection.</p>
+<p><strong>severity</strong> — Defaults to ERROR, the severity of a rejection.; <strong>Type:</strong> DiagnosticSeverity</p>
 </li>
 </ul>
 <h3 id="returns">Returns</h3>
-<p><strong>Type:</strong> Diagnostic</p>
+<p>Constructed a diagnostic located at an ast node.; <strong>Type:</strong> Diagnostic</p>
 
       </main>
       

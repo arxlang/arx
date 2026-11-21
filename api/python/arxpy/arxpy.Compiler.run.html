@@ -28,7 +28,7 @@
       <a class="site-brand" href="../../../index.html">
         <img class="brand-logo" src="../../../images/arx-logo-terracotta.png" alt="ArxLang">
         <span class="brand-name">ArxLang</span>
-        <span class="version badge rounded-pill">1.27.0</span>
+        <span class="version badge rounded-pill">1.29.0</span>
       </a>
       
       <nav class="site-navbar" aria-label="Primary">
@@ -263,7 +263,7 @@
             <ul class="api-members">
               <li class="api-overview"><a href="arxpy.typecheck.html" aria-label="typecheck module overview">Module overview</a></li>
               
-              <li><a href="arxpy.typecheck.typechecked.html"><span class="nav-label">typechecked</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
+              <li><a href="arxpy.typecheck.typechecked.html"><span class="nav-label">typechecked</span><span class="api-kind api-kind--function">function</span></a></li>
               
             </ul>
           </details>
@@ -294,29 +294,29 @@
         <h1 id="run"><span class="api-kind api-kind--method">method</span> run</h1>
 <pre class="highlight"><code><span class="n">run</span><span class="p">(</span><span class="n">artifact</span><span class="p">:</span> <span class="n">CompilationArtifact</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">args</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">(),</span> <span class="n">cwd</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">env</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">timeout</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ExecutionResult</span>
 </code></pre>
-<p>Source: packages/arxpy/src/arxpy/compiler.py:714</p>
+<p>Source: packages/arxpy/src/arxpy/compiler.py:654</p>
 <p>Declared as: python:arxpy:arxpy.compiler.Compiler.run</p>
 <p>Run an executable artifact without invoking a shell.</p>
 <h3 id="parameters">Parameters</h3>
 <ul>
 <li>
-<p><strong>artifact</strong> — <strong>Type:</strong> CompilationArtifact</p>
+<p><strong>artifact</strong> — Artifact.; <strong>Type:</strong> CompilationArtifact</p>
 </li>
 <li>
-<p><strong>args</strong> — <strong>Type:</strong> Sequence[str]</p>
+<p><strong>args</strong> — Arguments supplied to the operation.; <strong>Type:</strong> Sequence[str]</p>
 </li>
 <li>
-<p><strong>cwd</strong> — <strong>Type:</strong> str | Path | None</p>
+<p><strong>cwd</strong> — Cwd.; <strong>Type:</strong> str | Path | None</p>
 </li>
 <li>
-<p><strong>env</strong> — <strong>Type:</strong> Mapping[str, str] | None</p>
+<p><strong>env</strong> — Environment used by the subprocess or compiler.; <strong>Type:</strong> Mapping[str, str] | None</p>
 </li>
 <li>
-<p><strong>timeout</strong> — <strong>Type:</strong> float | None</p>
+<p><strong>timeout</strong> — Time limit for the operation.; <strong>Type:</strong> float | None</p>
 </li>
 </ul>
 <h3 id="returns">Returns</h3>
-<p><strong>Type:</strong> ExecutionResult</p>
+<p>Result of this operation: run an executable artifact without invoking a shell.; <strong>Type:</strong> ExecutionResult</p>
 
       </main>
       

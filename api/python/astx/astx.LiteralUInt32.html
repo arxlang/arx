@@ -28,7 +28,7 @@
       <a class="site-brand" href="../../../index.html">
         <img class="brand-logo" src="../../../images/arx-logo-terracotta.png" alt="ArxLang">
         <span class="brand-name">ArxLang</span>
-        <span class="version badge rounded-pill">1.27.0</span>
+        <span class="version badge rounded-pill">1.29.0</span>
       </a>
       
       <nav class="site-navbar" aria-label="Primary">
@@ -502,6 +502,8 @@
               
               <li><a href="astx.ImportStmt.html"><span class="nav-label">ImportStmt</span><span class="api-kind api-kind--class">class</span></a></li>
               
+              <li><a href="astx.InferredType.html"><span class="nav-label">InferredType</span><span class="api-kind api-kind--class">class</span></a></li>
+              
               <li><a href="astx.InlineVariableDeclaration.html"><span class="nav-label">InlineVariableDeclaration</span><span class="api-kind api-kind--class">class</span></a></li>
               
               <li><a href="astx.Int16.html"><span class="nav-label">Int16</span><span class="api-kind api-kind--class">class</span></a></li>
@@ -659,6 +661,8 @@
               <li><a href="astx.PrintExpr.html"><span class="nav-label">PrintExpr</span><span class="api-kind api-kind--class">class</span></a></li>
               
               <li><a href="astx.Program.html"><span class="nav-label">Program</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.RangeType.html"><span class="nav-label">RangeType</span><span class="api-kind api-kind--class">class</span></a></li>
               
               <li><a href="astx.SPECIALIZED_BINARY_OP_EXTRA.html"><span class="nav-label">SPECIALIZED_BINARY_OP_EXTRA</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
               
@@ -1788,7 +1792,7 @@
             <ul class="api-members">
               <li class="api-overview"><a href="astx.tools.typing.html" aria-label="tools.typing module overview">Module overview</a></li>
               
-              <li><a href="astx.tools.typing.typechecked.html"><span class="nav-label">typechecked</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
+              <li><a href="astx.tools.typing.typechecked.html"><span class="nav-label">typechecked</span><span class="api-kind api-kind--function">function</span></a></li>
               
             </ul>
           </details>
@@ -1840,6 +1844,8 @@
               
               <li><a href="astx.types.GeneratorType.html"><span class="nav-label">GeneratorType</span><span class="api-kind api-kind--class">class</span></a></li>
               
+              <li><a href="astx.types.InferredType.html"><span class="nav-label">InferredType</span><span class="api-kind api-kind--class">class</span></a></li>
+              
               <li><a href="astx.types.Int16.html"><span class="nav-label">Int16</span><span class="api-kind api-kind--class">class</span></a></li>
               
               <li><a href="astx.types.Int32.html"><span class="nav-label">Int32</span><span class="api-kind api-kind--class">class</span></a></li>
@@ -1863,6 +1869,8 @@
               <li><a href="astx.types.Number.html"><span class="nav-label">Number</span><span class="api-kind api-kind--class">class</span></a></li>
               
               <li><a href="astx.types.OrOp.html"><span class="nav-label">OrOp</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.types.RangeType.html"><span class="nav-label">RangeType</span><span class="api-kind api-kind--class">class</span></a></li>
               
               <li><a href="astx.types.SequenceType.html"><span class="nav-label">SequenceType</span><span class="api-kind api-kind--class">class</span></a></li>
               
@@ -1918,6 +1926,8 @@
               
               <li><a href="astx.types.base.AnyType.html"><span class="nav-label">AnyType</span><span class="api-kind api-kind--class">class</span></a></li>
               
+              <li><a href="astx.types.base.InferredType.html"><span class="nav-label">InferredType</span><span class="api-kind api-kind--class">class</span></a></li>
+              
               <li><a href="astx.types.base.NoneType.html"><span class="nav-label">NoneType</span><span class="api-kind api-kind--class">class</span></a></li>
               
             </ul>
@@ -1959,6 +1969,8 @@
               <li><a href="astx.types.collections.DictType.html"><span class="nav-label">DictType</span><span class="api-kind api-kind--class">class</span></a></li>
               
               <li><a href="astx.types.collections.ListType.html"><span class="nav-label">ListType</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.types.collections.RangeType.html"><span class="nav-label">RangeType</span><span class="api-kind api-kind--class">class</span></a></li>
               
               <li><a href="astx.types.collections.SequenceType.html"><span class="nav-label">SequenceType</span><span class="api-kind api-kind--class">class</span></a></li>
               
@@ -2237,19 +2249,40 @@
         <h1 id="literaluint32"><span class="api-kind api-kind--class">class</span> LiteralUInt32</h1>
 <pre class="highlight"><code><span class="n">LiteralUInt32</span><span class="p">(</span><span class="n">value</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">loc</span><span class="p">:</span> <span class="n">SourceLocation</span> <span class="o">=</span> <span class="n">NO_SOURCE_LOCATION</span><span class="p">)</span>
 </code></pre>
-<p>Source: packages/astx/src/astx/literals/numeric.py:291</p>
+<p>Source: packages/astx/src/astx/literals/numeric.py:256</p>
 <p>Declared as: python:astx:astx.literals.numeric.LiteralUInt32</p>
 <p>LiteralUInt32 data type class.</p>
 <h3 id="attributes">Attributes</h3>
 <ul>
 <li>
-<p><strong>type_</strong> — <strong>Type:</strong> UInt32</p>
+<p><strong>type_</strong> — Type associated with this expression.; <strong>Type:</strong> UInt32</p>
 </li>
 <li>
-<p><strong>loc</strong> — <strong>Type:</strong> SourceLocation</p>
+<p><strong>loc</strong> — Source coordinates attached to this node.; <strong>Type:</strong> SourceLocation</p>
 </li>
 <li>
-<p><strong>value</strong> — <strong>Type:</strong> int</p>
+<p><strong>value</strong> — Stored value.; <strong>Type:</strong> int</p>
+</li>
+<li>
+<p><strong>kind</strong> — <strong>Type:</strong> ASTKind</p>
+</li>
+<li>
+<p><strong>comment</strong> — <strong>Type:</strong> str</p>
+</li>
+<li>
+<p><strong>parent</strong> — <strong>Type:</strong> Optional[ASTNodes]</p>
+</li>
+<li>
+<p><strong>ref</strong> — <strong>Type:</strong> str</p>
+</li>
+<li>
+<p><strong>nbytes</strong> — <strong>Type:</strong> int</p>
+</li>
+<li>
+<p><strong>name</strong> — <strong>Type:</strong> str</p>
+</li>
+<li>
+<p><strong>_tmp_id</strong> — <strong>Type:</strong> int</p>
 </li>
 </ul>
 <h2 id="methods">Methods</h2>

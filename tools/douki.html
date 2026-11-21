@@ -28,7 +28,7 @@
       <a class="site-brand" href="../index.html">
         <img class="brand-logo" src="../images/arx-logo-terracotta.png" alt="ArxLang">
         <span class="brand-name">ArxLang</span>
-        <span class="version badge rounded-pill">1.27.0</span>
+        <span class="version badge rounded-pill">1.29.0</span>
       </a>
       
       <nav class="site-navbar" aria-label="Primary">
@@ -264,21 +264,22 @@ compiler pipeline.</p>
 </ul>
 <h2 id="python-usage">Python usage</h2>
 <pre class="highlight"><code><span class="k">def</span><span class="w"> </span><span class="nf">add</span><span class="p">(</span><span class="n">a</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">b</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    title: Add two integers</span>
 <span class="sd">    parameters:</span>
-<span class="sd">      a:</span>
-<span class="sd">        type: int</span>
+<span class="sd">      a: First integer to add.</span>
 <span class="sd">      b:</span>
-<span class="sd">        type: int</span>
+<span class="sd">        description: Second integer to add.</span>
 <span class="sd">        default: 0</span>
-<span class="sd">    returns:</span>
-<span class="sd">      type: int</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    returns: Sum of the two integers.</span>
+<span class="sd">    """</span>
     <span class="k">return</span> <span class="n">a</span> <span class="o">+</span> <span class="n">b</span>
 </code></pre>
-<p>The CLI exposes <code>check</code>, <code>sync</code>, and <code>migrate</code> commands. See the Douki
-repository for the options supported by the installed release.</p>
+<p>Python annotations supply types; authored docstrings contain descriptions, not
+<code>type</code> fields. <code>douki sync</code> scaffolds missing entries; replace its <code>...</code>
+placeholders with meaningful descriptions, then run <code>douki check</code>. Use
+<code>douki format</code> to format existing YAML. See the Douki repository for the options
+supported by the installed release.</p>
 <h2 id="use-in-arx-source">Use in Arx source</h2>
 <p>Arx source uses Douki YAML inside triple backticks:</p>
 <pre class="highlight"><code>```

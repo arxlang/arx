@@ -28,7 +28,7 @@
       <a class="site-brand" href="../index.html">
         <img class="brand-logo" src="../images/arx-logo-terracotta.png" alt="ArxLang">
         <span class="brand-name">ArxLang</span>
-        <span class="version badge rounded-pill">1.27.0</span>
+        <span class="version badge rounded-pill">1.29.0</span>
       </a>
       
       <nav class="site-navbar" aria-label="Primary">
@@ -365,6 +365,8 @@
             <summary><span class="nav-label">arrow_stdlib</span></summary>
             <ul class="api-members">
               <li class="api-overview"><a href="../api/python/arx/arx.arrow_stdlib.html" aria-label="arrow_stdlib module overview">Module overview</a></li>
+              
+              <li><a href="../api/python/arx/arx.arrow_stdlib.COMPUTE_FUNCTIONS.html"><span class="nav-label">COMPUTE_FUNCTIONS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
               
               <li><a href="../api/python/arx/arx.arrow_stdlib.IO_FUNCTIONS.html"><span class="nav-label">IO_FUNCTIONS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
               
@@ -926,11 +928,13 @@
             <ul class="api-members">
               <li class="api-overview"><a href="../api/python/arx/arx.parser.state.html" aria-label="parser.state module overview">Module overview</a></li>
               
+              <li><a href="../api/python/arx/arx.parser.state.BINDING_MUTABILITY_MODIFIERS.html"><span class="nav-label">BINDING_MUTABILITY_MODIFIERS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
+              
               <li><a href="../api/python/arx/arx.parser.state.CLASS_ALLOWED_MODIFIERS.html"><span class="nav-label">CLASS_ALLOWED_MODIFIERS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
               
               <li><a href="../api/python/arx/arx.parser.state.FIELD_ALLOWED_MODIFIERS.html"><span class="nav-label">FIELD_ALLOWED_MODIFIERS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
               
-              <li><a href="../api/python/arx/arx.parser.state.FIELD_MUTABILITY_MODIFIERS.html"><span class="nav-label">FIELD_MUTABILITY_MODIFIERS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
+              <li><a href="../api/python/arx/arx.parser.state.FUNCTION_ALLOWED_MODIFIERS.html"><span class="nav-label">FUNCTION_ALLOWED_MODIFIERS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
               
               <li><a href="../api/python/arx/arx.parser.state.INDENT_SIZE.html"><span class="nav-label">INDENT_SIZE</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
               
@@ -1219,6 +1223,22 @@ fn average(x: f32, y: f32) -&gt; f32:
   ```
   return (x + y) * 0.5
 </code></pre>
+<h2 id="module-scalar-state">Module Scalar State</h2>
+<p>Module variables support numeric and Boolean scalars, including their supported
+<code>nullable</code> forms. Literal initializers are checked and converted during
+analysis; runtime initializer expressions are rejected, even for unused
+variables. A mutable scalar without an initializer starts at zero (<code>false</code> for
+Boolean), or <code>none</code> for nullable storage. Constants require a literal
+initializer.</p>
+<p>Storage exists before function bodies run, and a function can refer to a module
+variable declared later in the file. Function calls share that module's state. A
+local declaration shadows it without changing the module binding; unlike Python,
+assignment to a resolved module variable needs no <code>global</code> statement. Same-named
+variables in different modules have independent storage. Variables are not
+importable exports; expose access through functions instead.</p>
+<p>Other module storage, including strings, containers, and resource-owning values,
+is rejected rather than silently omitted. Put those declarations inside a
+function; module initialization and owned-resource teardown are not implemented.</p>
 <h2 id="package-layout">Package Layout</h2>
 <p>When a project uses the default <code>src/</code> source root, or declares
 <code>[build].src_dir</code>, Arx treats files under that source root as package modules
@@ -1301,8 +1321,8 @@ at the packaged project root and declare both <code>[build].src_dir</code> and
         └── stats.x
 </code></pre>
 <pre class="highlight"><code><span class="k">[build]</span>
-<span class="n">src_dir</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;src&quot;</span>
-<span class="n">package</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;local_lib&quot;</span>
+<span class="n">src_dir</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"src"</span>
+<span class="n">package</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"local_lib"</span>
 </code></pre>
 <p>With that layout, <code>local_lib.stats</code> resolves to
 <code>site-packages/local_lib_project/src/local_lib/stats.x</code>.</p>
@@ -1338,16 +1358,16 @@ fn main() -&gt; i32:
   return math.square(4) + math.clamp(0 - 3, 0, 2)
 </code></pre>
 <h2 id="bundled-builtins">Bundled <code>builtins</code></h2>
-<p>Compiler-provided builtins live in bundled <code>.x</code> package resources, separately
-from the importable <code>stdlib</code>. They are not copied into user projects, and local
-sources cannot replace the reserved namespace. Ambient names are injected only
-when not shadowed by a declaration or import. Explicit <code>builtins.files</code> imports
-resolve the canonical <a href="file-io.html">File class</a>, not a second implementation.</p>
-<p>Builtin <code>range</code> currently allocates a scalar list; its declaration lives in
-<code>packages/arx/src/arx/builtins/generators.x</code>. See
-<a href="control-flow.html#for-loop-for-in-style">for-in workflows</a> and
-<a href="collections.html#lists">list ownership</a>. The module name does not imply Arx
-supports general generators or <code>yield</code>.</p>
+<p>Some compiler-provided builtins live in bundled <code>.x</code> package resources,
+separately from the importable <code>stdlib</code>. They are not copied into user projects,
+and local sources cannot replace the reserved namespace. Ambient names are
+injected only when not shadowed by a declaration or import. Explicit
+<code>builtins.files</code> imports resolve the canonical <a href="file-io.html">File class</a>, not a
+second implementation.</p>
+<p>Core intrinsics such as <code>range</code> and <code>len</code> are resolved by IRx rather than loaded
+as source modules. Range values are lazy and allocation-free; see
+<a href="control-flow.html#for-loop-for-in-style">for-in workflows</a>. General source
+generators and <code>yield</code> remain unsupported.</p>
 <h3 id="namespace-imports">Namespace Imports</h3>
 <p>Use a module alias when you want to keep names grouped under a module namespace:</p>
 <pre class="highlight"><code>```
@@ -1437,6 +1457,8 @@ CSV/shared Arrow do not activate the optional Parquet feature.</p>
           <ul>
             
             <li class="toc-h2"><a href="#module-layout">Module Layout</a></li>
+            
+            <li class="toc-h2"><a href="#module-scalar-state">Module Scalar State</a></li>
             
             <li class="toc-h2"><a href="#package-layout">Package Layout</a></li>
             

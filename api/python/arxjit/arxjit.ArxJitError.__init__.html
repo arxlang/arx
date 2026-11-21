@@ -28,7 +28,7 @@
       <a class="site-brand" href="../../../index.html">
         <img class="brand-logo" src="../../../images/arx-logo-terracotta.png" alt="ArxLang">
         <span class="brand-name">ArxLang</span>
-        <span class="version badge rounded-pill">1.27.0</span>
+        <span class="version badge rounded-pill">1.29.0</span>
       </a>
       
       <nav class="site-navbar" aria-label="Primary">
@@ -387,18 +387,20 @@
         <h1 id="_-_init-_-_"><span class="api-kind api-kind--method">method</span> __init__</h1>
 <pre class="highlight"><code><span class="fm">__init__</span><span class="p">(</span><span class="n">message</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">diagnostics</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Diagnostic</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
 </code></pre>
-<p>Source: packages/arxjit/src/arxjit/errors.py:30</p>
+<p>Source: packages/arxjit/src/arxjit/errors.py:28</p>
 <p>Declared as: python:arxjit:arxjit.errors.ArxJitError.__init__</p>
 <p>Initialize an ArxJitError.</p>
 <h3 id="parameters">Parameters</h3>
 <ul>
 <li>
-<p><strong>message</strong> — <strong>Type:</strong> str</p>
+<p><strong>message</strong> — Diagnostic or output message.; <strong>Type:</strong> str</p>
 </li>
 <li>
-<p><strong>diagnostics</strong> — <strong>Type:</strong> Sequence[Diagnostic] | None</p>
+<p><strong>diagnostics</strong> — Collected structured diagnostics.; <strong>Type:</strong> Sequence[Diagnostic] | None</p>
 </li>
 </ul>
+<h3 id="returns">Returns</h3>
+<p><strong>Type:</strong> None</p>
 
       </main>
       
@@ -408,6 +410,8 @@
           <ul>
             
             <li class="toc-h3"><a href="#parameters">Parameters</a></li>
+            
+            <li class="toc-h3"><a href="#returns">Returns</a></li>
             
           </ul>
         </div>

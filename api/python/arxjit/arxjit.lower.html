@@ -28,7 +28,7 @@
       <a class="site-brand" href="../../../index.html">
         <img class="brand-logo" src="../../../images/arx-logo-terracotta.png" alt="ArxLang">
         <span class="brand-name">ArxLang</span>
-        <span class="version badge rounded-pill">1.27.0</span>
+        <span class="version badge rounded-pill">1.29.0</span>
       </a>
       
       <nav class="site-navbar" aria-label="Primary">
@@ -387,21 +387,21 @@
         <h1 id="lower"><span class="api-kind api-kind--function">function</span> lower</h1>
 <pre class="highlight"><code><span class="n">lower</span><span class="p">(</span><span class="n">extracted</span><span class="p">:</span> <span class="n">ExtractedSource</span><span class="p">,</span> <span class="n">signature</span><span class="p">:</span> <span class="n">Signature</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">astx</span><span class="o">.</span><span class="n">Module</span>
 </code></pre>
-<p>Source: packages/arxjit/src/arxjit/lowering.py:1144</p>
+<p>Source: packages/arxjit/src/arxjit/lowering.py:1075</p>
 <p>Declared as: python:arxjit:arxjit.lowering.lower</p>
 <p>Lower a validated function into a single-function astx module.</p>
 <p>Takes the function ast from arxjit.source and the Signature from arxjit.reconcile, and returns the astx module IRx compiles. The module keeps the Python function's name so a compiled artifact is identifiable, and holds exactly one function definition: arxjit compiles one decorated function at a time. The definition itself may be emitted under a different name; see function_name. Both inputs are expected to have passed their own stage, so anything this stage cannot map is a LoweringError rather than a user-facing rejection.</p>
 <h3 id="parameters">Parameters</h3>
 <ul>
 <li>
-<p><strong>extracted</strong> — <strong>Type:</strong> ExtractedSource; A function that has already passed validation.</p>
+<p><strong>extracted</strong> — A function that has already passed validation.; <strong>Type:</strong> ExtractedSource</p>
 </li>
 <li>
-<p><strong>signature</strong> — <strong>Type:</strong> Signature; The signature resolve_signature settled on.</p>
+<p><strong>signature</strong> — The signature resolve_signature settled on.; <strong>Type:</strong> Signature</p>
 </li>
 </ul>
 <h3 id="returns">Returns</h3>
-<p><strong>Type:</strong> astx.Module</p>
+<p>Lowered a validated function into a single-function astx module.; <strong>Type:</strong> astx.Module</p>
 <h3 id="raises">Raises</h3>
 <ul>
 <li><strong>LoweringError:</strong> &quot;If any part of the function has no astx mapping yet.&quot;</li>

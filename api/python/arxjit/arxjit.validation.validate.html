@@ -28,7 +28,7 @@
       <a class="site-brand" href="../../../index.html">
         <img class="brand-logo" src="../../../images/arx-logo-terracotta.png" alt="ArxLang">
         <span class="brand-name">ArxLang</span>
-        <span class="version badge rounded-pill">1.27.0</span>
+        <span class="version badge rounded-pill">1.29.0</span>
       </a>
       
       <nav class="site-navbar" aria-label="Primary">
@@ -387,17 +387,19 @@
         <h1 id="validate"><span class="api-kind api-kind--function">function</span> validate</h1>
 <pre class="highlight"><code><span class="n">validate</span><span class="p">(</span><span class="n">extracted</span><span class="p">:</span> <span class="n">ExtractedSource</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
 </code></pre>
-<p>Source: packages/arxjit/src/arxjit/validation.py:687</p>
+<p>Source: packages/arxjit/src/arxjit/validation.py:675</p>
 <p>Validate that a function uses only the supported Python subset.</p>
 <p>Rejects functions defined in a class body, async definitions and generic (PEP 695) type parameters, checks the argument shape, then walks the body collecting one diagnostic per rejected construct, including free-variable reads (closures and globals). A function with several unsupported constructs is reported in a single UnsupportedSyntaxError carrying all of them, so a user fixes everything in one pass. See _defined_in_class_body for the method forms this cannot detect from source metadata alone.</p>
 <h3 id="parameters">Parameters</h3>
 <ul>
-<li><strong>extracted</strong> — <strong>Type:</strong> ExtractedSource; The result of arxjit.source.extract_source.</li>
+<li><strong>extracted</strong> — The result of arxjit.source.extract_source.; <strong>Type:</strong> ExtractedSource</li>
 </ul>
 <h3 id="raises">Raises</h3>
 <ul>
 <li><strong>UnsupportedSyntaxError:</strong> &quot;If the function is defined in a class body, is async or generic, has an unsupported argument shape, reads a free variable, or its body uses any construct outside the v1 subset.&quot;</li>
 </ul>
+<h3 id="returns">Returns</h3>
+<p><strong>Type:</strong> None</p>
 
       </main>
       
@@ -409,6 +411,8 @@
             <li class="toc-h3"><a href="#parameters">Parameters</a></li>
             
             <li class="toc-h3"><a href="#raises">Raises</a></li>
+            
+            <li class="toc-h3"><a href="#returns">Returns</a></li>
             
           </ul>
         </div>

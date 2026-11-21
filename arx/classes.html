@@ -28,7 +28,7 @@
       <a class="site-brand" href="../index.html">
         <img class="brand-logo" src="../images/arx-logo-terracotta.png" alt="ArxLang">
         <span class="brand-name">ArxLang</span>
-        <span class="version badge rounded-pill">1.27.0</span>
+        <span class="version badge rounded-pill">1.29.0</span>
       </a>
       
       <nav class="site-navbar" aria-label="Primary">
@@ -365,6 +365,8 @@
             <summary><span class="nav-label">arrow_stdlib</span></summary>
             <ul class="api-members">
               <li class="api-overview"><a href="../api/python/arx/arx.arrow_stdlib.html" aria-label="arrow_stdlib module overview">Module overview</a></li>
+              
+              <li><a href="../api/python/arx/arx.arrow_stdlib.COMPUTE_FUNCTIONS.html"><span class="nav-label">COMPUTE_FUNCTIONS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
               
               <li><a href="../api/python/arx/arx.arrow_stdlib.IO_FUNCTIONS.html"><span class="nav-label">IO_FUNCTIONS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
               
@@ -926,11 +928,13 @@
             <ul class="api-members">
               <li class="api-overview"><a href="../api/python/arx/arx.parser.state.html" aria-label="parser.state module overview">Module overview</a></li>
               
+              <li><a href="../api/python/arx/arx.parser.state.BINDING_MUTABILITY_MODIFIERS.html"><span class="nav-label">BINDING_MUTABILITY_MODIFIERS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
+              
               <li><a href="../api/python/arx/arx.parser.state.CLASS_ALLOWED_MODIFIERS.html"><span class="nav-label">CLASS_ALLOWED_MODIFIERS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
               
               <li><a href="../api/python/arx/arx.parser.state.FIELD_ALLOWED_MODIFIERS.html"><span class="nav-label">FIELD_ALLOWED_MODIFIERS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
               
-              <li><a href="../api/python/arx/arx.parser.state.FIELD_MUTABILITY_MODIFIERS.html"><span class="nav-label">FIELD_MUTABILITY_MODIFIERS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
+              <li><a href="../api/python/arx/arx.parser.state.FUNCTION_ALLOWED_MODIFIERS.html"><span class="nav-label">FUNCTION_ALLOWED_MODIFIERS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
               
               <li><a href="../api/python/arx/arx.parser.state.INDENT_SIZE.html"><span class="nav-label">INDENT_SIZE</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
               
@@ -1205,64 +1209,58 @@
         
         
         <h1 id="classes">Classes</h1>
-<p>Arx class declarations use annotation lines for modifiers. Declaration lines
-stay minimal: a field starts with its name, and a method starts with <code>fn</code>.</p>
+<p>Fields start with their names and accept inline declaration modifiers. Methods
+keep <code>fn name(...)</code>, with an optional group after <code>-&gt;</code>:
+<code>fn calculate(value: i32) -&gt; public static :: i32:</code>. The group modifies the
+method declaration, not the return type. Parameter <code>var</code>/<code>const</code> modifiers
+remain independent.</p>
 <h2 id="class-syntax">Class Syntax</h2>
 <pre class="highlight"><code>class Counter(BaseCounter, Audited):
-  @[public, static, constant]
-  version: int32 = 1
+  version: public static const :: int32 = 1
 
   value: int32 = 0
 
-  @[private]
-  internal: int32 = 1
+  internal: private :: int32 = 1
 
   fn get(self) -&gt; int32:
     return self.value
 
-  @[protected]
-  fn process(self, x: int32) -&gt; int32:
+  fn process(self, x: int32) -&gt; protected :: int32:
     return x + 1
 </code></pre>
 <p>Optional class-level annotations use the same surface form:</p>
 <pre class="highlight"><code>@[public, abstract]
 class Shape:
-  @[public, abstract]
-  fn area(self) -&gt; float64
+  fn area(self) -&gt; public abstract :: float64
 </code></pre>
-<p>Template methods use the same <code>@&lt;...&gt;</code> prefix form as module functions. Method
-modifiers and template parameters may appear in either order as long as each
-prefix stays on its own line above the method declaration:</p>
+<p>Template methods retain <code>@&lt;...&gt;</code> prefixes on their own lines before <code>fn</code>. Method
+modifiers move into the return tail:</p>
 <pre class="highlight"><code>class Math:
   @&lt;T: i32 | f64&gt;
-  @[public, static]
-  fn identity(value: T) -&gt; T:
+  fn identity(value: T) -&gt; public static :: T:
     return value
 </code></pre>
-<h2 id="annotation-rules">Annotation Rules</h2>
-<ul>
-<li>Modifiers must be written as <code>@[...]</code> on the line immediately above the target
-declaration.</li>
-<li>Modifiers never appear before the declaration name or before <code>fn</code>.</li>
-<li>Annotation lists are comma-separated and must not be empty.</li>
-<li>An annotation must be followed by exactly one declaration. Floating
-annotations are rejected.</li>
-</ul>
-<p>Supported modifiers:</p>
-<ul>
-<li>Visibility: <code>public</code>, <code>private</code>, <code>protected</code></li>
-<li>Storage and mutability: <code>static</code>, <code>constant</code>, <code>mutable</code></li>
-<li>Declaration metadata: <code>abstract</code>, <code>extern</code></li>
-</ul>
-<p>Not supported yet:</p>
-<ul>
-<li><code>override</code>, <code>virtual</code>, <code>final</code>, <code>sealed</code>, <code>readonly</code>, <code>inline</code></li>
-</ul>
+<h2 id="modifier-rules">Modifier Rules</h2>
+<p>Field modifiers are whitespace-separated in <code>name: modifiers :: type</code>; method
+modifiers use <code>fn name(...) -&gt; modifiers :: type</code>. Only classes retain
+comma-separated <code>@[...]</code> annotation lists. Method modifier annotations were
+removed rather than retained as a second spelling. Empty, duplicate,
+conflicting, floating, and invalid-target modifiers are rejected.</p>
+<p>Visibility is <code>public</code>, <code>private</code>, or <code>protected</code>. Fields support <code>static</code> and
+<code>var</code>/<code>const</code>; methods retain <code>static</code>, <code>abstract</code>, and <code>extern</code>. Neither <code>var</code>
+nor <code>const</code> modifies a method name. Parameters use <code>name: [var|const ::] type</code>
+inside the existing method signature. The implicit <code>self</code> receiver is unchanged.
+Class <code>const</code> fields require declaration-site initialization, not deferred
+assignment in <code>__init__</code>.</p>
+<p><code>override</code>, <code>virtual</code>, <code>final</code>, <code>sealed</code>, <code>readonly</code>, and <code>inline</code> remain
+unsupported. See the
+<a href="syntax.html#declarations-and-modifiers">declaration contract</a> for binding
+stability, inference, and removed annotation spellings.</p>
 <h2 id="defaults">Defaults</h2>
 <p>Defaults are applied during parsing and normalization, not written back as
-implicit annotation lines.</p>
+implicit modifier groups.</p>
 <ul>
-<li>Fields default to <code>public</code> visibility and <code>mutable</code> mutability.</li>
+<li>Fields default to <code>public</code> visibility and <code>var</code> binding policy.</li>
 <li>Methods default to <code>public</code> visibility.</li>
 <li>Only explicitly written modifiers are preserved as explicit metadata on the
 emitted IRx/ASTx nodes.</li>
@@ -1273,11 +1271,9 @@ emitted IRx/ASTx nodes.</li>
 fn get(self) -&gt; int32:
   return self.value
 </code></pre>
-<pre class="highlight"><code>@[public, mutable]
-value: int32 = 0
+<pre class="highlight"><code>value: public var :: int32 = 0
 
-@[public]
-fn get(self) -&gt; int32:
+fn get(self) -&gt; public :: int32:
   return self.value
 </code></pre>
 <h2 id="construction-and-typed-class-values">Construction And Typed Class Values</h2>
@@ -1286,22 +1282,20 @@ fn get(self) -&gt; int32:
 An optional <code>__init__</code> hook adds positional arguments, constructor keywords, and
 literal defaults; an optional <code>__del__</code> hook runs at final release.</p>
 <pre class="highlight"><code>class Counter:
-  @[public, static, constant]
-  version: int32 = 3
+  version: public static const :: int32 = 3
 
   fn get(self) -&gt; int32:
     return 1
 
 class CounterFactory:
-  @[public, static]
-  fn make() -&gt; Counter:
+  fn make() -&gt; public static :: Counter:
     return Counter()
 
 fn take_counter(counter: Counter) -&gt; int32:
   return counter.get()
 
 fn main() -&gt; int32:
-  var counter: Counter = CounterFactory.make()
+  counter: Counter = CounterFactory.make()
   return take_counter(counter) + Counter.version
 </code></pre>
 <p>This surface syntax maps directly onto IRx-owned class nodes:</p>
@@ -1324,8 +1318,8 @@ fn main() -&gt; int32:
     return none
 
 fn main() -&gt; i32:
-  var counter: Counter = Counter(value=7)
-  var alias: Counter = counter
+  counter: Counter = Counter(value=7)
+  alias: Counter = counter
   counter = Counter(3)
   assert alias.value == 7
   return 0
@@ -1345,16 +1339,19 @@ not the caller's binding.</p>
 The supported lifecycle names are <code>__init__</code> and <code>__del__</code>; unknown names such
 as <code>__inti__</code> or <code>__str__</code> are semantic errors, including on static methods.
 Lifecycle hooks cannot be declared as fields. Plain <code>init</code> and <code>deinit</code> are
-ordinary method names, not compatibility aliases. Existing IRx <code>__enter__</code> and
-<code>__exit__</code> context protocols remain recognized and callable, but do not enable
-Arx <code>with</code> syntax.</li>
+ordinary method names, not compatibility aliases. <code>with</code> uses ordinary
+<code>__enter__(self)</code> calls (including defaults) and
+<code>__exit__(self, success: bool) -&gt; none</code>. The Boolean reports body completion,
+not Python exception arguments; exit cannot suppress failures. See
+<a href="file-io.html#checked-resource-scopes">checked resource scopes</a> and the
+<a href="../irx/semantic-contract.html#context-manager-contract">IRx contract</a>.</li>
 <li>Dunders identify language-defined behavior, not private visibility or
 inheritance from a universal builtin superclass. Implementations are written
 by users; normal visibility annotations still apply.</li>
 <li><code>__init__(self, ...) -&gt; none</code> and <code>__del__(self) -&gt; none</code> are compiler entry
 points, not ordinary callable methods. Explicit calls are rejected.</li>
-<li>Hooks cannot be static, abstract, external, overloaded, templated, or
-variadic. Constructor defaults are existing scalar/string literals, not
+<li>Lifecycle hooks cannot be static, abstract, external, overloaded, templated,
+or variadic. Constructor defaults are existing scalar/string literals, not
 resource values.</li>
 <li>Constructor arguments bind by parameter name, excluding <code>self</code>. Unknown,
 duplicate, missing, excessive, and incompatible arguments are errors. Supplied
@@ -1367,9 +1364,10 @@ phase initializes its declared fields before calling its own <code>__init__</cod
 release reverses those phases, calling each <code>__del__</code> before dropping its
 fields in reverse declaration order. This also works through a base-typed
 reference; non-prefix multiple-inheritance views locate concrete storage.</li>
-<li>Inside hooks, <code>self</code> is only a field-access receiver: it cannot be aliased,
-returned, passed elsewhere, or used to invoke an ordinary self method. This
-prevents escape during construction and resurrection during destruction.</li>
+<li>Inside lifecycle hooks, <code>self</code> is only a field-access receiver: it cannot be
+aliased, returned, passed elsewhere, or used to invoke an ordinary self
+method. This prevents escape during construction and resurrection during
+destruction.</li>
 </ul>
 <p>These names are familiar from Python, but Arx keeps its own lifecycle contract:
 normal final-reference release synchronously runs cleanup, base phases chain
@@ -1447,7 +1445,7 @@ implicit narrowing or general numeric conversion-ranked overloads.</p>
             
             <li class="toc-h2"><a href="#class-syntax">Class Syntax</a></li>
             
-            <li class="toc-h2"><a href="#annotation-rules">Annotation Rules</a></li>
+            <li class="toc-h2"><a href="#modifier-rules">Modifier Rules</a></li>
             
             <li class="toc-h2"><a href="#defaults">Defaults</a></li>
             

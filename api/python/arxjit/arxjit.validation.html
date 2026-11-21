@@ -28,7 +28,7 @@
       <a class="site-brand" href="../../../index.html">
         <img class="brand-logo" src="../../../images/arx-logo-terracotta.png" alt="ArxLang">
         <span class="brand-name">ArxLang</span>
-        <span class="version badge rounded-pill">1.27.0</span>
+        <span class="version badge rounded-pill">1.29.0</span>
       </a>
       
       <nav class="site-navbar" aria-label="Primary">
@@ -390,6 +390,24 @@
 <p>Source: packages/arxjit/src/arxjit/validation.py:1</p>
 <p>Python-subset validation for arxjit.</p>
 <p>Second stage of the arxjit pipeline: walk the ast node produced by arxjit.source and check it only uses the v1 supported subset of pure Python (typed scalar arguments, arithmetic/comparison/boolean expressions, single- target local assignments, if/else, while, for over range, return). Dispatch is by node type via plum, matching the visitor convention used across the Arx packages. Every rejected construct is collected into its own Diagnostic so a function using several unsupported constructs reports all of them at once via UnsupportedSyntaxError; lowering the accepted subset to astx is a later stage and is not done here.</p>
+<h3 id="attributes">Attributes</h3>
+<ul>
+<li>
+<p><strong>_SCOPE_NODES</strong> — Scope nodes.; <strong>Type:</strong> tuple[type[ast.AST], ...]</p>
+</li>
+<li>
+<p><strong>_ALLOWED_BINOPS</strong> — Allowed binops.; <strong>Type:</strong> tuple[type[ast.operator], ...]</p>
+</li>
+<li>
+<p><strong>_ALLOWED_UNARYOPS</strong> — Allowed unaryops.; <strong>Type:</strong> tuple[type[ast.unaryop], ...]</p>
+</li>
+<li>
+<p><strong>_ALLOWED_COMPAREOPS</strong> — Allowed compareops.; <strong>Type:</strong> tuple[type[ast.cmpop], ...]</p>
+</li>
+<li>
+<p><strong>_UNSUPPORTED_MESSAGES</strong> — Unsupported messages.; <strong>Type:</strong> dict[type[ast.AST], str]</p>
+</li>
+</ul>
 <h2 id="functions">Functions</h2>
 <ul>
 <li><a href="arxjit.validation.validate.html">validate</a> — Validate that a function uses only the supported Python subset.</li>
@@ -401,6 +419,8 @@
         <div class="toc-panel">
           <strong>On this page</strong>
           <ul>
+            
+            <li class="toc-h3"><a href="#attributes">Attributes</a></li>
             
             <li class="toc-h2"><a href="#functions">Functions</a></li>
             
