@@ -9,6 +9,7 @@ from __future__ import annotations
 import copy
 
 from dataclasses import dataclass
+from decimal import Decimal, InvalidOperation
 from enum import Enum
 from typing import Any, cast
 
@@ -409,6 +410,8 @@ class Lexer:
         title: Get the next token.
         summary: Skip blank and comment-only lines before emitting indentation.
           Trailing whitespace or comments produce only EOF, not indentation.
+          Floating literals retain exact decimal values and source spelling;
+          malformed exponents fail before parsing.
         returns: The next token from standard input.
         """
         buffer_was_replaced = (
@@ -502,6 +505,7 @@ class Lexer:
         if self.last_char.isdigit() or self.last_char == ".":
             num_str = ""
             dot_count = 0
+            has_exponent = False
 
             if self.last_char == ".":
                 next_char = self.advance()
@@ -516,13 +520,44 @@ class Lexer:
                 dot_count = 1
                 self.last_char = next_char
 
-            while self.last_char.isdigit() or self.last_char == ".":
+            while self.last_char.isdigit() or self.last_char in {
+                ".",
+                "e",
+                "E",
+            }:
                 if self.last_char == ".":
+                    if has_exponent:
+                        raise LexerError(
+                            "Invalid number exponent: decimal points are "
+                            "not allowed",
+                            token_location,
+                            code="ARX-LEX-NUMBER-EXPONENT-001",
+                        )
                     dot_count += 1
                     if dot_count > 1:
                         raise LexerError(
                             "Invalid number format: multiple decimal points",
                             self.lex_loc,
+                        )
+                elif self.last_char in {"e", "E"}:
+                    if has_exponent:
+                        raise LexerError(
+                            "Invalid number exponent: multiple markers",
+                            token_location,
+                            code="ARX-LEX-NUMBER-EXPONENT-001",
+                        )
+                    has_exponent = True
+                    num_str += self.last_char
+                    self.last_char = self.advance()
+                    if self.last_char in {"+", "-"}:
+                        num_str += self.last_char
+                        self.last_char = self.advance()
+                    if not self.last_char.isdigit():
+                        raise LexerError(
+                            "Invalid number exponent: expected at least "
+                            "one digit",
+                            token_location,
+                            code="ARX-LEX-NUMBER-EXPONENT-001",
                         )
                 num_str += self.last_char
                 if len(num_str) > MAX_NUMERIC_LITERAL_CHARS:
@@ -534,7 +569,7 @@ class Lexer:
                     )
                 self.last_char = self.advance()
 
-            if dot_count == 0:
+            if dot_count == 0 and not has_exponent:
                 return Token(
                     kind=TokenKind.int_literal,
                     value=int(num_str),
@@ -542,9 +577,25 @@ class Lexer:
                     location=token_location,
                 )
 
+            try:
+                exact = Decimal(num_str)
+            except InvalidOperation as error:
+                raise LexerError(
+                    "Invalid number exponent: outside the supported "
+                    "decimal range",
+                    token_location,
+                    code="ARX-LEX-NUMBER-EXPONENT-001",
+                ) from error
+            if not exact.is_finite():
+                raise LexerError(
+                    "Invalid number exponent: outside the supported "
+                    "decimal range",
+                    token_location,
+                    code="ARX-LEX-NUMBER-EXPONENT-001",
+                )
             return Token(
                 kind=TokenKind.float_literal,
-                value=float(num_str),
+                value=exact,
                 source_text=num_str,
                 location=token_location,
             )

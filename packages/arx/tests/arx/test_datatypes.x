@@ -73,9 +73,20 @@ fn test_boolean_and_string_paths() -> none:
 fn test_numeric_casts_and_widths() -> none:
   ```
   title: test_numeric_casts_and_widths
-  summary: Covers integer and floating-point cast combinations.
+  summary: Covers numeric casts and contextual scientific floating literals.
   ```
   assert widened_total() == 40
+  large: f64 = 1e300
+  assert large > 1e299
+  tiny: f64 = 1.5e-200
+  assert tiny > 1e-200
+  assert tiny < 2e-200
+  single: f32 = 1.25E+2
+  assert single == 125.0
+  underflow: f32 = 1e-1000000000
+  assert underflow == 0.0
+  negative_zero: f64 = -1e-1000000000
+  assert (1.0 / negative_zero) < 0.0
 
 fn test_fixed_width_integer_wrapping() -> none:
   ```
