@@ -3,14 +3,36 @@ name: arrow-first-design
 description: Choose Arrow-first types, data representations and compute operations while preserving IRx language semantics and ABI safety. Use for data and numeric feature design.
 ---
 
-# Arrow-first data and computation design
+# Arrow-first types, storage and computation
 
-Use before adding a data type, storage layout, numerical operation, collection kernel, or interoperability feature.
+**Use before adding a data type, column/Series representation, data kernel, math operation or interchange contract.** See [arx-architecture](../arx-architecture/SKILL.md) and [native-runtime-design](../native-runtime-design/SKILL.md).
 
-**Arrow first, not Arrow only.** Investigate Arrow's logical types, scalar/array/record-batch representations, validity/null semantics, `Datum`, compute kernels, memory model, and C Data/C Stream interchange. Reuse an Arrow construct when it implements the approved Arx semantics and has a safe native integration. Do not invent parallel data representations or per-operation C++ wrappers without a concrete incompatibility.
+**Rule:** Arrow first, **not** Arrow only. Arx is a general-purpose LLVM language. IRx owns language type *meaning*, ASTx models reusable language-neutral types, Arrow is the preferred runtime data/compute representation when it satisfies Arx's semantics. Never force function/generic/control-flow types into physical Arrow storage.
 
-Distinguish three layers: IRx owns language-level type meaning; ASTx models relevant syntax/types; Arrow is the preferred data representation and computation engine. Not every semantic type (functions, generics, control-flow types) should be forced into an Arrow storage layout. Register concrete runtime capabilities and resolve typed operation plans in IRx analysis, not via unchecked string kernels in lowering.
+## Type/operation design procedure
 
-Check signedness/width, overflow, null propagation, empty inputs, shapes, IEEE floating values and signed zero, ownership, conversions, errors, and scalar versus Series behavior. Reuse the shared typed compute dispatcher. Arrow kernels do not constitute a general query engine.
+1. **Specify semantics before backend choice.** Determine logical type, widths, nullable/non-nullable behavior, scalar versus Series rules, operations, ownership, conversion, error behavior and public call shape.
+2. **Check Arrow capabilities:** logical types, Scalar, Array, Datum, RecordBatch, validity, memory/pool behavior, compute kernel and C Data/C Stream interchange. Do not introduce a parallel implementation without demonstrating the gap.
+3. **Compare semantics:** integer overflow, signedness/width, IEEE NaN/infinity/signed zero, floating error bounds, null propagation, shapes, conversion and errors. "Arrow has a kernel" is not proof it matches Arx's public contract.
+4. **Resolve approved call in IRx analysis:** typed callable identity, allowed argument shapes/types, conversions/options, output type and required registered native feature. Reuse operation catalog/typed compute plan. No unchecked arbitrary kernel string dispatch from Arx source.
+5. **Lower to existing shared native dispatcher:** opaque C ABI handles and status/out parameters only. A second kernel should not automatically require a second handwritten C++ glue wrapper.
+6. **Verify applicable boundaries:** semantic analysis, compiled scalar and Series behavior, null and invalid shapes, ownership/error cleanup, PyArrow interchange and an independently installed `.x`-only consumer if the feature is public.
 
-When Arrow lacks a compatible semantic contract, document the specific gap in the PR and use a reviewed LLVM/native/pure-Arx implementation; do not impose Arrow as a language capability ceiling. Keep the single-version Arrow/PyArrow/source ABI policy synchronized with manifests/lockfile, not stale prose. Consult [native-runtime-design](../native-runtime-design/SKILL.md) for handles and statuses.
+## Choice matrix
+
+| Situation | Decision |
+| --- | --- |
+| Compatible Arrow logical/storage type exists | Reuse through an explicit Arx semantic mapping |
+| Typed approved Arrow compute kernel matches contract | Use shared registered dispatcher |
+| Arrow scalar boxing adds overhead | Measure before introducing a conformant specialized register path; LLVM primitive transport is already allowed |
+| Arrow kernel differs in null/overflow semantics | Reject, adapt with checked semantics, or choose reviewed alternative; never silently change language behavior |
+| No compatible Arrow contract | Explain concrete gap in PR; reviewed LLVM/native/pure-Arx implementation is allowed |
+| New Arrow version requested | Verify exact paired PyArrow and `arx-arrowcpp-sources` versions, source headers, native caches, manifests and root lockfile; never guess a published artifact |
+
+## Existing architecture and anti-patterns
+
+See `packages/irx/src/irx/analysis/resolved_nodes.py`, semantic operation catalog/compute logic under IRx, runtime feature registration and `irx_arrow_*`/ `irx_rb_*` C ABI. Current `AGENTS.md` describes the single-version migration policy; **read current manifests** for deployed pins rather than copying a dated target.
+
+**Avoid:** inventing an Arx-only data buffer by default, encoding C++ Arrow struct layouts in LLVM, treating Arrow kernels as a general query engine, scalar-only custom math without evaluation, compiling unsupported kernel names as strings, or promising native dispatch from ArxJIT.
+
+**Exit:** semantically conformant representation choice with verified boundary tests, or a clear reason Arrow could not be reused.
