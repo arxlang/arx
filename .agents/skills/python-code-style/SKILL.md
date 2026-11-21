@@ -3,24 +3,62 @@ name: python-code-style
 description: Apply Arx Python coding conventions including Typeguard development instrumentation, atpublic visibility, Plum dispatch, SOLID, shallow nesting, strict typing and Ruff. Use on Python changes.
 ---
 
-# Python engineering standards
+# Python implementation conventions for Arx
 
-Use for Python implementation, review, or refactoring in the Arx monorepo. Apply [minimal-change](../minimal-change/SKILL.md). Read root `AGENTS.md` and follow local package conventions.
+**Use on Python edits and reviews.** Read root `AGENTS.md` and [minimal-change](../minimal-change/SKILL.md). Do not perform a style-only rewrite of unrelated code.
 
-## Types and runtime checking
+## Type annotations and development-time runtime checks
 
-Annotate arguments and returns; minimize `Any`, and use strict mypy. For ASTx use `astx.tools.typing.typechecked`; for IRx use `irx.typecheck.typechecked`. Do not substitute direct Typeguard decoration in those packages. Check invalid inputs and collection elements in focused tests where relevant.
+- Annotate *every argument and return*, including helpers; avoid `Any` except where a contract truly requires it. Root `pyproject.toml` enables strict mypy, Ruff line length 79, and Python 3.11 target; check package manifests and CI for actual supported interpreters (currently 3.11–3.14).
+- For ASTx, import `typechecked` from `astx.tools.typing`; for IRx, from `irx.typecheck`. IRx re-exports the ASTx policy. Do **not** directly use `typeguard.typechecked` in these packages.
+- `packages/astx/src/astx/tools/typing.py` reads `ARX_RUNTIME_TYPECHECK` at **import time**. `0` (default) returns the original function/class without instrumentation; `1` instruments arguments, returns, and all collection items via `CollectionCheckStrategy.ALL_ITEMS`. Other values raise `ValueError`. Changing the environment after import **does not** retrofit checking.
+- Use runtime checking in development/CI where configured; it is not a substitute for semantic validation of `.x` code.
 
-The actual `astx.tools.typing` wrapper reads `ARX_RUNTIME_TYPECHECK` **once at import time** (accepted values `0` or `1`, default `0`). `1` instruments arguments, return values, and **ALL_ITEMS** collection checks; `0` returns the original target without instrumentation. Set the environment variable *before importing* the stack in developer/test processes. Compiler semantic checks remain mandatory regardless of this flag; production need not incur instrumentation overhead.
+```python
+from irx.typecheck import typechecked
+from public import public
 
-## API visibility and dispatch
+@public
+@typechecked
+def normalize_width(width: int) -> int:
+    """ 
+    title: Validate a requested numeric width.
+    parameters:
+      width: Width in bits.
+    returns: Validated width.
+    """
+    if width <= 0:
+        raise ValueError("width must be positive")
+    return width
+```
 
-Packages using `atpublic` import `public`/`private` from `public` and explicitly decorate symbols. Do not introduce leading underscores as a substitute for visibility or expand existing naming debt. Respect package `__all__`/exports where relevant.
+This is an illustrative pattern, not a suggestion to add a new helper. Follow the owning package's actual decorator/export conventions; inspect existing `@public` and `@private` use before editing.
 
-Use Plum multiple dispatch when behavior varies by argument type, especially visitor overloads of a single `visit` method; retain a typed, fail-closed fallback. Do not introduce per-type visitor names.
+To probe runtime checking, start a **fresh process** with `ARX_RUNTIME_TYPECHECK=1` before package imports and exercise bad arguments (including a non-first invalid collection item). Don't toggle environment settings mid-test and claim the wrapper changed.
 
-## Maintainability
+## Visibility
 
-Prefer guard clauses and early returns to unnecessary nested conditionals. Apply SOLID pragmatically: single responsibility, small interfaces, clear ownership, and dependency direction without speculative abstractions. A small direct implementation may be better than several layers of indirection. Use structured, phase-appropriate exceptions and trustworthy spans; never silently discard input.
+In packages using `atpublic`, use `from public import private, public` and the relevant decorators. A leading `_` in existing names is historical/internal naming, **not** the visibility mechanism to introduce for new APIs. Review `__all__` and exports where the package uses them. Avoid gratuitous renames.
 
-Follow Ruff's 79-character limit, four-space Python indentation, double quotes, and existing import conventions. Do not reformat untouched code. Public Python source contracts use Douki docstrings; see [douki-docstrings](../douki-docstrings/SKILL.md).
+## Type-specific behavior
+
+Prefer Plum overloads sharing a single name, such as `visit`, when behavior differs by ASTx node type. Do not introduce `visit_binary` / `visit_return` families in place of typed dispatch. A broad fallback must raise a typed, actionable error instead of silently returning `None` or a generic AST node.
+
+## Control flow and SOLID
+
+Use validation-first guard clauses; avoid "never nesting" as an absolute rule. Nested scope can be appropriate in parsers, CFG construction or resource handling. Single responsibility and dependency inversion should enforce actual Arx ownership boundaries, not create interfaces without real consumers. Avoid redundant wrappers, broad exception handling and reflective `getattr` workarounds where the type contract should be explicit.
+
+```python
+def checked_divisor(value: int | None) -> int:
+    if value is None:
+        raise ValueError("missing divisor")
+    if value == 0:
+        raise ValueError("zero divisor")
+    return value
+```
+
+## Errors, source contracts, verification
+
+Prefer structured phase errors with trustworthy spans. Do not raise bare `Exception`, invent locations, or swallow inputs. Python source docstrings use Douki YAML content (see [douki-docstrings](../douki-docstrings/SKILL.md)); update only changed contracts.
+
+Verify with focused `pytest`, `makim <package>.typecheck` and `makim <package>.lint` for affected packages, and relevant development-mode runtime type tests. Report what actually ran.
