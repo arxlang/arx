@@ -1225,14 +1225,14 @@ files = [
 
 [[package]]
 name = "douki"
-version = "0.14.0"
+version = "0.14.1"
 description = "Documetatio from annotations"
 optional = false
 python-versions = "<4,>=3.10"
 groups = ["dev"]
 files = [
-    {file = "douki-0.14.0-py3-none-any.whl", hash = "sha256:617012a5fc14cdce49b469a36cb548920cd9fcc2a1d64dd79783dd6011916268"},
-    {file = "douki-0.14.0.tar.gz", hash = "sha256:6245a321dd48ef04f947d073b1ea3bd1e4bb05a06a8a078c57c81d366fe66623"},
+    {file = "douki-0.14.1-py3-none-any.whl", hash = "sha256:1012edc9f89a63866e7ef2b7aa11b6e2308c3f882a7f0aebc8149cead122743f"},
+    {file = "douki-0.14.1.tar.gz", hash = "sha256:43e2a7f045bf64d76719e380d92b2a28db426216f8fc4173a728635c0f026380"},
 ]
 
 [package.dependencies]
@@ -1246,20 +1246,20 @@ typer = ">=0.9"
 
 [[package]]
 name = "doukimd"
-version = "1.4.6"
+version = "1.4.8"
 description = "Markdown documentation with first-class Douki API references"
 optional = false
 python-versions = "<4,>=3.11"
 groups = ["dev"]
 files = [
-    {file = "doukimd-1.4.6-py3-none-any.whl", hash = "sha256:75bbaf57cde4e0bba04842d7041da8844c517116848d54a528a6da5b69e9acc3"},
-    {file = "doukimd-1.4.6.tar.gz", hash = "sha256:924997507193f6d7c8b91965cd87a0a5c17e8a78efc34a43198d210b98527312"},
+    {file = "doukimd-1.4.8-py3-none-any.whl", hash = "sha256:2f464285d70a2d174fd3db2d86bb8d29db235b10cf49a750588b31bb67fd8b87"},
+    {file = "doukimd-1.4.8.tar.gz", hash = "sha256:dd2fa77dd14f95f76c9c7c665a50f7140822404991f1b046ddbd4a7db1943579"},
 ]
 
 [package.dependencies]
 atpublic = ">=5,<6"
 click = ">=8.1,<9"
-douki = ">=0.14.0"
+douki = ">=0.14.1"
 griffe = ">=1.15,<2"
 Jinja2 = ">=3.1.6,<4"
 jsonschema = ">=4.23,<5"
@@ -4766,4 +4766,4 @@ test = ["coverage (>=5.3.1)", "prompt-toolkit (>=3.0.29)", "pygments (>=2.2)", "
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11,<4"
-content-hash = "bc2dd8d82268b1aaca4c475bfa65a3970da0574719cfc8b97f88214167fad748"
+content-hash = "c3be80b3cb199ccd21c72bdf9b31ea0dc8feacbf87c2988b5ec1bd7ffa8b7ff7"

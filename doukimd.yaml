@@ -12,7 +12,7 @@ project:
   name: arx
   version: 1.28.0
 docs_dir: docs
-output_dir: build
+output_dir: build/docs
 assets:
   - images/**
   - favicon.ico
