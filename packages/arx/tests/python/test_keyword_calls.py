@@ -11,6 +11,7 @@ import pytest
 
 from arxpy import ArtifactKind, CompileError, Compiler, ParseError
 from irx.analysis.resolved_nodes import SemanticInfo
+from irx.diagnostics import DiagnosticCodes
 from llvmlite import binding as llvm
 
 DOC = "```\ntitle: Keyword call regression\n```\n"
@@ -198,6 +199,51 @@ fn main() -> i32:
     )
     with pytest.raises(CompileError):
         compiler.check(program)
+
+
+@pytest.mark.parametrize(
+    "arguments,literal",
+    [("0.0, 5", "0.0"), ("step=1.0, stop=5, start=0", "1.0")],
+)
+def test_range_diagnostic_source_location(
+    arguments: str, literal: str
+) -> None:
+    """
+    title: Range errors identify source operands after Unicode loop names.
+    parameters:
+      arguments: Source arguments supplied to range.
+      literal: Invalid source operand.
+    """
+    line = f"  for café in range({arguments}):"
+    source = (
+        DOC + "fn main() -> i32:\n" + line + "\n    print(café)\n  return 0\n"
+    )
+    compiler = Compiler()
+    with pytest.raises(CompileError) as error:
+        compiler.check(compiler.parse_string(source))
+    diagnostic = error.value.diagnostics[0]
+    assert diagnostic.code == DiagnosticCodes.SEMANTIC_TYPE_MISMATCH
+    assert diagnostic.message == (
+        "argument 1 of call to 'range' expects Int32 but got Float32"
+    )
+    assert (diagnostic.line, diagnostic.column) == (
+        5,
+        line.index(literal) + 1,
+    )
+
+
+def test_shadowed_range_keeps_user_signature() -> None:
+    """
+    title: A user-defined range accepts its own floating-point parameter type.
+    """
+    compiler = Compiler()
+    program = compiler.parse_string(
+        DOC + "fn range(value: f64) -> f64:\n  return value\n"
+        "fn main() -> i32:\n  return cast(range(0.5), i32)\n"
+    )
+    artifact = compiler.compile(program, kind=ArtifactKind.LLVM_IR)
+    assert artifact.llvm_ir is not None
+    llvm.parse_assembly(artifact.llvm_ir).verify()
 
 
 @pytest.mark.parametrize(

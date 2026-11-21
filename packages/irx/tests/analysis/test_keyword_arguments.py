@@ -15,7 +15,7 @@ from irx.analysis.resolved_nodes import (
     SemanticInfo,
 )
 from irx.builder import Builder
-from irx.diagnostics import LoweringError, SemanticError
+from irx.diagnostics import DiagnosticCodes, LoweringError, SemanticError
 from llvmlite import binding as llvm
 from typeguard import TypeCheckError
 
@@ -46,6 +46,56 @@ def main(value: astx.DataType) -> astx.FunctionDef:
         astx.FunctionPrototype("main", astx.Arguments(), astx.Int32()),
         block(value),
     )
+
+
+@pytest.mark.parametrize(
+    "names,invalid_index",
+    [
+        ((None,), 0),
+        ((None, None), 0),
+        ((None, None), 1),
+        ((None, None, None), 0),
+        ((None, None, None), 1),
+        ((None, None, None), 2),
+        (("stop",), 0),
+        (("step", "stop", "start"), 0),
+        (("stop", "step", "start"), 2),
+        ((None, "stop"), 1),
+    ],
+)
+def test_range_argument_diagnostics_use_source_positions(
+    names: tuple[str | None, ...], invalid_index: int
+) -> None:
+    """
+    title: Range argument numbers follow source order, not canonical slots.
+    parameters:
+      names: Keyword names or None for positional arguments, in source order.
+      invalid_index: Source index of the invalid operand.
+    """
+    values = [
+        astx.LiteralFloat("0.5")
+        if index == invalid_index
+        else astx.LiteralInteger(1)
+        for index in range(len(names))
+    ]
+    call = astx.FunctionCall(
+        "range",
+        [value for name, value in zip(names, values) if name is None],
+        keywords=tuple(
+            astx.KeywordArgument(name, value)
+            for name, value in zip(names, values)
+            if name is not None
+        ),
+    )
+    with pytest.raises(SemanticError) as error:
+        analyze(call)
+    (diagnostic,) = error.value.diagnostics.diagnostics
+    assert diagnostic.code == DiagnosticCodes.SEMANTIC_TYPE_MISMATCH
+    assert diagnostic.message == (
+        f"argument {invalid_index + 1} of call to 'range' "
+        "expects Int32 but got Float32"
+    )
+    assert diagnostic.node is values[invalid_index]
 
 
 @pytest.mark.parametrize("kind", ["instance", "static", "base"])
