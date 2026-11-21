@@ -3,14 +3,29 @@ name: language-design
 description: Design minimal and coherent Arx syntax, builtins and stdlib behavior using Python ergonomics without assuming compatibility. Use for language proposals.
 ---
 
-# Arx language and library design
+# Arx language and standard-library design
 
-Use when changing `.x` syntax, builtin behavior, protocols, type-system surface, standard-library APIs, or user-facing diagnostics.
+**Use for syntax, builtin, stdlib, methods, types, protocols and user-facing diagnostics.** Refer to [compiler-design](../compiler-design/SKILL.md), [api-design](../api-design/SKILL.md), and [minimal-change](../minimal-change/SKILL.md).
 
-Prioritize a simple, predictable, Python-familiar experience, but do not treat Python compatibility as Arx's specification. Evaluate common-case usage before choosing a public name or shape. Favor a small universal builtin set, explicitly imported shared stdlib modules, and value-specific methods where natural. Ensure safe defaults, typed options, clear return and error contracts.
+## Decide the smallest useful public behavior
 
-Arx is general-purpose and Arrow-first for data; maintain the distinction between language semantics and Arrow physical representations. An ASTx type is not proof of parser, analysis, or lowering support. Check the current syntax manifest and tests before asserting that a construct exists; preserve significant two-space indentation and Douki module docstrings.
+1. Express the user's common task in short `.x` code using **currently supported** syntax; where proposed, label unimplemented constructs explicitly.
+2. Look at Python and established library APIs for names, ergonomics and safe defaults. Familiarity is guidance, **not** a compatibility obligation.
+3. Decide ownership: small broadly useful builtins (`print`, `len`, `cast`), focused imported stdlib modules (e.g. math reductions), or a natural method on a type. Don't create synonymous entry points.
+4. Define return/error/null/overflow/ownership meaning, supported options and invalid forms before implementation. Reject unsupported combinations explicitly, not with silent coercions.
+5. Choose types: IRx language semantics versus Arrow runtime representation. A reserved lexical token or ASTx type alone does not prove executable language support.
+6. Validate the one complete slice through manifest/lexer/parser, ASTx, semantic analysis, LLVM, registered native feature/linking if applicable, and compiled tests.
+7. Update existing source contracts/examples only where behavior is actually supported.
 
-Prefer one canonical call shape. Avoid speculative protocol layers, duplicate aliases, silent conversion, undocumented unsupported options, or premature complexity. Before Arx 2.0 intentional API changes may be breaking: update affected consumers consistently, without unrequested deprecation shims.
+## Examples of decisions
 
-Use [api-design](../api-design/SKILL.md), [compiler-design](../compiler-design/SKILL.md), and [minimal-change](../minimal-change/SKILL.md). Implement only the approved useful slice; suggest unrelated ideas separately.
+- Numeric functions: prefer imported `stdlib.math`, Arrow compute when semantically compatible, and typed plans; do not automatically add every function to the builtin namespace.
+- New iterables: explicitly define eager/lazy semantics, lifetime, for-loop eligibility and error behavior before inventing a universal `LazyType`.
+- New protocol: demonstrate an actual operation and two useful implementations; don't add a speculative method hierarchy.
+- API change before 2.0: no default compatibility alias/deprecation shim, but update actual callers and maintain ABI/IR consistency.
+
+Arx uses name-first syntax where currently implemented, significant two-space indentation and required Douki module docstrings. Verify examples against current parser rather than guessing spellings.
+
+## Review check
+
+Is it obvious to an Arx user how to do the common case? Is there one canonical interface? Are restrictions and errors precise? Is the requested behavior actually executable? Did the implementation avoid building a larger language feature than requested?
