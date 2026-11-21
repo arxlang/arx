@@ -3,20 +3,54 @@ name: douki-docstrings
 description: Write, validate and minimally maintain Douki Python docstrings, Arx .x YAML docstrings and generated documentation sources. Use for docstring or documentation changes.
 ---
 
-# Douki documentation contracts
+# Douki source contracts without documentation churn
 
-Use when creating or modifying Python public APIs, `.x` modules, class/function documentation, or generated documentation sources. Apply [minimal-change](../minimal-change/SKILL.md).
+**Use when changing public Python symbols, `.x` source modules, docstrings, or DoukiMD.** Apply [minimal-change](../minimal-change/SKILL.md).
 
-## Python source
+## Python docstrings
 
-Python docstrings follow the project's Douki YAML conventions: `title` plus relevant `summary`, `parameters`, `returns`, etc., based on the owning schema. Parameters and returns require meaningful descriptions; annotations alone do not replace source contracts. Preserve existing docstrings if their meaning is unchanged. Use the established `douki` commands and ensure `douki sync` is idempotent; do not hand-edit generated reference pages.
+Actual source examples: `packages/irx/src/irx/typecheck.py` and `packages/arx/src/arx/docstrings.py`. Arx uses YAML content in Python triple-quoted docstrings, with `title`, appropriate `parameters`, `returns`, `summary`, etc. as required by the owning Douki schema.
 
-## Arx source
+```python
+def validate_name(name: str) -> str:
+    """
+    title: Validate a requested name.
+    parameters:
+      name: Name supplied by the caller.
+    returns: Validated name.
+    """
+    if not name:
+        raise ValueError("name must not be empty")
+    return name
+```
 
-Every committed `.x` module—including examples and tests—starts at line 1, column 1 with a valid triple-backtick Douki YAML module docstring. The mapping requires a `title`; validate against `packages/arx/src/arx/schema/douki.json`. Function/member docstrings must occupy parser-supported positions and comply with their schema. Current Arx parser validates these blocks but does not emit them into AST/IR. Do not infer that every user-defined function needs a docstring. Preserve two-space indentation outside module documentation.
+Illustrative only. A Python annotation is **not** a replacement for a parameter or return description. Preserve existing correct descriptions. Update the docstring if meaning or signature changes; do not reword unrelated documentation for personal taste. Avoid invented `returns` on APIs without a return value unless the package schema requires it.
 
-## Scope control
+## Arx `.x` documents
 
-Do not create a Markdown page for each API or PR; DoukiMD generates API reference from native source contracts according to `doukimd.yaml`. Update a short existing guide only when a user workflow, safety/lifetime contract, important restriction, or architecture explanation actually changes. Avoid duplicate signatures/default tables and investigation notes.
+Every committed `.x`—source, stdlib, example, fixture or compiled test—begins at **line 1 column 1** with a triple-backtick Douki YAML module block. Example:
 
-For affected docs, run the relevant `douki` validation and `makim docs.check` / `makim docs.build` when needed. Report unrun checks precisely.
+````text
+```
+title: Example module
+summary: Show a minimal supported Arx source module.
+```
+````
+
+`packages/arx/src/arx/docstrings.py` validates YAML against `packages/arx/src/arx/schema/douki.json`; `title` is mandatory. Function/member documentation must appear at the parser-supported position. A user function is not automatically required to have its own docstring. Docstrings are currently validated but not emitted into AST/IR. Keep significant two-space syntax indentation.
+
+## Docs-versus-code decision
+
+| Change | Documentation action |
+| --- | --- |
+| Internal bug fix, unchanged API/workflow | No guide changes; update source contract only if inaccurate |
+| Public signature/semantics changed | Update the owning source Douki docstring and affected example/test |
+| New user workflow/restriction/safety requirement | Update the smallest existing guide |
+| Generated API reference | Never hand-edit it; source remains authoritative |
+| New feature in an existing page | Extend that page, not create a separate feature page by default |
+
+Do not duplicate signatures, defaults, type tables or method lists in handwritten Markdown. `doukimd.yaml` defines generated API sources. Avoid docs pages, test-result logs, and implementation diaries not explicitly needed.
+
+## Validation
+
+For affected source contracts, use established `douki sync` / lint workflow and confirm idempotency. Use `makim docs.check` or `makim docs.build` when documentation generation is affected. For `.x` modules validate through existing lexer/parser/compiled tests. Don't add a documentation-specific CI job for an ordinary code change.
