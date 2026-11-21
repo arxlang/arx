@@ -403,9 +403,14 @@ def test_assignment_type_mismatch_reports_expected_and_actual_types() -> None:
     assert "cannot assign Float64 to 'count' of type Int32" in formatted
 
 
-def test_argument_type_mismatch_reports_argument_position_and_callee() -> None:
+@pytest.mark.parametrize("keyword", [False, True])
+def test_argument_type_mismatch_reports_argument_position_and_callee(
+    keyword: bool,
+) -> None:
     """
     title: Call diagnostics should identify the failing argument and callee.
+    parameters:
+      keyword: Whether to supply reordered named arguments.
     """
     helper = astx.FunctionDef(
         prototype=astx.FunctionPrototype(
@@ -421,7 +426,15 @@ def test_argument_type_mismatch_reports_argument_position_and_callee() -> None:
     call = _with_loc(
         astx.FunctionCall(
             "mix",
-            [astx.LiteralInt32(1), astx.LiteralUTF8String("oops")],
+            []
+            if keyword
+            else [astx.LiteralInt32(1), astx.LiteralUTF8String("oops")],
+            keywords=(
+                astx.KeywordArgument("rhs", astx.LiteralUTF8String("oops")),
+                astx.KeywordArgument("lhs", astx.LiteralInt32(1)),
+            )
+            if keyword
+            else (),
         ),
         9,
         6,
@@ -445,9 +458,10 @@ def test_argument_type_mismatch_reports_argument_position_and_callee() -> None:
     formatted = str(exc_info.value)
 
     assert "IRX-S010" in formatted
+    position = 1 if keyword else 2
     assert (
-        "argument 2 of call to 'mix' expects Float64 but got UTF8String"
-        in formatted
+        f"argument {position} of call to 'mix' "
+        "expects Float64 but got UTF8String" in formatted
     )
 
 

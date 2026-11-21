@@ -201,6 +201,8 @@ def validate_call(
 ) -> CallResolution:
     """
     title: Validate a function call.
+    summary: Report argument numbers in source evaluation order.
+      Bound parameter slots still select expected types and ABI positions.
     parameters:
       diagnostics: Collected structured diagnostics.
       function: Function to process.
@@ -230,8 +232,8 @@ def validate_call(
             target: astx.DataType | None = signature.parameters[slot].type_
             if not is_assignable(target, arg_type):
                 diagnostics.add(
-                    f"argument {slot + 1} of call to '{function.name}' "
-                    "expects "
+                    f"argument {source_index + 1} of call to "
+                    f"'{function.name}' expects "
                     f"{display_type_name(target)} but got "
                     f"{display_type_name(arg_type)}",
                     node=evaluations[source_index],
@@ -242,7 +244,7 @@ def validate_call(
             target = _variadic_argument_type(arg_type)
             if target is None:
                 diagnostics.add(
-                    f"variadic argument {slot + 1} of call to "
+                    f"variadic argument {source_index + 1} of call to "
                     f"'{function.name}' uses unsupported type "
                     f"{display_type_name(arg_type)}",
                     node=evaluations[source_index],
