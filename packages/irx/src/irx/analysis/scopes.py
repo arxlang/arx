@@ -1,7 +1,6 @@
 """
 title: Lexical scope helpers for semantic analysis.
-summary: >-
-  Define the lexical-scope stack used to resolve locals and detect
+summary: Define the lexical-scope stack used to resolve locals and detect
   redeclarations during analysis.
 """
 
@@ -21,14 +20,11 @@ from irx.typecheck import typechecked
 class Scope:
     """
     title: One lexical scope.
-    summary: >-
-      Hold the local symbol table for one lexical region such as a module or
-      function body.
+    summary: Hold the local symbol table for one lexical region such as a
+      module or function body.
     attributes:
-      kind:
-        type: str
-      symbols:
-        type: dict[str, SemanticSymbol]
+      kind: Kind of value or operation.
+      symbols: Symbols.
     """
 
     kind: str
@@ -40,11 +36,11 @@ class Scope:
 class ScopeStack:
     """
     title: Stack of lexical scopes.
-    summary: >-
-      Manage nested lexical scopes for local declarations and name lookup.
+    summary: Manage nested lexical scopes for local declarations and name
+      lookup.
     attributes:
-      _stack:
-        type: list[Scope]
+      _stack: Stack.
+      current: Current.
     """
 
     def __init__(self) -> None:
@@ -57,10 +53,9 @@ class ScopeStack:
     def current(self) -> Scope | None:
         """
         title: Return the current scope.
-        summary: >-
-          Expose the innermost active lexical scope, if one has been pushed.
-        returns:
-          type: Scope | None
+        summary: Expose the innermost active lexical scope, if one has been
+          pushed.
+        returns: The current scope.
         """
         if not self._stack:
             return None
@@ -71,10 +66,8 @@ class ScopeStack:
         title: Push a scope.
         summary: Create and activate a new lexical scope of the requested kind.
         parameters:
-          kind:
-            type: str
-        returns:
-          type: Scope
+          kind: Kind of value or operation.
+        returns: 'Result of this operation: push a scope.'
         """
         scope = Scope(kind=kind)
         self._stack.append(scope)
@@ -83,25 +76,21 @@ class ScopeStack:
     def pop(self) -> Scope:
         """
         title: Pop the current scope.
-        summary: >-
-          Remove and return the innermost lexical scope after a block finishes
-          analysis.
-        returns:
-          type: Scope
+        summary: Remove and return the innermost lexical scope after a block
+          finishes analysis.
+        returns: 'Result of this operation: pop the current scope.'
         """
         return self._stack.pop()
 
     def declare(self, symbol: SemanticSymbol) -> bool:
         """
         title: Declare a symbol in the current scope.
-        summary: >-
-          Add one local symbol to the current scope, reporting whether the name
-          was new there.
+        summary: Add one local symbol to the current scope, reporting whether
+          the name was new there.
         parameters:
-          symbol:
-            type: SemanticSymbol
-        returns:
-          type: bool
+          symbol: Resolved symbol for the operation.
+        returns: 'Result of this operation: declare a symbol in the current
+          scope.'
         """
         current = self.current
         if current is None:
@@ -114,14 +103,11 @@ class ScopeStack:
     def resolve(self, name: str) -> SemanticSymbol | None:
         """
         title: Resolve a symbol by name.
-        summary: >-
-          Search outward from the innermost scope to find the visible local
-          symbol for one name.
+        summary: Search outward from the innermost scope to find the visible
+          local symbol for one name.
         parameters:
-          name:
-            type: str
-        returns:
-          type: SemanticSymbol | None
+          name: Name identifying the declaration or operation.
+        returns: Resolved a symbol by name.
         """
         for scope in reversed(self._stack):
             symbol = scope.symbols.get(name)

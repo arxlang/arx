@@ -48,8 +48,7 @@ class Int8(SignedInteger):
     """
     title: Int8 data type expression.
     attributes:
-      nbytes:
-        type: int
+      nbytes: Nbytes.
     """
 
     nbytes: int = 1
@@ -61,8 +60,7 @@ class Int16(SignedInteger):
     """
     title: Int16 data type expression.
     attributes:
-      nbytes:
-        type: int
+      nbytes: Nbytes.
     """
 
     nbytes: int = 2
@@ -74,8 +72,7 @@ class Int32(SignedInteger):
     """
     title: Int32 data type expression.
     attributes:
-      nbytes:
-        type: int
+      nbytes: Nbytes.
     """
 
     nbytes: int = 4
@@ -87,8 +84,7 @@ class Int64(SignedInteger):
     """
     title: Int64 data type expression.
     attributes:
-      nbytes:
-        type: int
+      nbytes: Nbytes.
     """
 
     nbytes: int = 8
@@ -100,8 +96,7 @@ class Int128(SignedInteger):
     """
     title: Int128 data type expression.
     attributes:
-      nbytes:
-        type: int
+      nbytes: Nbytes.
     """
 
     nbytes: int = 16
@@ -113,8 +108,7 @@ class UInt8(UnsignedInteger):
     """
     title: UInt8 data type expression.
     attributes:
-      nbytes:
-        type: int
+      nbytes: Nbytes.
     """
 
     nbytes: int = 1
@@ -126,8 +120,7 @@ class UInt16(UnsignedInteger):
     """
     title: UInt16 data type expression.
     attributes:
-      nbytes:
-        type: int
+      nbytes: Nbytes.
     """
 
     nbytes: int = 2
@@ -139,8 +132,7 @@ class UInt32(UnsignedInteger):
     """
     title: UInt32 data type expression.
     attributes:
-      nbytes:
-        type: int
+      nbytes: Nbytes.
     """
 
     nbytes: int = 4
@@ -152,8 +144,7 @@ class UInt64(UnsignedInteger):
     """
     title: UInt64 data type expression.
     attributes:
-      nbytes:
-        type: int
+      nbytes: Nbytes.
     """
 
     nbytes: int = 8
@@ -165,8 +156,7 @@ class UInt128(UnsignedInteger):
     """
     title: UInt128 data type expression.
     attributes:
-      nbytes:
-        type: int
+      nbytes: Nbytes.
     """
 
     nbytes: int = 16
@@ -218,8 +208,7 @@ class Complex32(Complex):
     """
     title: Complex32 data type class.
     attributes:
-      nbytes:
-        type: int
+      nbytes: Nbytes.
     """
 
     nbytes: int = 8
@@ -231,8 +220,7 @@ class Complex64(Complex):
     """
     title: Complex64 data type class.
     attributes:
-      nbytes:
-        type: int
+      nbytes: Nbytes.
     """
 
     nbytes: int = 16

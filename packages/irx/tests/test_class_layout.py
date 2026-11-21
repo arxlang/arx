@@ -34,10 +34,8 @@ def _class_type(name: str) -> astx.ClassType:
     """
     title: Build one named class type reference.
     parameters:
-      name:
-        type: str
-    returns:
-      type: astx.ClassType
+      name: Name identifying the declaration or operation.
+    returns: Constructed one named class type reference.
     """
     return astx.ClassType(name)
 
@@ -53,18 +51,13 @@ def _attribute(
     """
     title: Build one class attribute declaration.
     parameters:
-      name:
-        type: str
-      type_:
-        type: astx.DataType
-      mutability:
-        type: astx.MutabilityKind
-      is_static:
-        type: bool
-      value:
-        type: astx.AST | None
-    returns:
-      type: astx.VariableDeclaration
+      name: Name identifying the declaration or operation.
+      type_: Type expression to process.
+      mutability: Mutability.
+      is_static: Whether the member belongs to the class rather than
+        an instance.
+      value: Value to process.
+    returns: Constructed one class attribute declaration.
     """
     declaration = astx.VariableDeclaration(
         name=name,
@@ -86,14 +79,10 @@ def _mutable_var(
     """
     title: Build one mutable local variable declaration.
     parameters:
-      name:
-        type: str
-      type_:
-        type: astx.DataType
-      value:
-        type: astx.AST | astx.Undefined
-    returns:
-      type: astx.VariableDeclaration
+      name: Name identifying the declaration or operation.
+      type_: Type expression to process.
+      value: Value to process.
+    returns: Constructed one mutable local variable declaration.
     """
     return astx.VariableDeclaration(
         name=name,
@@ -108,10 +97,9 @@ def _main_int32(*body_nodes: astx.AST) -> astx.FunctionDef:
     title: Build a small int32-returning main function.
     parameters:
       body_nodes:
-        type: astx.AST
         variadic: positional
-    returns:
-      type: astx.FunctionDef
+        description: Body nodes.
+    returns: Constructed a small int32-returning main function.
     """
     body = astx.Block()
     for node in body_nodes:
@@ -135,13 +123,11 @@ def _jit_int32_globals(
     """
     title: Read Int32 class-static globals from one JIT-compiled module.
     parameters:
-      ir_text:
-        type: str
+      ir_text: IR text.
       global_names:
-        type: str
         variadic: positional
-    returns:
-      type: dict[str, int]
+        description: Global names.
+    returns: Read int32 class-static globals from one JIT-compiled module.
     """
     llvm_module = llvm.parse_assembly(ir_text)
     llvm_module.verify()
@@ -172,8 +158,7 @@ def test_class_definition_emits_header_and_instance_layout(
     """
     title: Class definitions lower to pointer-oriented object structs.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     node = astx.ClassDefStmt(
@@ -199,8 +184,7 @@ def test_class_layout_flattens_canonical_shared_ancestor_storage(
     """
     title: Shared ancestors appear once and bases precede derived fields.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     root = astx.ClassDefStmt(
@@ -242,8 +226,7 @@ def test_class_values_lower_as_pointers_and_static_members_as_globals(
     """
     title: Class locals use pointer storage and statics emit globals.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     node = astx.ClassDefStmt(
@@ -287,12 +270,10 @@ def test_ir_defined_functions_use_pointer_abi_for_class_values(
     builder_class: type[Builder],
 ) -> None:
     """
-    title: >-
-      Generated signatures pass class pointers and publish them through output
-      slots.
+    title: Generated signatures pass class pointers and publish them through
+      output slots.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     widget = astx.ClassDefStmt(name="Widget")
@@ -326,8 +307,7 @@ def test_class_static_globals_keep_literal_and_default_values(
     """
     title: Static class globals preserve literal and default init values.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     node = astx.ClassDefStmt(
@@ -379,8 +359,7 @@ def test_static_field_access_reads_class_global_storage(
     """
     title: Static field reads lower to loads from analyzed class globals.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     node = astx.ClassDefStmt(
@@ -418,8 +397,7 @@ def test_static_field_access_reads_default_initialized_class_global(
     """
     title: Static field reads preserve zero/default-initialized globals.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     node = astx.ClassDefStmt(
@@ -456,8 +434,7 @@ def test_inherited_static_field_access_reuses_ancestor_storage(
     """
     title: Inherited static field reads do not duplicate ancestor globals.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     base = astx.ClassDefStmt(
@@ -505,8 +482,7 @@ def test_class_type_bodies_do_not_leak_across_translations(
     """
     title: Reused class names keep per-translation LLVM layouts isolated.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     first = make_module(

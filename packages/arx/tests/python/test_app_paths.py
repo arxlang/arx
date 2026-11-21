@@ -100,8 +100,7 @@ def test_arxio_get_char_from_stdin(monkeypatch: pytest.MonkeyPatch) -> None:
     """
     title: Test stdin path in ArxIO.get_char.
     parameters:
-      monkeypatch:
-        type: pytest.MonkeyPatch
+      monkeypatch: Fixture for temporarily replacing dependencies and settings.
     """
     monkeypatch.setattr(sys, "stdin", io.StringIO("z"))
     ArxIO.INPUT_FROM_STDIN = True
@@ -117,10 +116,8 @@ def test_arxio_file_and_stdin_loaders(
     """
     title: Test ArxIO input loading helpers.
     parameters:
-      monkeypatch:
-        type: pytest.MonkeyPatch
-      tmp_path:
-        type: Path
+      monkeypatch: Fixture for temporarily replacing dependencies and settings.
+      tmp_path: Temporary directory for this test.
     """
     sample = tmp_path / "sample.x"
     sample.write_text("fn main() -> i32:\n  return 1\n", encoding="utf-8")
@@ -133,10 +130,8 @@ def test_arxio_file_and_stdin_loaders(
         """
         title: Fake file-to-buffer loader.
         parameters:
-          cls:
-            type: type[ArxIO]
-          filename:
-            type: str
+          cls: Cls.
+          filename: Source or resource filename.
         """
         calls["filename"] = filename
 
@@ -165,8 +160,7 @@ def test_arxio_rejects_source_over_utf8_byte_limit(
     """
     title: In-memory source uses a stable UTF-8 byte limit diagnostic.
     parameters:
-      monkeypatch:
-        type: pytest.MonkeyPatch
+      monkeypatch: Fixture for temporarily replacing dependencies and settings.
     """
     monkeypatch.setattr(io_module, "MAX_SOURCE_BYTES", 4)
     with pytest.raises(SourceError) as captured:
@@ -178,8 +172,7 @@ def test_arxio_rejects_non_utf8_source_file(tmp_path: Path) -> None:
     """
     title: Invalid file encoding becomes an expected source diagnostic.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     source = tmp_path / "invalid.x"
     source.write_bytes(b"\xff\xfe")
@@ -271,8 +264,7 @@ def test_cli_show_version(capsys: pytest.CaptureFixture[str]) -> None:
     """
     title: Test version output.
     parameters:
-      capsys:
-        type: pytest.CaptureFixture[str]
+      capsys: Fixture capturing standard output and error streams.
     """
     cli_module.show_version()
     assert __version__ in capsys.readouterr().out
@@ -282,16 +274,18 @@ def test_cli_app_version_branch(monkeypatch: pytest.MonkeyPatch) -> None:
     """
     title: Test CLI app version branch.
     parameters:
-      monkeypatch:
-        type: pytest.MonkeyPatch
+      monkeypatch: Fixture for temporarily replacing dependencies and settings.
     """
 
     class DummyParser:
+        """
+        title: Parser stub for CLI routing tests.
+        """
+
         def parse_args(self) -> Namespace:
             """
             title: Return CLI args for the version branch.
-            returns:
-              type: Namespace
+            returns: CLI args for the version branch.
             """
             return Namespace(
                 input_files=[],
@@ -318,8 +312,7 @@ def test_cli_app_version_branch(monkeypatch: pytest.MonkeyPatch) -> None:
     def fake_get_args() -> DummyParser:
         """
         title: Return a dummy CLI parser.
-        returns:
-          type: DummyParser
+        returns: A dummy CLI parser.
         """
         return DummyParser()
 
@@ -334,11 +327,16 @@ def test_cli_app_test_branch(monkeypatch: pytest.MonkeyPatch) -> None:
     """
     title: Test CLI dispatch for the `arx test` subcommand.
     parameters:
-      monkeypatch:
-        type: pytest.MonkeyPatch
+      monkeypatch: Fixture for temporarily replacing dependencies and settings.
     """
 
     class DummyMain:
+        """
+        title: Compiler entry-point stub for CLI tests.
+        attributes:
+          called_kwargs: Called kwargs.
+        """
+
         called_kwargs: dict[str, object] = {}
 
         def __init__(self) -> None:
@@ -352,10 +350,10 @@ def test_cli_app_test_branch(monkeypatch: pytest.MonkeyPatch) -> None:
             title: Record forwarded test-runner kwargs.
             parameters:
               kwargs:
-                type: object
                 variadic: keyword
-            returns:
-              type: int
+                description: Keyword arguments.
+            returns: 'Result of this operation: record forwarded test-runner
+              kwargs.'
             """
             DummyMain.called_kwargs = kwargs
             return 0
@@ -390,10 +388,8 @@ def test_cli_selects_runtime_checking_before_compiler_import(
     """
     title: CLI builds skip instrumentation while test discovery enables it.
     parameters:
-      arguments:
-        type: list[str]
-      enabled:
-        type: bool
+      arguments: Arguments supplied to the call.
+      enabled: Whether to use enabled.
     """
     env = os.environ.copy()
     env.pop("ARX_RUNTIME_TYPECHECK", None)
@@ -437,20 +433,22 @@ def test_cli_app_test_branch_nonzero_exit(
     """
     title: Test CLI exits nonzero when `arx test` reports failures.
     parameters:
-      monkeypatch:
-        type: pytest.MonkeyPatch
+      monkeypatch: Fixture for temporarily replacing dependencies and settings.
     """
 
     class DummyMain:
+        """
+        title: Compiler entry-point stub for CLI tests.
+        """
+
         def run_tests(self, **kwargs: object) -> int:
             """
             title: Return a failing exit status for the test branch.
             parameters:
               kwargs:
-                type: object
                 variadic: keyword
-            returns:
-              type: int
+                description: Keyword arguments.
+            returns: A failing exit status for the test branch.
             """
             del kwargs
             return 1
@@ -467,10 +465,8 @@ def test_cli_app_test_autoloads_tests_settings(
     """
     title: Auto-load tests settings from .arxproject.toml when present.
     parameters:
-      monkeypatch:
-        type: pytest.MonkeyPatch
-      tmp_path:
-        type: Path
+      monkeypatch: Fixture for temporarily replacing dependencies and settings.
+      tmp_path: Temporary directory for this test.
     """
     (tmp_path / ".arxproject.toml").write_text(
         '[project]\nname = "demo"\nversion = "0.0.1"\n\n'
@@ -482,21 +478,24 @@ def test_cli_app_test_autoloads_tests_settings(
     captured_kwargs: dict[str, object] = {}
 
     class DummyRunner:
+        """
+        title: Test runner stub for CLI tests.
+        """
+
         def __init__(self, **kwargs: object) -> None:
             """
             title: Record runner kwargs.
             parameters:
               kwargs:
-                type: object
                 variadic: keyword
+                description: Keyword arguments.
             """
             captured_kwargs.update(kwargs)
 
         def run(self) -> object:
             """
             title: Return a passing summary placeholder.
-            returns:
-              type: object
+            returns: A passing summary placeholder.
             """
             return _TestRunSummary(
                 selected=0,
@@ -521,31 +520,32 @@ def test_cli_app_test_cli_exclude_reaches_runner(
     """
     title: CLI `--exclude` flag forwards to the runner as a tuple.
     parameters:
-      monkeypatch:
-        type: pytest.MonkeyPatch
-      tmp_path:
-        type: Path
+      monkeypatch: Fixture for temporarily replacing dependencies and settings.
+      tmp_path: Temporary directory for this test.
     """
     monkeypatch.chdir(tmp_path)
 
     captured_kwargs: dict[str, object] = {}
 
     class DummyRunner:
+        """
+        title: Test runner stub for CLI tests.
+        """
+
         def __init__(self, **kwargs: object) -> None:
             """
             title: Record runner kwargs.
             parameters:
               kwargs:
-                type: object
                 variadic: keyword
+                description: Keyword arguments.
             """
             captured_kwargs.update(kwargs)
 
         def run(self) -> object:
             """
             title: Return a passing summary placeholder.
-            returns:
-              type: object
+            returns: A passing summary placeholder.
             """
             return _TestRunSummary(
                 selected=0,
@@ -578,12 +578,9 @@ def test_cli_app_test_invalid_tests_config_exits_nonzero(
     """
     title: Invalid .arxproject.toml tests section exits 2 with an error.
     parameters:
-      monkeypatch:
-        type: pytest.MonkeyPatch
-      tmp_path:
-        type: Path
-      capsys:
-        type: pytest.CaptureFixture[str]
+      monkeypatch: Fixture for temporarily replacing dependencies and settings.
+      tmp_path: Temporary directory for this test.
+      capsys: Fixture capturing standard output and error streams.
     """
     (tmp_path / ".arxproject.toml").write_text(
         '[project]\nname = "demo"\nversion = "0.0.1"\n\n[tests]\npaths = 1\n',
@@ -592,13 +589,17 @@ def test_cli_app_test_invalid_tests_config_exits_nonzero(
     monkeypatch.chdir(tmp_path)
 
     class BoomRunner:
+        """
+        title: Test runner stub that raises an exception.
+        """
+
         def __init__(self, **kwargs: object) -> None:
             """
             title: Fail if the runner is ever constructed.
             parameters:
               kwargs:
-                type: object
                 variadic: keyword
+                description: Keyword arguments.
             """
             del kwargs
             raise AssertionError("runner must not be constructed")
@@ -606,8 +607,7 @@ def test_cli_app_test_invalid_tests_config_exits_nonzero(
         def run(self) -> object:
             """
             title: Unreachable.
-            returns:
-              type: object
+            returns: 'Result of this operation: unreachable.'
             """
             raise AssertionError("runner must not run")
 
@@ -628,21 +628,22 @@ def test_cli_app_run_branch(
     """
     title: Test CLI app run branch.
     parameters:
-      monkeypatch:
-        type: pytest.MonkeyPatch
-      tmp_path:
-        type: Path
+      monkeypatch: Fixture for temporarily replacing dependencies and settings.
+      tmp_path: Temporary directory for this test.
     """
     entry = tmp_path / "a.x"
     entry.write_text("", encoding="utf-8")
     monkeypatch.chdir(tmp_path)
 
     class DummyParser:
+        """
+        title: Parser stub for CLI routing tests.
+        """
+
         def parse_args(self) -> Namespace:
             """
             title: Return CLI args for the run branch.
-            returns:
-              type: Namespace
+            returns: CLI args for the run branch.
             """
             return Namespace(
                 input_files=["a.x"],
@@ -659,6 +660,12 @@ def test_cli_app_run_branch(
             )
 
     class DummyMain:
+        """
+        title: Compiler entry-point stub for CLI tests.
+        attributes:
+          called_kwargs: Called kwargs.
+        """
+
         called_kwargs: dict[str, object] = {}
 
         def run(self, **kwargs: object) -> None:
@@ -666,16 +673,15 @@ def test_cli_app_run_branch(
             title: Record forwarded CLI kwargs.
             parameters:
               kwargs:
-                type: object
                 variadic: keyword
+                description: Keyword arguments.
             """
             DummyMain.called_kwargs = kwargs
 
     def fake_get_args() -> DummyParser:
         """
         title: Return a dummy CLI parser.
-        returns:
-          type: DummyParser
+        returns: A dummy CLI parser.
         """
         return DummyParser()
 
@@ -694,21 +700,22 @@ def test_cli_app_run_alias(
     """
     title: Test CLI app run alias dispatch.
     parameters:
-      monkeypatch:
-        type: pytest.MonkeyPatch
-      tmp_path:
-        type: Path
+      monkeypatch: Fixture for temporarily replacing dependencies and settings.
+      tmp_path: Temporary directory for this test.
     """
     entry = tmp_path / "prog.x"
     entry.write_text("", encoding="utf-8")
     monkeypatch.chdir(tmp_path)
 
     class DummyParser:
+        """
+        title: Parser stub for CLI routing tests.
+        """
+
         def parse_args(self) -> Namespace:
             """
             title: Return CLI args for the run alias branch.
-            returns:
-              type: Namespace
+            returns: CLI args for the run alias branch.
             """
             return Namespace(
                 input_files=["run", "prog.x"],
@@ -725,6 +732,12 @@ def test_cli_app_run_alias(
             )
 
     class DummyMain:
+        """
+        title: Compiler entry-point stub for CLI tests.
+        attributes:
+          called_kwargs: Called kwargs.
+        """
+
         called_kwargs: dict[str, object] = {}
 
         def run(self, **kwargs: object) -> None:
@@ -732,16 +745,15 @@ def test_cli_app_run_alias(
             title: Record forwarded CLI kwargs.
             parameters:
               kwargs:
-                type: object
                 variadic: keyword
+                description: Keyword arguments.
             """
             DummyMain.called_kwargs = kwargs
 
     def fake_get_args() -> DummyParser:
         """
         title: Return a dummy CLI parser.
-        returns:
-          type: DummyParser
+        returns: A dummy CLI parser.
         """
         return DummyParser()
 
@@ -761,12 +773,9 @@ def test_cli_app_unknown_subcommand_exits_cleanly(
     """
     title: Test unknown subcommand tokens exit with code 2 and no traceback.
     parameters:
-      monkeypatch:
-        type: pytest.MonkeyPatch
-      tmp_path:
-        type: Path
-      capsys:
-        type: pytest.CaptureFixture[str]
+      monkeypatch: Fixture for temporarily replacing dependencies and settings.
+      tmp_path: Temporary directory for this test.
+      capsys: Fixture capturing standard output and error streams.
     """
     monkeypatch.chdir(tmp_path)
     with pytest.raises(SystemExit) as excinfo:
@@ -787,12 +796,9 @@ def test_cli_app_missing_input_file_exits_cleanly(
     """
     title: Test missing .x input file reports a precise file-not-found error.
     parameters:
-      monkeypatch:
-        type: pytest.MonkeyPatch
-      tmp_path:
-        type: Path
-      capsys:
-        type: pytest.CaptureFixture[str]
+      monkeypatch: Fixture for temporarily replacing dependencies and settings.
+      tmp_path: Temporary directory for this test.
+      capsys: Fixture capturing standard output and error streams.
     """
     monkeypatch.chdir(tmp_path)
     with pytest.raises(SystemExit) as excinfo:
@@ -812,12 +818,9 @@ def test_cli_app_rejects_multiple_direct_inputs(
     """
     title: Test multiple entry files fail before backend initialization.
     parameters:
-      monkeypatch:
-        type: pytest.MonkeyPatch
-      tmp_path:
-        type: Path
-      capsys:
-        type: pytest.CaptureFixture[str]
+      monkeypatch: Fixture for temporarily replacing dependencies and settings.
+      tmp_path: Temporary directory for this test.
+      capsys: Fixture capturing standard output and error streams.
     """
     first = tmp_path / "first.x"
     second = tmp_path / "second.x"
@@ -840,24 +843,25 @@ def test_cli_app_renders_parser_failure_without_traceback(
     """
     title: Test expected parser failures use the CLI diagnostic boundary.
     parameters:
-      monkeypatch:
-        type: pytest.MonkeyPatch
-      tmp_path:
-        type: Path
-      capsys:
-        type: pytest.CaptureFixture[str]
+      monkeypatch: Fixture for temporarily replacing dependencies and settings.
+      tmp_path: Temporary directory for this test.
+      capsys: Fixture capturing standard output and error streams.
     """
     source = tmp_path / "bad.x"
     source.write_text("bad", encoding="utf-8")
 
     class FailingMain:
+        """
+        title: Compiler stub for failure-reporting tests.
+        """
+
         def run(self, **kwargs: object) -> None:
             """
             title: Raise one expected parser error.
             parameters:
               kwargs:
-                type: object
                 variadic: keyword
+                description: Keyword arguments.
             """
             del kwargs
             raise ParserException(
@@ -885,24 +889,25 @@ def test_cli_app_renders_parser_failure_as_versioned_json(
     """
     title: Test the machine-readable compiler diagnostic schema.
     parameters:
-      monkeypatch:
-        type: pytest.MonkeyPatch
-      tmp_path:
-        type: Path
-      capsys:
-        type: pytest.CaptureFixture[str]
+      monkeypatch: Fixture for temporarily replacing dependencies and settings.
+      tmp_path: Temporary directory for this test.
+      capsys: Fixture capturing standard output and error streams.
     """
     source = tmp_path / "bad-json.x"
     source.write_text("bad", encoding="utf-8")
 
     class FailingMain:
+        """
+        title: Compiler stub for failure-reporting tests.
+        """
+
         def run(self, **kwargs: object) -> None:
             """
             title: Raise one located frontend failure.
             parameters:
               kwargs:
-                type: object
                 variadic: keyword
+                description: Keyword arguments.
             """
             del kwargs
             raise ParserException(
@@ -945,24 +950,25 @@ def test_cli_app_renders_irx_semantic_failure_without_traceback(
     """
     title: Test IRx semantic diagnostics cross the CLI failure boundary.
     parameters:
-      monkeypatch:
-        type: pytest.MonkeyPatch
-      tmp_path:
-        type: Path
-      capsys:
-        type: pytest.CaptureFixture[str]
+      monkeypatch: Fixture for temporarily replacing dependencies and settings.
+      tmp_path: Temporary directory for this test.
+      capsys: Fixture capturing standard output and error streams.
     """
     source = tmp_path / "bad-semantic.x"
     source.write_text("bad", encoding="utf-8")
 
     class FailingMain:
+        """
+        title: Compiler stub for failure-reporting tests.
+        """
+
         def run(self, **kwargs: object) -> None:
             """
             title: Raise one structured semantic failure.
             parameters:
               kwargs:
-                type: object
                 variadic: keyword
+                description: Keyword arguments.
             """
             del kwargs
             diagnostics = DiagnosticBag()
@@ -991,24 +997,25 @@ def test_cli_app_renders_all_semantic_diagnostics_as_json(
     """
     title: Test JSON mode preserves every semantic diagnostic in order.
     parameters:
-      monkeypatch:
-        type: pytest.MonkeyPatch
-      tmp_path:
-        type: Path
-      capsys:
-        type: pytest.CaptureFixture[str]
+      monkeypatch: Fixture for temporarily replacing dependencies and settings.
+      tmp_path: Temporary directory for this test.
+      capsys: Fixture capturing standard output and error streams.
     """
     source = tmp_path / "bad-semantic-json.x"
     source.write_text("bad", encoding="utf-8")
 
     class FailingMain:
+        """
+        title: Compiler stub for failure-reporting tests.
+        """
+
         def run(self, **kwargs: object) -> None:
             """
             title: Raise two structured semantic failures.
             parameters:
               kwargs:
-                type: object
                 variadic: keyword
+                description: Keyword arguments.
             """
             del kwargs
             diagnostics = DiagnosticBag()
@@ -1042,24 +1049,25 @@ def test_cli_app_sanitizes_internal_failures_by_default(
     """
     title: Test internal failures are sanitized unless traceback is requested.
     parameters:
-      monkeypatch:
-        type: pytest.MonkeyPatch
-      tmp_path:
-        type: Path
-      capsys:
-        type: pytest.CaptureFixture[str]
+      monkeypatch: Fixture for temporarily replacing dependencies and settings.
+      tmp_path: Temporary directory for this test.
+      capsys: Fixture capturing standard output and error streams.
     """
     source = tmp_path / "internal.x"
     source.write_text("bad", encoding="utf-8")
 
     class FailingMain:
+        """
+        title: Compiler stub for failure-reporting tests.
+        """
+
         def run(self, **kwargs: object) -> None:
             """
             title: Raise an unexpected internal failure.
             parameters:
               kwargs:
-                type: object
                 variadic: keyword
+                description: Keyword arguments.
             """
             del kwargs
             raise RuntimeError("internal invariant failed")
@@ -1086,24 +1094,25 @@ def test_cli_app_renders_sanitized_internal_failure_as_json(
     """
     title: Test internal failures preserve the JSON diagnostic envelope.
     parameters:
-      monkeypatch:
-        type: pytest.MonkeyPatch
-      tmp_path:
-        type: Path
-      capsys:
-        type: pytest.CaptureFixture[str]
+      monkeypatch: Fixture for temporarily replacing dependencies and settings.
+      tmp_path: Temporary directory for this test.
+      capsys: Fixture capturing standard output and error streams.
     """
     source = tmp_path / "internal-json.x"
     source.write_text("bad", encoding="utf-8")
 
     class FailingMain:
+        """
+        title: Compiler stub for failure-reporting tests.
+        """
+
         def run(self, **kwargs: object) -> None:
             """
             title: Raise an unexpected internal failure.
             parameters:
               kwargs:
-                type: object
                 variadic: keyword
+                description: Keyword arguments.
             """
             del kwargs
             raise RuntimeError("private implementation detail")
@@ -1125,8 +1134,7 @@ def test_python_m_entrypoint_calls_cli_app(
     """
     title: Test python -m arx entrypoint.
     parameters:
-      monkeypatch:
-        type: pytest.MonkeyPatch
+      monkeypatch: Fixture for temporarily replacing dependencies and settings.
     """
     called: dict[str, bool] = {"app": False}
 
@@ -1145,8 +1153,7 @@ def test_main_module_name_helper(tmp_path: Path) -> None:
     """
     title: Test module-name extraction helper outside project src_dir.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     sample = tmp_path / "examples" / "sample.x"
     sample.parent.mkdir()
@@ -1164,8 +1171,7 @@ def test_main_module_name_helper_uses_package_init_module_name(
     """
     title: Package __init__ files map to the package dotted name.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     project_root = tmp_path / "workspace"
     module_file = project_root / "src" / "samplepkg" / "__init__.x"
@@ -1192,8 +1198,7 @@ def test_main_module_name_helper_uses_src_relative_package_name(
     """
     title: Module-name extraction uses dotted names under [build].src_dir.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     project_root = tmp_path / "workspace"
     module_file = project_root / "src" / "samplepkg" / "core.x"
@@ -1227,8 +1232,7 @@ def test_arxmain_get_astx_single_file_returns_module(tmp_path: Path) -> None:
     """
     title: Single input file yields an astx.Module from _get_astx.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     src = tmp_path / "one.x"
     src.write_text(
@@ -1247,8 +1251,7 @@ def test_arxmain_get_astx_uses_package_init_module_name(
     """
     title: _get_astx maps package __init__ files to package names.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     project_root = tmp_path / "workspace"
     src = project_root / "src" / "samplepkg" / "__init__.x"
@@ -1276,8 +1279,7 @@ def test_arxmain_get_astx_uses_src_relative_module_name(
     """
     title: _get_astx uses dotted module names for package files.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     project_root = tmp_path / "workspace"
     src = project_root / "src" / "samplepkg" / "core.x"
@@ -1310,8 +1312,7 @@ def test_arxmain_get_codegen_rejects_multi_module_block() -> None:
     def fake_get_astx() -> astx.AST:
         """
         title: Return a multi-module block.
-        returns:
-          type: astx.AST
+        returns: A multi-module block.
         """
         return bundle
 
@@ -1393,10 +1394,8 @@ def test_arxmain_show_ast_prefers_to_json_when_repr_fails(
     """
     title: show_ast prints to_json when repr fails but to_json works.
     parameters:
-      monkeypatch:
-        type: pytest.MonkeyPatch
-      capsys:
-        type: pytest.CaptureFixture[str]
+      monkeypatch: Fixture for temporarily replacing dependencies and settings.
+      capsys: Fixture capturing standard output and error streams.
     """
     app = main_module.ArxMain(input_files=["irrelevant.x"])
 
@@ -1414,8 +1413,7 @@ def test_arxmain_show_ast_prefers_to_json_when_repr_fails(
         def __repr__(self) -> str:
             """
             title: Force repr failure.
-            returns:
-              type: str
+            returns: Printable representation of this instance.
             """
             raise RuntimeError("repr unavailable")
 
@@ -1423,10 +1421,8 @@ def test_arxmain_show_ast_prefers_to_json_when_repr_fails(
             """
             title: Return deterministic JSON text.
             parameters:
-              simplified:
-                type: bool
-            returns:
-              type: str
+              simplified: Whether to request the compact representation.
+            returns: Deterministic JSON text.
             """
             del simplified
             return '{"via": "json"}'
@@ -1434,8 +1430,8 @@ def test_arxmain_show_ast_prefers_to_json_when_repr_fails(
     def fake_get_astx_json() -> JsonTree:
         """
         title: Supply JsonTree for show_ast coverage.
-        returns:
-          type: JsonTree
+        returns: 'Result of this operation: supply JsonTree for show_ast
+          coverage.'
         """
         return JsonTree()
 
@@ -1450,10 +1446,8 @@ def test_arxmain_show_ast_fallback_tree_formatter_when_repr_fails(
     """
     title: show_ast uses _format_ast_fallback when repr and to_json fail.
     parameters:
-      monkeypatch:
-        type: pytest.MonkeyPatch
-      capsys:
-        type: pytest.CaptureFixture[str]
+      monkeypatch: Fixture for temporarily replacing dependencies and settings.
+      capsys: Fixture capturing standard output and error streams.
     """
     app = main_module.ArxMain(input_files=["irrelevant.x"])
 
@@ -1471,8 +1465,7 @@ def test_arxmain_show_ast_fallback_tree_formatter_when_repr_fails(
         def __repr__(self) -> str:
             """
             title: Force repr failure for AST nodes.
-            returns:
-              type: str
+            returns: Printable representation of this instance.
             """
             raise RuntimeError("repr broken")
 
@@ -1480,10 +1473,9 @@ def test_arxmain_show_ast_fallback_tree_formatter_when_repr_fails(
             """
             title: Force the JSON path to fail after repr fails.
             parameters:
-              simplified:
-                type: bool
-            returns:
-              type: str
+              simplified: Whether to request the compact representation.
+            returns: 'Result of this operation: force the JSON path to fail
+              after repr fails.'
             """
             del simplified
             raise RuntimeError("json also broken")
@@ -1491,8 +1483,8 @@ def test_arxmain_show_ast_fallback_tree_formatter_when_repr_fails(
     def fake_get_astx_badrepr() -> BadReprModule:
         """
         title: Supply BadReprModule for fallback formatter coverage.
-        returns:
-          type: BadReprModule
+        returns: 'Result of this operation: supply BadReprModule for fallback
+          formatter coverage.'
         """
         return BadReprModule()
 
@@ -1508,34 +1500,37 @@ def test_arxmain_get_astx_uses_all_inputs(
     """
     title: Test ArxMain internal AST aggregation.
     parameters:
-      monkeypatch:
-        type: pytest.MonkeyPatch
+      monkeypatch: Fixture for temporarily replacing dependencies and settings.
     """
     loaded_files: list[str] = []
     parsed_modules: list[str] = []
 
     class DummyLexer:
+        """
+        title: Lexer stub for CLI routing tests.
+        """
+
         def lex(self) -> list[str]:
             """
             title: Return placeholder lexer tokens.
-            returns:
-              type: list[str]
+            returns: Placeholder lexer tokens.
             """
             return ["TOKENS"]
 
     class DummyParser:
+        """
+        title: Parser stub for CLI routing tests.
+        """
+
         def parse(
             self, tokens: list[str], module_name: str = "main"
         ) -> astx.Module:
             """
             title: Return a module for the requested name.
             parameters:
-              tokens:
-                type: list[str]
-              module_name:
-                type: str
-            returns:
-              type: astx.Module
+              tokens: Tokens in source order.
+              module_name: Module name to resolve.
+            returns: A module for the requested name.
             """
             assert tokens == ["TOKENS"]
             parsed_modules.append(module_name)
@@ -1545,10 +1540,8 @@ def test_arxmain_get_astx_uses_all_inputs(
         """
         title: Record file loading requests.
         parameters:
-          cls:
-            type: type[ArxIO]
-          filename:
-            type: str
+          cls: Cls.
+          filename: Source or resource filename.
         """
         loaded_files.append(filename)
 
@@ -1574,8 +1567,7 @@ def test_arxmain_run_branches(monkeypatch: pytest.MonkeyPatch) -> None:
     """
     title: Test ArxMain.run dispatch branches.
     parameters:
-      monkeypatch:
-        type: pytest.MonkeyPatch
+      monkeypatch: Fixture for temporarily replacing dependencies and settings.
     """
     app = main_module.ArxMain()
 
@@ -1620,8 +1612,7 @@ def test_arxmain_run_branches(monkeypatch: pytest.MonkeyPatch) -> None:
     def fake_compile() -> bool:
         """
         title: Record compile dispatch.
-        returns:
-          type: bool
+        returns: 'Result of this operation: record compile dispatch.'
         """
         compiled["called"] = True
         return True
@@ -1653,27 +1644,27 @@ def test_arxmain_show_methods_and_compile(
     """
     title: Test ArxMain show/compile helpers.
     parameters:
-      monkeypatch:
-        type: pytest.MonkeyPatch
-      capsys:
-        type: pytest.CaptureFixture[str]
+      monkeypatch: Fixture for temporarily replacing dependencies and settings.
+      capsys: Fixture capturing standard output and error streams.
     """
     app = main_module.ArxMain(input_files=["sample.x"], output_file="out.o")
 
     class ReprTree:
+        """
+        title: Syntax tree stub with a printable structure.
+        """
+
         def __repr__(self) -> str:
             """
             title: Return a stable repr string.
-            returns:
-              type: str
+            returns: Printable representation of this instance.
             """
             return "TREE"
 
     def fake_get_astx_tree() -> ReprTree:
         """
         title: Return a tree with a stable repr.
-        returns:
-          type: ReprTree
+        returns: A tree with a stable repr.
         """
         return ReprTree()
 
@@ -1682,27 +1673,28 @@ def test_arxmain_show_methods_and_compile(
     assert "TREE" in capsys.readouterr().out
 
     class ReprFailTree:
+        """
+        title: Syntax tree stub for representation failures.
+        """
+
         def __repr__(self) -> str:
             """
             title: Raise when repr is requested.
-            returns:
-              type: str
+            returns: Printable representation of this instance.
             """
             raise RuntimeError("repr failure")
 
         def __str__(self) -> str:
             """
             title: Return a fallback string form.
-            returns:
-              type: str
+            returns: String representation of this instance.
             """
             return "TREE_FALLBACK"
 
     def fake_get_astx_tree_fallback() -> ReprFailTree:
         """
         title: Return a tree with a failing repr.
-        returns:
-          type: ReprFailTree
+        returns: A tree with a failing repr.
         """
         return ReprFailTree()
 
@@ -1711,11 +1703,14 @@ def test_arxmain_show_methods_and_compile(
     assert "TREE_FALLBACK" in capsys.readouterr().out
 
     class DummyLexer:
+        """
+        title: Lexer stub for CLI routing tests.
+        """
+
         def lex(self) -> list[str]:
             """
             title: Return placeholder tokens for show_tokens.
-            returns:
-              type: list[str]
+            returns: Placeholder tokens for show_tokens.
             """
             return ["tok-a", "tok-b"]
 
@@ -1723,10 +1718,8 @@ def test_arxmain_show_methods_and_compile(
         """
         title: Validate the requested source filename.
         parameters:
-          cls:
-            type: type[ArxIO]
-          filename:
-            type: str
+          cls: Cls.
+          filename: Source or resource filename.
         """
         assert filename == "sample.x"
 
@@ -1740,14 +1733,16 @@ def test_arxmain_show_methods_and_compile(
     assert "tok-b" in out
 
     class DummyIRShow:
+        """
+        title: Compiler stub that supplies LLVM output.
+        """
+
         def translate(self, tree: object) -> str:
             """
             title: Return placeholder LLVM IR text.
             parameters:
-              tree:
-                type: object
-            returns:
-              type: str
+              tree: Tree.
+            returns: Placeholder LLVM IR text.
             """
             return f"IR<{tree}>"
 
@@ -1757,6 +1752,15 @@ def test_arxmain_show_methods_and_compile(
     assert "IR<TREE>" in capsys.readouterr().out
 
     class DummyIRBuild:
+        """
+        title: Compiler stub for native build routing tests.
+        attributes:
+          built_tree: Built tree.
+          built_out: Built out.
+          built_link: Whether to use built link.
+          built_link_mode: Built link mode.
+        """
+
         built_tree: object | None = None
         built_out: str | None = None
         built_link: bool | None = None
@@ -1772,14 +1776,10 @@ def test_arxmain_show_methods_and_compile(
             """
             title: Record build arguments.
             parameters:
-              tree:
-                type: object
-              output_file:
-                type: str
-              link:
-                type: bool
-              link_mode:
-                type: str
+              tree: Tree.
+              output_file: Destination file for generated output.
+              link: Whether to use link.
+              link_mode: Link mode.
             """
             DummyIRBuild.built_tree = tree
             DummyIRBuild.built_out = output_file
@@ -1802,10 +1802,8 @@ def test_arxmain_show_llvm_ir_uses_translate_modules_for_imports(
     """
     title: show_llvm_ir should use IRx multi-module translation for imports.
     parameters:
-      monkeypatch:
-        type: pytest.MonkeyPatch
-      capsys:
-        type: pytest.CaptureFixture[str]
+      monkeypatch: Fixture for temporarily replacing dependencies and settings.
+      capsys: Fixture capturing standard output and error streams.
     """
     app = main_module.ArxMain(input_files=["app.x"])
     module = astx.Module("app")
@@ -1816,8 +1814,7 @@ def test_arxmain_show_llvm_ir_uses_translate_modules_for_imports(
     def fake_get_astx_tree() -> astx.AST:
         """
         title: Return a module containing imports.
-        returns:
-          type: astx.AST
+        returns: A module containing imports.
         """
         return module
 
@@ -1827,23 +1824,24 @@ def test_arxmain_show_llvm_ir_uses_translate_modules_for_imports(
         """
         title: Return a sentinel multi-module context.
         parameters:
-          tree:
-            type: astx.Module
-        returns:
-          type: tuple[object, object]
+          tree: Tree.
+        returns: A sentinel multi-module context.
         """
         assert tree is module
         return sentinel_root, sentinel_resolver
 
     class DummyIRShow:
+        """
+        title: Compiler stub that supplies LLVM output.
+        """
+
         def translate(self, tree: object) -> str:
             """
             title: Single-module translation should not be used here.
             parameters:
-              tree:
-                type: object
-            returns:
-              type: str
+              tree: Tree.
+            returns: 'Result of this operation: single-module translation
+              should not be used here.'
             """
             raise AssertionError(tree)
 
@@ -1851,12 +1849,10 @@ def test_arxmain_show_llvm_ir_uses_translate_modules_for_imports(
             """
             title: Record multi-module translation inputs.
             parameters:
-              root:
-                type: object
-              resolver:
-                type: object
-            returns:
-              type: str
+              root: Root module or resource.
+              resolver: Host-supplied module resolver.
+            returns: 'Result of this operation: record multi-module translation
+              inputs.'
             """
             assert root is sentinel_root
             assert resolver is sentinel_resolver
@@ -1881,8 +1877,7 @@ def test_arxmain_compile_uses_build_modules_for_imports(
     """
     title: compile should use IRx multi-module build for imports.
     parameters:
-      monkeypatch:
-        type: pytest.MonkeyPatch
+      monkeypatch: Fixture for temporarily replacing dependencies and settings.
     """
     app = main_module.ArxMain(input_files=["app.x"], output_file="out.o")
     module = astx.Module("app")
@@ -1893,8 +1888,7 @@ def test_arxmain_compile_uses_build_modules_for_imports(
     def fake_get_astx_tree() -> astx.AST:
         """
         title: Return a module containing imports.
-        returns:
-          type: astx.AST
+        returns: A module containing imports.
         """
         return module
 
@@ -1904,15 +1898,23 @@ def test_arxmain_compile_uses_build_modules_for_imports(
         """
         title: Return a sentinel multi-module build context.
         parameters:
-          tree:
-            type: astx.Module
-        returns:
-          type: tuple[object, object]
+          tree: Tree.
+        returns: A sentinel multi-module build context.
         """
         assert tree is module
         return sentinel_root, sentinel_resolver
 
     class DummyIRBuild:
+        """
+        title: Compiler stub for native build routing tests.
+        attributes:
+          built_root: Built root.
+          built_resolver: Built resolver.
+          built_out: Built out.
+          built_link: Whether to use built link.
+          built_link_mode: Built link mode.
+        """
+
         built_root: object | None = None
         built_resolver: object | None = None
         built_out: str | None = None
@@ -1923,11 +1925,10 @@ def test_arxmain_compile_uses_build_modules_for_imports(
             """
             title: Single-module build should not be used here.
             parameters:
-              tree:
-                type: object
+              tree: Tree.
               kwargs:
-                type: object
                 variadic: keyword
+                description: Keyword arguments.
             """
             del kwargs
             raise AssertionError(tree)
@@ -1943,16 +1944,11 @@ def test_arxmain_compile_uses_build_modules_for_imports(
             """
             title: Record multi-module build arguments.
             parameters:
-              root:
-                type: object
-              resolver:
-                type: object
-              output_file:
-                type: str
-              link:
-                type: bool
-              link_mode:
-                type: str
+              root: Root module or resource.
+              resolver: Host-supplied module resolver.
+              output_file: Destination file for generated output.
+              link: Whether to use link.
+              link_mode: Link mode.
             """
             DummyIRBuild.built_root = root
             DummyIRBuild.built_resolver = resolver
@@ -1983,20 +1979,26 @@ def test_arxmain_compile_default_output_name(
     """
     title: Test compile default output file resolution.
     parameters:
-      monkeypatch:
-        type: pytest.MonkeyPatch
+      monkeypatch: Fixture for temporarily replacing dependencies and settings.
     """
     app = main_module.ArxMain(input_files=["examples/print-star.x"])
 
     def fake_get_astx_tree() -> object:
         """
         title: Return a placeholder AST object.
-        returns:
-          type: object
+        returns: A placeholder AST object.
         """
         return object()
 
     class DummyIRBuild:
+        """
+        title: Compiler stub for native build routing tests.
+        attributes:
+          built_out: Built out.
+          built_link: Whether to use built link.
+          built_link_mode: Built link mode.
+        """
+
         built_out: str | None = None
         built_link: bool | None = None
         built_link_mode: str | None = None
@@ -2011,14 +2013,10 @@ def test_arxmain_compile_default_output_name(
             """
             title: Record build arguments.
             parameters:
-              tree:
-                type: object
-              output_file:
-                type: str
-              link:
-                type: bool
-              link_mode:
-                type: str
+              tree: Tree.
+              output_file: Destination file for generated output.
+              link: Whether to use link.
+              link_mode: Link mode.
             """
             del tree
             DummyIRBuild.built_out = output_file
@@ -2042,20 +2040,25 @@ def test_arxmain_compile_links_when_main_present(
     """
     title: Test compile links output when module has main.
     parameters:
-      monkeypatch:
-        type: pytest.MonkeyPatch
+      monkeypatch: Fixture for temporarily replacing dependencies and settings.
     """
     app = main_module.ArxMain(input_files=["examples/fibonacci.x"])
 
     def fake_get_astx_tree() -> object:
         """
         title: Return a placeholder AST object.
-        returns:
-          type: object
+        returns: A placeholder AST object.
         """
         return object()
 
     class DummyIRBuild:
+        """
+        title: Compiler stub for native build routing tests.
+        attributes:
+          built_link: Whether to use built link.
+          built_link_mode: Built link mode.
+        """
+
         built_link: bool | None = None
         built_link_mode: str | None = None
 
@@ -2069,14 +2072,10 @@ def test_arxmain_compile_links_when_main_present(
             """
             title: Record build arguments.
             parameters:
-              tree:
-                type: object
-              output_file:
-                type: str
-              link:
-                type: bool
-              link_mode:
-                type: str
+              tree: Tree.
+              output_file: Destination file for generated output.
+              link: Whether to use link.
+              link_mode: Link mode.
             """
             del tree, output_file
             DummyIRBuild.built_link = link
@@ -2086,10 +2085,9 @@ def test_arxmain_compile_links_when_main_present(
         """
         title: Pretend that the AST contains main.
         parameters:
-          node:
-            type: object
-        returns:
-          type: bool
+          node: Syntax node to process.
+        returns: 'Result of this operation: pretend that the AST contains
+          main.'
         """
         del node
         return True
@@ -2110,16 +2108,15 @@ def test_arxmain_run_requires_executable_for_run_flag(
     """
     title: Test run flag fails when compile does not produce executable.
     parameters:
-      monkeypatch:
-        type: pytest.MonkeyPatch
+      monkeypatch: Fixture for temporarily replacing dependencies and settings.
     """
     app = main_module.ArxMain()
 
     def fake_compile() -> bool:
         """
         title: Pretend that compile produced no executable.
-        returns:
-          type: bool
+        returns: 'Result of this operation: pretend that compile produced
+          no executable.'
         """
         return False
 
@@ -2135,10 +2132,8 @@ def test_arxmain_run_binary_uses_absolute_path(
     """
     title: Test run_binary executes resolved absolute path.
     parameters:
-      monkeypatch:
-        type: pytest.MonkeyPatch
-      tmp_path:
-        type: Path
+      monkeypatch: Fixture for temporarily replacing dependencies and settings.
+      tmp_path: Temporary directory for this test.
     """
     app = main_module.ArxMain(output_file="print-star")
 
@@ -2150,12 +2145,10 @@ def test_arxmain_run_binary_uses_absolute_path(
         """
         title: Record subprocess execution arguments.
         parameters:
-          cmd:
-            type: list[str]
-          check:
-            type: bool
-        returns:
-          type: subprocess.CompletedProcess[str]
+          cmd: Cmd.
+          check: Whether to use check.
+        returns: 'Result of this operation: record subprocess execution
+          arguments.'
         """
         recorded["cmd"] = cmd
         recorded["check"] = check
@@ -2180,14 +2173,10 @@ def test_arxmain_run_binary_nonzero_exits(
     """
     title: Test run_binary exits with child return code on failure.
     parameters:
-      monkeypatch:
-        type: pytest.MonkeyPatch
-      tmp_path:
-        type: Path
-      capsys:
-        type: pytest.CaptureFixture[str]
-      returncode:
-        type: int
+      monkeypatch: Fixture for temporarily replacing dependencies and settings.
+      tmp_path: Temporary directory for this test.
+      capsys: Fixture capturing standard output and error streams.
+      returncode: Returncode.
     """
     app = main_module.ArxMain(output_file="print-star")
 
@@ -2197,12 +2186,9 @@ def test_arxmain_run_binary_nonzero_exits(
         """
         title: Return a failing subprocess result.
         parameters:
-          cmd:
-            type: list[str]
-          check:
-            type: bool
-        returns:
-          type: subprocess.CompletedProcess[str]
+          cmd: Cmd.
+          check: Whether to use check.
+        returns: A failing subprocess result.
         """
         del cmd
         del check
@@ -2235,10 +2221,8 @@ def test_arxmain_run_binary_signal_preserves_child_output(
     """
     title: A real signaled child preserves its output and adds a diagnosis.
     parameters:
-      tmp_path:
-        type: Path
-      capfd:
-        type: pytest.CaptureFixture[str]
+      tmp_path: Temporary directory for this test.
+      capfd: Fixture capturing native and Python output streams.
     """
     child = tmp_path / "signal-child"
     child.write_text(
@@ -2269,12 +2253,9 @@ def _write_resolver_project(
     """
     title: Write a minimal project manifest for resolver tests.
     parameters:
-      project_root:
-        type: Path
-      name:
-        type: str
-      dependencies:
-        type: tuple[str, Ellipsis]
+      project_root: Project root.
+      name: Name identifying the declaration or operation.
+      dependencies: Dependencies.
     """
     dependency_lines = ""
     if dependencies:
@@ -2300,18 +2281,13 @@ def _write_installed_arx_distribution(
     """
     title: Write a minimal installed Arx distribution fixture.
     parameters:
-      site_packages:
-        type: Path
-      distribution_name:
-        type: str
-      module_name:
-        type: str
-      files:
-        type: dict[str, str]
-      requires:
-        type: tuple[str, Ellipsis]
-    returns:
-      type: Path
+      site_packages: Site packages.
+      distribution_name: Name of distribution.
+      module_name: Module name to resolve.
+      files: Files.
+      requires: Requires.
+    returns: 'Result of this operation: write a minimal installed
+      Arx distribution fixture.'
     """
     package_dir = site_packages / module_name
     package_dir.mkdir(parents=True)
@@ -2368,20 +2344,14 @@ def _write_installed_arx_src_distribution(
     """
     title: Write an installed Arx distribution with a src package layout.
     parameters:
-      site_packages:
-        type: Path
-      distribution_name:
-        type: str
-      project_dir_name:
-        type: str
-      module_name:
-        type: str
-      files:
-        type: dict[str, str]
-      requires:
-        type: tuple[str, Ellipsis]
-    returns:
-      type: Path
+      site_packages: Site packages.
+      distribution_name: Name of distribution.
+      project_dir_name: Name of project dir.
+      module_name: Module name to resolve.
+      files: Files.
+      requires: Requires.
+    returns: 'Result of this operation: write an installed Arx distribution
+      with a src package layout.'
     """
     project_dir = site_packages / project_dir_name
     package_dir = project_dir / "src" / module_name
@@ -2435,10 +2405,8 @@ def _write_python_only_distribution(
     """
     title: Write a minimal non-Arx installed distribution fixture.
     parameters:
-      site_packages:
-        type: Path
-      distribution_name:
-        type: str
+      site_packages: Site packages.
+      distribution_name: Name of distribution.
     """
     dist_info_name = distribution_name.replace("-", "_")
     dist_info = site_packages / f"{dist_info_name}-0.1.dist-info"
@@ -2460,11 +2428,10 @@ def test_file_import_resolver_rejects_ambiguous_package_and_module_paths(
     tmp_path: Path,
 ) -> None:
     """
-    title: >-
-      Resolver rejects specifiers that match both pkg.x and pkg/__init__.x.
+    title: Resolver rejects specifiers that match both pkg.x and
+      pkg/__init__.x.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     project_root = tmp_path / "ambiguous"
     src_dir = project_root / "src"
@@ -2501,8 +2468,7 @@ def test_file_import_resolver_honors_build_src_dir(tmp_path: Path) -> None:
     """
     title: FileImportResolver consults [build].src_dir from .arxproject.toml.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     project_root = tmp_path / "mypkg"
     src_dir = project_root / "sources"
@@ -2543,10 +2509,8 @@ def test_file_import_resolver_resolves_direct_installed_arx_dependency(
     """
     title: FileImportResolver resolves a direct installed Arx dependency.
     parameters:
-      tmp_path:
-        type: Path
-      monkeypatch:
-        type: pytest.MonkeyPatch
+      tmp_path: Temporary directory for this test.
+      monkeypatch: Fixture for temporarily replacing dependencies and settings.
     """
     project_root = tmp_path / "app"
     src_dir = project_root / "src"
@@ -2593,10 +2557,8 @@ def test_file_import_resolver_resolves_transitive_installed_arx_dependency(
     """
     title: FileImportResolver resolves transitive installed Arx dependencies.
     parameters:
-      tmp_path:
-        type: Path
-      monkeypatch:
-        type: pytest.MonkeyPatch
+      tmp_path: Temporary directory for this test.
+      monkeypatch: Fixture for temporarily replacing dependencies and settings.
     """
     project_root = tmp_path / "app"
     src_dir = project_root / "src"
@@ -2643,10 +2605,8 @@ def test_file_import_resolver_skips_inactive_transitive_requirements(
     """
     title: Inactive metadata markers are not indexed as Arx dependencies.
     parameters:
-      tmp_path:
-        type: Path
-      monkeypatch:
-        type: pytest.MonkeyPatch
+      tmp_path: Temporary directory for this test.
+      monkeypatch: Fixture for temporarily replacing dependencies and settings.
     """
     project_root = tmp_path / "app"
     src_dir = project_root / "src"
@@ -2700,10 +2660,8 @@ def test_file_import_resolver_honors_installed_package_src_dir(
     """
     title: Installed Arx package discovery honors build src_dir and package.
     parameters:
-      tmp_path:
-        type: Path
-      monkeypatch:
-        type: pytest.MonkeyPatch
+      tmp_path: Temporary directory for this test.
+      monkeypatch: Fixture for temporarily replacing dependencies and settings.
     """
     project_root = tmp_path / "app"
     src_dir = project_root / "src"
@@ -2744,10 +2702,8 @@ def test_file_import_resolver_local_source_shadows_installed_package(
     """
     title: Local project source keeps precedence over installed packages.
     parameters:
-      tmp_path:
-        type: Path
-      monkeypatch:
-        type: pytest.MonkeyPatch
+      tmp_path: Temporary directory for this test.
+      monkeypatch: Fixture for temporarily replacing dependencies and settings.
     """
     project_root = tmp_path / "app"
     src_dir = project_root / "src"
@@ -2790,10 +2746,8 @@ def test_file_import_resolver_ignores_python_only_dependency(
     """
     title: Python-only installed dependencies are not Arx import roots.
     parameters:
-      tmp_path:
-        type: Path
-      monkeypatch:
-        type: pytest.MonkeyPatch
+      tmp_path: Temporary directory for this test.
+      monkeypatch: Fixture for temporarily replacing dependencies and settings.
     """
     project_root = tmp_path / "app"
     src_dir = project_root / "src"
@@ -2824,10 +2778,8 @@ def test_file_import_resolver_reports_missing_installed_dependency(
     """
     title: Missing declared installed dependencies get a clear error.
     parameters:
-      tmp_path:
-        type: Path
-      monkeypatch:
-        type: pytest.MonkeyPatch
+      tmp_path: Temporary directory for this test.
+      monkeypatch: Fixture for temporarily replacing dependencies and settings.
     """
     project_root = tmp_path / "app"
     src_dir = project_root / "src"
@@ -2859,10 +2811,8 @@ def test_file_import_resolver_rejects_ambiguous_installed_module_paths(
     """
     title: Installed packages reject ambiguous module and package paths.
     parameters:
-      tmp_path:
-        type: Path
-      monkeypatch:
-        type: pytest.MonkeyPatch
+      tmp_path: Temporary directory for this test.
+      monkeypatch: Fixture for temporarily replacing dependencies and settings.
     """
     project_root = tmp_path / "app"
     src_dir = project_root / "src"
@@ -2905,10 +2855,8 @@ def test_file_import_resolver_keeps_reserved_namespaces_bundled(
     """
     title: Installed packages do not shadow reserved compiler namespaces.
     parameters:
-      tmp_path:
-        type: Path
-      monkeypatch:
-        type: pytest.MonkeyPatch
+      tmp_path: Temporary directory for this test.
+      monkeypatch: Fixture for temporarily replacing dependencies and settings.
     """
     project_root = tmp_path / "app"
     src_dir = project_root / "src"
@@ -2948,11 +2896,10 @@ def test_file_import_resolver_supports_nested_relative_imports(
     tmp_path: Path,
 ) -> None:
     """
-    title: >-
-      Nested package modules support same-level and parent relative imports.
+    title: Nested package modules support same-level and parent relative
+      imports.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     project_root = tmp_path / "samplepkg"
     src_dir = project_root / "src"
@@ -3026,8 +2973,7 @@ def test_file_import_resolver_rejects_top_level_parent_relative_import(
     """
     title: Top-level package modules cannot climb beyond the package root.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     project_root = tmp_path / "samplepkg"
     src_dir = project_root / "src"
@@ -3062,8 +3008,7 @@ def test_file_import_resolver_normalizes_relative_imports(
     """
     title: FileImportResolver normalizes relative imports against package keys.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     project_root = tmp_path / "samplepkg"
     src_dir = project_root / "src"

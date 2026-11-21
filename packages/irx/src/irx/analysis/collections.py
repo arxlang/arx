@@ -1,8 +1,7 @@
 """
 title: Collection capability helpers for semantic analysis.
-summary: >-
-  Centralize collection-kind detection, item-type extraction, and method
-  capability records for list, tuple, set, and dictionary operations.
+summary: Centralize collection-kind detection, item-type extraction, and
+  method capability records for list, tuple, set, and dictionary operations.
 """
 
 from __future__ import annotations
@@ -39,10 +38,8 @@ def collection_kind(
     """
     title: Return the collection kind represented by one type.
     parameters:
-      type_:
-        type: astx.DataType | None
-    returns:
-      type: CollectionKind | None
+      type_: Type expression to process.
+    returns: The collection kind represented by one type.
     """
     if isinstance(type_, astx.ListType):
         return CollectionKind.LIST
@@ -61,10 +58,8 @@ def is_collection_type(type_: astx.DataType | None) -> bool:
     """
     title: Return whether one type is a supported collection type.
     parameters:
-      type_:
-        type: astx.DataType | None
-    returns:
-      type: bool
+      type_: Type expression to process.
+    returns: Whether one type is a supported collection type.
     """
     return collection_kind(type_) is not None
 
@@ -76,14 +71,11 @@ def collection_value_types(
 ) -> tuple[astx.DataType, ...]:
     """
     title: Return value-like element types for one collection.
-    summary: >-
-      Lists and sets expose their element type, tuples expose all positional
-      member types, and dictionaries expose their value type.
+    summary: Lists and sets expose their element type, tuples expose all
+      positional member types, and dictionaries expose their value type.
     parameters:
-      type_:
-        type: astx.DataType | None
-    returns:
-      type: tuple[astx.DataType, Ellipsis]
+      type_: Type expression to process.
+    returns: Value-like element types for one collection.
     """
     list_type = list_element_type(type_)
     if list_type is not None:
@@ -114,14 +106,11 @@ def collection_contains_types(
 ) -> tuple[astx.DataType, ...]:
     """
     title: Return accepted containment probe types for one collection.
-    summary: >-
-      Dictionaries use key containment; other collections use value/element
-      containment.
+    summary: Dictionaries use key containment; other collections
+      use value/element containment.
     parameters:
-      type_:
-        type: astx.DataType | None
-    returns:
-      type: tuple[astx.DataType, Ellipsis]
+      type_: Type expression to process.
+    returns: Accepted containment probe types for one collection.
     """
     if isinstance(type_, astx.DictType) and isinstance(
         type_.key_type,
@@ -139,10 +128,8 @@ def collection_supports_sequence_search(
     """
     title: Return whether a collection supports index/count queries.
     parameters:
-      type_:
-        type: astx.DataType | None
-    returns:
-      type: bool
+      type_: Type expression to process.
+    returns: Whether a collection supports index/count queries.
     """
     return isinstance(type_, (astx.ListType, astx.TupleType))
 

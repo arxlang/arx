@@ -1,8 +1,7 @@
 """
 title: Expression parser mixin.
-summary: >-
-  Parse primary, postfix, unary, and binary expressions plus literal and call
-  syntax.
+summary: Parse primary, postfix, unary, and binary expressions plus literal
+  and call syntax.
 """
 
 from __future__ import annotations
@@ -39,8 +38,7 @@ class ExpressionParserMixin(ParserMixinBase):
     def parse_primary(self) -> astx.AST:
         """
         title: Parse the primary expression.
-        returns:
-          type: astx.AST
+        returns: Parsed the primary expression.
         """
         if self._is_operator("@"):
             raise ParserException(
@@ -151,10 +149,9 @@ class ExpressionParserMixin(ParserMixinBase):
         """
         title: Preserve source-ordered operands after an opening parenthesis.
         parameters:
-          allow_trailing:
-            type: bool
-        returns:
-          type: tuple[list[astx.DataType], list[astx.KeywordArgument]]
+          allow_trailing: Whether to use allow trailing.
+        returns: 'Result of this operation: preserve source-ordered operands
+          after an opening parenthesis.'
         """
         args: list[astx.DataType] = []
         keywords: list[astx.KeywordArgument] = []
@@ -190,13 +187,12 @@ class ExpressionParserMixin(ParserMixinBase):
     def parse_postfix(self) -> astx.AST:
         """
         title: Parse member access, method calls, and subscripts.
-        summary: >-
-          Reject same-line postfix increment and decrement at their operator
-          token; prefix mutation in a following statement remains valid.
-          DataFrame metadata calls retain ordinary method-call arguments and
-          locations; receiver-type and signature validation belong to IRx.
-        returns:
-          type: astx.AST
+        summary: Reject same-line postfix increment and decrement at
+          their operator token; prefix mutation in a following statement
+          remains valid. DataFrame metadata calls retain ordinary method-call
+          arguments and locations; receiver-type and signature validation
+          belong to IRx.
+        returns: Parsed member access, method calls, and subscripts.
         """
         expr = self.parse_primary()
 
@@ -291,8 +287,7 @@ class ExpressionParserMixin(ParserMixinBase):
     def parse_expression(self) -> astx.AST:
         """
         title: Parse an expression.
-        returns:
-          type: astx.AST
+        returns: Parsed an expression.
         """
         lhs = self.parse_unary()
         expression = self.parse_bin_op_rhs(0, lhs)
@@ -310,12 +305,11 @@ class ExpressionParserMixin(ParserMixinBase):
     def parse_assignment_or_expression(self) -> astx.AST:
         """
         title: Parse a scalar compound statement or an ordinary expression.
-        summary: >-
-          Only statement and count-loop dispatch may enter this path. Preserve
-          target, operator, and RHS locations without duplicating evaluations;
-          IRx validates mutability, numeric types, and loop binding identity.
-        returns:
-          type: astx.AST
+        summary: Only statement and count-loop dispatch may enter this path.
+          Preserve target, operator, and RHS locations without duplicating
+          evaluations; IRx validates mutability, numeric types, and loop
+          binding identity.
+        returns: Parsed a scalar compound statement or an ordinary expression.
         """
         target = self.tokens.cur_tok
         following = self._peek_token()
@@ -361,8 +355,7 @@ class ExpressionParserMixin(ParserMixinBase):
     def parse_int_expr(self) -> astx.LiteralInteger:
         """
         title: Parse the integer expression.
-        returns:
-          type: astx.LiteralInteger
+        returns: Parsed the integer expression.
         """
         result = astx.LiteralInteger(
             self.tokens.cur_tok.value, loc=self.tokens.cur_tok.location
@@ -373,8 +366,7 @@ class ExpressionParserMixin(ParserMixinBase):
     def parse_float_expr(self) -> astx.LiteralFloat:
         """
         title: Parse the float expression.
-        returns:
-          type: astx.LiteralFloat
+        returns: Parsed the float expression.
         """
         result = astx.LiteralFloat(
             self.tokens.cur_tok.source_text or str(self.tokens.cur_tok.value),
@@ -386,8 +378,7 @@ class ExpressionParserMixin(ParserMixinBase):
     def parse_string_expr(self) -> astx.LiteralString:
         """
         title: Parse the string expression.
-        returns:
-          type: astx.LiteralString
+        returns: Parsed the string expression.
         """
         result = astx.LiteralString(self.tokens.cur_tok.value)
         self.tokens.get_next_token()
@@ -396,8 +387,7 @@ class ExpressionParserMixin(ParserMixinBase):
     def parse_char_expr(self) -> astx.LiteralUTF8Char:
         """
         title: Parse the char expression.
-        returns:
-          type: astx.LiteralUTF8Char
+        returns: Parsed the char expression.
         """
         result = astx.LiteralUTF8Char(self.tokens.cur_tok.value)
         self.tokens.get_next_token()
@@ -406,8 +396,7 @@ class ExpressionParserMixin(ParserMixinBase):
     def parse_bool_expr(self) -> astx.LiteralBoolean:
         """
         title: Parse the bool expression.
-        returns:
-          type: astx.LiteralBoolean
+        returns: Parsed the bool expression.
         """
         result = astx.LiteralBoolean(self.tokens.cur_tok.value)
         self.tokens.get_next_token()
@@ -416,8 +405,7 @@ class ExpressionParserMixin(ParserMixinBase):
     def parse_none_expr(self) -> astx.LiteralNone:
         """
         title: Parse the none expression.
-        returns:
-          type: astx.LiteralNone
+        returns: Parsed the none expression.
         """
         result = astx.LiteralNone()
         self.tokens.get_next_token()
@@ -426,8 +414,7 @@ class ExpressionParserMixin(ParserMixinBase):
     def parse_paren_expr(self) -> astx.AST:
         """
         title: Parse the parenthesis expression.
-        returns:
-          type: astx.AST
+        returns: Parsed the parenthesis expression.
         """
         self._consume_operator("(")
         expr = self.parse_expression()
@@ -437,8 +424,7 @@ class ExpressionParserMixin(ParserMixinBase):
     def parse_array_expr(self) -> astx.ListExpr:
         """
         title: Parse ordered lists without selecting storage or types.
-        returns:
-          type: astx.ListExpr
+        returns: Parsed ordered lists without selecting storage or types.
         """
         location = self.tokens.cur_tok.location
         self._consume_operator("[")
@@ -460,10 +446,9 @@ class ExpressionParserMixin(ParserMixinBase):
         """
         title: Match a dotted import's complete binding before member access.
         parameters:
-          name:
-            type: str
-        returns:
-          type: str
+          name: Name identifying the declaration or operation.
+        returns: 'Result of this operation: match a dotted import''s complete
+          binding before member access.'
         """
         if self._name_is_shadowed(name):
             return name
@@ -503,8 +488,7 @@ class ExpressionParserMixin(ParserMixinBase):
     def parse_identifier_expr(self) -> astx.AST:
         """
         title: Parse the identifier expression.
-        returns:
-          type: astx.AST
+        returns: Parsed the identifier expression.
         """
         id_name = cast(str, self.tokens.cur_tok.value)
         id_loc = self.tokens.cur_tok.location
@@ -694,10 +678,8 @@ class ExpressionParserMixin(ParserMixinBase):
         """
         title: Parse one postfix subscript or tensor index expression.
         parameters:
-          base:
-            type: astx.AST
-        returns:
-          type: astx.AST
+          base: Base value or declaration.
+        returns: Parsed one postfix subscript or tensor index expression.
         """
         subscript_loc = self.tokens.cur_tok.location
         self._consume_operator("[")
@@ -788,8 +770,7 @@ class ExpressionParserMixin(ParserMixinBase):
     def parse_dataframe_constructor(self) -> astx.DataFrameLiteral:
         """
         title: Parse a builtin DataFrame constructor expression.
-        returns:
-          type: astx.DataFrameLiteral
+        returns: Parsed a builtin DataFrame constructor expression.
         """
         self._skip_inline_indents()
         self._consume_operator("{")
@@ -854,10 +835,8 @@ class ExpressionParserMixin(ParserMixinBase):
         """
         title: Return whether one expression is known as a DataFrame.
         parameters:
-          expr:
-            type: astx.AST
-        returns:
-          type: bool
+          expr: Expression to process.
+        returns: Whether one expression is known as a DataFrame.
         """
         if isinstance(expr, astx.DataFrameLiteral):
             return True
@@ -869,10 +848,8 @@ class ExpressionParserMixin(ParserMixinBase):
         """
         title: Return one DataFrame-aware access base when available.
         parameters:
-          base:
-            type: astx.AST
-        returns:
-          type: astx.AST | None
+          base: Base value or declaration.
+        returns: One DataFrame-aware access base when available.
         """
         if isinstance(base, astx.DataFrameLiteral):
             return base
@@ -896,12 +873,10 @@ class ExpressionParserMixin(ParserMixinBase):
         """
         title: Build and validate one DataFrame field-style column access.
         parameters:
-          base:
-            type: astx.AST
-          column_name:
-            type: str
-        returns:
-          type: astx.DataFrameColumnAccess
+          base: Base value or declaration.
+          column_name: Name of column.
+        returns: Constructed and validate one DataFrame field-style column
+          access.
         """
         dataframe_base = self._coerce_dataframe_base(base)
         if dataframe_base is None:
@@ -929,12 +904,10 @@ class ExpressionParserMixin(ParserMixinBase):
         """
         title: Build and validate one DataFrame string-key column access.
         parameters:
-          base:
-            type: astx.AST
-          column_name:
-            type: str
-        returns:
-          type: astx.DataFrameStringColumnAccess
+          base: Base value or declaration.
+          column_name: Name of column.
+        returns: Constructed and validate one DataFrame string-key column
+          access.
         """
         if isinstance(base, astx.Identifier):
             binding = self._lookup_dataframe_binding(base.name)
@@ -955,10 +928,8 @@ class ExpressionParserMixin(ParserMixinBase):
         """
         title: Return one tensor-aware indexing base when available.
         parameters:
-          base:
-            type: astx.AST
-        returns:
-          type: astx.AST | None
+          base: Base value or declaration.
+        returns: One tensor-aware indexing base when available.
         """
         if isinstance(base, astx.TensorLiteral):
             return base
@@ -977,15 +948,14 @@ class ExpressionParserMixin(ParserMixinBase):
     def parse_unary(self, min_precedence: int = 0) -> astx.AST:
         """
         title: Parse prefix expressions with comparison-binding word negation.
-        summary: >-
-          Word not binds below comparisons but above and/or and emits the
-          existing Boolean ! operation. Symbolic prefixes retain their higher
-          precedence; parenthesize not when used in a tighter operand.
+        summary: Word not binds below comparisons but above and/or and
+          emits the existing Boolean ! operation. Symbolic prefixes retain
+          their higher precedence; parenthesize not when used in a tighter
+          operand.
         parameters:
-          min_precedence:
-            type: int
-        returns:
-          type: astx.AST
+          min_precedence: Min precedence.
+        returns: Parsed prefix expressions with comparison-binding word
+          negation.
         """
         if self._is_operator("@"):
             raise ParserException(
@@ -1051,12 +1021,9 @@ class ExpressionParserMixin(ParserMixinBase):
         """
         title: Parse a binary expression rhs.
         parameters:
-          expr_prec:
-            type: int
-          lhs:
-            type: astx.AST
-        returns:
-          type: astx.AST
+          expr_prec: Expr prec.
+          lhs: Left operand.
+        returns: Parsed a binary expression rhs.
         """
         while True:
             cur_prec = self.get_tok_precedence()

@@ -41,14 +41,10 @@ def test_exact_rounding_boundaries(
     """
     title: Exact midpoints, subnormals and overflow use nearest-even rounding.
     parameters:
-      target:
-        type: astx.DataType
-      precision:
-        type: int
-      minimum:
-        type: int
-      maximum:
-        type: int
+      target: Destination of the operation.
+      precision: Precision.
+      minimum: Minimum.
+      maximum: Maximum.
     """
     # Enough decimal precision to construct every tested dyadic value exactly.
     with localcontext() as context:
@@ -101,8 +97,7 @@ def test_extreme_decimal_exponents_are_bounded(target: astx.DataType) -> None:
     """
     title: Compact huge exponents do not require enormous integer ratios.
     parameters:
-      target:
-        type: astx.DataType
+      target: Destination of the operation.
     """
     assert rounded_float(Decimal("1e1000000000"), target) == math.inf
     tiny = rounded_float(Decimal("-1e-1000000000"), target)
@@ -173,8 +168,8 @@ def test_integer_context_does_not_become_a_declared_type() -> None:
 
 def test_explicitly_typed_payload_is_not_rewritten() -> None:
     """
-    title: >-
-      Typed literals keep declared values; semantic constants hold rounding.
+    title: Typed literals keep declared values; semantic constants
+      hold rounding.
     """
     original = 0.1
     literal = astx.LiteralFloat32(original)
@@ -190,8 +185,8 @@ def test_explicitly_typed_payload_is_not_rewritten() -> None:
 
 def test_integer_to_float_constant_rounding_does_not_double_round() -> None:
     """
-    title: >-
-      Constant conversion agrees with direct LLVM integer-to-float rounding.
+    title: Constant conversion agrees with direct LLVM integer-to-float
+      rounding.
     """
     value = (1 << 62) + (1 << 38) + 1
     assert rounded_float(value, astx.Float32()) == float((1 << 62) + (1 << 39))
@@ -199,8 +194,8 @@ def test_integer_to_float_constant_rounding_does_not_double_round() -> None:
 
 def test_rounding_rejects_unsupported_inputs() -> None:
     """
-    title: >-
-      Exact rounding fails closed for nonfinite decimals and wrong targets.
+    title: Exact rounding fails closed for nonfinite decimals and
+      wrong targets.
     """
     with pytest.raises(TypeError, match="f16, f32, or f64"):
         rounded_float(Decimal(1), astx.Int32())
@@ -234,10 +229,8 @@ def test_list_inference_uses_every_domain(
     """
     title: Every permutation chooses the same lossless list element domain.
     parameters:
-      elements:
-        type: list[astx.DataType]
-      expected:
-        type: type[astx.DataType]
+      elements: Elements.
+      expected: Expected result for this case.
     """
 
     for permutation in permutations(elements):
@@ -267,8 +260,7 @@ def test_list_inference_rejects_ambiguous_or_unsupported_domains(
     """
     title: Empty, lossy, heterogeneous, and nested ownership fails in analysis.
     parameters:
-      elements:
-        type: list[astx.DataType]
+      elements: Elements.
     """
     with pytest.raises(SemanticError, match=r"concrete element|nested owned"):
         analyze(astx.ListExpr(elements))
@@ -297,8 +289,7 @@ def test_narrow_list_context_checks_all_exact_values(
     """
     title: Explicit narrow collection domains reject large values in any order.
     parameters:
-      elements:
-        type: list[int]
+      elements: Elements.
     """
     expression = astx.ListExpr(
         [astx.LiteralInteger(item) for item in elements]

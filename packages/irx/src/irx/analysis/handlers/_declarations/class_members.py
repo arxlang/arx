@@ -3,9 +3,8 @@
 
 """
 title: Declaration class-member resolution helpers.
-summary: >-
-  Resolve declared and effective class members, then finish class-definition
-  analysis from the normalized declaration metadata.
+summary: Resolve declared and effective class members, then finish
+  class-definition analysis from the normalized declaration metadata.
 """
 
 from __future__ import annotations
@@ -58,12 +57,9 @@ class DeclarationClassMemberVisitorMixin(DeclarationClassMethodVisitorMixin):
         """
         title: Resolve the declared member set for one class.
         parameters:
-          class_:
-            type: SemanticClass
-          mro:
-            type: tuple[SemanticClass, Ellipsis]
-        returns:
-          type: tuple[SemanticClassMember, Ellipsis]
+          class_: Class being processed.
+          mro: Mro.
+        returns: Resolved the declared member set for one class.
         """
         attribute_names: set[str] = set()
         method_groups: dict[str, list[SemanticClassMember]] = {}
@@ -483,20 +479,11 @@ class DeclarationClassMemberVisitorMixin(DeclarationClassMethodVisitorMixin):
         """
         title: Resolve the effective class members for one class.
         parameters:
-          class_:
-            type: SemanticClass
-          mro:
-            type: tuple[SemanticClass, Ellipsis]
-          declared_member_table:
-            type: dict[str, SemanticClassMember]
-          declared_method_groups:
-            type: dict[str, tuple[SemanticClassMember, Ellipsis]]
-        returns:
-          type: >-
-            tuple[dict[str, SemanticClassMember], dict[str,
-            tuple[SemanticClassMember, Ellipsis]], dict[str,
-            SemanticClassMemberResolution], dict[str,
-            tuple[SemanticClassMemberResolution, Ellipsis]]]
+          class_: Class being processed.
+          mro: Mro.
+          declared_member_table: Declared member table.
+          declared_method_groups: Declared method groups.
+        returns: Resolved the effective class members for one class.
         """
         ancestor_attributes = self._ancestor_declared_attributes(mro)
         ancestor_methods = self._ancestor_declared_method_groups(mro)
@@ -720,10 +707,8 @@ class DeclarationClassMemberVisitorMixin(DeclarationClassMethodVisitorMixin):
         """
         title: Resolve one class declaration up to structural metadata.
         parameters:
-          class_:
-            type: SemanticClass
-        returns:
-          type: SemanticClass
+          class_: Class being processed.
+        returns: Resolved one class declaration up to structural metadata.
         """
         with self.context.in_module(class_.module_key):
             return self.resolve_class_structure_in_module(class_)
@@ -732,12 +717,12 @@ class DeclarationClassMemberVisitorMixin(DeclarationClassMethodVisitorMixin):
         self, class_: SemanticClass
     ) -> SemanticClass:
         """
-        title: Resolve structural members in the declaring module's namespace.
+        title: Resolve structural members in the declaring module's
+          namespace.
         parameters:
-          class_:
-            type: SemanticClass
-        returns:
-          type: SemanticClass
+          class_: Class being processed.
+        returns: Resolved structural members in the declaring module's
+          namespace.
         """
         current = self.context.get_class(class_.module_key, class_.name)
         if current is None:
@@ -825,10 +810,9 @@ class DeclarationClassMemberVisitorMixin(DeclarationClassMethodVisitorMixin):
         """
         title: Resolve one class declaration into normalized semantic metadata.
         parameters:
-          class_:
-            type: SemanticClass
-        returns:
-          type: SemanticClass
+          class_: Class being processed.
+        returns: Resolved one class declaration into normalized semantic
+          metadata.
         """
         current = self.context.get_class(class_.module_key, class_.name)
         if current is None:
@@ -848,8 +832,7 @@ class DeclarationClassMemberVisitorMixin(DeclarationClassMethodVisitorMixin):
         """
         title: Visit ClassDefStmt nodes.
         parameters:
-          node:
-            type: astx.ClassDefStmt
+          node: Syntax node to process.
         """
         class_ = self.registry.register_class(node)
         self.bindings.bind_class(node.name, class_, node=node)

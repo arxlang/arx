@@ -23,10 +23,8 @@ def hook_method(name: str) -> astx.FunctionDef:
     """
     title: Build a void instance method with no explicit parameters.
     parameters:
-      name:
-        type: str
-    returns:
-      type: astx.FunctionDef
+      name: Name identifying the declaration or operation.
+    returns: Constructed a void instance method with no explicit parameters.
     """
     body = astx.Block()
     body.append(astx.FunctionReturn(astx.LiteralNone()))
@@ -66,12 +64,12 @@ def test_unknown_dunder_methods_are_rejected(
     name: str, is_static: bool
 ) -> None:
     """
-    title: Typos and future protocols cannot silently become ordinary methods.
+    title: Typos and future protocols cannot silently become ordinary
+      methods.
     parameters:
-      name:
-        type: str
-      is_static:
-        type: bool
+      name: Name identifying the declaration or operation.
+      is_static: Whether the member belongs to the class rather than
+        an instance.
     """
     method = hook_method(name)
     method.prototype.is_static = is_static
@@ -88,8 +86,7 @@ def test_hook_names_cannot_be_fields(name: str) -> None:
     """
     title: Instance storage cannot shadow a compiler lifecycle entry point.
     parameters:
-      name:
-        type: str
+      name: Name identifying the declaration or operation.
     """
     class_ = astx.ClassDefStmt(
         "Value",
@@ -109,10 +106,8 @@ def test_explicit_hook_calls_are_rejected(name: str, call_kind: str) -> None:
     """
     title: All ASTx method call forms preserve compiler-only hook entry.
     parameters:
-      name:
-        type: str
-      call_kind:
-        type: str
+      name: Name identifying the declaration or operation.
+      call_kind: Call kind.
     """
     base = astx.ClassDefStmt("Base", methods=[hook_method(name)])
     child = astx.ClassDefStmt("Child", bases=[astx.ClassType("Base")])
@@ -157,8 +152,7 @@ def test_context_hooks_remain_callable_and_dispatchable(name: str) -> None:
     """
     title: Existing context protocols do not acquire lifecycle restrictions.
     parameters:
-      name:
-        type: str
+      name: Name identifying the declaration or operation.
     """
     class_ = astx.ClassDefStmt("Value", methods=[hook_method(name)])
     call = astx.MethodCall(astx.Identifier("value"), name, [])
@@ -187,8 +181,7 @@ def test_module_functions_are_not_class_hooks(name: str) -> None:
     """
     title: Class-only protocols do not capture namespace function calls.
     parameters:
-      name:
-        type: str
+      name: Name identifying the declaration or operation.
     """
     call = astx.MethodCall(astx.Identifier("helpers"), name, [])
     main_body = astx.Block()

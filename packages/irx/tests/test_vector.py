@@ -20,8 +20,7 @@ VEC2 = 2
 def setup_builder() -> Visitor:
     """
     title: Return a visitor with a live IRBuilder positioned inside main().
-    returns:
-      type: Visitor
+    returns: A visitor with a live IRBuilder positioned inside main().
     """
     main_builder = Builder()
     visitor = main_builder.translator
@@ -44,18 +43,14 @@ def _make_binop_visitor(
     fma_rhs: ir.Value | None = None,
 ) -> Visitor:
     """
-    title: >-
-      Return a fresh visitor patched to inject pre-built IR values for the LHS,
-      RHS, and FMA_RHS identifiers.
+    title: Return a fresh visitor patched to inject pre-built IR values for
+      the LHS, RHS, and FMA_RHS identifiers.
     parameters:
-      lhs_val:
-        type: ir.Value
-      rhs_val:
-        type: ir.Value
-      fma_rhs:
-        type: ir.Value | None
-    returns:
-      type: Visitor
+      lhs_val: Left operand val.
+      rhs_val: Right operand val.
+      fma_rhs: Fma right operand.
+    returns: A fresh visitor patched to inject pre-built IR values for the
+      LHS, RHS, and FMA_RHS identifiers.
     """
     builder = setup_builder()
     original_visit = builder.visit
@@ -64,16 +59,14 @@ def _make_binop_visitor(
         """
         title: Mock visit.
         parameters:
-          node:
-            type: Any
+          node: Syntax node to process.
           args:
-            type: Any
             variadic: positional
+            description: Positional arguments.
           kwargs:
-            type: Any
             variadic: keyword
-        returns:
-          type: Any
+            description: Keyword arguments.
+        returns: 'Result of this operation: mock visit.'
         """
         if isinstance(node, astx.Identifier):
             mapping = {"LHS": lhs_val, "RHS": rhs_val, "FMA_RHS": fma_rhs}
@@ -90,12 +83,10 @@ def _make_binop_visitor(
         """
         title: Supply raw LLVM operands without simulating semantic analysis.
         parameters:
-          node:
-            type: astx.BinaryOp
-          unify_numeric:
-            type: bool
-        returns:
-          type: tuple[ir.Value, ir.Value, bool]
+          node: Syntax node to process.
+          unify_numeric: Whether to use unify numeric.
+        returns: 'Result of this operation: supply raw LLVM operands without
+          simulating semantic analysis.'
         """
         unsigned = bool(getattr(node, "unsigned", False))
         lhs, rhs = lhs_val, rhs_val
@@ -137,20 +128,14 @@ def _run_vector_binop(
     """
     title: Drive a BinaryOp through the visitor and return the result.
     parameters:
-      op_code:
-        type: str
-      lhs_val:
-        type: ir.Value
-      rhs_val:
-        type: ir.Value
-      unsigned:
-        type: bool | None
-      fma_rhs:
-        type: ir.Value | None
-      fast_math:
-        type: bool
-    returns:
-      type: ir.Value
+      op_code: Operator spelling.
+      lhs_val: Left operand val.
+      rhs_val: Right operand val.
+      unsigned: Whether to use unsigned semantics.
+      fma_rhs: Fma right operand.
+      fast_math: Whether to use fast math.
+    returns: 'Result of this operation: drive a BinaryOp through the visitor
+      and return the result.'
     """
     builder = _make_binop_visitor(lhs_val, rhs_val, fma_rhs)
     bin_op = astx.BinaryOp(
@@ -189,10 +174,8 @@ def _arith_id(case: tuple[Any, ...]) -> str:
     """
     title: Arith id.
     parameters:
-      case:
-        type: tuple[Any, Ellipsis]
-    returns:
-      type: str
+      case: Case.
+    returns: 'Result of this operation: arith id.'
     """
     elem, count, _, _, op, *_ = case
     return f"{elem.replace('_TYPE', '').lower()}x{count}_{op}"
@@ -213,24 +196,16 @@ def test_vector_arithmetic(
     is_fp: bool,
 ) -> None:
     """
-    title: >-
-      Vector arithmetic emits the correct instruction and preserves element
-      type and lane count for all supported numeric types.
+    title: Vector arithmetic emits the correct instruction and preserves
+      element type and lane count for all supported numeric types.
     parameters:
-      elem_attr:
-        type: str
-      count:
-        type: int
-      lhs_vals:
-        type: list[Any]
-      rhs_vals:
-        type: list[Any]
-      op:
-        type: str
-      mnemonic:
-        type: str
-      is_fp:
-        type: bool
+      elem_attr: Elem attr.
+      count: Number of items.
+      lhs_vals: Left operand vals.
+      rhs_vals: Right operand vals.
+      op: Op.
+      mnemonic: Mnemonic.
+      is_fp: Whether is fp.
     """
     builder = setup_builder()
     elem_ty = getattr(builder._llvm, elem_attr)
@@ -257,16 +232,12 @@ def test_vector_arithmetic(
 )
 def test_int_vector_division(unsigned: bool, want: str, reject: str) -> None:
     """
-    title: >-
-      Integer vector division emits sdiv for signed and udiv for unsigned, and
-      never emits the opposite variant.
+    title: Integer vector division emits sdiv for signed and udiv for unsigned,
+      and never emits the opposite variant.
     parameters:
-      unsigned:
-        type: bool
-      want:
-        type: str
-      reject:
-        type: str
+      unsigned: Whether to use unsigned semantics.
+      want: Want.
+      reject: Reject.
     """
     builder = setup_builder()
     vec_ty = ir.VectorType(builder._llvm.INT32_TYPE, VEC4)
@@ -296,10 +267,8 @@ def _splat_id(case: tuple[Any, ...]) -> str:
     """
     title: Splat id.
     parameters:
-      case:
-        type: tuple[Any, Ellipsis]
-    returns:
-      type: str
+      case: Case.
+    returns: 'Result of this operation: splat id.'
     """
     elem, count, _, _, lhs_is_vec, *_ = case
     order = "vec+scalar" if lhs_is_vec else "scalar+vec"
@@ -320,22 +289,15 @@ def test_scalar_splatted_to_vector(
     mnemonic: str,
 ) -> None:
     """
-    title: >-
-      A scalar operand is broadcast to all lanes of the partner vector
+    title: A scalar operand is broadcast to all lanes of the partner vector
       regardless of operand order.
     parameters:
-      elem_attr:
-        type: str
-      count:
-        type: int
-      vec_vals:
-        type: list[Any]
-      scalar_val:
-        type: float | int
-      lhs_is_vec:
-        type: bool
-      mnemonic:
-        type: str
+      elem_attr: Elem attr.
+      count: Number of items.
+      vec_vals: Vec vals.
+      scalar_val: Scalar val.
+      lhs_is_vec: Whether to use left operand is vec.
+      mnemonic: Mnemonic.
     """
     builder = setup_builder()
     elem_ty = getattr(builder._llvm, elem_attr)
@@ -402,10 +364,8 @@ def _cross_id(case: tuple[Any, ...]) -> str:
     """
     title: Cross id.
     parameters:
-      case:
-        type: tuple[Any, Ellipsis]
-    returns:
-      type: str
+      case: Case.
+    returns: 'Result of this operation: cross id.'
     """
     vec_e, sc_e, lhs_is_vec, *_ = case
     v = vec_e.replace("_TYPE", "").lower()
@@ -425,18 +385,13 @@ def test_fp_scalar_vector_cross_precision(
     expected_elem_attr: str,
 ) -> None:
     """
-    title: >-
-      Cross-precision FP scalar+vector ops produce the vector's element type
-      (scalar is cast to match).
+    title: Cross-precision FP scalar+vector ops produce the vector's element
+      type (scalar is cast to match).
     parameters:
-      vec_elem_attr:
-        type: str
-      scalar_attr:
-        type: str
-      lhs_is_vec:
-        type: bool
-      expected_elem_attr:
-        type: str
+      vec_elem_attr: Vec elem attr.
+      scalar_attr: Scalar attr.
+      lhs_is_vec: Whether to use left operand is vec.
+      expected_elem_attr: Expected elem attr.
     """
     builder = setup_builder()
     vec_elem_ty = getattr(builder._llvm, vec_elem_attr)
@@ -462,14 +417,11 @@ def test_fp_scalar_vector_cross_precision(
 )
 def test_vector_fma_direct(elem_attr: str, count: int) -> None:
     """
-    title: >-
-      _emit_fma produces a vector result of the correct type and registers the
-      llvm.fma intrinsic in the module.
+    title: _emit_fma produces a vector result of the correct type and registers
+      the llvm.fma intrinsic in the module.
     parameters:
-      elem_attr:
-        type: str
-      count:
-        type: int
+      elem_attr: Elem attr.
+      count: Number of items.
     """
     builder = setup_builder()
     elem_ty = getattr(builder._llvm, elem_attr)
@@ -486,9 +438,8 @@ def test_vector_fma_direct(elem_attr: str, count: int) -> None:
 
 def test_fma_via_binop_visitor() -> None:
     """
-    title: >-
-      FMA driven through the BinaryOp visitor produces a vector result and
-      emits the llvm.fma intrinsic.
+    title: FMA driven through the BinaryOp visitor produces a vector result
+      and emits the llvm.fma intrinsic.
     """
     builder = setup_builder()
     vec_ty = ir.VectorType(builder._llvm.FLOAT_TYPE, VEC4)
@@ -535,16 +486,12 @@ def test_vector_float_binop_uses_node_fast_math(
     expect_fast: bool,
 ) -> None:
     """
-    title: >-
-      Float vector BinaryOp nodes honour the node fast_math attribute when they
-      go through visit().
+    title: Float vector BinaryOp nodes honour the node fast_math attribute
+      when they go through visit().
     parameters:
-      op:
-        type: str
-      fast_math:
-        type: bool
-      expect_fast:
-        type: bool
+      op: Op.
+      fast_math: Whether to use fast math.
+      expect_fast: Whether to use expect fast.
     """
     builder = setup_builder()
     vec_ty = ir.VectorType(builder._llvm.FLOAT_TYPE, VEC4)
@@ -574,16 +521,12 @@ def test_fast_math_flag_restored_after_vector_binop(
     raises: bool,
 ) -> None:
     """
-    title: >-
-      Vector BinaryOp visits restore the prior fast-math state after success or
-      failure.
+    title: Vector BinaryOp visits restore the prior fast-math state after
+      success or failure.
     parameters:
-      op:
-        type: str
-      initial_fast_math:
-        type: bool
-      raises:
-        type: bool
+      op: Op.
+      initial_fast_math: Whether to use initial fast math.
+      raises: Whether to use raises.
     """
     builder = setup_builder()
     vec_ty = ir.VectorType(builder._llvm.FLOAT_TYPE, VEC4)
@@ -615,8 +558,7 @@ def test_fast_math_flag_restored_after_vector_fma(
     """
     title: Vector FMA visits restore the prior fast-math state.
     parameters:
-      initial_fast_math:
-        type: bool
+      initial_fast_math: Whether to use initial fast math.
     """
     builder = setup_builder()
     vec_ty = ir.VectorType(builder._llvm.FLOAT_TYPE, VEC4)
@@ -644,15 +586,12 @@ def test_vector_size_mismatch_raises(
     lhs_count: int, rhs_count: int, match: str
 ) -> None:
     """
-    title: >-
-      Mismatched vector sizes raise an exception with a descriptive message.
+    title: Mismatched vector sizes raise an exception with a descriptive
+      message.
     parameters:
-      lhs_count:
-        type: int
-      rhs_count:
-        type: int
-      match:
-        type: str
+      lhs_count: Number of left operand.
+      rhs_count: Number of right operand.
+      match: Match.
     """
     builder = setup_builder()
     elem_ty = builder._llvm.INT32_TYPE
@@ -696,14 +635,11 @@ def test_vector_element_type_mismatch_raises() -> None:
 )
 def test_unsupported_vector_op_raises(op: str, match: str) -> None:
     """
-    title: >-
-      Unsupported and unimplemented comparison operators all raise an
+    title: Unsupported and unimplemented comparison operators all raise an
       exception.
     parameters:
-      op:
-        type: str
-      match:
-        type: str
+      op: Op.
+      match: Match.
     """
     builder = setup_builder()
     vec_ty = ir.VectorType(builder._llvm.FLOAT_TYPE, VEC4)
@@ -746,24 +682,16 @@ def test_vector_edge_values(
     is_fp: bool,
 ) -> None:
     """
-    title: >-
-      Zero and negative-valued vectors are lowered without error and produce
-      the expected instruction and type.
+    title: Zero and negative-valued vectors are lowered without error and
+      produce the expected instruction and type.
     parameters:
-      elem_attr:
-        type: str
-      count:
-        type: int
-      vals:
-        type: list[Any]
-      other_val:
-        type: float | int
-      op:
-        type: str
-      mnemonic:
-        type: str
-      is_fp:
-        type: bool
+      elem_attr: Elem attr.
+      count: Number of items.
+      vals: Vals.
+      other_val: Other val.
+      op: Op.
+      mnemonic: Mnemonic.
+      is_fp: Whether is fp.
     """
     builder = setup_builder()
     elem_ty = getattr(builder._llvm, elem_attr)

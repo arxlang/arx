@@ -26,14 +26,10 @@ class Literal(DataTypeOps):
     """
     title: Literal Data type.
     attributes:
-      ref:
-        type: str
-      type_:
-        type: ExprType
-      loc:
-        type: SourceLocation
-      value:
-        type: Any
+      ref: Identifier associated with this node.
+      type_: Type associated with this expression.
+      loc: Source coordinates attached to this node.
+      value: Stored value.
     """
 
     ref: str
@@ -42,14 +38,16 @@ class Literal(DataTypeOps):
     loc: SourceLocation
     value: Any
 
-    def __init__(self, *args, **kwargs) -> None:  # type: ignore
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         """
         title: Initialize the literal base node.
         parameters:
           args:
             variadic: positional
+            description: Positional arguments.
           kwargs:
             variadic: keyword
+            description: Keyword arguments.
         """
         super().__init__(*args, **kwargs)
         self.ref = uuid4().hex
@@ -57,8 +55,7 @@ class Literal(DataTypeOps):
     def __str__(self) -> str:
         """
         title: Return a string that represents the object.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         class_name = self.__class__.__name__
         return f"{class_name}({self.value})"
@@ -67,10 +64,8 @@ class Literal(DataTypeOps):
         """
         title: Return the AST representation for the object.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         key = f"Literal[{self.type_}]: {self.value}"
         value = self.value
@@ -83,14 +78,10 @@ class LiteralNone(Literal):
     """
     title: LiteralNone data type.
     attributes:
-      loc:
-        type: SourceLocation
-      ref:
-        type: str
-      value:
-        type: None
-      type_:
-        type: NoneType
+      loc: Source coordinates attached to this node.
+      ref: Identifier associated with this node.
+      value: Stored value.
+      type_: Type associated with this expression.
     """
 
     ref: str
@@ -103,8 +94,7 @@ class LiteralNone(Literal):
         """
         title: Initialize LiteralNone.
         parameters:
-          loc:
-            type: SourceLocation
+          loc: Source coordinates associated with the node.
         """
         super().__init__(loc)
         self.value = None
@@ -114,10 +104,8 @@ class LiteralNone(Literal):
         """
         title: Represent explicit null in the supported scalar vocabulary.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         return self._prepare_struct(
             f"Literal[{self.type_}]: None", "none", simplified

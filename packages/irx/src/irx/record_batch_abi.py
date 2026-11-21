@@ -40,8 +40,7 @@ class ArrowArrayStream(ctypes.Structure):
 class ArrowSchema(ctypes.Structure):
     """
     title: Caller-owned Arrow C Data schema storage, not an Arrow C++ layout.
-    summary: >-
-      Matches irx_arrow_c_abi.h. Native release helpers own callback
+    summary: Matches irx_arrow_c_abi.h. Native release helpers own callback
       invocation; pointer fields remain opaque. This uses only the Python
       standard library.
     """
@@ -64,9 +63,9 @@ class ArrowSchema(ctypes.Structure):
 class ArrowArray(ctypes.Structure):
     """
     title: Caller-owned Arrow C Data array storage with opaque native buffers.
-    summary: >-
-      Matches irx_arrow_c_abi.h. Release callbacks are invoked by the native
-      helpers; this structure does not describe any Arrow C++ object layout.
+    summary: Matches irx_arrow_c_abi.h. Release callbacks are invoked by
+      the native helpers; this structure does not describe any Arrow C++
+      object layout.
     """
 
     _fields_ = [
@@ -87,8 +86,7 @@ class ArrowArray(ctypes.Structure):
 def record_batch_library_name() -> str:
     """
     title: Return the platform-native RecordBatch shared-library name.
-    returns:
-      type: str
+    returns: The platform-native RecordBatch shared-library name.
     """
     if sys.platform == "darwin":
         return "libirx_record_batch.dylib"
@@ -101,8 +99,7 @@ def record_batch_library_name() -> str:
 def irx_native_cache_dir() -> Path:
     """
     title: Return the explicit writable cache root for generated native code.
-    returns:
-      type: Path
+    returns: The explicit writable cache root for generated native code.
     """
     configured = os.environ.get(IRX_NATIVE_CACHE_DIR_ENV)
     if configured:
@@ -119,8 +116,7 @@ def irx_native_cache_dir() -> Path:
 def record_batch_library_path() -> Path:
     """
     title: Return the configured or ABI-scoped cached native library path.
-    returns:
-      type: Path
+    returns: The configured or ABI-scoped cached native library path.
     """
     configured = os.environ.get(IRX_RECORD_BATCH_LIBRARY_ENV)
     if configured:

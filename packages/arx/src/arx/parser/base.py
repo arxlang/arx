@@ -1,8 +1,7 @@
 """
 title: Shared parser mixin base.
-summary: >-
-  Declare parser state and cross-mixin method contracts so the parser can be
-  split by concern while keeping the public Parser API stable.
+summary: Declare parser state and cross-mixin method contracts so the parser
+  can be split by concern while keeping the public Parser API stable.
 """
 
 from __future__ import annotations
@@ -23,34 +22,20 @@ class ParserMixinBase:
     """
     title: Shared parser mixin contract.
     attributes:
-      bin_op_precedence:
-        type: dict[str, int]
-      indent_level:
-        type: int
-      list_scopes:
-        type: list[set[str]]
-      known_class_names:
-        type: set[str]
-      imported_type_names:
-        type: set[str]
-      namespace_roots:
-        type: set[str]
-      builtin_type_bindings:
-        type: dict[str, astx.DataType]
-      tensor_scopes:
-        type: list[dict[str, TensorBinding | None]]
-      dataframe_scopes:
-        type: list[dict[str, DataFrameBinding | None]]
-      return_type_scopes:
-        type: list[astx.DataType]
-      template_type_scopes:
-        type: list[dict[str, astx.DataType]]
-      type_aliases:
-        type: dict[str, astx.DataType]
-      value_scopes:
-        type: list[set[str]]
-      tokens:
-        type: TokenList
+      bin_op_precedence: Bin op precedence.
+      indent_level: Indent level.
+      list_scopes: List scopes.
+      known_class_names: Known class names.
+      imported_type_names: Imported type names.
+      namespace_roots: Namespace roots.
+      builtin_type_bindings: Builtin type bindings.
+      tensor_scopes: Tensor scopes.
+      dataframe_scopes: Dataframe scopes.
+      return_type_scopes: Return type scopes.
+      template_type_scopes: Template type scopes.
+      type_aliases: Type aliases.
+      value_scopes: Value scopes.
+      tokens: Tokens in source order.
     """
 
     bin_op_precedence: dict[str, int]
@@ -72,8 +57,7 @@ class ParserMixinBase:
         """
         title: Reject inference markers as names of declared types.
         parameters:
-          target:
-            type: str
+          target: Destination of the operation.
         """
         del target
         raise NotImplementedError
@@ -81,32 +65,31 @@ class ParserMixinBase:
     def parse_statement(self) -> astx.AST:
         """
         title: Parse a statement without admitting it as an expression operand.
-        returns:
-          type: astx.AST
+        returns: Parsed a statement without admitting it as an expression
+          operand.
         """
         raise NotImplementedError
 
     def parse_loop_transfer(self) -> astx.BreakStmt | astx.ContinueStmt:
         """
         title: Parse a statement-only transfer to the enclosing loop.
-        returns:
-          type: astx.BreakStmt | astx.ContinueStmt
+        returns: Parsed a statement-only transfer to the enclosing loop.
         """
         raise NotImplementedError
 
     def parse_with_stmt(self) -> astx.WithStmt:
         """
-        title: Parse a resource scope with an optional entered-value binding.
-        returns:
-          type: astx.WithStmt
+        title: Parse a resource scope with an optional entered-value
+          binding.
+        returns: Parsed a resource scope with an optional entered-value
+          binding.
         """
         raise NotImplementedError
 
     def parse_assignment_or_expression(self) -> astx.AST:
         """
         title: Parse a compound statement or ordinary count-loop expression.
-        returns:
-          type: astx.AST
+        returns: Parsed a compound statement or ordinary count-loop expression.
         """
         raise NotImplementedError
 
@@ -114,12 +97,10 @@ class ParserMixinBase:
         """
         title: Match a clause without consuming an unrelated line marker.
         parameters:
-          kind:
-            type: TokenKind
-          indentation:
-            type: int
-        returns:
-          type: bool
+          kind: Kind of value or operation.
+          indentation: Indentation.
+        returns: 'Result of this operation: match a clause without consuming
+          an unrelated line marker.'
         """
         del kind
         del indentation
@@ -135,14 +116,10 @@ class ParserMixinBase:
         """
         title: Push one visible-name scope.
         parameters:
-          declared_names:
-            type: tuple[str, Ellipsis]
-          declared_lists:
-            type: tuple[str, Ellipsis]
-          declared_tensors:
-            type: dict[str, TensorBinding | None] | None
-          declared_dataframes:
-            type: dict[str, DataFrameBinding | None] | None
+          declared_names: Declared names.
+          declared_lists: Declared lists.
+          declared_tensors: Declared tensors.
+          declared_dataframes: Declared dataframes.
         """
         del declared_names
         del declared_lists
@@ -160,8 +137,7 @@ class ParserMixinBase:
         """
         title: Record one visible value name in the current scope.
         parameters:
-          name:
-            type: str
+          name: Name identifying the declaration or operation.
         """
         del name
         raise NotImplementedError
@@ -170,10 +146,8 @@ class ParserMixinBase:
         """
         title: Return whether one visible value name shadows one class name.
         parameters:
-          name:
-            type: str
-        returns:
-          type: bool
+          name: Name identifying the declaration or operation.
+        returns: Whether one visible value name shadows one class name.
         """
         del name
         raise NotImplementedError
@@ -186,10 +160,8 @@ class ParserMixinBase:
         """
         title: Record one visible tensor binding in the current scope.
         parameters:
-          name:
-            type: str
-          binding:
-            type: TensorBinding | None
+          name: Name identifying the declaration or operation.
+          binding: Resolved binding for the operation.
         """
         del name
         del binding
@@ -199,10 +171,8 @@ class ParserMixinBase:
         """
         title: Return whether one visible name is declared as a tensor.
         parameters:
-          name:
-            type: str
-        returns:
-          type: bool
+          name: Name identifying the declaration or operation.
+        returns: Whether one visible name is declared as a tensor.
         """
         del name
         raise NotImplementedError
@@ -215,10 +185,8 @@ class ParserMixinBase:
         """
         title: Record one visible DataFrame binding in the current scope.
         parameters:
-          name:
-            type: str
-          binding:
-            type: DataFrameBinding | None
+          name: Name identifying the declaration or operation.
+          binding: Resolved binding for the operation.
         """
         del name
         del binding
@@ -228,10 +196,8 @@ class ParserMixinBase:
         """
         title: Return whether one visible name is declared as a DataFrame.
         parameters:
-          name:
-            type: str
-        returns:
-          type: bool
+          name: Name identifying the declaration or operation.
+        returns: Whether one visible name is declared as a DataFrame.
         """
         del name
         raise NotImplementedError
@@ -240,8 +206,7 @@ class ParserMixinBase:
         """
         title: Record one visible list binding in the current scope.
         parameters:
-          name:
-            type: str
+          name: Name identifying the declaration or operation.
         """
         del name
         raise NotImplementedError
@@ -250,10 +215,8 @@ class ParserMixinBase:
         """
         title: Return whether one visible name is declared as a list.
         parameters:
-          name:
-            type: str
-        returns:
-          type: bool
+          name: Name identifying the declaration or operation.
+        returns: Whether one visible name is declared as a list.
         """
         del name
         raise NotImplementedError
@@ -262,10 +225,9 @@ class ParserMixinBase:
         """
         title: Look up one visible tensor binding by name.
         parameters:
-          name:
-            type: str
-        returns:
-          type: TensorBinding | None
+          name: Name identifying the declaration or operation.
+        returns: 'Result of this operation: look up one visible tensor binding
+          by name.'
         """
         del name
         raise NotImplementedError
@@ -277,10 +239,9 @@ class ParserMixinBase:
         """
         title: Look up one visible DataFrame binding by name.
         parameters:
-          name:
-            type: str
-        returns:
-          type: DataFrameBinding | None
+          name: Name identifying the declaration or operation.
+        returns: 'Result of this operation: look up one visible DataFrame
+          binding by name.'
         """
         del name
         raise NotImplementedError
@@ -292,8 +253,7 @@ class ParserMixinBase:
         """
         title: Push one template-type scope.
         parameters:
-          template_params:
-            type: tuple[astx.TemplateParam, Ellipsis]
+          template_params: Template parameters declared by the callable.
         """
         del template_params
         raise NotImplementedError
@@ -308,10 +268,9 @@ class ParserMixinBase:
         """
         title: Look up one visible template bound by name.
         parameters:
-          name:
-            type: str
-        returns:
-          type: astx.DataType | None
+          name: Name identifying the declaration or operation.
+        returns: 'Result of this operation: look up one visible template
+          bound by name.'
         """
         del name
         raise NotImplementedError
@@ -320,8 +279,7 @@ class ParserMixinBase:
         """
         title: Push one active function return type.
         parameters:
-          return_type:
-            type: astx.DataType
+          return_type: Declared result type.
         """
         del return_type
         raise NotImplementedError
@@ -335,8 +293,7 @@ class ParserMixinBase:
     def _current_return_type(self) -> astx.DataType | None:
         """
         title: Return the active function return type when one exists.
-        returns:
-          type: astx.DataType | None
+        returns: The active function return type when one exists.
         """
         raise NotImplementedError
 
@@ -344,10 +301,8 @@ class ParserMixinBase:
         """
         title: Return one class name for a static access candidate.
         parameters:
-          expr:
-            type: astx.AST
-        returns:
-          type: str | None
+          expr: Expression to process.
+        returns: One class name for a static access candidate.
         """
         del expr
         raise NotImplementedError
@@ -356,10 +311,8 @@ class ParserMixinBase:
         """
         title: Return whether the current token matches one operator.
         parameters:
-          value:
-            type: str
-        returns:
-          type: bool
+          value: Value to process.
+        returns: Whether the current token matches one operator.
         """
         del value
         raise NotImplementedError
@@ -368,8 +321,7 @@ class ParserMixinBase:
         """
         title: Consume one expected operator token.
         parameters:
-          value:
-            type: str
+          value: Value to process.
         """
         del value
         raise NotImplementedError
@@ -378,10 +330,8 @@ class ParserMixinBase:
         """
         title: Return whether the current token matches one identifier value.
         parameters:
-          value:
-            type: str
-        returns:
-          type: bool
+          value: Value to process.
+        returns: Whether the current token matches one identifier value.
         """
         del value
         raise NotImplementedError
@@ -390,8 +340,7 @@ class ParserMixinBase:
         """
         title: Consume one expected contextual identifier.
         parameters:
-          value:
-            type: str
+          value: Value to process.
         """
         del value
         raise NotImplementedError
@@ -412,10 +361,9 @@ class ParserMixinBase:
         """
         title: Peek one token ahead without consuming it.
         parameters:
-          offset:
-            type: int
-        returns:
-          type: Token
+          offset: Offset within the data.
+        returns: 'Result of this operation: peek one token ahead without
+          consuming it.'
         """
         del offset
         raise NotImplementedError
@@ -424,10 +372,8 @@ class ParserMixinBase:
         """
         title: Return whether one token can start one expression.
         parameters:
-          token:
-            type: Token
-        returns:
-          type: bool
+          token: Token being processed.
+        returns: Whether one token can start one expression.
         """
         del token
         raise NotImplementedError
@@ -436,9 +382,10 @@ class ParserMixinBase:
         self,
     ) -> tuple[tuple[astx.DataType, ...], Token] | None:
         """
-        title: Speculatively parse one explicit template-argument list.
-        returns:
-          type: tuple[tuple[astx.DataType, Ellipsis], Token] | None
+        title: Speculatively parse one explicit template-argument
+          list.
+        returns: 'Result of this operation: speculatively parse one
+          explicit template-argument list.'
         """
         raise NotImplementedError
 
@@ -447,24 +394,21 @@ class ParserMixinBase:
     ) -> tuple[astx.DataType, ...] | None:
         """
         title: Parse explicit template arguments only for call syntax.
-        returns:
-          type: tuple[astx.DataType, Ellipsis] | None
+        returns: Parsed explicit template arguments only for call syntax.
         """
         raise NotImplementedError
 
     def get_tok_precedence(self) -> int:
         """
         title: Get the precedence of the pending binary operator token.
-        returns:
-          type: int
+        returns: The precedence of the pending binary operator token.
         """
         raise NotImplementedError
 
     def parse_expression(self) -> astx.AST:
         """
         title: Parse one expression.
-        returns:
-          type: astx.AST
+        returns: Parsed one expression.
         """
         raise NotImplementedError
 
@@ -479,18 +423,12 @@ class ParserMixinBase:
         """
         title: Parse one block of nodes.
         parameters:
-          allow_docstring:
-            type: bool
-          declared_names:
-            type: tuple[str, Ellipsis]
-          declared_lists:
-            type: tuple[str, Ellipsis]
-          declared_tensors:
-            type: dict[str, TensorBinding | None] | None
-          declared_dataframes:
-            type: dict[str, DataFrameBinding | None] | None
-        returns:
-          type: astx.Block
+          allow_docstring: Whether to use allow docstring.
+          declared_names: Declared names.
+          declared_lists: Declared lists.
+          declared_tensors: Declared tensors.
+          declared_dataframes: Declared dataframes.
+        returns: Parsed one block of nodes.
         """
         del (
             allow_docstring,
@@ -511,14 +449,10 @@ class ParserMixinBase:
         """
         title: Parse one type annotation.
         parameters:
-          allow_template_vars:
-            type: bool
-          allow_union:
-            type: bool
-          type_context:
-            type: TypeUseContext
-        returns:
-          type: astx.DataType
+          allow_template_vars: Whether to use allow template vars.
+          allow_union: Whether to use allow union.
+          type_context: Type context.
+        returns: Parsed one type annotation.
         """
         del allow_template_vars, allow_union, type_context
         raise NotImplementedError
@@ -526,8 +460,7 @@ class ParserMixinBase:
     def is_type_alias_decl_start(self) -> bool:
         """
         title: Return whether the current token starts a type alias.
-        returns:
-          type: bool
+        returns: Whether the current token starts a type alias.
         """
         raise NotImplementedError
 
@@ -544,10 +477,8 @@ class ParserMixinBase:
         """
         title: Parse a function definition.
         parameters:
-          template_params:
-            type: tuple[astx.TemplateParam, Ellipsis]
-        returns:
-          type: astx.FunctionDef
+          template_params: Template parameters declared by the callable.
+        returns: Parsed a function definition.
         """
         del template_params
         raise NotImplementedError
@@ -557,8 +488,7 @@ class ParserMixinBase:
     ) -> astx.ImportStmt | astx.ImportFromStmt:
         """
         title: Parse one import statement.
-        returns:
-          type: astx.ImportStmt | astx.ImportFromStmt
+        returns: Parsed one import statement.
         """
         raise NotImplementedError
 
@@ -569,10 +499,8 @@ class ParserMixinBase:
         """
         title: Parse one class declaration.
         parameters:
-          annotations:
-            type: ParsedAnnotation | None
-        returns:
-          type: astx.ClassDefStmt
+          annotations: Annotations.
+        returns: Parsed one class declaration.
         """
         del annotations
         raise NotImplementedError
@@ -585,10 +513,8 @@ class ParserMixinBase:
         """
         title: Parse declaration prefixes before one declaration.
         parameters:
-          body_indent:
-            type: int | None
-        returns:
-          type: ParsedDeclarationPrefixes
+          body_indent: Body indent.
+        returns: Parsed declaration prefixes before one declaration.
         """
         del body_indent
         raise NotImplementedError
@@ -598,32 +524,28 @@ class ParserMixinBase:
     ) -> tuple[astx.DataType, ...]:
         """
         title: Parse one explicit template-argument list.
-        returns:
-          type: tuple[astx.DataType, Ellipsis]
+        returns: Parsed one explicit template-argument list.
         """
         raise NotImplementedError
 
     def parse_if_stmt(self) -> astx.IfStmt:
         """
         title: Parse an if statement.
-        returns:
-          type: astx.IfStmt
+        returns: Parsed an if statement.
         """
         raise NotImplementedError
 
     def parse_while_stmt(self) -> astx.WhileStmt:
         """
         title: Parse a while statement.
-        returns:
-          type: astx.WhileStmt
+        returns: Parsed a while statement.
         """
         raise NotImplementedError
 
     def parse_for_stmt(self) -> astx.AST:
         """
         title: Parse a for statement.
-        returns:
-          type: astx.AST
+        returns: Parsed a for statement.
         """
         raise NotImplementedError
 
@@ -633,12 +555,9 @@ class ParserMixinBase:
         """
         title: Parse typed variable declarations.
         parameters:
-          name_token:
-            type: Token
-          modifiers:
-            type: ParsedAnnotation | None
-        returns:
-          type: astx.VariableDeclaration
+          name_token: Name token.
+          modifiers: Modifiers.
+        returns: Parsed typed variable declarations.
         """
         del name_token, modifiers
         raise NotImplementedError
@@ -646,16 +565,14 @@ class ParserMixinBase:
     def parse_assert_stmt(self) -> astx.AssertStmt:
         """
         title: Parse one fatal assertion statement.
-        returns:
-          type: astx.AssertStmt
+        returns: Parsed one fatal assertion statement.
         """
         raise NotImplementedError
 
     def parse_return_function(self) -> astx.FunctionReturn:
         """
         title: Parse a return statement.
-        returns:
-          type: astx.FunctionReturn
+        returns: Parsed a return statement.
         """
         raise NotImplementedError
 
@@ -663,10 +580,8 @@ class ParserMixinBase:
         """
         title: Parse function/extern prototypes.
         parameters:
-          expect_colon:
-            type: bool
-        returns:
-          type: astx.FunctionPrototype
+          expect_colon: Whether to use expect colon.
+        returns: Parsed function/extern prototypes.
         """
         del expect_colon
         raise NotImplementedError
@@ -678,10 +593,8 @@ class ParserMixinBase:
         """
         title: Build one default initializer for one typed declaration.
         parameters:
-          data_type:
-            type: astx.DataType
-        returns:
-          type: astx.Expr
+          data_type: Declared data type.
+        returns: Constructed one default initializer for one typed declaration.
         """
         del data_type
         raise NotImplementedError
@@ -689,8 +602,8 @@ class ParserMixinBase:
     def is_declaration_start(self) -> bool:
         """
         title: Recognize a same-line name-first declaration.
-        returns:
-          type: bool
+        returns: 'Result of this operation: recognize a same-line name-first
+          declaration.'
         """
         raise NotImplementedError
 
@@ -699,14 +612,12 @@ class ParserMixinBase:
     ) -> ParsedAnnotation | None:
         """
         title: Parse optional whitespace-separated declaration modifiers.
-        summary: >-
-          Keep declaration policy outside the type. Reject unknown, repeated,
-          conflicting, and unterminated groups without accepting ignored flags.
+        summary: Keep declaration policy outside the type. Reject unknown,
+          repeated, conflicting, and unterminated groups without accepting
+          ignored flags.
         parameters:
-          allow_layout:
-            type: bool
-        returns:
-          type: ParsedAnnotation | None
+          allow_layout: Whether to use allow layout.
+        returns: Parsed optional whitespace-separated declaration modifiers.
         """
         del allow_layout
         raise NotImplementedError
@@ -714,16 +625,16 @@ class ParserMixinBase:
     def parse_declaration_head(self) -> tuple[Token, ParsedAnnotation | None]:
         """
         title: Consume a declaration name, colon, and optional modifier group.
-        returns:
-          type: tuple[Token, ParsedAnnotation | None]
+        returns: 'Result of this operation: consume a declaration name, colon,
+          and optional modifier group.'
         """
         raise NotImplementedError
 
     def parse_named_declaration(self) -> astx.VariableDeclaration:
         """
         title: Parse a name-first variable declaration without function syntax.
-        returns:
-          type: astx.VariableDeclaration
+        returns: Parsed a name-first variable declaration without function
+          syntax.
         """
         raise NotImplementedError
 
@@ -736,12 +647,9 @@ class ParserMixinBase:
         """
         title: Validate one modifier list against a declaration target.
         parameters:
-          modifiers:
-            type: ParsedAnnotation | None
-          allowed:
-            type: frozenset[str]
-          target:
-            type: str
+          modifiers: Modifiers.
+          allowed: Allowed.
+          target: Destination of the operation.
         """
         del modifiers, allowed, target
         raise NotImplementedError
@@ -754,12 +662,9 @@ class ParserMixinBase:
         """
         title: Return whether one modifier is present.
         parameters:
-          modifiers:
-            type: ParsedAnnotation | None
-          expected:
-            type: str
-        returns:
-          type: bool
+          modifiers: Modifiers.
+          expected: Expected result for this case.
+        returns: Whether one modifier is present.
         """
         del modifiers, expected
         raise NotImplementedError
@@ -769,13 +674,12 @@ class ParserMixinBase:
         modifiers: ParsedAnnotation | None,
     ) -> astx.MutabilityKind:
         """
-        title: >-
-          Resolve Arx binding mutability for variables, fields, and parameters.
+        title: Resolve Arx binding mutability for variables, fields, and
+          parameters.
         parameters:
-          modifiers:
-            type: ParsedAnnotation | None
-        returns:
-          type: astx.MutabilityKind
+          modifiers: Modifiers.
+        returns: Resolved arx binding mutability for variables, fields, and
+          parameters.
         """
         del modifiers
         raise NotImplementedError
@@ -786,9 +690,7 @@ class ParserMixinBase:
         """
         title: Parse an extern declaration.
         parameters:
-          template_params:
-            type: tuple[astx.TemplateParam, Ellipsis]
-        returns:
-          type: astx.FunctionPrototype
+          template_params: Template parameters declared by the callable.
+        returns: Parsed an extern declaration.
         """
         raise NotImplementedError

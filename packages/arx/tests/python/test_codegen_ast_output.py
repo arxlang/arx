@@ -36,10 +36,9 @@ def compute_program(tmp_path_factory: pytest.TempPathFactory) -> Path:
     """
     title: Verify and link cross-module math with boundary auditing.
     parameters:
-      tmp_path_factory:
-        type: pytest.TempPathFactory
-    returns:
-      type: Path
+      tmp_path_factory: Factory for shared temporary test directories.
+    returns: 'Result of this operation: verify and link cross-module math
+      with boundary auditing.'
     """
     if sys.platform != "linux":
         pytest.skip("compute boundary auditing requires ELF --wrap")
@@ -229,12 +228,9 @@ def test_compute_transport_and_cleanup(
     """
     title: Shared native math preserves values and cleans owners on failure.
     parameters:
-      compute_program:
-        type: Path
-      mode:
-        type: str
-      role:
-        type: str | None
+      compute_program: Compute program.
+      mode: Selected processing mode.
+      role: Role.
     """
     result = subprocess.run(
         [str(compute_program)],
@@ -262,8 +258,8 @@ def test_compute_transport_and_cleanup(
 def scalar_module_ir() -> tuple[ArxBuilder, str]:
     """
     title: Translate scalar global updates and shadows once for native checks.
-    returns:
-      type: tuple[ArxBuilder, str]
+    returns: 'Result of this operation: translate scalar global updates and
+      shadows once for native checks.'
     """
     ArxIO.string_to_buffer(
         "```\ntitle: Scalar module storage\n```\n"
@@ -317,8 +313,7 @@ def test_scalar_module_global_storage(
     """
     title: Surface module declarations become internal scalar LLVM globals.
     parameters:
-      scalar_module_ir:
-        type: tuple[ArxBuilder, str]
+      scalar_module_ir: Scalar module IR.
     """
     _, text = scalar_module_ir
     module = llvm.parse_assembly(text)
@@ -347,10 +342,8 @@ def test_scalar_module_global_execution(
     """
     title: Global updates persist across calls while local shadows stay local.
     parameters:
-      scalar_module_ir:
-        type: tuple[ArxBuilder, str]
-      tmp_path:
-        type: Path
+      scalar_module_ir: Scalar module IR.
+      tmp_path: Temporary directory for this test.
     """
     builder, text = scalar_module_ir
     executable = tmp_path / "module-scalars"
@@ -373,8 +366,7 @@ def test_unsupported_module_storage_fails_before_lowering(
     """
     title: Unused unsupported globals fail with a real declaration location.
     parameters:
-      declaration:
-        type: str
+      declaration: Declaration being processed.
     """
     ArxIO.string_to_buffer(
         "```\ntitle: Unsupported module storage\n```\n"
@@ -399,8 +391,7 @@ def test_iterated_list_replacement_fails_at_assignment(stop: int) -> None:
     """
     title: Short, equal, and longer replacements fail before list lowering.
     parameters:
-      stop:
-        type: int
+      stop: Stopping position.
     """
     ArxIO.string_to_buffer(
         "```\ntitle: Iterated owner replacement\n```\n"
@@ -485,10 +476,8 @@ def test_compound_semantic_restrictions(body: str, message: str) -> None:
     """
     title: Invalid scalar domains and loop bindings fail in IRx, not lowering.
     parameters:
-      body:
-        type: str
-      message:
-        type: str
+      body: Statements forming the body.
+      message: Diagnostic or output message.
     """
     ArxIO.string_to_buffer(
         "```\ntitle: Invalid compound assignment\n```\n"
@@ -541,8 +530,7 @@ def test_elif_chain_translate(body: str) -> None:
     """
     title: Elif lowering preserves terminators and statement result stacks.
     parameters:
-      body:
-        type: str
+      body: Statements forming the body.
     """
     ArxIO.string_to_buffer(
         "```\ntitle: Conditional chains\n```\n"
@@ -579,8 +567,7 @@ def test_unsupported_subscript_reports_its_source(expression: str) -> None:
     """
     title: Unsupported subscripts diagnose the bracket, including Unicode.
     parameters:
-      expression:
-        type: str
+      expression: Expression to process.
     """
     line = f"  print({expression})"
     source = (
@@ -604,8 +591,8 @@ def test_unsupported_subscript_reports_its_source(expression: str) -> None:
 def literal_loop_ir() -> tuple[ArxBuilder, str]:
     """
     title: Translate list loop paths once for safety regressions.
-    returns:
-      type: tuple[ArxBuilder, str]
+    returns: 'Result of this operation: translate list loop paths once for
+      safety regressions.'
     """
     ArxIO.string_to_buffer(
         "```\ntitle: Bounded literal loop storage\n```\n"
@@ -635,8 +622,7 @@ def test_literal_loop_allocations_are_in_entry(
     """
     title: Loop scratch slots cannot accumulate on back edges.
     parameters:
-      literal_loop_ir:
-        type: tuple[ArxBuilder, str]
+      literal_loop_ir: Literal loop IR.
     """
     _, text = literal_loop_ir
     module = llvm.parse_assembly(text)
@@ -664,14 +650,11 @@ def literal_loop_binary(
     """
     title: Separate compilation setup from repeated constrained execution.
     parameters:
-      literal_loop_ir:
-        type: tuple[ArxBuilder, str]
-      tmp_path_factory:
-        type: pytest.TempPathFactory
-      request:
-        type: pytest.FixtureRequest
-    returns:
-      type: Path
+      literal_loop_ir: Literal loop IR.
+      tmp_path_factory: Factory for shared temporary test directories.
+      request: Fixture request providing the current test context.
+    returns: 'Result of this operation: separate compilation setup
+      from repeated constrained execution.'
     """
     builder, text = literal_loop_ir
     module = llvm.parse_assembly(text)
@@ -697,8 +680,7 @@ def test_literal_loop_runs_with_bounded_stack(
     """
     title: Reuse each optimized binary for short and long small-stack runs.
     parameters:
-      literal_loop_binary:
-        type: Path
+      literal_loop_binary: Literal loop binary.
     """
     launcher = (
         "import os, resource, sys; "
@@ -867,8 +849,7 @@ def test_ast_to_output(code: str) -> None:
     """
     title: Test AST to output.
     parameters:
-      code:
-        type: str
+      code: Source code or diagnostic identifier.
     """
     lexer = Lexer()
     parser = Parser()
@@ -887,8 +868,7 @@ def test_file_operations_translate_with_checked_cleanup(factory: str) -> None:
     """
     title: The public translate path emits status guards and lexical release.
     parameters:
-      factory:
-        type: str
+      factory: Factory.
     """
     ArxIO.string_to_buffer(
         "```\ntitle: File translate regression\n```\n"
@@ -932,8 +912,8 @@ def test_numeric_operand_plans_translate_mixed_widths() -> None:
 
 def test_numeric_union_comparison_has_a_resolved_storage_plan() -> None:
     """
-    title: >-
-      Numeric unions retain comparison support without a raw LLVM fallback.
+    title: Numeric unions retain comparison support without a raw
+      LLVM fallback.
     """
     ArxIO.string_to_buffer(
         "```\ntitle: Numeric union comparison translation\n```\n"
@@ -952,8 +932,8 @@ def test_numeric_union_comparison_has_a_resolved_storage_plan() -> None:
 
 def test_integer_helpers_translate_with_wide_range_arithmetic() -> None:
     """
-    title: >-
-      Range uses wide count and index arithmetic alongside checked helpers.
+    title: Range uses wide count and index arithmetic alongside checked
+      helpers.
     """
     ArxIO.string_to_buffer(
         "```\ntitle: Integer helper translation\n```\n"
@@ -978,11 +958,10 @@ def test_integer_helpers_translate_with_wide_range_arithmetic() -> None:
 @pytest.mark.parametrize("width", [8, 16, 32, 64])
 def test_math_templates_translate_concrete_widths(width: int) -> None:
     """
-    title: >-
-      Imported aliases lower inferred and explicit concrete template calls.
+    title: Imported aliases lower inferred and explicit concrete template
+      calls.
     parameters:
-      width:
-        type: int
+      width: Bit width or display width.
     """
     ArxIO.string_to_buffer(
         "```\ntitle: Signed math specialization translation\n```\n"
@@ -1064,8 +1043,7 @@ def test_native_package_translate_verifies(tmp_path: Path) -> None:
     """
     title: The public translate path consumes resolved native package features.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     fixture = Path(__file__).parents[1] / "fixtures" / "native-package"
     root_dir = tmp_path / "native"
@@ -1121,8 +1099,8 @@ def test_arrow_stdlib_translate_uses_resolved_native_capabilities() -> None:
 
 def test_nullable_dataframe_translate_uses_checked_record_batch_abi() -> None:
     """
-    title: >-
-      Nullable literals produce verified LLVM without a Parquet dependency.
+    title: Nullable literals produce verified LLVM without a Parquet
+      dependency.
     """
     ArxIO.string_to_buffer(
         "type Frame = dataframe[id:i64 | none, label:str | none]\n"
@@ -1224,10 +1202,8 @@ def test_nullable_semantic_errors(body: str, message: str) -> None:
     """
     title: Unsupported operations fail in semantics, not during LLVM emission.
     parameters:
-      body:
-        type: str
-      message:
-        type: str
+      body: Statements forming the body.
+      message: Diagnostic or output message.
     """
     ArxIO.string_to_buffer(
         "fn main() -> i32:\n"
@@ -1243,8 +1219,7 @@ def test_table_io_translate_uses_resolved_calls(namespace: bool) -> None:
     """
     title: CSV-only imported calls and direct casts emit verified native IR.
     parameters:
-      namespace:
-        type: bool
+      namespace: Whether to use namespace.
     """
     imports = (
         "import stdlib.csv as csv\n"
@@ -1285,12 +1260,9 @@ def test_format_stream_imports_translate(
     """
     title: Explicit stream types and import aliases retain native lifecycles.
     parameters:
-      module_name:
-        type: str
-      class_name:
-        type: str
-      alias:
-        type: bool
+      module_name: Module name to resolve.
+      class_name: Name of class.
+      alias: Whether to use alias.
     """
     local_name = "Stream" if alias else class_name
     imported = f"{class_name} as Stream" if alias else class_name
@@ -1340,8 +1312,8 @@ def test_table_io_names_do_not_grant_capabilities() -> None:
 def owned_list_ir() -> tuple[ArxBuilder, str]:
     """
     title: Reuse the compiled-language list workflow for translation tests.
-    returns:
-      type: tuple[ArxBuilder, str]
+    returns: 'Result of this operation: reuse the compiled-language list
+      workflow for translation tests.'
     """
     source = (Path(__file__).parents[1] / "arx" / "test_lists.x").read_text()
     source += (
@@ -1362,8 +1334,8 @@ def owned_list_ir() -> tuple[ArxBuilder, str]:
 def loop_transfer_ir() -> tuple[ArxBuilder, str]:
     """
     title: Translate statement scopes and loop cleanup once for native checks.
-    returns:
-      type: tuple[ArxBuilder, str]
+    returns: 'Result of this operation: translate statement scopes and loop
+      cleanup once for native checks.'
     """
     source = (
         Path(__file__).parents[1] / "arx" / "test_control_flow.x"
@@ -1390,8 +1362,7 @@ def test_loop_transfers_translate(
     """
     title: Statement scopes and transfers use verified IR and owner cleanup.
     parameters:
-      loop_transfer_ir:
-        type: tuple[ArxBuilder, str]
+      loop_transfer_ir: Loop transfer IR.
     """
     _, text = loop_transfer_ir
     assert 'call void @"irx_list_destroy"' in text
@@ -1408,12 +1379,9 @@ def test_loop_transfers_execute(
     """
     title: Shadowed owners survive or release once across all body exits.
     parameters:
-      loop_transfer_ir:
-        type: tuple[ArxBuilder, str]
-      tmp_path:
-        type: Path
-      optimization:
-        type: int
+      loop_transfer_ir: Loop transfer IR.
+      tmp_path: Temporary directory for this test.
+      optimization: Optimization level.
     """
     builder, text = loop_transfer_ir
     module = llvm.parse_assembly(text)
@@ -1457,10 +1425,8 @@ def test_loop_transfers_outside_loop_fail_before_lowering(
     """
     title: Invalid loop transfers retain their source location in IRx.
     parameters:
-      keyword:
-        type: str
-      prefix:
-        type: str
+      keyword: Keyword.
+      prefix: Prefix.
     """
     source = prefix + keyword
     ArxIO.string_to_buffer(source)
@@ -1491,10 +1457,8 @@ def test_resource_scope_semantic_boundary(body: str, match: str) -> None:
     """
     title: Source scopes retain type, binding, and lexical lifetime checks.
     parameters:
-      body:
-        type: str
-      match:
-        type: str
+      body: Statements forming the body.
+      match: Match.
     """
     ArxIO.string_to_buffer(
         "```\ntitle: Resource scope validation\n```\n"
@@ -1527,8 +1491,8 @@ def test_resource_scope_rejects_module_level() -> None:
 def resource_scope_ir() -> tuple[ArxBuilder, str]:
     """
     title: Reuse verified resource workflows for ownership and native checks.
-    returns:
-      type: tuple[ArxBuilder, str]
+    returns: 'Result of this operation: reuse verified resource workflows
+      for ownership and native checks.'
     """
     source = (Path(__file__).parents[1] / "arx" / "test_file.x").read_text(
         encoding="utf-8"
@@ -1552,8 +1516,7 @@ def test_resource_scopes_translate(
     """
     title: Resource scopes use implicit cleanup and checked open-state queries.
     parameters:
-      resource_scope_ir:
-        type: tuple[ArxBuilder, str]
+      resource_scope_ir: Resource scope IR.
     """
     _, text = resource_scope_ir
     assert "irx_exception_cleanup_enter" in text
@@ -1570,12 +1533,9 @@ def test_resource_scopes_execute(
     """
     title: Entered owners, failed returns, and loop exits release once.
     parameters:
-      resource_scope_ir:
-        type: tuple[ArxBuilder, str]
-      tmp_path:
-        type: Path
-      optimization:
-        type: int
+      resource_scope_ir: Resource scope IR.
+      tmp_path: Temporary directory for this test.
+      optimization: Optimization level.
     """
     builder, text = resource_scope_ir
     module = llvm.parse_assembly(text)
@@ -1614,8 +1574,7 @@ def test_owned_list_translation(owned_list_ir: tuple[ArxBuilder, str]) -> None:
     """
     title: Expression lists use owned storage and non-truncating shared length.
     parameters:
-      owned_list_ir:
-        type: tuple[ArxBuilder, str]
+      owned_list_ir: Owned list IR.
     """
     _, text = owned_list_ir
     assert 'call i32 @"irx_list_append"' in text
@@ -1633,12 +1592,9 @@ def test_owned_lists_build_and_run(
     """
     title: Native lists retain values through failures and transfers.
     parameters:
-      owned_list_ir:
-        type: tuple[ArxBuilder, str]
-      tmp_path:
-        type: Path
-      optimization:
-        type: int
+      owned_list_ir: Owned list IR.
+      tmp_path: Temporary directory for this test.
+      optimization: Optimization level.
     """
     builder, text = owned_list_ir
     executable = tmp_path / "owned-lists"
@@ -1720,10 +1676,8 @@ def test_owned_list_diagnostics(source: str, message: str) -> None:
     """
     title: Invalid collection domains and ownership fail before LLVM lowering.
     parameters:
-      source:
-        type: str
-      message:
-        type: str
+      source: Source input to process.
+      message: Diagnostic or output message.
     """
     ArxIO.string_to_buffer(source)
     with pytest.raises(SemanticError, match=message):
@@ -1735,8 +1689,7 @@ def test_text_builtins_can_be_shadowed_by_a_function(name: str) -> None:
     """
     title: Builtin spelling respects ordinary name resolution.
     parameters:
-      name:
-        type: str
+      name: Name identifying the declaration or operation.
     """
     ArxIO.string_to_buffer(
         f"fn {name}(value: i32) -> i32:\n  return value\n"
@@ -1753,8 +1706,7 @@ def test_local_text_builtin_shadow_is_not_callable(name: str) -> None:
     """
     title: Local values cannot fall through to intrinsic text names.
     parameters:
-      name:
-        type: str
+      name: Name identifying the declaration or operation.
     """
     ArxIO.string_to_buffer(
         f'fn main() -> i32:\n  {name}: i32 = 0\n  {name}("1")\n  return 0\n'
@@ -1767,8 +1719,8 @@ def test_local_text_builtin_shadow_is_not_callable(name: str) -> None:
 def text_operations_ir() -> tuple[ArxBuilder, str]:
     """
     title: Translate the Unicode workflow once for native optimization checks.
-    returns:
-      type: tuple[ArxBuilder, str]
+    returns: 'Result of this operation: translate the Unicode workflow once
+      for native optimization checks.'
     """
     source = (Path(__file__).parents[1] / "arx" / "test_text.x").read_text()
     source += (
@@ -1794,8 +1746,7 @@ def test_text_operations_translation(
     """
     title: Text lowering uses registered status/output APIs and valid LLVM.
     parameters:
-      text_operations_ir:
-        type: tuple[ArxBuilder, str]
+      text_operations_ir: Text operations IR.
     """
     builder, text = text_operations_ir
     for operation in ("len", "index", "slice", "split", "strip", "int", "ord"):
@@ -1828,12 +1779,9 @@ def test_text_operations_build_and_run(
     """
     title: Native text survives source release, mutation and checked failures.
     parameters:
-      text_operations_ir:
-        type: tuple[ArxBuilder, str]
-      tmp_path:
-        type: Path
-      optimization:
-        type: int
+      text_operations_ir: Text operations IR.
+      tmp_path: Temporary directory for this test.
+      optimization: Optimization level.
     """
     builder, text = text_operations_ir
     executable = tmp_path / "text-operations"
@@ -1863,8 +1811,7 @@ def test_numeric_sequence_example(tmp_path: Path) -> None:
     """
     title: One generic consumer executes across all surface source families.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     if shutil.which("clang") is None:
         pytest.skip("native sequence integration requires clang")
@@ -1889,10 +1836,9 @@ def numeric_bounds_binary(tmp_path_factory: pytest.TempPathFactory) -> Path:
     """
     title: Compile tensor and sequence boundary failures once.
     parameters:
-      tmp_path_factory:
-        type: pytest.TempPathFactory
-    returns:
-      type: Path
+      tmp_path_factory: Factory for shared temporary test directories.
+    returns: 'Result of this operation: compile tensor and sequence boundary
+      failures once.'
     """
     if shutil.which("clang") is None:
         pytest.skip("native bounds checks require clang")
@@ -1966,14 +1912,10 @@ def test_numeric_bounds_are_recoverable(
     """
     title: Check rank, empty and signed bounds before reads or publication.
     parameters:
-      numeric_bounds_binary:
-        type: Path
-      mode:
-        type: int
-      index:
-        type: int
-      expected:
-        type: int
+      numeric_bounds_binary: Numeric bounds binary.
+      mode: Selected processing mode.
+      index: Index selecting the item.
+      expected: Expected result for this case.
     """
     result = subprocess.run(
         [str(numeric_bounds_binary)],
@@ -1989,8 +1931,7 @@ def test_nested_template_literal_context(arguments: str) -> None:
     """
     title: Concrete siblings and explicit arguments contextualize list[T].
     parameters:
-      arguments:
-        type: str
+      arguments: Arguments supplied to the call.
     """
     parameters = (
         "values: list[T], seed: T"
@@ -2016,10 +1957,9 @@ def binary_file_program(tmp_path_factory: pytest.TempPathFactory) -> Path:
     """
     title: Verify and compile the byte workflow once without Arrow artifacts.
     parameters:
-      tmp_path_factory:
-        type: pytest.TempPathFactory
-    returns:
-      type: Path
+      tmp_path_factory: Factory for shared temporary test directories.
+    returns: 'Result of this operation: verify and compile the byte workflow
+      once without Arrow artifacts.'
     """
     if shutil.which("clang") is None:
         pytest.skip("binary file checks require clang")
@@ -2044,10 +1984,8 @@ def test_binary_file_roundtrip(
     """
     title: Independently inspect all bytes, append, empty writes and lifetimes.
     parameters:
-      binary_file_program:
-        type: Path
-      tmp_path:
-        type: Path
+      binary_file_program: Binary file program.
+      tmp_path: Temporary directory for this test.
     """
     result = subprocess.run(
         [str(binary_file_program)],
@@ -2070,8 +2008,7 @@ def test_inferred_declarations_translate(binding: str) -> None:
     """
     title: Inference crosses functions, nullable values, templates, and layout.
     parameters:
-      binding:
-        type: str
+      binding: Resolved binding for the operation.
     """
     ArxIO.string_to_buffer(
         "limit: const :: auto = 10\n"
@@ -2152,10 +2089,8 @@ def test_constant_binding_writes_fail_before_lowering(
     """
     title: Surface constant declarations authorize no scalar binding writes.
     parameters:
-      declaration:
-        type: str
-      write:
-        type: str
+      declaration: Declaration being processed.
+      write: Write.
     """
     ArxIO.string_to_buffer(
         f"fn main() -> i32:\n  {declaration}\n  {write}\n  return value\n"
@@ -2190,13 +2125,11 @@ def test_constant_parameter_writes_fail_before_lowering(
     declaration: str, call: str
 ) -> None:
     """
-    title: >-
-      Unchanged function heads enforce argument modifiers through analysis.
+    title: Unchanged function heads enforce argument modifiers through
+      analysis.
     parameters:
-      declaration:
-        type: str
-      call:
-        type: str
+      declaration: Declaration being processed.
+      call: Call being processed.
     """
     ArxIO.string_to_buffer(
         declaration + f"fn main() -> i32:\n  return {call}\n"
@@ -2227,13 +2160,11 @@ def test_inference_rejects_ambiguous_or_unsupported_storage(
     source: str, message: str
 ) -> None:
     """
-    title: >-
-      Inference neither invents a type nor enables unsupported initialization.
+    title: Inference neither invents a type nor enables unsupported
+      initialization.
     parameters:
-      source:
-        type: str
-      message:
-        type: str
+      source: Source input to process.
+      message: Diagnostic or output message.
     """
     ArxIO.string_to_buffer(source)
     with pytest.raises(SemanticError, match=message):
@@ -2303,11 +2234,10 @@ def test_collection_metadata_arguments_fail_before_lowering(
     operation: str,
 ) -> None:
     """
-    title: >-
-      Explicit and inferred calls share semantic diagnostics and Unicode spans.
+    title: Explicit and inferred calls share semantic diagnostics and Unicode
+      spans.
     parameters:
-      operation:
-        type: str
+      operation: Operation to resolve or execute.
     """
     reports: list[tuple[str, str, int, int]] = []
     method = operation.split("(", maxsplit=1)[0].split("<", maxsplit=1)[0]
@@ -2368,10 +2298,8 @@ def test_private_function_imports_fail_during_analysis(
     """
     title: Frontend visibility cannot be bypassed by either import spelling.
     parameters:
-      tmp_path:
-        type: Path
-      import_style:
-        type: str
+      tmp_path: Temporary directory for this test.
+      import_style: Import style.
     """
     (tmp_path / "library.x").write_text(
         "```\ntitle: Private library\n```\n"
@@ -2411,8 +2339,7 @@ def test_imported_template_can_call_its_private_module_helper(
     """
     title: Template privacy uses the defining module rather than the caller.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     (tmp_path / "library.x").write_text(
         "```\ntitle: Private template helpers\n```\n"
@@ -2441,10 +2368,9 @@ def metadata_count_binary(tmp_path_factory: pytest.TempPathFactory) -> Path:
     """
     title: Compile all metadata receiver forms once, separate from execution.
     parameters:
-      tmp_path_factory:
-        type: pytest.TempPathFactory
-    returns:
-      type: Path
+      tmp_path_factory: Factory for shared temporary test directories.
+    returns: 'Result of this operation: compile all metadata receiver forms
+      once, separate from execution.'
     """
     if shutil.which("clang") is None or shutil.which("c++") is None:
         pytest.skip("native Clang and C++ toolchains required")
@@ -2512,8 +2438,7 @@ def test_metadata_counts_preserve_evaluation_and_lifetimes(
     """
     title: Static, inferred, runtime-schema, and temporary receivers run alike.
     parameters:
-      metadata_count_binary:
-        type: Path
+      metadata_count_binary: Metadata count binary.
     """
     result = subprocess.run(
         [str(metadata_count_binary)],

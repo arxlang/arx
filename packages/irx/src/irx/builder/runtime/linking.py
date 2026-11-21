@@ -32,10 +32,8 @@ class NativeLinkInputs:
     """
     title: Collected native linker inputs for one build.
     attributes:
-      objects:
-        type: tuple[Path, Ellipsis]
-      linker_flags:
-        type: tuple[str, Ellipsis]
+      objects: Objects.
+      linker_flags: Linker flags.
     """
 
     objects: tuple[Path, ...]
@@ -52,16 +50,12 @@ def compile_native_artifacts(
     """
     title: Compile or collect native artifacts for linking.
     parameters:
-      artifacts:
-        type: Sequence[NativeArtifact]
-      build_dir:
-        type: Path
-      clang_binary:
-        type: str
-      cxx_binary:
-        type: str
-    returns:
-      type: NativeLinkInputs
+      artifacts: Artifacts.
+      build_dir: Build dir.
+      clang_binary: Clang binary.
+      cxx_binary: Cxx binary.
+    returns: 'Result of this operation: compile or collect native artifacts
+      for linking.'
     """
     objects: list[Path] = []
     linker_flags: list[str] = []
@@ -122,18 +116,12 @@ def link_executable(
     """
     title: Link the main object file plus optional runtime artifacts.
     parameters:
-      primary_object:
-        type: Path
-      output_file:
-        type: Path
-      artifacts:
-        type: Sequence[NativeArtifact]
-      linker_flags:
-        type: Sequence[str]
-      clang_binary:
-        type: str
-      cxx_binary:
-        type: str
+      primary_object: Primary object.
+      output_file: Destination file for generated output.
+      artifacts: Artifacts.
+      linker_flags: Linker flags.
+      clang_binary: Clang binary.
+      cxx_binary: Cxx binary.
     """
     build_dir = primary_object.parent
     link_inputs = compile_native_artifacts(
@@ -177,14 +165,10 @@ def _compile_native_source(
     """
     title: Compile native source.
     parameters:
-      artifact:
-        type: NativeArtifact
-      build_dir:
-        type: Path
-      compiler_binary:
-        type: str
-    returns:
-      type: Path
+      artifact: Artifact.
+      build_dir: Build dir.
+      compiler_binary: Compiler binary.
+    returns: 'Result of this operation: compile native source.'
     """
     digest = hashlib.sha256(str(artifact.path).encode("utf8")).hexdigest()[:12]
     object_path = build_dir / f"{artifact.path.stem}_{digest}.o"
@@ -225,10 +209,8 @@ def _has_cxx_artifacts(artifacts: Sequence[NativeArtifact]) -> bool:
     """
     title: Return whether any artifact requires a C++ linker.
     parameters:
-      artifacts:
-        type: Sequence[NativeArtifact]
-    returns:
-      type: bool
+      artifacts: Artifacts.
+    returns: Whether any artifact requires a C++ linker.
     """
     return any(artifact.kind == "cxx_source" for artifact in artifacts)
 
@@ -238,10 +220,8 @@ def _resolve_cxx_binary(cxx_binary: str) -> str:
     """
     title: Resolve the C++ compiler command.
     parameters:
-      cxx_binary:
-        type: str
-    returns:
-      type: str
+      cxx_binary: Cxx binary.
+    returns: Resolved the C++ compiler command.
     """
     if shutil.which(cxx_binary) is not None:
         return cxx_binary
@@ -255,10 +235,8 @@ def _command_excerpt(text: str) -> str:
     """
     title: Return one compact stdout or stderr excerpt.
     parameters:
-      text:
-        type: str
-    returns:
-      type: str
+      text: Text to process.
+    returns: One compact stdout or stderr excerpt.
     """
     stripped = text.strip()
     if not stripped:
@@ -277,10 +255,9 @@ def _format_command(command: Sequence[str]) -> str:
     """
     title: Render one command line for diagnostics.
     parameters:
-      command:
-        type: Sequence[str]
-    returns:
-      type: str
+      command: Command.
+    returns: 'Result of this operation: render one command line for
+      diagnostics.'
     """
     return " ".join(command)
 
@@ -299,20 +276,13 @@ def _run_checked(
     """
     title: Run checked.
     parameters:
-      command:
-        type: Sequence[str]
-      error_type:
-        type: type[NativeCompileError] | type[LinkingError]
-      phase:
-        type: str
-      code:
-        type: str
-      message:
-        type: str
-      notes:
-        type: Sequence[str]
-      hint:
-        type: str | None
+      command: Command.
+      error_type: Type of error.
+      phase: Phase.
+      code: Source code or diagnostic identifier.
+      message: Diagnostic or output message.
+      notes: Notes.
+      hint: Hint.
     """
     try:
         result = subprocess.run(

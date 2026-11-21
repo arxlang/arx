@@ -21,8 +21,7 @@ from .conftest import (
 def _number_bound() -> astx.UnionType:
     """
     title: Build the small Number template domain used in tests.
-    returns:
-      type: astx.UnionType
+    returns: Constructed the small Number template domain used in tests.
     """
     return astx.UnionType(
         (astx.Int32(), astx.Float64()),
@@ -34,10 +33,8 @@ def _template_var(name: str = "T") -> astx.TemplateTypeVar:
     """
     title: Build one Number-bounded template type variable.
     parameters:
-      name:
-        type: str
-    returns:
-      type: astx.TemplateTypeVar
+      name: Name identifying the declaration or operation.
+    returns: Constructed one Number-bounded template type variable.
     """
     return astx.TemplateTypeVar(name, bound=_number_bound())
 
@@ -46,10 +43,8 @@ def _template_param(name: str = "T") -> astx.TemplateParam:
     """
     title: Build one Number-bounded template parameter.
     parameters:
-      name:
-        type: str
-    returns:
-      type: astx.TemplateParam
+      name: Name identifying the declaration or operation.
+    returns: Constructed one Number-bounded template parameter.
     """
     return astx.TemplateParam(name, _number_bound())
 
@@ -62,15 +57,12 @@ def _templated_function(
     """
     title: Build one templated function definition.
     parameters:
-      name:
-        type: str
-      return_value:
-        type: astx.AST
+      name: Name identifying the declaration or operation.
+      return_value: Return value.
       args:
-        type: astx.Argument
         variadic: positional
-    returns:
-      type: astx.FunctionDef
+        description: Positional arguments.
+    returns: Constructed one templated function definition.
     """
     prototype = astx.FunctionPrototype(
         name,
@@ -91,15 +83,12 @@ def _templated_static_method(
     """
     title: Build one templated static method definition.
     parameters:
-      name:
-        type: str
-      return_value:
-        type: astx.AST
+      name: Name identifying the declaration or operation.
+      return_value: Return value.
       args:
-        type: astx.Argument
         variadic: positional
-    returns:
-      type: astx.FunctionDef
+        description: Positional arguments.
+    returns: Constructed one templated static method definition.
     """
     method = _templated_function(name, return_value, *args)
     method.prototype.is_static = True
@@ -110,13 +99,11 @@ def _int_function(name: str, *body_nodes: astx.AST) -> astx.FunctionDef:
     """
     title: Build a small Int32-returning function.
     parameters:
-      name:
-        type: str
+      name: Name identifying the declaration or operation.
       body_nodes:
-        type: astx.AST
         variadic: positional
-    returns:
-      type: astx.FunctionDef
+        description: Body nodes.
+    returns: Constructed a small Int32-returning function.
     """
     body = astx.Block()
     for node in body_nodes:

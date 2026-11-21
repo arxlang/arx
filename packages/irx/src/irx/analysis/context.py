@@ -1,8 +1,7 @@
 """
 title: Shared semantic-analysis context.
-summary: >-
-  Hold the mutable semantic-analysis state that is shared across node visits
-  and, in multi-module mode, across modules in one session.
+summary: Hold the mutable semantic-analysis state that is shared across node
+  visits and, in multi-module mode, across modules in one session.
 """
 
 from __future__ import annotations
@@ -34,50 +33,29 @@ from irx.typecheck import typechecked
 class SemanticContext:
     """
     title: Shared semantic-analysis state.
-    summary: >-
-      Store scopes, diagnostics, module-aware top-level registries, and
-      transient current-node context for the analyzer.
+    summary: Store scopes, diagnostics, module-aware top-level registries,
+      and transient current-node context for the analyzer.
     attributes:
-      scopes:
-        type: ScopeStack
-      diagnostics:
-        type: DiagnosticBag
-      functions:
-        type: dict[tuple[ModuleKey, str], SemanticFunction]
-      structs:
-        type: dict[tuple[ModuleKey, str], SemanticStruct]
-      classes:
-        type: dict[tuple[ModuleKey, str], SemanticClass]
-      current_function:
-        type: SemanticFunction | None
-      current_class:
-        type: SemanticClass | None
-      current_module_key:
-        type: ModuleKey | None
-      check_constant_expressions:
-        type: bool
-      loop_depth:
-        type: int
-      active_list_iteration_owners:
-        type: frozenset[str]
-      exception_region_depth:
-        type: int
-      native_feature_names:
-        type: tuple[str, Ellipsis]
-      native_bindings:
-        type: dict[int, tuple[str, Ellipsis]]
-      native_table_io:
-        type: dict[int, TableIOOperation]
-      native_compute:
-        type: dict[int, ComputeKernel]
-      exception_declarations:
-        type: tuple[astx.ClassDefStmt, Ellipsis]
-      runtime_exception_types:
-        type: dict[str, ResolvedExceptionType]
-      _symbol_counter:
-        type: int
-      _method_slot_counter:
-        type: int
+      scopes: Scopes.
+      diagnostics: Collected structured diagnostics.
+      functions: Functions.
+      structs: Structs.
+      classes: Classes.
+      current_function: Current function.
+      current_class: Current class.
+      current_module_key: Current module key.
+      check_constant_expressions: Whether to use check constant expressions.
+      loop_depth: Loop depth.
+      active_list_iteration_owners: Active list iteration owners.
+      exception_region_depth: Exception region depth.
+      native_feature_names: Native feature names.
+      native_bindings: Native bindings.
+      native_table_io: Native table I/O.
+      native_compute: Native compute.
+      exception_declarations: Exception declarations.
+      runtime_exception_types: Types of runtime exception.
+      _symbol_counter: Symbol counter.
+      _method_slot_counter: Method slot counter.
     """
 
     scopes: ScopeStack = field(default_factory=ScopeStack)
@@ -114,16 +92,15 @@ class SemanticContext:
     def list_iteration(self, owner_symbol_id: str | None) -> Iterator[None]:
         """
         title: Protect list storage borrowed for iteration.
-        summary: >-
-          Track resolved identity, not spelling. Restore the previous set even
-          on failed analysis or nested iteration of the same owner. Temporary
-          lists and non-list iterables have no named owner to protect. This
-          guards replacement, not in-place append or ownership-moving returns.
+        summary: Track resolved identity, not spelling. Restore
+          the previous set even on failed analysis or nested iteration
+          of the same owner. Temporary lists and non-list iterables
+          have no named owner to protect. This guards replacement,
+          not in-place append or ownership-moving returns.
         parameters:
-          owner_symbol_id:
-            type: str | None
-        returns:
-          type: Iterator[None]
+          owner_symbol_id: Identifier for owner symbol.
+        returns: 'Result of this operation: protect list storage
+          borrowed for iteration.'
         """
         previous = self.active_list_iteration_owners
         if owner_symbol_id is not None:
@@ -138,10 +115,9 @@ class SemanticContext:
         """
         title: Suppress operation errors in possibly unevaluated branches.
         parameters:
-          enabled:
-            type: bool
-        returns:
-          type: Iterator[None]
+          enabled: Whether to use enabled.
+        returns: 'Result of this operation: suppress operation errors in
+          possibly unevaluated branches.'
         """
         previous = self.check_constant_expressions
         self.check_constant_expressions = previous and enabled
@@ -153,14 +129,11 @@ class SemanticContext:
     def next_symbol_id(self, prefix: str) -> str:
         """
         title: Return a fresh semantic symbol id.
-        summary: >-
-          Generate a unique semantic id for locals and declarations that need
-          stable identity inside one analysis run.
+        summary: Generate a unique semantic id for locals and declarations
+          that need stable identity inside one analysis run.
         parameters:
-          prefix:
-            type: str
-        returns:
-          type: str
+          prefix: Prefix.
+        returns: A fresh semantic symbol id.
         """
         self._symbol_counter += 1
         return f"{prefix}:{self._symbol_counter}"
@@ -168,11 +141,9 @@ class SemanticContext:
     def next_method_slot(self) -> int:
         """
         title: Return a fresh class-method dispatch slot.
-        summary: >-
-          Generate a deterministic dispatch-table slot index for one newly
-          introduced overridable instance method.
-        returns:
-          type: int
+        summary: Generate a deterministic dispatch-table slot index for one
+          newly introduced overridable instance method.
+        returns: A fresh class-method dispatch slot.
         """
         slot = self._method_slot_counter
         self._method_slot_counter += 1
@@ -181,12 +152,10 @@ class SemanticContext:
     def register_function(self, function: SemanticFunction) -> None:
         """
         title: Register a top-level function by module and name.
-        summary: >-
-          Store the canonical semantic function object for one module-qualified
-          top-level name.
+        summary: Store the canonical semantic function object for
+          one module-qualified top-level name.
         parameters:
-          function:
-            type: SemanticFunction
+          function: Function to process.
         """
         self.functions[(function.module_key, function.name)] = function
 
@@ -197,28 +166,22 @@ class SemanticContext:
     ) -> SemanticFunction | None:
         """
         title: Return a top-level function by module and name.
-        summary: >-
-          Retrieve the canonical semantic function for one module-qualified
-          top-level name.
+        summary: Retrieve the canonical semantic function for one
+          module-qualified top-level name.
         parameters:
-          module_key:
-            type: ModuleKey
-          name:
-            type: str
-        returns:
-          type: SemanticFunction | None
+          module_key: Canonical module identity.
+          name: Name identifying the declaration or operation.
+        returns: A top-level function by module and name.
         """
         return self.functions.get((module_key, name))
 
     def register_struct(self, struct: SemanticStruct) -> None:
         """
         title: Register a top-level struct by module and name.
-        summary: >-
-          Store the canonical semantic struct object for one module-qualified
-          top-level name.
+        summary: Store the canonical semantic struct object for one
+          module-qualified top-level name.
         parameters:
-          struct:
-            type: SemanticStruct
+          struct: Struct.
         """
         self.structs[(struct.module_key, struct.name)] = struct
 
@@ -229,28 +192,22 @@ class SemanticContext:
     ) -> SemanticStruct | None:
         """
         title: Return a top-level struct by module and name.
-        summary: >-
-          Retrieve the canonical semantic struct for one module-qualified top-
-          level name.
+        summary: Retrieve the canonical semantic struct for
+          one module-qualified top- level name.
         parameters:
-          module_key:
-            type: ModuleKey
-          name:
-            type: str
-        returns:
-          type: SemanticStruct | None
+          module_key: Canonical module identity.
+          name: Name identifying the declaration or operation.
+        returns: Structured representation of this node.
         """
         return self.structs.get((module_key, name))
 
     def register_class(self, class_: SemanticClass) -> None:
         """
         title: Register a top-level class by module and name.
-        summary: >-
-          Store the canonical semantic class object for one module-qualified
-          top-level name.
+        summary: Store the canonical semantic class object for one
+          module-qualified top-level name.
         parameters:
-          class_:
-            type: SemanticClass
+          class_: Class being processed.
         """
         self.classes[(class_.module_key, class_.name)] = class_
 
@@ -261,16 +218,12 @@ class SemanticContext:
     ) -> SemanticClass | None:
         """
         title: Return a top-level class by module and name.
-        summary: >-
-          Retrieve the canonical semantic class for one module-qualified top-
-          level name.
+        summary: Retrieve the canonical semantic class for one module-qualified
+          top- level name.
         parameters:
-          module_key:
-            type: ModuleKey
-          name:
-            type: str
-        returns:
-          type: SemanticClass | None
+          module_key: Canonical module identity.
+          name: Name identifying the declaration or operation.
+        returns: A top-level class by module and name.
         """
         return self.classes.get((module_key, name))
 
@@ -278,14 +231,12 @@ class SemanticContext:
     def scope(self, kind: str) -> Iterator[None]:
         """
         title: Push/pop a scope around a block of work.
-        summary: >-
-          Temporarily add a lexical scope frame while analyzing a block of
-          statements.
+        summary: Temporarily add a lexical scope frame while analyzing a
+          block of statements.
         parameters:
-          kind:
-            type: str
-        returns:
-          type: Iterator[None]
+          kind: Kind of value or operation.
+        returns: 'Result of this operation: push/pop a scope around a block
+          of work.'
         """
         self.scopes.push(kind)
         try:
@@ -297,14 +248,11 @@ class SemanticContext:
     def in_function(self, function: SemanticFunction) -> Iterator[None]:
         """
         title: Temporarily set current_function.
-        summary: >-
-          Remember which function body is being analyzed so return and control-
-          flow rules can consult it.
+        summary: Remember which function body is being analyzed so return
+          and control- flow rules can consult it.
         parameters:
-          function:
-            type: SemanticFunction
-        returns:
-          type: Iterator[None]
+          function: Function to process.
+        returns: 'Result of this operation: temporarily set current_function.'
         """
         previous = self.current_function
         self.current_function = function
@@ -317,14 +265,12 @@ class SemanticContext:
     def in_class(self, class_: SemanticClass) -> Iterator[None]:
         """
         title: Temporarily set current_class.
-        summary: >-
-          Remember which class declaration is being analyzed so inheritance and
-          member-semantics helpers can consult the active owner.
+        summary: Remember which class declaration is being analyzed
+          so inheritance and member-semantics helpers can consult
+          the active owner.
         parameters:
-          class_:
-            type: SemanticClass
-        returns:
-          type: Iterator[None]
+          class_: Class being processed.
+        returns: 'Result of this operation: temporarily set current_class.'
         """
         previous = self.current_class
         self.current_class = class_
@@ -337,14 +283,12 @@ class SemanticContext:
     def in_module(self, module_key: ModuleKey) -> Iterator[None]:
         """
         title: Temporarily set the current module key.
-        summary: >-
-          Switch the active module identity so registrations and diagnostics
-          are attributed to the right module.
+        summary: Switch the active module identity so registrations
+          and diagnostics are attributed to the right module.
         parameters:
-          module_key:
-            type: ModuleKey
-        returns:
-          type: Iterator[None]
+          module_key: Canonical module identity.
+        returns: 'Result of this operation: temporarily set the current
+          module key.'
         """
         previous = self.current_module_key
         previous_diagnostic_key = self.diagnostics.default_module_key
@@ -360,11 +304,10 @@ class SemanticContext:
     def in_loop(self) -> Iterator[None]:
         """
         title: Increase loop depth for loop analysis.
-        summary: >-
-          Mark a temporary loop region so break and continue validation can see
-          that loop nesting exists.
-        returns:
-          type: Iterator[None]
+        summary: Mark a temporary loop region so break and continue validation
+          can see that loop nesting exists.
+        returns: 'Result of this operation: increase loop depth for loop
+          analysis.'
         """
         self.loop_depth += 1
         try:

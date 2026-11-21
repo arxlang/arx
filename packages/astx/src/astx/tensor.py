@@ -1,8 +1,7 @@
 """
 title: ASTx Tensor AST nodes.
-summary: >-
-  Provide internal nodes for the Arrow C++ backed tensor runtime, aligned with
-  Apache Arrow's homogeneous N-dimensional tensor model.
+summary: Provide internal nodes for the Arrow C++ backed tensor runtime,
+  aligned with Apache Arrow's homogeneous N-dimensional tensor model.
 """
 
 from __future__ import annotations
@@ -21,10 +20,8 @@ def _format_type_name(type_: astx.DataType) -> str:
     """
     title: Return one stable tensor element type name.
     parameters:
-      type_:
-        type: astx.DataType
-    returns:
-      type: str
+      type_: Type expression to process.
+    returns: One stable tensor element type name.
     """
     if isinstance(type_, astx.PointerType):
         if type_.pointee_type is None:
@@ -42,14 +39,11 @@ def _format_type_name(type_: astx.DataType) -> str:
 class TensorType(AnyType):
     """
     title: Internal Tensor semantic type.
-    summary: >-
-      Represent the homogeneous N-dimensional tensor abstraction while reusing
-      the canonical buffer/view representation during lowering.
+    summary: Represent the homogeneous N-dimensional tensor abstraction while
+      reusing the canonical buffer/view representation during lowering.
     attributes:
-      element_type:
-        type: astx.DataType | None
-      shape:
-        type: tuple[int, Ellipsis] | None
+      element_type: Type of each element.
+      shape: Declared dimensions or result shape.
     """
 
     element_type: astx.DataType | None
@@ -64,10 +58,8 @@ class TensorType(AnyType):
         """
         title: Initialize one Tensor type.
         parameters:
-          element_type:
-            type: astx.DataType | None
-          shape:
-            type: Sequence[int] | None
+          element_type: Type of each element.
+          shape: Declared dimensions or result shape.
         """
         super().__init__()
         self.element_type = element_type
@@ -78,8 +70,7 @@ class TensorType(AnyType):
     def __str__(self) -> str:
         """
         title: Render the Tensor type.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         if self.element_type is None:
             return "TensorType"
@@ -93,22 +84,15 @@ class TensorType(AnyType):
 class TensorLiteral(astx.base.DataType):
     """
     title: Internal Arrow C++ backed Tensor literal node.
-    summary: >-
-      Build one Arrow C++ tensor value from scalar values plus shape and stride
-      metadata.
+    summary: Build one Arrow C++ tensor value from scalar values plus shape
+      and stride metadata.
     attributes:
-      values:
-        type: list[astx.AST]
-      element_type:
-        type: astx.DataType
-      shape:
-        type: tuple[int, Ellipsis]
-      strides:
-        type: tuple[int, Ellipsis] | None
-      offset_bytes:
-        type: int
-      type_:
-        type: TensorType
+      values: Values to process, in order.
+      element_type: Type of each element.
+      shape: Declared dimensions or result shape.
+      strides: Strides.
+      offset_bytes: Offset bytes.
+      type_: Type associated with this expression.
     """
 
     values: list[astx.AST]
@@ -130,16 +114,11 @@ class TensorLiteral(astx.base.DataType):
         """
         title: Initialize one Tensor literal.
         parameters:
-          values:
-            type: Sequence[astx.AST]
-          element_type:
-            type: astx.DataType
-          shape:
-            type: Sequence[int]
-          strides:
-            type: Sequence[int] | None
-          offset_bytes:
-            type: int
+          values: Values to process, in order.
+          element_type: Type of each element.
+          shape: Declared dimensions or result shape.
+          strides: Strides.
+          offset_bytes: Offset bytes.
         """
         super().__init__()
         self.values = list(values)
@@ -153,10 +132,8 @@ class TensorLiteral(astx.base.DataType):
         """
         title: Return the structured representation of the Tensor literal.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: astx.base.ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         value = {
             "values": [item.get_struct(simplified) for item in self.values],
@@ -176,20 +153,14 @@ class TensorLiteral(astx.base.DataType):
 class TensorView(astx.base.DataType):
     """
     title: Internal Tensor view node.
-    summary: >-
-      Build one shallow tensor view by reusing the base storage and replacing
-      the logical shape, strides, and offset metadata.
+    summary: Build one shallow tensor view by reusing the base storage and
+      replacing the logical shape, strides, and offset metadata.
     attributes:
-      base:
-        type: astx.AST
-      shape:
-        type: tuple[int, Ellipsis]
-      strides:
-        type: tuple[int, Ellipsis] | None
-      offset_bytes:
-        type: int
-      type_:
-        type: TensorType
+      base: Base value or declaration.
+      shape: Declared dimensions or result shape.
+      strides: Strides.
+      offset_bytes: Offset bytes.
+      type_: Type associated with this expression.
     """
 
     base: astx.AST
@@ -209,14 +180,10 @@ class TensorView(astx.base.DataType):
         """
         title: Initialize one Tensor view.
         parameters:
-          base:
-            type: astx.AST
-          shape:
-            type: Sequence[int]
-          strides:
-            type: Sequence[int] | None
-          offset_bytes:
-            type: int
+          base: Base value or declaration.
+          shape: Declared dimensions or result shape.
+          strides: Strides.
+          offset_bytes: Offset bytes.
         """
         super().__init__()
         self.base = base
@@ -229,10 +196,8 @@ class TensorView(astx.base.DataType):
         """
         title: Return the structured representation of the Tensor view.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: astx.base.ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         value = {
             "base": self.base.get_struct(simplified),
@@ -252,12 +217,9 @@ class TensorIndex(astx.base.DataType):
     """
     title: Internal Tensor indexed read.
     attributes:
-      base:
-        type: astx.AST
-      indices:
-        type: list[astx.AST]
-      type_:
-        type: astx.DataType
+      base: Base value or declaration.
+      indices: Indices.
+      type_: Type associated with this expression.
     """
 
     base: astx.AST
@@ -272,10 +234,8 @@ class TensorIndex(astx.base.DataType):
         """
         title: Initialize one Tensor indexed read.
         parameters:
-          base:
-            type: astx.AST
-          indices:
-            type: Sequence[astx.AST]
+          base: Base value or declaration.
+          indices: Indices.
         """
         super().__init__()
         if not indices:
@@ -288,10 +248,8 @@ class TensorIndex(astx.base.DataType):
         """
         title: Return the structured representation of the indexed read.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: astx.base.ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         value = {
             "base": self.base.get_struct(simplified),
@@ -310,19 +268,14 @@ class TensorIndex(astx.base.DataType):
 class TensorStore(astx.base.DataType):
     """
     title: Internal Tensor indexed store.
-    summary: >-
-      Stores one scalar through tensor shape and stride metadata. Arrow C++
-      backed tensors remain readonly in this phase, but the node keeps the
-      surface aligned with future writable views.
+    summary: Stores one scalar through tensor shape and stride metadata.
+      Arrow C++ backed tensors remain readonly in this phase, but the node
+      keeps the surface aligned with future writable views.
     attributes:
-      base:
-        type: astx.AST
-      indices:
-        type: list[astx.AST]
-      value:
-        type: astx.AST
-      type_:
-        type: astx.Int32
+      base: Base value or declaration.
+      indices: Indices.
+      value: Stored value.
+      type_: Type associated with this expression.
     """
 
     base: astx.AST
@@ -339,12 +292,9 @@ class TensorStore(astx.base.DataType):
         """
         title: Initialize one Tensor indexed store.
         parameters:
-          base:
-            type: astx.AST
-          indices:
-            type: Sequence[astx.AST]
-          value:
-            type: astx.AST
+          base: Base value or declaration.
+          indices: Indices.
+          value: Value to process.
         """
         super().__init__()
         if not indices:
@@ -358,10 +308,8 @@ class TensorStore(astx.base.DataType):
         """
         title: Return the structured representation of the indexed store.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: astx.base.ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         value = {
             "base": self.base.get_struct(simplified),
@@ -382,10 +330,8 @@ class TensorNDim(astx.base.DataType):
     """
     title: Internal Tensor rank query.
     attributes:
-      base:
-        type: astx.AST
-      type_:
-        type: astx.Int32
+      base: Base value or declaration.
+      type_: Type associated with this expression.
     """
 
     base: astx.AST
@@ -395,8 +341,7 @@ class TensorNDim(astx.base.DataType):
         """
         title: Initialize one Tensor rank query.
         parameters:
-          base:
-            type: astx.AST
+          base: Base value or declaration.
         """
         super().__init__()
         self.base = base
@@ -406,10 +351,8 @@ class TensorNDim(astx.base.DataType):
         """
         title: Return the structured representation of the rank query.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: astx.base.ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         return self._prepare_struct(
             "TensorNDim",
@@ -423,12 +366,9 @@ class TensorShape(astx.base.DataType):
     """
     title: Internal Tensor shape-entry query.
     attributes:
-      base:
-        type: astx.AST
-      axis:
-        type: int
-      type_:
-        type: astx.Int64
+      base: Base value or declaration.
+      axis: Axis selected by the operation.
+      type_: Type associated with this expression.
     """
 
     base: astx.AST
@@ -439,10 +379,8 @@ class TensorShape(astx.base.DataType):
         """
         title: Initialize one Tensor shape query.
         parameters:
-          base:
-            type: astx.AST
-          axis:
-            type: int
+          base: Base value or declaration.
+          axis: Axis selected by the operation.
         """
         super().__init__()
         self.base = base
@@ -453,10 +391,8 @@ class TensorShape(astx.base.DataType):
         """
         title: Return the structured representation of the shape query.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: astx.base.ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         value = {
             "base": self.base.get_struct(simplified),
@@ -474,12 +410,9 @@ class TensorStride(astx.base.DataType):
     """
     title: Internal Tensor stride-entry query.
     attributes:
-      base:
-        type: astx.AST
-      axis:
-        type: int
-      type_:
-        type: astx.Int64
+      base: Base value or declaration.
+      axis: Axis selected by the operation.
+      type_: Type associated with this expression.
     """
 
     base: astx.AST
@@ -490,10 +423,8 @@ class TensorStride(astx.base.DataType):
         """
         title: Initialize one Tensor stride query.
         parameters:
-          base:
-            type: astx.AST
-          axis:
-            type: int
+          base: Base value or declaration.
+          axis: Axis selected by the operation.
         """
         super().__init__()
         self.base = base
@@ -504,10 +435,8 @@ class TensorStride(astx.base.DataType):
         """
         title: Return the structured representation of the stride query.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: astx.base.ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         value = {
             "base": self.base.get_struct(simplified),
@@ -525,10 +454,8 @@ class TensorElementCount(astx.base.DataType):
     """
     title: Internal Tensor element-count query.
     attributes:
-      base:
-        type: astx.AST
-      type_:
-        type: astx.Int64
+      base: Base value or declaration.
+      type_: Type associated with this expression.
     """
 
     base: astx.AST
@@ -538,8 +465,7 @@ class TensorElementCount(astx.base.DataType):
         """
         title: Initialize one Tensor element-count query.
         parameters:
-          base:
-            type: astx.AST
+          base: Base value or declaration.
         """
         super().__init__()
         self.base = base
@@ -549,10 +475,8 @@ class TensorElementCount(astx.base.DataType):
         """
         title: Return the structured representation of the element-count query.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: astx.base.ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         return self._prepare_struct(
             "TensorElementCount",
@@ -566,12 +490,9 @@ class TensorByteOffset(astx.base.DataType):
     """
     title: Internal Tensor byte-offset query for indexed addressing.
     attributes:
-      base:
-        type: astx.AST
-      indices:
-        type: list[astx.AST]
-      type_:
-        type: astx.Int64
+      base: Base value or declaration.
+      indices: Indices.
+      type_: Type associated with this expression.
     """
 
     base: astx.AST
@@ -586,10 +507,8 @@ class TensorByteOffset(astx.base.DataType):
         """
         title: Initialize one Tensor byte-offset query.
         parameters:
-          base:
-            type: astx.AST
-          indices:
-            type: Sequence[astx.AST]
+          base: Base value or declaration.
+          indices: Indices.
         """
         super().__init__()
         if not indices:
@@ -602,10 +521,8 @@ class TensorByteOffset(astx.base.DataType):
         """
         title: Return the structured representation of the byte-offset query.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: astx.base.ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         value = {
             "base": self.base.get_struct(simplified),
@@ -625,10 +542,8 @@ class TensorRetain(astx.base.DataType):
     """
     title: Internal explicit retain for Tensor-backed storage.
     attributes:
-      base:
-        type: astx.AST
-      type_:
-        type: astx.Int32
+      base: Base value or declaration.
+      type_: Type associated with this expression.
     """
 
     base: astx.AST
@@ -638,8 +553,7 @@ class TensorRetain(astx.base.DataType):
         """
         title: Initialize one Tensor retain helper.
         parameters:
-          base:
-            type: astx.AST
+          base: Base value or declaration.
         """
         super().__init__()
         self.base = base
@@ -649,10 +563,8 @@ class TensorRetain(astx.base.DataType):
         """
         title: Return the structured representation of the retain helper.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: astx.base.ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         return self._prepare_struct(
             "TensorRetain",
@@ -666,10 +578,8 @@ class TensorRelease(astx.base.DataType):
     """
     title: Internal explicit release for Tensor-backed storage.
     attributes:
-      base:
-        type: astx.AST
-      type_:
-        type: astx.Int32
+      base: Base value or declaration.
+      type_: Type associated with this expression.
     """
 
     base: astx.AST
@@ -679,8 +589,7 @@ class TensorRelease(astx.base.DataType):
         """
         title: Initialize one Tensor release helper.
         parameters:
-          base:
-            type: astx.AST
+          base: Base value or declaration.
         """
         super().__init__()
         self.base = base
@@ -690,10 +599,8 @@ class TensorRelease(astx.base.DataType):
         """
         title: Return the structured representation of the release helper.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: astx.base.ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         return self._prepare_struct(
             "TensorRelease",

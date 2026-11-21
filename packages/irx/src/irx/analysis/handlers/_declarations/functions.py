@@ -4,9 +4,8 @@
 
 """
 title: Declaration function visitors.
-summary: >-
-  Resolve function declarations, synchronize normalized signatures, and analyze
-  non-template function bodies.
+summary: Resolve function declarations, synchronize normalized signatures,
+  and analyze non-template function bodies.
 """
 
 from __future__ import annotations
@@ -41,10 +40,8 @@ def _is_yield_node(node: astx.AST) -> bool:
     """
     title: Return whether one node is a yield form.
     parameters:
-      node:
-        type: astx.AST
-    returns:
-      type: bool
+      node: Syntax node to process.
+    returns: Whether one node is a yield form.
     """
     return isinstance(
         node,
@@ -57,10 +54,8 @@ def _nested_yield_nodes(node: astx.AST) -> tuple[astx.AST, ...]:
     """
     title: Return yield nodes nested below one non-function statement.
     parameters:
-      node:
-        type: astx.AST
-    returns:
-      type: tuple[astx.AST, Ellipsis]
+      node: Syntax node to process.
+    returns: Yield nodes nested below one non-function statement.
     """
     if _is_yield_node(node):
         return (node,)
@@ -95,10 +90,8 @@ def _top_level_yield_nodes(block: astx.Block) -> tuple[astx.AST, ...]:
     """
     title: Return yield nodes that are direct statements in a block.
     parameters:
-      block:
-        type: astx.Block
-    returns:
-      type: tuple[astx.AST, Ellipsis]
+      block: Block of statements.
+    returns: Yield nodes that are direct statements in a block.
     """
     return tuple(node for node in block.nodes if _is_yield_node(node))
 
@@ -119,14 +112,11 @@ class DeclarationFunctionVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Synchronize one semantic function with resolved AST types.
         parameters:
-          function:
-            type: SemanticFunction
-          prototype:
-            type: astx.FunctionPrototype
-          definition:
-            type: astx.FunctionDef | None
-        returns:
-          type: SemanticFunction
+          function: Function to process.
+          prototype: Prototype.
+          definition: Definition.
+        returns: 'Result of this operation: synchronize one semantic function
+          with resolved AST types.'
         """
         signature = self.registry.normalize_function_signature(
             prototype,
@@ -206,12 +196,9 @@ class DeclarationFunctionVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Resolve generator metadata for one function definition.
         parameters:
-          function:
-            type: SemanticFunction
-          node:
-            type: astx.FunctionDef
-        returns:
-          type: ResolvedGeneratorFunction | None
+          function: Function to process.
+          node: Syntax node to process.
+        returns: Resolved generator metadata for one function definition.
         """
         yield_nodes = _top_level_yield_nodes(node.body)
         nested_yields = tuple(
@@ -278,8 +265,7 @@ class DeclarationFunctionVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Visit FunctionPrototype nodes.
         parameters:
-          node:
-            type: astx.FunctionPrototype
+          node: Syntax node to process.
         """
         for template_param in astx.get_template_params(node):
             self._resolve_declared_type(
@@ -305,8 +291,7 @@ class DeclarationFunctionVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Visit FunctionDef nodes.
         parameters:
-          node:
-            type: astx.FunctionDef
+          node: Syntax node to process.
         """
         for template_param in astx.get_template_params(node.prototype):
             self._resolve_declared_type(

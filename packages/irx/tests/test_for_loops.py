@@ -19,10 +19,8 @@ def build_int32_main_module(body: astx.Block) -> astx.Module:
     """
     title: Build a module with one Int32 main function.
     parameters:
-      body:
-        type: astx.Block
-    returns:
-      type: astx.Module
+      body: Statements forming the body.
+    returns: Constructed a module with one Int32 main function.
     """
     module = astx.Module()
     main_proto = astx.FunctionPrototype(
@@ -39,10 +37,9 @@ def block_of(*nodes: astx.AST) -> astx.Block:
     title: Build one block from positional AST nodes.
     parameters:
       nodes:
-        type: astx.AST
         variadic: positional
-    returns:
-      type: astx.Block
+        description: Syntax nodes in source order.
+    returns: Constructed one block from positional AST nodes.
     """
     block = astx.Block()
     for node in nodes:
@@ -54,12 +51,9 @@ def add_assign(name: str, value: astx.AST) -> astx.VariableAssignment:
     """
     title: Build one additive variable assignment.
     parameters:
-      name:
-        type: str
-      value:
-        type: astx.AST
-    returns:
-      type: astx.VariableAssignment
+      name: Name identifying the declaration or operation.
+      value: Value to process.
+    returns: Constructed one additive variable assignment.
     """
     return astx.VariableAssignment(
         name,
@@ -86,12 +80,9 @@ def test_for_range_lowers_for_numeric_induction_types(
     """
     title: For-range loops should lower cleanly for supported numeric IV types.
     parameters:
-      builder_class:
-        type: type[Builder]
-      int_type:
-        type: type
-      literal_type:
-        type: type
+      builder_class: Builder implementation under test.
+      int_type: Type of int.
+      literal_type: Literal type used by this case.
     """
     builder = builder_class()
     loop = astx.ForRangeLoopStmt(
@@ -119,8 +110,7 @@ def test_for_range_empty_body_no_crash(
     """
     title: ForRangeLoopStmt with empty body must still lower and execute.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     for_loop = astx.ForRangeLoopStmt(
@@ -148,8 +138,7 @@ def test_for_range_break_allows_following_statements(
     """
     title: ForRangeLoopStmt break must still reach statements after the loop.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     loop = astx.ForRangeLoopStmt(
@@ -187,8 +176,7 @@ def test_for_range_continue_uses_step_block(
     """
     title: ForRangeLoopStmt continue must branch through the step block.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     loop = astx.ForRangeLoopStmt(
@@ -221,8 +209,7 @@ def test_for_range_continue_preserves_step_progression(
     """
     title: For-range continue should still advance through the step path.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     loop = astx.ForRangeLoopStmt(
@@ -270,8 +257,7 @@ def test_for_range_accumulates_with_stable_induction_progression(
     """
     title: For-range accumulation should observe a stable induction sequence.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     loop = astx.ForRangeLoopStmt(
@@ -308,8 +294,7 @@ def test_for_range_caches_end_and_step_before_iteration(
     """
     title: For-range end and step are observed before the first iteration.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     loop = astx.ForRangeLoopStmt(
@@ -360,11 +345,10 @@ def test_for_range_body_mutation_feeds_step(
     builder_class: type[Builder],
 ) -> None:
     """
-    title: >-
-      Mutating the range induction variable in the body should feed the step.
+    title: Mutating the range induction variable in the body should feed
+      the step.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     loop = astx.ForRangeLoopStmt(
@@ -411,8 +395,7 @@ def test_for_range_nested_loops_accumulate_cleanly(
     """
     title: Nested for-range loops should preserve nearest-loop control flow.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     inner_loop = astx.ForRangeLoopStmt(
@@ -462,8 +445,7 @@ def test_for_range_zero_iterations_preserve_post_loop_state(
     """
     title: A zero-trip for-range loop should leave post-loop state untouched.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     loop = astx.ForRangeLoopStmt(
@@ -511,12 +493,9 @@ def test_for_count_lowers_for_numeric_induction_types(
     """
     title: For-count loops should lower cleanly for supported numeric IV types.
     parameters:
-      builder_class:
-        type: type[Builder]
-      int_type:
-        type: type
-      literal_type:
-        type: type
+      builder_class: Builder implementation under test.
+      int_type: Type of int.
+      literal_type: Literal type used by this case.
     """
     builder = builder_class()
     init_a = astx.InlineVariableDeclaration(
@@ -546,8 +525,7 @@ def test_for_count_empty_body_no_crash(
     """
     title: ForCountLoopStmt with empty body must still lower and execute.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     variable = astx.Identifier("a2")
@@ -580,8 +558,7 @@ def test_for_count_break_allows_following_statements(
     """
     title: ForCountLoopStmt break must still reach statements after the loop.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     initializer = astx.InlineVariableDeclaration(
@@ -625,8 +602,7 @@ def test_for_count_continue_uses_update_block(
     """
     title: ForCountLoopStmt continue must branch through the update block.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     loop = astx.ForCountLoopStmt(
@@ -663,8 +639,7 @@ def test_for_count_continue_runs_update_before_rechecking_condition(
     """
     title: For-count continue should still execute the update expression.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     loop = astx.ForCountLoopStmt(
@@ -716,8 +691,7 @@ def test_for_count_update_expression_result_becomes_next_iteration_value(
     """
     title: For-count update result should become the next induction value.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     loop = astx.ForCountLoopStmt(
@@ -762,8 +736,7 @@ def test_for_count_body_mutation_feeds_update(
     """
     title: Body mutation in for-count should be observed by the update step.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     loop = astx.ForCountLoopStmt(
@@ -814,8 +787,7 @@ def test_for_count_nested_loops_accumulate_cleanly(
     """
     title: Nested for-count loops should preserve nearest-loop control flow.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     inner_loop = astx.ForCountLoopStmt(
@@ -873,8 +845,7 @@ def test_for_count_uses_single_initializer_alloca(
     """
     title: For-count lowering should not duplicate the initializer alloca.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     loop = astx.ForCountLoopStmt(
@@ -909,8 +880,7 @@ def test_for_count_zero_iterations_preserve_post_loop_state(
     """
     title: A zero-trip for-count loop should leave post-loop state untouched.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     loop = astx.ForCountLoopStmt(

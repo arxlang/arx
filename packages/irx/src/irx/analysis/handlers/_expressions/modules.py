@@ -4,9 +4,8 @@
 
 """
 title: Expression module-namespace helpers.
-summary: >-
-  Resolve module namespaces, namespace member access, and direct function calls
-  in expression analysis.
+summary: Resolve module namespaces, namespace member access, and
+  direct function calls in expression analysis.
 """
 
 from __future__ import annotations
@@ -67,8 +66,7 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
     """
     title: Expression helpers for module namespaces and function calls
     attributes:
-      call_visitor:
-        type: CallAnalysisVisitor
+      call_visitor: Call visitor.
     """
 
     call_visitor: CallAnalysisVisitor
@@ -82,12 +80,9 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Resolve list borrowing and result ownership for one call.
         parameters:
-          node:
-            type: astx.AST
-          args:
-            type: list[astx.AST]
-          result_type:
-            type: astx.DataType | None
+          node: Syntax node to process.
+          args: Arguments supplied to the operation.
+          result_type: Resolved result type.
         """
         self._semantic(node).resource_ownership = None
         call = self._semantic(node).resolved_call
@@ -181,10 +176,8 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Build one semantic-only namespace type for a module.
         parameters:
-          module:
-            type: SemanticModule
-        returns:
-          type: astx.NamespaceType
+          module: Module to process.
+        returns: Constructed one semantic-only namespace type for a module.
         """
         return astx.NamespaceType(
             module.module_key,
@@ -199,10 +192,9 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Reconstruct module identity from a namespace type.
         parameters:
-          type_:
-            type: astx.DataType | None
-        returns:
-          type: SemanticModule | None
+          type_: Type expression to process.
+        returns: 'Result of this operation: reconstruct module identity
+          from a namespace type.'
         """
         if not isinstance(type_, astx.NamespaceType):
             return None
@@ -220,10 +212,8 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Return the resolved module namespace for one expression.
         parameters:
-          node:
-            type: astx.AST
-        returns:
-          type: SemanticModule | None
+          node: Syntax node to process.
+        returns: The resolved module namespace for one expression.
         """
         semantic = getattr(node, "semantic", None)
         module = getattr(semantic, "resolved_module", None)
@@ -239,12 +229,9 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Return one stable display name for a namespace expression.
         parameters:
-          node:
-            type: astx.AST
-          module:
-            type: SemanticModule | None
-        returns:
-          type: str
+          node: Syntax node to process.
+          module: Module to process.
+        returns: One stable display name for a namespace expression.
         """
         if isinstance(node, astx.Identifier):
             return node.name
@@ -271,16 +258,11 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Resolve one visible member through a module namespace.
         parameters:
-          module:
-            type: SemanticModule
-          member_name:
-            type: str
-          node:
-            type: astx.AST
-          namespace_name:
-            type: str
-        returns:
-          type: SemanticBinding | None
+          module: Module to process.
+          member_name: Name of member.
+          node: Syntax node to process.
+          namespace_name: Name of namespace.
+        returns: Resolved one visible member through a module namespace.
         """
         binding = self.bindings.resolve(
             member_name,
@@ -318,14 +300,10 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Attach resolved module-member semantics to one node.
         parameters:
-          node:
-            type: astx.AST
-          module:
-            type: SemanticModule
-          member_name:
-            type: str
-          binding:
-            type: SemanticBinding
+          node: Syntax node to process.
+          module: Module to process.
+          member_name: Name of member.
+          binding: Resolved binding for the operation.
         """
         self._set_module_member_access(
             node,
@@ -359,12 +337,9 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Resolve one callable lookup through a module namespace.
         parameters:
-          node:
-            type: astx.MethodCall
-          module:
-            type: SemanticModule
-          arg_types:
-            type: list[astx.DataType | None]
+          node: Syntax node to process.
+          module: Module to process.
+          arg_types: Types of arg.
         """
         namespace_name = self._module_namespace_name(node.receiver, module)
         binding = self._resolve_module_member_binding(
@@ -448,10 +423,9 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Supply one analyzed expression through the narrow call boundary.
         parameters:
-          node:
-            type: astx.AST
-        returns:
-          type: astx.DataType | None
+          node: Syntax node to process.
+        returns: 'Result of this operation: supply one analyzed expression
+          through the narrow call boundary.'
         """
         self.visit(node)
         return self._expr_type(node)
@@ -460,15 +434,13 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
         self, type_: astx.ClassType, node: astx.AST
     ) -> SemanticClass | None:
         """
-        title: >-
-          Supply nominal class resolution without exporting analyzer state.
+        title: Supply nominal class resolution without exporting analyzer
+          state.
         parameters:
-          type_:
-            type: astx.ClassType
-          node:
-            type: astx.AST
-        returns:
-          type: SemanticClass | None
+          type_: Type expression to process.
+          node: Syntax node to process.
+        returns: 'Result of this operation: supply nominal class resolution
+          without exporting analyzer state.'
         """
         return self._resolve_class_from_type(
             type_, node=node, unknown_message="unknown class {name}"
@@ -480,15 +452,13 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
         function: SemanticFunction,
     ) -> bool:
         """
-        title: >-
-          Delegate resolved operation meaning after ordinary symbol lookup.
+        title: Delegate resolved operation meaning after ordinary symbol
+          lookup.
         parameters:
-          node:
-            type: astx.FunctionCall | astx.MethodCall
-          function:
-            type: SemanticFunction
-        returns:
-          type: bool
+          node: Syntax node to process.
+          function: Function to process.
+        returns: 'Result of this operation: delegate resolved operation meaning
+          after ordinary symbol lookup.'
         """
         operation = function.signature.operation
         if operation is None:
@@ -538,8 +508,7 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Visit Identifier nodes.
         parameters:
-          node:
-            type: astx.Identifier
+          node: Syntax node to process.
         """
         self._semantic(node).resource_ownership = None
         self._semantic(node).lifecycle_self = False
@@ -676,8 +645,7 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Visit FunctionCall nodes.
         parameters:
-          node:
-            type: astx.FunctionCall
+          node: Syntax node to process.
         """
         info = self._semantic(node)
         info.range_construction = None

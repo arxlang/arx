@@ -36,12 +36,9 @@ class NullableVisitorMixin(DataFrameVisitorMixin):
         """
         title: Encode either an opaque column or fixed-width scalar bits.
         parameters:
-          node:
-            type: astx.AST
-          target:
-            type: astx.DataType | None
-        returns:
-          type: list[ir.Value]
+          node: Syntax node to process.
+          target: Destination of the operation.
+        returns: Encoded either an opaque column or fixed-width scalar bits.
         """
         self.visit_child(node)
         value = require_lowered_value(
@@ -98,14 +95,10 @@ class NullableVisitorMixin(DataFrameVisitorMixin):
         """
         title: Decode scalar bits only after native status success.
         parameters:
-          node:
-            type: astx.AST
-          result_type:
-            type: astx.DataType
-          bits:
-            type: ir.Value
-          valid:
-            type: ir.Value
+          node: Syntax node to process.
+          result_type: Resolved result type.
+          bits: Exact scalar payload bits.
+          valid: Whether the scalar payload is valid.
         """
         builder = self._llvm.ir_builder
         nullable = isinstance(result_type, astx.NullableType)
@@ -148,18 +141,16 @@ class NullableVisitorMixin(DataFrameVisitorMixin):
 
     def lower_compute(self, node: astx.AST, plan: ComputePlan) -> None:
         """
-        title: Lower closed math plans through the versioned Arrow Datum ABI.
-        summary: >-
-          Evaluate once, borrow the input for the synchronous call, and read
-          outputs only on success. Scalar payloads remain primitive bits;
-          Series outputs use the existing semantic move/cleanup facts. Native
-          Scalar/Datum owners are scoped inside the dispatcher, not exported as
-          a portable Arrow Scalar C ABI or exposed to LLVM.
+        title: Lower closed math plans through the versioned Arrow Datum
+          ABI.
+        summary: Evaluate once, borrow the input for the synchronous call,
+          and read outputs only on success. Scalar payloads remain primitive
+          bits; Series outputs use the existing semantic move/cleanup facts.
+          Native Scalar/Datum owners are scoped inside the dispatcher, not
+          exported as a portable Arrow Scalar C ABI or exposed to LLVM.
         parameters:
-          node:
-            type: astx.AST
-          plan:
-            type: ComputePlan
+          node: Syntax node to process.
+          plan: Resolved semantic execution plan.
         """
         self.emit_compute(
             node,
@@ -184,20 +175,13 @@ class NullableVisitorMixin(DataFrameVisitorMixin):
         """
         title: Emit one versioned call from resolved operands and conversions.
         parameters:
-          node:
-            type: astx.AST
-          operation_id:
-            type: int
-          input_id:
-            type: int
-          result_id:
-            type: int
-          result_type:
-            type: astx.DataType
-          arguments:
-            type: tuple[astx.AST, Ellipsis]
-          operand_ids:
-            type: tuple[int, Ellipsis]
+          node: Syntax node to process.
+          operation_id: Approved operation identifier.
+          input_id: Arrow logical common input type identifier.
+          result_id: Arrow logical result type identifier.
+          result_type: Resolved result type.
+          arguments: Arguments supplied to the call.
+          operand_ids: Identifiers for operand.
         """
         builder = self._llvm.ir_builder
         integer = ir.IntType(32)
@@ -268,10 +252,9 @@ class NullableVisitorMixin(DataFrameVisitorMixin):
         """
         title: Consume the semantic kernel plan without rediscovering types.
         parameters:
-          node:
-            type: astx.AST
-        returns:
-          type: bool
+          node: Syntax node to process.
+        returns: 'Result of this operation: consume the semantic kernel plan
+          without rediscovering types.'
         """
         info = getattr(node, "semantic", None)
         plan = None if info is None else info.extras.get("column_operation")
@@ -334,8 +317,7 @@ class NullableVisitorMixin(DataFrameVisitorMixin):
         """
         title: Lower a resolved null test.
         parameters:
-          node:
-            type: astx.NullCheck
+          node: Syntax node to process.
         """
         if not self.lower_column_operation(node):
             require_semantic_metadata(
@@ -347,8 +329,7 @@ class NullableVisitorMixin(DataFrameVisitorMixin):
         """
         title: Lower a resolved eager null replacement.
         parameters:
-          node:
-            type: astx.NullFill
+          node: Syntax node to process.
         """
         if not self.lower_column_operation(node):
             require_semantic_metadata(
@@ -362,8 +343,7 @@ class NullableVisitorMixin(DataFrameVisitorMixin):
         """
         title: Lower resolved slice bounds without reading failed outputs.
         parameters:
-          node:
-            type: astx.SubscriptExpr
+          node: Syntax node to process.
         """
         column = self.column_operand(node.value)[0]
         bounds = 0
@@ -403,8 +383,7 @@ class NullableVisitorMixin(DataFrameVisitorMixin):
         """
         title: Lower a fully resolved null-skipping Series reduction.
         parameters:
-          node:
-            type: astx.SeriesReduction
+          node: Syntax node to process.
         """
         if not self.lower_column_operation(node):
             require_semantic_metadata(
@@ -420,10 +399,8 @@ class NullableVisitorMixin(DataFrameVisitorMixin):
         """
         title: Update one element without producing a statement value.
         parameters:
-          node:
-            type: astx.BinaryOp
-          plan:
-            type: ColumnOperation
+          node: Syntax node to process.
+          plan: Resolved semantic execution plan.
         """
         assert isinstance(node.lhs, astx.SubscriptExpr)
         column = self.column_operand(node.lhs.value)[0]

@@ -1,5 +1,9 @@
 """
 title: Tests for Python-subset validation.
+attributes:
+  _UNSUPPORTED_CASES: Unsupported cases.
+  _SHADOWED_MESSAGES: Shadowed messages.
+  _ASYNC_ONLY: Async only.
 """
 
 import ast
@@ -26,14 +30,12 @@ PyFunc = Callable[..., Any]
 def _rejected(fn: PyFunc) -> list[Any]:
     """
     title: Extract, validate, and return the diagnostics of a rejection.
-    summary: >-
-      Asserts the function is rejected and returns its diagnostics, so
-      individual tests can focus on which messages and locations matter.
+    summary: Asserts the function is rejected and returns its diagnostics,
+      so individual tests can focus on which messages and locations matter.
     parameters:
-      fn:
-        type: PyFunc
-    returns:
-      type: list[Any]
+      fn: Function to process.
+    returns: 'Result of this operation: extract, validate, and return the
+      diagnostics of a rejection.'
     """
     extracted = extract_source(fn)
     with pytest.raises(UnsupportedSyntaxError) as caught:
@@ -45,12 +47,10 @@ def sample_valid(count: int, flag: bool) -> int:
     """
     title: Exercise the entire v1-supported subset in one function.
     parameters:
-      count:
-        type: int
-      flag:
-        type: bool
-    returns:
-      type: int
+      count: Number of items.
+      flag: Whether to use flag.
+    returns: 'Result of this operation: exercise the entire v1-supported
+      subset in one function.'
     """
     total = 0
     if flag:
@@ -88,14 +88,11 @@ def test_chained_comparison_is_accepted() -> None:
         """
         title: Check a is strictly between b and c.
         parameters:
-          a:
-            type: int
-          b:
-            type: int
-          c:
-            type: int
-        returns:
-          type: bool
+          a: First operand.
+          b: Second operand.
+          c: Third operand.
+        returns: 'Result of this operation: check a is strictly between b
+          and c.'
         """
         return b < a < c
 
@@ -112,10 +109,8 @@ def test_async_function_is_rejected() -> None:
         """
         title: Return the argument, asynchronously.
         parameters:
-          x:
-            type: int
-        returns:
-          type: int
+          x: Input value.
+        returns: The argument, asynchronously.
         """
         return x
 
@@ -133,10 +128,8 @@ def test_list_literal_is_rejected() -> None:
         """
         title: Build a list.
         parameters:
-          x:
-            type: int
-        returns:
-          type: int
+          x: Input value.
+        returns: Constructed a list.
         """
         values = [x, 1]
         return values[0]
@@ -148,20 +141,18 @@ def test_list_literal_is_rejected() -> None:
 def test_yield_statement_gets_the_generators_message() -> None:
     """
     title: A bare "yield x" gets the specific generators message.
-    summary: >-
-      Regression test: visit_Expr must delegate Yield/YieldFrom to the generic
-      unsupported-construct lookup instead of reporting the generic "standalone
-      expression statements" message.
+    summary: 'Regression test: visit_Expr must delegate Yield/YieldFrom
+      to the generic unsupported-construct lookup instead of reporting
+      the generic "standalone expression statements" message.'
     """
 
     def sample(x: int) -> int:
         """
         title: Yield the argument, making this a generator function.
         parameters:
-          x:
-            type: int
-        returns:
-          type: int
+          x: Input value.
+        returns: Iterator yielding the argument, making this a generator
+          function.
         """
         yield x
 
@@ -179,10 +170,9 @@ def test_bare_call_expression_is_rejected() -> None:
         """
         title: Call a builtin and discard its result.
         parameters:
-          x:
-            type: int
-        returns:
-          type: int
+          x: Input value.
+        returns: 'Result of this operation: call a builtin and discard its
+          result.'
         """
         abs(x)
         return x
@@ -200,10 +190,8 @@ def test_docstring_is_not_rejected() -> None:
         """
         title: Return the argument unchanged.
         parameters:
-          x:
-            type: int
-        returns:
-          type: int
+          x: Input value.
+        returns: The argument unchanged.
         """
         return x
 
@@ -220,10 +208,9 @@ def test_pass_is_not_rejected() -> None:
         """
         title: Branch without doing anything in the else arm.
         parameters:
-          flag:
-            type: bool
-        returns:
-          type: int
+          flag: Whether to use flag.
+        returns: 'Result of this operation: branch without doing anything
+          in the else arm.'
         """
         if flag:
             pass
@@ -244,12 +231,9 @@ def test_bitwise_operator_is_rejected() -> None:
         """
         title: Bitwise-and two integers.
         parameters:
-          x:
-            type: int
-          y:
-            type: int
-        returns:
-          type: int
+          x: Input value.
+          y: Second input value.
+        returns: 'Result of this operation: bitwise-and two integers.'
         """
         return x & y
 
@@ -266,10 +250,8 @@ def test_string_constant_is_rejected() -> None:
         """
         title: Return a fixed string.
         parameters:
-          flag:
-            type: bool
-        returns:
-          type: str
+          flag: Whether to use flag.
+        returns: A fixed string.
         """
         return "hello"
 
@@ -286,10 +268,9 @@ def test_multiple_violations_are_all_collected() -> None:
         """
         title: Combine three unsupported constructs.
         parameters:
-          x:
-            type: int
-        returns:
-          type: int
+          x: Input value.
+        returns: 'Result of this operation: combine three unsupported
+          constructs.'
         """
         import math  # noqa: F401, PLC0415
 
@@ -314,10 +295,8 @@ def test_multiple_assignment_targets_are_rejected() -> None:
         """
         title: Assign to two names at once.
         parameters:
-          x:
-            type: int
-        returns:
-          type: int
+          x: Input value.
+        returns: 'Result of this operation: assign to two names at once.'
         """
         a = b = x
         return a + b
@@ -335,10 +314,8 @@ def test_bitwise_not_is_rejected() -> None:
         """
         title: Bitwise-invert an integer.
         parameters:
-          x:
-            type: int
-        returns:
-          type: int
+          x: Input value.
+        returns: 'Result of this operation: bitwise-invert an integer.'
         """
         return ~x
 
@@ -355,12 +332,9 @@ def test_identity_comparison_is_rejected() -> None:
         """
         title: Compare two values by identity.
         parameters:
-          x:
-            type: int
-          y:
-            type: int
-        returns:
-          type: bool
+          x: Input value.
+          y: Second input value.
+        returns: 'Result of this operation: compare two values by identity.'
         """
         return x is y
 
@@ -377,10 +351,9 @@ def test_for_over_non_range_is_rejected() -> None:
         """
         title: Iterate over a bare name instead of range(...).
         parameters:
-          x:
-            type: int
-        returns:
-          type: int
+          x: Input value.
+        returns: 'Result of this operation: iterate over a bare name
+          instead of range(...).'
         """
         total = 0
         for i in x:
@@ -400,10 +373,9 @@ def test_for_tuple_target_is_rejected() -> None:
         """
         title: Unpack a tuple target in a for loop.
         parameters:
-          x:
-            type: int
-        returns:
-          type: int
+          x: Input value.
+        returns: 'Result of this operation: unpack a tuple target in a for
+          loop.'
         """
         total = 0
         for i, j in range(x):
@@ -417,19 +389,17 @@ def test_for_tuple_target_is_rejected() -> None:
 def test_for_else_clause_is_rejected() -> None:
     """
     title: A for-else clause is rejected.
-    summary: >-
-      The loop else pairs with break, which is outside the subset, so it is
-      rejected rather than silently accepted and left for lowering.
+    summary: The loop else pairs with break, which is outside the subset,
+      so it is rejected rather than silently accepted and left for lowering.
     """
 
     def sample(x: int) -> int:
         """
         title: Attach an else clause to a for loop.
         parameters:
-          x:
-            type: int
-        returns:
-          type: int
+          x: Input value.
+        returns: 'Result of this operation: attach an else clause to a for
+          loop.'
         """
         total = 0
         for i in range(x):
@@ -451,10 +421,9 @@ def test_while_else_clause_is_rejected() -> None:
         """
         title: Attach an else clause to a while loop.
         parameters:
-          x:
-            type: int
-        returns:
-          type: int
+          x: Input value.
+        returns: 'Result of this operation: attach an else clause to a while
+          loop.'
         """
         while x > 0:
             x = x - 1
@@ -476,10 +445,10 @@ def test_varargs_are_rejected() -> None:
         title: Accept a variable number of positional arguments.
         parameters:
           values:
-            type: int
             variadic: positional
-        returns:
-          type: int
+            description: Values to process, in order.
+        returns: 'Result of this operation: accept a variable number
+          of positional arguments.'
         """
         return 0
 
@@ -499,10 +468,10 @@ def test_kwargs_are_rejected() -> None:
         title: Accept a variable number of keyword arguments.
         parameters:
           values:
-            type: int
             variadic: keyword
-        returns:
-          type: int
+            description: Values to process, in order.
+        returns: 'Result of this operation: accept a variable number
+          of keyword arguments.'
         """
         return 0
 
@@ -519,12 +488,9 @@ def test_keyword_only_arguments_are_rejected() -> None:
         """
         title: Accept a keyword-only argument.
         parameters:
-          x:
-            type: int
-          y:
-            type: int
-        returns:
-          type: int
+          x: Input value.
+          y: Second input value.
+        returns: 'Result of this operation: accept a keyword-only argument.'
         """
         return x + y
 
@@ -541,12 +507,10 @@ def test_default_argument_values_are_rejected() -> None:
         """
         title: Accept an argument with a default value.
         parameters:
-          x:
-            type: int
-          y:
-            type: int
-        returns:
-          type: int
+          x: Input value.
+          y: Second input value.
+        returns: 'Result of this operation: accept an argument with a default
+          value.'
         """
         return x + y
 
@@ -556,22 +520,20 @@ def test_default_argument_values_are_rejected() -> None:
 
 def test_column_points_at_the_real_file() -> None:
     """
-    title: A diagnostic's line and column point at the real source file.
-    summary: >-
-      Regression test for the extracted-source line-offset fix: node.lineno is
-      a real file line number, not an index into ExtractedSource.source, so the
-      diagnostic must locate the correct real line before converting its
-      column.
+    title: A diagnostic's line and column point at the real source
+      file.
+    summary: 'Regression test for the extracted-source line-offset
+      fix: node.lineno is a real file line number, not an index into
+      ExtractedSource.source, so the diagnostic must locate the correct
+      real line before converting its column.'
     """
 
     def sample(x: int) -> int:
         """
         title: Build an unsupported list literal.
         parameters:
-          x:
-            type: int
-        returns:
-          type: int
+          x: Input value.
+        returns: Constructed an unsupported list literal.
         """
         return [x, 1]
 
@@ -586,27 +548,24 @@ def test_column_points_at_the_real_file() -> None:
 def test_nested_function_diagnostics_point_at_the_real_file() -> None:
     """
     title: Diagnostics from a non-module-level function are still file-true.
-    summary: >-
-      A function defined inside another starts partway through the file,
-      exercising the extracted.lineno offset the module-level cases above do
-      not.
+    summary: A function defined inside another starts partway through
+      the file, exercising the extracted.lineno offset the module-level
+      cases above do not.
     """
 
     def outer() -> PyFunc:
         """
         title: Define and return a nested function containing a violation.
-        returns:
-          type: PyFunc
+        returns: 'Result of this operation: define and return a nested
+          function containing a violation.'
         """
 
         def inner(x: int) -> int:
             """
             title: Build an unsupported list literal.
             parameters:
-              x:
-                type: int
-            returns:
-              type: int
+              x: Input value.
+            returns: Constructed an unsupported list literal.
             """
             return [x, 1]
 
@@ -622,10 +581,9 @@ def test_nested_function_diagnostics_point_at_the_real_file() -> None:
 def test_char_column_converts_multibyte_prefixes() -> None:
     """
     title: char_column converts a UTF-8 byte offset to a character column.
-    summary: >-
-      A non-ASCII character earlier on the line makes the byte offset diverge
-      from the character index; this directly pins the conversion independent
-      of the ast probing above.
+    summary: A non-ASCII character earlier on the line makes the byte offset
+      diverge from the character index; this directly pins the conversion
+      independent of the ast probing above.
     """
     line = '    x = "héllo" + [1, 2]'
     char_index = line.index("[")
@@ -639,20 +597,18 @@ def test_char_column_converts_multibyte_prefixes() -> None:
 def test_free_variable_read_is_rejected() -> None:
     """
     title: Reading a name that is neither an argument nor a local is rejected.
-    summary: >-
-      The extracted node of a nested function keeps its free variables as plain
-      ast.Name loads; without binding analysis a closure capture would pass
-      validation, so this pins that a free read is rejected.
+    summary: The extracted node of a nested function keeps its free variables
+      as plain ast.Name loads; without binding analysis a closure capture
+      would pass validation, so this pins that a free read is rejected.
     """
 
     def sample(x: int) -> int:
         """
         title: Multiply by an undefined free variable.
         parameters:
-          x:
-            type: int
-        returns:
-          type: int
+          x: Input value.
+        returns: 'Result of this operation: multiply by an undefined free
+          variable.'
         """
         return x * scale  # noqa: F821
 
@@ -670,10 +626,9 @@ def test_global_read_is_rejected() -> None:
         """
         title: Multiply by a module-level constant.
         parameters:
-          x:
-            type: int
-        returns:
-          type: int
+          x: Input value.
+        returns: 'Result of this operation: multiply by a module-level
+          constant.'
         """
         return x * _SAMPLE_GLOBAL
 
@@ -690,10 +645,8 @@ def test_shadowed_range_is_rejected() -> None:
         """
         title: Loop over a parameter named range.
         parameters:
-          range:
-            type: int
-        returns:
-          type: int
+          range: Range.
+        returns: 'Result of this operation: loop over a parameter named range.'
         """
         total = 0
         for i in range(3):
@@ -707,19 +660,18 @@ def test_shadowed_range_is_rejected() -> None:
 def test_closure_captured_range_shadow_is_rejected() -> None:
     """
     title: A range captured from an enclosing scope is rejected.
-    summary: >-
-      An enclosing function's local shadows the builtin for the whole nested
-      function, which Python resolves through the closure (a TypeError when it
-      is not callable). The capture is a plain Name load in the extracted AST,
-      indistinguishable from the builtin, so the captured names carried by
-      extraction are what reveal it.
+    summary: An enclosing function's local shadows the builtin for
+      the whole nested function, which Python resolves through the
+      closure (a TypeError when it is not callable). The capture is
+      a plain Name load in the extracted AST, indistinguishable from
+      the builtin, so the captured names carried by extraction are
+      what reveal it.
     """
 
     def outer() -> PyFunc:
         """
         title: Return a kernel that captures a local named range.
-        returns:
-          type: PyFunc
+        returns: A kernel that captures a local named range.
         """
         range = 5
 
@@ -727,10 +679,8 @@ def test_closure_captured_range_shadow_is_rejected() -> None:
             """
             title: Loop over the captured range.
             parameters:
-              n:
-                type: int
-            returns:
-              type: int
+              n: N.
+            returns: 'Result of this operation: loop over the captured range.'
             """
             total = 0
             for i in range(n):
@@ -746,11 +696,10 @@ def test_closure_captured_range_shadow_is_rejected() -> None:
 def test_module_level_range_shadow_is_rejected() -> None:
     """
     title: A module-global that shadows range is rejected.
-    summary: >-
-      A module-level ``range = 42`` makes the call a TypeError in Python, so
-      compiling it as the range intrinsic would silently change behavior. The
-      shadowing is invisible in the AST, so the defining module's namespace
-      carried by extraction is what reveals it.
+    summary: A module-level ``range = 42`` makes the call a TypeError in
+      Python, so compiling it as the range intrinsic would silently change
+      behavior. The shadowing is invisible in the AST, so the defining module's
+      namespace carried by extraction is what reveals it.
     """
     source = (
         "def kernel(n: int) -> int:\n"
@@ -775,9 +724,8 @@ def test_module_level_range_shadow_is_rejected() -> None:
 def test_module_namespace_without_shadowing_is_accepted() -> None:
     """
     title: A module namespace that leaves range alone validates cleanly.
-    summary: >-
-      Covers both an unrelated global and the builtin bound explicitly under
-      its own name, neither of which shadows the intrinsic.
+    summary: Covers both an unrelated global and the builtin bound explicitly
+      under its own name, neither of which shadows the intrinsic.
     """
     source = (
         "def kernel(n: int) -> int:\n"
@@ -800,28 +748,26 @@ def test_module_namespace_without_shadowing_is_accepted() -> None:
 def test_nested_scope_binding_does_not_leak_outward() -> None:
     """
     title: A name assigned in a nested scope is not a binding of this one.
-    summary: >-
-      Regression test: collecting bindings with ast.walk descended into the
-      nested function and treated its ``range`` local as shadowing the builtin
-      in the outer scope, producing a misleading diagnostic. Only the nested
-      definition itself should be reported.
+    summary: 'Regression test: collecting bindings with ast.walk descended
+      into the nested function and treated its ``range`` local as shadowing
+      the builtin in the outer scope, producing a misleading diagnostic.
+      Only the nested definition itself should be reported.'
     """
 
     def sample(n: int) -> int:
         """
         title: Loop over range while a nested helper binds the name range.
         parameters:
-          n:
-            type: int
-        returns:
-          type: int
+          n: N.
+        returns: 'Result of this operation: loop over range while a nested
+          helper binds the name range.'
         """
 
         def helper() -> int:
             """
             title: Bind and return a local named range.
-            returns:
-              type: int
+            returns: 'Result of this operation: bind and return a local named
+              range.'
             """
             range = 10
             return range
@@ -839,25 +785,24 @@ def test_nested_scope_binding_does_not_leak_outward() -> None:
 
 def test_nested_scope_binding_does_not_hide_a_free_variable() -> None:
     """
-    title: A nested scope's local does not mask an outer free-variable read.
-    summary: >-
-      Regression test for the collect-all-at-once guarantee: the nested
-      function's ``scale`` local made the outer read of ``scale`` look bound,
-      so only one of the two problems was reported.
+    title: A nested scope's local does not mask an outer free-variable
+      read.
+    summary: 'Regression test for the collect-all-at-once guarantee:
+      the nested function''s ``scale`` local made the outer read of ``scale``
+      look bound, so only one of the two problems was reported.'
     """
 
     def sample() -> int:
         """
         title: Read a name that only a nested helper binds.
-        returns:
-          type: int
+        returns: Read a name that only a nested helper binds.
         """
 
         def helper() -> int:
             """
             title: Bind and return a local named scale.
-            returns:
-              type: int
+            returns: 'Result of this operation: bind and return a local named
+              scale.'
             """
             scale = 2
             return scale
@@ -879,10 +824,9 @@ def test_range_with_too_many_arguments_is_rejected() -> None:
         """
         title: Loop over range with four arguments.
         parameters:
-          n:
-            type: int
-        returns:
-          type: int
+          n: N.
+        returns: 'Result of this operation: loop over range with
+          four arguments.'
         """
         total = 0
         for i in range(1, 2, 3, 4):
@@ -902,10 +846,8 @@ def test_range_with_no_arguments_is_rejected() -> None:
         """
         title: Loop over range with no arguments.
         parameters:
-          n:
-            type: int
-        returns:
-          type: int
+          n: N.
+        returns: 'Result of this operation: loop over range with no arguments.'
         """
         total = 0
         for i in range():
@@ -925,10 +867,9 @@ def test_range_with_keyword_argument_is_rejected() -> None:
         """
         title: Call range with a keyword argument.
         parameters:
-          n:
-            type: int
-        returns:
-          type: int
+          n: N.
+        returns: 'Result of this operation: call range with a keyword
+          argument.'
         """
         total = 0
         for i in range(stop=n):
@@ -942,13 +883,12 @@ def test_range_with_keyword_argument_is_rejected() -> None:
 def test_binding_collector_handles_every_target_shape() -> None:
     """
     title: The binding collector records each binding form of one scope.
-    summary: >-
-      Tuple, list, and starred targets each bind their names, while an
-      attribute or subscript target binds none. The annotated, augmented, and
-      walrus forms bind their target even though the subset rejects the
-      statements themselves, so a rejected statement does not also report a
-      spurious free variable. A nested scope contributes its own name but never
-      its locals.
+    summary: Tuple, list, and starred targets each bind their names, while
+      an attribute or subscript target binds none. The annotated, augmented,
+      and walrus forms bind their target even though the subset rejects the
+      statements themselves, so a rejected statement does not also report
+      a spurious free variable. A nested scope contributes its own name but
+      never its locals.
     """
     source = (
         "def kernel(a, /, b, *args, c=1, **kwargs):\n"
@@ -992,21 +932,18 @@ def test_binding_collector_handles_every_target_shape() -> None:
 
 def test_unrecognized_node_type_falls_back_to_a_generic_message() -> None:
     """
-    title: >-
-      A node type absent from the whitelist and the message table still gets a
-      rejection, not a silent pass.
-    summary: >-
-      Exercises the fail-closed ast.AST dispatch fallback directly, covering
-      any future Python syntax this validator was not updated for, without
-      depending on a version-gated construct being available.
+    title: A node type absent from the whitelist and the message table still
+      gets a rejection, not a silent pass.
+    summary: Exercises the fail-closed ast.AST dispatch fallback directly,
+      covering any future Python syntax this validator was not updated for,
+      without depending on a version-gated construct being available.
     """
 
     class _Unknown(ast.AST):
         """
         title: A stand-in ast node type absent from every lookup table.
         attributes:
-          _fields:
-            type: tuple[str, Ellipsis]
+          _fields: Fields.
         """
 
         _fields: tuple[str, ...] = ()
@@ -1028,9 +965,8 @@ def test_unrecognized_node_type_falls_back_to_a_generic_message() -> None:
 def test_generic_function_is_rejected() -> None:
     """
     title: A PEP 695 generic function (type parameters) is rejected.
-    summary: >-
-      The type-parameter syntax parses only on Python 3.12+, so rather than
-      version-gate the test, type_params is set on a parsed node directly
+    summary: The type-parameter syntax parses only on Python 3.12+, so rather
+      than version-gate the test, type_params is set on a parsed node directly
       (validate only checks that the list is non-empty); this exercises the
       rejection on every supported Python version.
     """
@@ -1054,12 +990,10 @@ def sample_module_level(self: Any, x: int) -> int:
     """
     title: Double the argument (test helper defined outside any class).
     parameters:
-      self:
-        type: Any
-      x:
-        type: int
-    returns:
-      type: int
+      self: Self.
+      x: Input value.
+    returns: 'Result of this operation: double the argument (test helper
+      defined outside any class).'
     """
     return x * 2
 
@@ -1068,10 +1002,9 @@ def _wraps_preserving(fn: PyFunc) -> PyFunc:
     """
     title: Replace a function, preserving its identity metadata.
     parameters:
-      fn:
-        type: PyFunc
-    returns:
-      type: PyFunc
+      fn: Function to process.
+    returns: 'Result of this operation: replace a function, preserving its
+      identity metadata.'
     """
 
     @functools.wraps(fn)
@@ -1079,12 +1012,9 @@ def _wraps_preserving(fn: PyFunc) -> PyFunc:
         """
         title: Double the argument.
         parameters:
-          self:
-            type: Any
-          x:
-            type: int
-        returns:
-          type: int
+          self: Self.
+          x: Input value.
+        returns: 'Result of this operation: double the argument.'
         """
         return x * 2
 
@@ -1095,22 +1025,18 @@ def _replacing(fn: PyFunc) -> PyFunc:
     """
     title: Replace a function without preserving its identity metadata.
     parameters:
-      fn:
-        type: PyFunc
-    returns:
-      type: PyFunc
+      fn: Function to process.
+    returns: 'Result of this operation: replace a function without preserving
+      its identity metadata.'
     """
 
     def replacement(self: Any, x: int) -> int:
         """
         title: Double the argument.
         parameters:
-          self:
-            type: Any
-          x:
-            type: int
-        returns:
-          type: int
+          self: Self.
+          x: Input value.
+        returns: 'Result of this operation: double the argument.'
         """
         return x * 2
 
@@ -1126,10 +1052,8 @@ class SampleCalc:
         """
         title: Double the argument.
         parameters:
-          x:
-            type: int
-        returns:
-          type: int
+          x: Input value.
+        returns: 'Result of this operation: double the argument.'
         """
         return x * 2
 
@@ -1138,10 +1062,9 @@ class SampleCalc:
         """
         title: Double the argument, without an instance.
         parameters:
-          x:
-            type: int
-        returns:
-          type: int
+          x: Input value.
+        returns: 'Result of this operation: double the argument, without
+          an instance.'
         """
         return x * 2
 
@@ -1150,10 +1073,9 @@ class SampleCalc:
         """
         title: Double the argument, given the class.
         parameters:
-          x:
-            type: int
-        returns:
-          type: int
+          x: Input value.
+        returns: 'Result of this operation: double the argument, given the
+          class.'
         """
         return x * 2
 
@@ -1162,10 +1084,9 @@ class SampleCalc:
         """
         title: Double the argument, behind a functools.wraps decorator.
         parameters:
-          x:
-            type: int
-        returns:
-          type: int
+          x: Input value.
+        returns: 'Result of this operation: double the argument, behind
+          a functools.wraps decorator.'
         """
         return x * 2
 
@@ -1182,10 +1103,8 @@ class SampleCalc2:
         """
         title: Return the argument unchanged.
         parameters:
-          x:
-            type: int
-        returns:
-          type: int
+          x: Input value.
+        returns: The argument unchanged.
         """
         return x
 
@@ -1197,15 +1116,14 @@ class SampleCalc2:
 def test_method_is_rejected(attribute: str) -> None:
     """
     title: Every method form defined in a class body is rejected.
-    summary: >-
-      An instance method and a staticmethod resolve to plain functions when
-      accessed through the class, while a classmethod resolves to a bound
-      method object, so all three are pinned rather than assumed equivalent. A
-      functools.wraps decorator chain stays covered because it copies
-      __qualname__ and sets __wrapped__ for extraction to follow.
+    summary: An instance method and a staticmethod resolve to plain
+      functions when accessed through the class, while a classmethod
+      resolves to a bound method object, so all three are pinned
+      rather than assumed equivalent. A functools.wraps decorator
+      chain stays covered because it copies __qualname__ and sets
+      __wrapped__ for extraction to follow.
     parameters:
-      attribute:
-        type: str
+      attribute: Attribute.
     """
     (diagnostic,) = _rejected(getattr(SampleCalc, attribute))
     assert "methods are not supported" in diagnostic.message
@@ -1213,14 +1131,16 @@ def test_method_is_rejected(attribute: str) -> None:
 
 def test_class_body_assignment_is_not_detected() -> None:
     """
-    title: A module-level function assigned in a class body is accepted.
-    summary: >-
-      Documented limitation rather than an oversight: SampleCalc.assigned is a
-      genuine method, but __qualname__ records where the function was defined,
-      so nothing in the extracted source or its metadata reveals the class that
-      now owns it. Closing this needs the decorator layer, where
-      JitFunction.__set_name__ receives the owning class. Pinned so the
-      contract is explicit and a future fix has a test to flip.
+    title: A module-level function assigned in a class body
+      is accepted.
+    summary: 'Documented limitation rather than an oversight:
+      SampleCalc.assigned is a genuine method, but __qualname__
+      records where the function was defined, so nothing
+      in the extracted source or its metadata reveals the
+      class that now owns it. Closing this needs the decorator
+      layer, where JitFunction.__set_name__ receives the
+      owning class. Pinned so the contract is explicit and
+      a future fix has a test to flip.'
     """
     extracted = extract_source(SampleCalc.assigned)
     assert extracted.qualname == "sample_module_level"
@@ -1230,12 +1150,11 @@ def test_class_body_assignment_is_not_detected() -> None:
 def test_decorator_dropping_qualname_is_not_detected() -> None:
     """
     title: A method behind a non-wraps decorator is accepted.
-    summary: >-
-      The second documented limitation: a decorator that returns a different
-      function without functools.wraps preserves neither __qualname__ nor
-      __wrapped__, so the replacement reports the decorator's own scope and
-      extraction has no chain to follow back. Pinned for the same reason as the
-      assignment case.
+    summary: 'The second documented limitation: a decorator that
+      returns a different function without functools.wraps preserves
+      neither __qualname__ nor __wrapped__, so the replacement reports
+      the decorator''s own scope and extraction has no chain to follow
+      back. Pinned for the same reason as the assignment case.'
     """
     extracted = extract_source(SampleCalc2.replaced)
     assert extracted.qualname.endswith("<locals>.replacement")
@@ -1245,19 +1164,16 @@ def test_decorator_dropping_qualname_is_not_detected() -> None:
 def test_nested_function_is_not_treated_as_a_method() -> None:
     """
     title: A function nested in another function is not a method.
-    summary: >-
-      Both are dotted qualified names; only a method's has a class as its
-      second-to-last part, where a nested function has "<locals>".
+    summary: Both are dotted qualified names; only a method's has a class
+      as its second-to-last part, where a nested function has "<locals>".
     """
 
     def sample(x: int) -> int:
         """
         title: Double the argument.
         parameters:
-          x:
-            type: int
-        returns:
-          type: int
+          x: Input value.
+        returns: 'Result of this operation: double the argument.'
         """
         return x * 2
 
@@ -1329,22 +1245,19 @@ _ASYNC_ONLY: tuple[type[ast.AST], ...] = (
 
 def _validate_snippet(body: str, is_async: bool = False) -> list[str]:
     """
-    title: Validate a function built around a body snippet (test helper).
-    summary: >-
-      Builds the smallest function containing the snippet, hand-constructs an
-      ExtractedSource around it, and returns the rejection messages. The source
-      is built as text rather than as a real nested function so that a lint
-      autofix cannot rewrite the construct under test, which has happened
-      before with unused in-function imports.
+    title: Validate a function built around a body snippet (test
+      helper).
+    summary: Builds the smallest function containing the snippet,
+      hand-constructs an ExtractedSource around it, and returns the
+      rejection messages. The source is built as text rather than
+      as a real nested function so that a lint autofix cannot rewrite
+      the construct under test, which has happened before with unused
+      in-function imports.
     parameters:
-      body:
-        type: str
-        description: The statements to place in the function body.
-      is_async:
-        type: bool
-        description: Whether the containing function must be async.
-    returns:
-      type: list[str]
+      body: The statements to place in the function body.
+      is_async: Whether the containing function must be async.
+    returns: 'Result of this operation: validate a function built
+      around a body snippet (test helper).'
     """
     prefix = "async def" if is_async else "def"
     indented = "\n".join(
@@ -1372,15 +1285,12 @@ def test_unsupported_construct_uses_its_own_message(
 ) -> None:
     """
     title: Every unsupported construct reports its own diagnostic message.
-    summary: >-
-      Guards against a construct being swallowed by a more general rule: the
-      message produced must be the one the table assigns to that node type, not
-      one belonging to an enclosing node.
+    summary: 'Guards against a construct being swallowed by a more general
+      rule: the message produced must be the one the table assigns to that
+      node type, not one belonging to an enclosing node.'
     parameters:
-      node_type:
-        type: type[ast.AST]
-      body:
-        type: str
+      node_type: Type of node.
+      body: Statements forming the body.
     """
     messages = _validate_snippet(body, is_async=node_type in _ASYNC_ONLY)
     assert _UNSUPPORTED_MESSAGES[node_type] in messages
@@ -1389,9 +1299,9 @@ def test_unsupported_construct_uses_its_own_message(
 def test_every_unsupported_message_has_a_case() -> None:
     """
     title: The rejection matrix covers every entry in the message table.
-    summary: >-
-      Adding a message to _UNSUPPORTED_MESSAGES without a matching case here
-      fails this test, so the matrix cannot quietly fall behind the validator.
+    summary: Adding a message to _UNSUPPORTED_MESSAGES without a matching
+      case here fails this test, so the matrix cannot quietly fall behind
+      the validator.
     """
     covered = {node_type for node_type, _ in _UNSUPPORTED_CASES}
     assert covered | _SHADOWED_MESSAGES == set(_UNSUPPORTED_MESSAGES)
@@ -1400,10 +1310,9 @@ def test_every_unsupported_message_has_a_case() -> None:
 def test_walrus_does_not_also_report_a_free_variable() -> None:
     """
     title: A rejected walrus binds its name, so it reports exactly once.
-    summary: >-
-      The binding collector records NamedExpr targets precisely so a rejected
-      statement does not also emit a spurious free-variable read for the name
-      it introduces.
+    summary: The binding collector records NamedExpr targets precisely so
+      a rejected statement does not also emit a spurious free-variable read
+      for the name it introduces.
     """
     messages = _validate_snippet("if (v := x):\n    pass\nv = v + 1")
     assert messages == ["walrus assignment expressions are not supported"]
@@ -1428,9 +1337,8 @@ def test_augmented_assignment_does_not_also_report_a_free_variable() -> None:
 def test_call_nested_inside_range_args_is_rejected() -> None:
     """
     title: A non-range call inside range(...)'s arguments is rejected.
-    summary: >-
-      range() itself is the one permitted call, so its arguments still have to
-      be walked rather than trusted.
+    summary: range() itself is the one permitted call, so its arguments still
+      have to be walked rather than trusted.
     """
     messages = _validate_snippet("for i in range(abs(x)):\n    pass")
     assert messages == [

@@ -4,9 +4,8 @@
 
 """
 title: Expression class-access visitors.
-summary: >-
-  Handle class construction, method calls, and field access using the shared
-  class-resolution helpers.
+summary: Handle class construction, method calls, and field access using
+  the shared class-resolution helpers.
 """
 
 from __future__ import annotations
@@ -81,14 +80,11 @@ class ExpressionClassAccessVisitorMixin(ExpressionClassSupportVisitorMixin):
         """
         title: Diagnose one invalid abstract method call.
         parameters:
-          node:
-            type: astx.AST
-          member:
-            type: SemanticClassMember
-          allow_indirect_dispatch:
-            type: bool
-        returns:
-          type: bool
+          node: Syntax node to process.
+          member: Member.
+          allow_indirect_dispatch: Whether to use allow indirect dispatch.
+        returns: 'Result of this operation: diagnose one invalid abstract
+          method call.'
         """
         if not member.is_abstract:
             return False
@@ -113,8 +109,7 @@ class ExpressionClassAccessVisitorMixin(ExpressionClassSupportVisitorMixin):
         """
         title: Visit ClassConstruct nodes.
         parameters:
-          node:
-            type: astx.ClassConstruct
+          node: Syntax node to process.
         """
         self._semantic(node).resolved_class_construction = None
         class_ = self._resolve_named_class(node.class_name, node=node)
@@ -131,10 +126,8 @@ class ExpressionClassAccessVisitorMixin(ExpressionClassSupportVisitorMixin):
         """
         title: Resolve a class-valued callable after ordinary symbol lookup.
         parameters:
-          node:
-            type: astx.ClassConstruct | astx.FunctionCall | astx.MethodCall
-          class_:
-            type: SemanticClass
+          node: Syntax node to process.
+          class_: Class being processed.
         """
         resolve_definition = getattr(self, "_resolve_class_definition", None)
         if callable(resolve_definition) and not class_.is_resolved:
@@ -223,8 +216,7 @@ class ExpressionClassAccessVisitorMixin(ExpressionClassSupportVisitorMixin):
         """
         title: Visit MethodCall nodes.
         parameters:
-          node:
-            type: astx.MethodCall
+          node: Syntax node to process.
         """
         info = self._semantic(node)
         info.normalized_collection = None
@@ -397,8 +389,7 @@ class ExpressionClassAccessVisitorMixin(ExpressionClassSupportVisitorMixin):
         """
         title: Visit BaseMethodCall nodes.
         parameters:
-          node:
-            type: astx.BaseMethodCall
+          node: Syntax node to process.
         """
         if reject_hook_call(
             cast(SemanticAnalyzerCore, self), node, node.method_name
@@ -510,8 +501,7 @@ class ExpressionClassAccessVisitorMixin(ExpressionClassSupportVisitorMixin):
         """
         title: Visit StaticMethodCall nodes.
         parameters:
-          node:
-            type: astx.StaticMethodCall
+          node: Syntax node to process.
         """
         if reject_hook_call(
             cast(SemanticAnalyzerCore, self), node, node.method_name
@@ -606,8 +596,7 @@ class ExpressionClassAccessVisitorMixin(ExpressionClassSupportVisitorMixin):
         """
         title: Visit BaseFieldAccess nodes.
         parameters:
-          node:
-            type: astx.BaseFieldAccess
+          node: Syntax node to process.
         """
         self._semantic(node).resource_ownership = None
         self.visit(node.receiver)
@@ -698,8 +687,7 @@ class ExpressionClassAccessVisitorMixin(ExpressionClassSupportVisitorMixin):
         """
         title: Visit StaticFieldAccess nodes.
         parameters:
-          node:
-            type: astx.StaticFieldAccess
+          node: Syntax node to process.
         """
         class_ = self._resolve_named_class(node.class_name, node=node)
         if class_ is None:
@@ -753,8 +741,7 @@ class ExpressionClassAccessVisitorMixin(ExpressionClassSupportVisitorMixin):
         """
         title: Visit FieldAccess nodes.
         parameters:
-          node:
-            type: astx.FieldAccess
+          node: Syntax node to process.
         """
         self._semantic(node).normalized_collection = None
         self._semantic(node).resource_ownership = None

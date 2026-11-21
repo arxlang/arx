@@ -1,5 +1,7 @@
 """
 title: Exhaustive domain tests for the checked-arithmetic policy foundation.
+attributes:
+  TYPE_NAMES: Type names.
 """
 
 from __future__ import annotations
@@ -57,8 +59,7 @@ def test_integer_domain(type_class: type[astx.DataType]) -> None:
     """
     title: Match each complete signed or unsigned integer domain.
     parameters:
-      type_class:
-        type: type[astx.DataType]
+      type_class: Type class.
     """
     width = SIGNED_TYPES.get(type_class, UNSIGNED_TYPES.get(type_class, 0))
     bounds = integer_bounds(type_class())
@@ -77,10 +78,8 @@ def test_common_domain_matrix(
     """
     title: Preserve both operand domains and choose a symmetric minimal type.
     parameters:
-      lhs:
-        type: type[astx.DataType]
-      rhs:
-        type: type[astx.DataType]
+      lhs: Left operand.
+      rhs: Right operand.
     """
     result = lossless_common_numeric_type(lhs(), rhs())
     reverse = lossless_common_numeric_type(rhs(), lhs())
@@ -131,12 +130,9 @@ def test_promotion_policy_examples(
     """
     title: Check policy boundaries independently of the matrix invariants.
     parameters:
-      lhs:
-        type: type[astx.DataType]
-      rhs:
-        type: type[astx.DataType]
-      result:
-        type: type[astx.DataType] | None
+      lhs: Left operand.
+      rhs: Right operand.
+      result: Result of the operation.
     """
     assert type(lossless_common_numeric_type(lhs(), rhs())) is (
         result if result is not None else type(None)
@@ -151,10 +147,8 @@ def test_conversion_policy_matrix(
     """
     title: Classify every scalar numeric conversion without evaluating a value.
     parameters:
-      source:
-        type: type[astx.DataType]
-      target:
-        type: type[astx.DataType]
+      source: Source input to process.
+      target: Destination of the operation.
     """
     plan = classify_numeric_conversion(source(), target())
     assert plan is not None
@@ -188,12 +182,10 @@ def test_conversion_policy_matrix(
 )
 def test_unsupported_domains_fail_closed(type_: astx.DataType) -> None:
     """
-    title: >-
-      Do not accidentally treat bool, containers, or unsupported widths as
-      numbers.
+    title: Do not accidentally treat bool, containers, or unsupported widths
+      as numbers.
     parameters:
-      type_:
-        type: astx.DataType
+      type_: Type expression to process.
     """
     assert integer_bounds(type_) is None
     assert not is_lossless_numeric_conversion(type_, type_)
@@ -295,16 +287,11 @@ def test_conversion_checks_and_precision_loss_are_distinct(
     """
     title: Distinguish explicit precision loss from finite-range failures.
     parameters:
-      source:
-        type: type[astx.DataType]
-      target:
-        type: type[astx.DataType]
-      implicit:
-        type: bool
-      checked:
-        type: bool
-      kind:
-        type: NumericConversionKind
+      source: Source input to process.
+      target: Destination of the operation.
+      implicit: Whether to use implicit.
+      checked: Whether to use checked.
+      kind: Kind of value or operation.
     """
     plan = classify_numeric_conversion(source(), target())
     assert plan is not None

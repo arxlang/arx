@@ -1,8 +1,7 @@
 """
 title: DataFrame helpers layered on the builtin Arrow runtime.
-summary: >-
-  Define IRx's backend-neutral DataFrame metadata helpers on top of Arrow Table
-  and ChunkedArray storage.
+summary: Define IRx's backend-neutral DataFrame metadata helpers on top of
+  Arrow Table and ChunkedArray storage.
 """
 
 from __future__ import annotations
@@ -33,14 +32,10 @@ class DataFrameSchemaColumn:
     """
     title: Static DataFrame schema column metadata.
     attributes:
-      name:
-        type: str
-      type_:
-        type: astx.DataType
-      nullable:
-        type: bool
-      index:
-        type: int
+      name: Name identifying this declaration.
+      type_: Type associated with this expression.
+      nullable: Whether null values are permitted.
+      index: Index selecting the item.
     """
 
     name: str
@@ -56,8 +51,8 @@ class DataFrameSchema:
     """
     title: Static DataFrame schema metadata.
     attributes:
-      columns:
-        type: tuple[DataFrameSchemaColumn, Ellipsis]
+      columns: Column declarations or values.
+      column_count: Number of column.
     """
 
     columns: tuple[DataFrameSchemaColumn, ...]
@@ -66,8 +61,7 @@ class DataFrameSchema:
     def column_count(self) -> int:
         """
         title: Return the number of columns in this schema.
-        returns:
-          type: int
+        returns: The number of columns in this schema.
         """
         return len(self.columns)
 
@@ -75,10 +69,8 @@ class DataFrameSchema:
         """
         title: Return one schema column by name.
         parameters:
-          name:
-            type: str
-        returns:
-          type: DataFrameSchemaColumn | None
+          name: Name identifying the declaration or operation.
+        returns: One schema column by name.
         """
         for column in self.columns:
             if column.name == name:
@@ -94,10 +86,8 @@ def schema_from_type(
     """
     title: Return static schema metadata from one DataFrame type.
     parameters:
-      type_:
-        type: astx.DataFrameType
-    returns:
-      type: DataFrameSchema | None
+      type_: Type expression to process.
+    returns: Static schema metadata from one DataFrame type.
     """
     if type_.columns is None:
         return None
@@ -122,10 +112,8 @@ def dataframe_primitive_type_name(
     """
     title: Return the builtin primitive storage name for one column type.
     parameters:
-      type_:
-        type: astx.DataType | None
-    returns:
-      type: str | None
+      type_: Type expression to process.
+    returns: The builtin primitive storage name for one column type.
     """
     return tensor_primitive_type_name(type_)
 
@@ -136,10 +124,8 @@ def dataframe_type_id(type_: astx.DataType | None) -> int | None:
     """
     title: Return the Arrow runtime type id for one supported column type.
     parameters:
-      type_:
-        type: astx.DataType | None
-    returns:
-      type: int | None
+      type_: Type expression to process.
+    returns: The Arrow runtime type id for one supported column type.
     """
     primitive_name = dataframe_primitive_type_name(type_)
     if primitive_name is None:
@@ -152,12 +138,12 @@ def dataframe_type_id(type_: astx.DataType | None) -> int | None:
 @typechecked
 def dataframe_record_batch_type_id(type_: astx.DataType | None) -> int | None:
     """
-    title: Resolve a DataFrame scalar to its RecordBatch physical storage id.
+    title: Resolve a DataFrame scalar to its RecordBatch physical storage
+      id.
     parameters:
-      type_:
-        type: astx.DataType | None
-    returns:
-      type: int | None
+      type_: Type expression to process.
+    returns: Resolved a DataFrame scalar to its RecordBatch physical storage
+      id.
     """
     supported: dict[type[astx.DataType], int] = {
         astx.Int8: 0,
@@ -187,10 +173,8 @@ def dataframe_column_type_is_supported(type_: astx.DataType | None) -> bool:
     """
     title: Return whether one type is supported for MVP DataFrame columns.
     parameters:
-      type_:
-        type: astx.DataType | None
-    returns:
-      type: bool
+      type_: Type expression to process.
+    returns: Whether one type is supported for MVP DataFrame columns.
     """
     if isinstance(type_, astx.ColumnType):
         try:

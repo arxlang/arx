@@ -13,8 +13,7 @@ def visitor() -> Visitor:
     """
     title: Create a Visitor with a dummy module, function, and block.
     summary: This ensures a valid IRBuilder context.
-    returns:
-      type: Visitor
+    returns: Created a Visitor with a dummy module, function, and block.
     """
     v = Visitor()
     dummy_module = ir.Module("dummy")
@@ -29,8 +28,7 @@ def test_same_type(visitor: Visitor) -> None:
     """
     title: Test promotion in case of same type (no promotion).
     parameters:
-      visitor:
-        type: Visitor
+      visitor: Visitor performing the traversal or lowering.
     """
     a = ir.Constant(ir.IntType(32), 5)
     b = ir.Constant(ir.IntType(32), 10)
@@ -43,8 +41,7 @@ def test_integer_promotion(visitor: Visitor) -> None:
     """
     title: Test integer type promotion.
     parameters:
-      visitor:
-        type: Visitor
+      visitor: Visitor performing the traversal or lowering.
     """
     a = ir.Constant(ir.IntType(16), 5)
     b = ir.Constant(ir.IntType(32), 10)
@@ -57,8 +54,7 @@ def test_float_promotion(visitor: Visitor) -> None:
     """
     title: Test floating-point type promotion.
     parameters:
-      visitor:
-        type: Visitor
+      visitor: Visitor performing the traversal or lowering.
     """
     a = ir.Constant(ir.FloatType(), 3.14)
     b = ir.Constant(ir.DoubleType(), 3.14)
@@ -73,8 +69,7 @@ def test_same_type_returns_original_operands(
     """
     title: Test returning original operands in case of same type.
     parameters:
-      visitor:
-        type: Visitor
+      visitor: Visitor performing the traversal or lowering.
     """
     a = ir.Constant(ir.IntType(8), 2)
     b = ir.Constant(ir.IntType(8), 3)
@@ -87,8 +82,7 @@ def test_integer_promotion_extends_rhs(visitor: Visitor) -> None:
     """
     title: Integer promotion should extend rhs when lhs is wider.
     parameters:
-      visitor:
-        type: Visitor
+      visitor: Visitor performing the traversal or lowering.
     """
     lhs = ir.Constant(ir.IntType(32), 10)
     rhs = ir.Constant(ir.IntType(16), 3)
@@ -105,8 +99,7 @@ def test_unsigned_integer_promotion_zero_extends_rhs(
     """
     title: Unsigned integer promotion should zero-extend narrower operands.
     parameters:
-      visitor:
-        type: Visitor
+      visitor: Visitor performing the traversal or lowering.
     """
     lhs = ir.Constant(ir.IntType(32), 10)
     rhs = ir.Constant(ir.IntType(16), 3)
@@ -123,8 +116,7 @@ def test_float_promotion_extends_rhs(visitor: Visitor) -> None:
     """
     title: Float promotion should extend rhs when lhs has wider fp type.
     parameters:
-      visitor:
-        type: Visitor
+      visitor: Visitor performing the traversal or lowering.
     """
     lhs = ir.Constant(ir.DoubleType(), 3.14)
     rhs = ir.Constant(ir.FloatType(), 2.71)
@@ -139,8 +131,7 @@ def test_int_to_float_promotion_lhs(visitor: Visitor) -> None:
     """
     title: Integer lhs should be converted to fp when rhs is floating-point.
     parameters:
-      visitor:
-        type: Visitor
+      visitor: Visitor performing the traversal or lowering.
     """
     lhs = ir.Constant(ir.IntType(32), 2)
     rhs = ir.Constant(ir.FloatType(), 1.5)
@@ -155,8 +146,7 @@ def test_int_to_float_promotion_rhs(visitor: Visitor) -> None:
     """
     title: Integer rhs should be converted to fp when lhs is floating-point.
     parameters:
-      visitor:
-        type: Visitor
+      visitor: Visitor performing the traversal or lowering.
     """
     lhs = ir.Constant(ir.FloatType(), 1.5)
     rhs = ir.Constant(ir.IntType(32), 2)
@@ -173,8 +163,7 @@ def test_unsigned_int_to_float_promotion_rhs_uses_uitofp(
     """
     title: Unsigned integer rhs should use uitofp when lhs is floating-point.
     parameters:
-      visitor:
-        type: Visitor
+      visitor: Visitor performing the traversal or lowering.
     """
     lhs = ir.Constant(ir.FloatType(), 1.5)
     rhs = ir.Constant(ir.IntType(32), 2)

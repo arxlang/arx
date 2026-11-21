@@ -34,8 +34,7 @@ if TYPE_CHECKING:
 def build_dataframe_runtime_feature() -> RuntimeFeature:
     """
     title: Build the builtin dataframe runtime feature specification.
-    returns:
-      type: RuntimeFeature
+    returns: Constructed the builtin dataframe runtime feature specification.
     """
     runtime_root = Path(__file__).resolve().parent
     native_root = (runtime_root.parent / "arrow" / "native").resolve()
@@ -142,10 +141,9 @@ def declare_sequence_length(visitor: VisitorProtocol) -> ir.Function:
     """
     title: Query the logical length across all chunks of a borrowed Series.
     parameters:
-      visitor:
-        type: VisitorProtocol
-    returns:
-      type: ir.Function
+      visitor: Visitor performing the traversal or lowering.
+    returns: 'Result of this operation: query the logical length across all
+      chunks of a borrowed Series.'
     """
     return declare_external_function(
         visitor._llvm.module,
@@ -166,16 +164,12 @@ def _declare_function(
     """
     title: Declare one Arrow dataframe runtime symbol.
     parameters:
-      visitor:
-        type: VisitorProtocol
-      name:
-        type: str
-      return_type:
-        type: ir.Type
-      arg_types:
-        type: list[ir.Type]
-    returns:
-      type: ir.Function
+      visitor: Visitor performing the traversal or lowering.
+      name: Name identifying the declaration or operation.
+      return_type: Declared result type.
+      arg_types: Types of arg.
+    returns: 'Result of this operation: declare one Arrow dataframe runtime
+      symbol.'
     """
     fn_type = ir.FunctionType(return_type, arg_types)
     return declare_external_function(visitor._llvm.module, name, fn_type)
@@ -188,10 +182,9 @@ def _declare_table_new_from_arrays(
     """
     title: Declare Arrow table construction from arrays.
     parameters:
-      visitor:
-        type: VisitorProtocol
-    returns:
-      type: ir.Function
+      visitor: Visitor performing the traversal or lowering.
+    returns: 'Result of this operation: declare Arrow table construction
+      from arrays.'
     """
     return _declare_function(
         visitor,
@@ -211,10 +204,8 @@ def _declare_table_num_rows(visitor: VisitorProtocol) -> ir.Function:
     """
     title: Declare Arrow table row-count query.
     parameters:
-      visitor:
-        type: VisitorProtocol
-    returns:
-      type: ir.Function
+      visitor: Visitor performing the traversal or lowering.
+    returns: 'Result of this operation: declare Arrow table row-count query.'
     """
     return _declare_function(
         visitor,
@@ -229,10 +220,9 @@ def _declare_table_num_columns(visitor: VisitorProtocol) -> ir.Function:
     """
     title: Declare Arrow table column-count query.
     parameters:
-      visitor:
-        type: VisitorProtocol
-    returns:
-      type: ir.Function
+      visitor: Visitor performing the traversal or lowering.
+    returns: 'Result of this operation: declare Arrow table column-count
+      query.'
     """
     return _declare_function(
         visitor,
@@ -249,10 +239,9 @@ def _declare_table_column_by_name(
     """
     title: Declare Arrow table column lookup by name.
     parameters:
-      visitor:
-        type: VisitorProtocol
-    returns:
-      type: ir.Function
+      visitor: Visitor performing the traversal or lowering.
+    returns: 'Result of this operation: declare Arrow table column lookup
+      by name.'
     """
     return _declare_function(
         visitor,
@@ -273,10 +262,9 @@ def _declare_table_column_by_index(
     """
     title: Declare Arrow table column lookup by index.
     parameters:
-      visitor:
-        type: VisitorProtocol
-    returns:
-      type: ir.Function
+      visitor: Visitor performing the traversal or lowering.
+    returns: 'Result of this operation: declare Arrow table column lookup
+      by index.'
     """
     return _declare_function(
         visitor,
@@ -295,10 +283,8 @@ def _declare_table_retain(visitor: VisitorProtocol) -> ir.Function:
     """
     title: Declare Arrow table retain.
     parameters:
-      visitor:
-        type: VisitorProtocol
-    returns:
-      type: ir.Function
+      visitor: Visitor performing the traversal or lowering.
+    returns: 'Result of this operation: declare Arrow table retain.'
     """
     return _declare_function(
         visitor,
@@ -313,10 +299,8 @@ def _declare_table_release(visitor: VisitorProtocol) -> ir.Function:
     """
     title: Declare Arrow table release.
     parameters:
-      visitor:
-        type: VisitorProtocol
-    returns:
-      type: ir.Function
+      visitor: Visitor performing the traversal or lowering.
+    returns: 'Result of this operation: declare Arrow table release.'
     """
     return _declare_function(
         visitor,
@@ -333,10 +317,8 @@ def _declare_chunked_array_retain(
     """
     title: Declare Arrow chunked-array retain.
     parameters:
-      visitor:
-        type: VisitorProtocol
-    returns:
-      type: ir.Function
+      visitor: Visitor performing the traversal or lowering.
+    returns: 'Result of this operation: declare Arrow chunked-array retain.'
     """
     return _declare_function(
         visitor,
@@ -353,10 +335,8 @@ def _declare_chunked_array_release(
     """
     title: Declare Arrow chunked-array release.
     parameters:
-      visitor:
-        type: VisitorProtocol
-    returns:
-      type: ir.Function
+      visitor: Visitor performing the traversal or lowering.
+    returns: 'Result of this operation: declare Arrow chunked-array release.'
     """
     return _declare_function(
         visitor,
@@ -371,10 +351,9 @@ def _declare_last_error(visitor: VisitorProtocol) -> ir.Function:
     """
     title: Declare Arrow runtime last-error query.
     parameters:
-      visitor:
-        type: VisitorProtocol
-    returns:
-      type: ir.Function
+      visitor: Visitor performing the traversal or lowering.
+    returns: 'Result of this operation: declare Arrow runtime last-error
+      query.'
     """
     return _declare_function(
         visitor,
@@ -393,10 +372,9 @@ def declare_series_index(visitor: VisitorProtocol) -> ir.Function:
     """
     title: Declare status-returning scalar access through opaque storage.
     parameters:
-      visitor:
-        type: VisitorProtocol
-    returns:
-      type: ir.Function
+      visitor: Visitor performing the traversal or lowering.
+    returns: 'Result of this operation: declare status-returning scalar access
+      through opaque storage.'
     """
     i32, i64 = ir.IntType(32), ir.IntType(64)
     return _declare_function(
@@ -417,13 +395,12 @@ def declare_series_index(visitor: VisitorProtocol) -> ir.Function:
 @typechecked
 def declare_series_slice(visitor: VisitorProtocol) -> ir.Function:
     """
-    title: >-
-      Declare a checked slice returning independently owned column storage.
+    title: Declare a checked slice returning independently owned
+      column storage.
     parameters:
-      visitor:
-        type: VisitorProtocol
-    returns:
-      type: ir.Function
+      visitor: Visitor performing the traversal or lowering.
+    returns: 'Result of this operation: declare a checked slice returning
+      independently owned column storage.'
     """
     column = visitor._llvm.CHUNKED_ARRAY_HANDLE_TYPE
     return _declare_function(
@@ -447,10 +424,9 @@ def declare_series_set(visitor: VisitorProtocol) -> ir.Function:
     """
     title: Declare checked copy-on-write Series element updates.
     parameters:
-      visitor:
-        type: VisitorProtocol
-    returns:
-      type: ir.Function
+      visitor: Visitor performing the traversal or lowering.
+    returns: 'Result of this operation: declare checked copy-on-write Series
+      element updates.'
     """
     i32, i64 = ir.IntType(32), ir.IntType(64)
     return _declare_function(
@@ -467,10 +443,9 @@ def declare_table_from_ipc(visitor: VisitorProtocol) -> ir.Function:
     """
     title: Declare owned DataFrame construction from a checked IPC literal.
     parameters:
-      visitor:
-        type: VisitorProtocol
-    returns:
-      type: ir.Function
+      visitor: Visitor performing the traversal or lowering.
+    returns: 'Result of this operation: declare owned DataFrame construction
+      from a checked IPC literal.'
     """
     return _declare_function(
         visitor,
@@ -490,10 +465,9 @@ def declare_sequence_snapshot(visitor: "VisitorProtocol") -> ir.Function:
     """
     title: Declare a status-checked independently owned Series snapshot.
     parameters:
-      visitor:
-        type: VisitorProtocol
-    returns:
-      type: ir.Function
+      visitor: Visitor performing the traversal or lowering.
+    returns: 'Result of this operation: declare a status-checked independently
+      owned Series snapshot.'
     """
     opaque = ir.IntType(8).as_pointer()
     return declare_external_function(

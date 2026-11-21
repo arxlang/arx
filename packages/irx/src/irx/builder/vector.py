@@ -16,10 +16,8 @@ def is_vector(value: ir.Value) -> bool:
     """
     title: Is vector.
     parameters:
-      value:
-        type: ir.Value
-    returns:
-      type: bool
+      value: Value to process.
+    returns: 'Result of this operation: is vector.'
     """
     return isinstance(getattr(value, "type", None), VectorType)
 
@@ -34,16 +32,11 @@ def emit_int_div(
     """
     title: Emit int div.
     parameters:
-      ir_builder:
-        type: ir.IRBuilder
-      lhs:
-        type: ir.Value
-      rhs:
-        type: ir.Value
-      unsigned:
-        type: bool
-    returns:
-      type: ir.Instruction
+      ir_builder: IR builder.
+      lhs: Left operand.
+      rhs: Right operand.
+      unsigned: Whether to use unsigned semantics.
+    returns: 'Result of this operation: emit int div.'
     """
     return (
         ir_builder.udiv(lhs, rhs, name="vdivtmp")
@@ -62,16 +55,11 @@ def emit_add(
     """
     title: Emit add.
     parameters:
-      ir_builder:
-        type: ir.IRBuilder
-      lhs:
-        type: ir.Value
-      rhs:
-        type: ir.Value
-      name:
-        type: str
-    returns:
-      type: ir.Instruction
+      ir_builder: IR builder.
+      lhs: Left operand.
+      rhs: Right operand.
+      name: Name identifying the declaration or operation.
+    returns: 'Result of this operation: emit add.'
     """
     if is_fp_type(lhs.type):
         return ir_builder.fadd(lhs, rhs, name=name)
@@ -87,14 +75,10 @@ def splat_scalar(
     """
     title: Splat scalar.
     parameters:
-      ir_builder:
-        type: ir.IRBuilder
-      scalar:
-        type: ir.Value
-      vec_type:
-        type: ir.VectorType
-    returns:
-      type: ir.Value
+      ir_builder: IR builder.
+      scalar: Scalar.
+      vec_type: Type of vec.
+    returns: 'Result of this operation: splat scalar.'
     """
     zero_i32 = ir.Constant(ir.IntType(32), 0)
     undef_vec = ir.Constant(vec_type, ir.Undefined)

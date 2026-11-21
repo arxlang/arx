@@ -31,8 +31,7 @@ STDLIB_NAMESPACE = "stdlib"
 def get_bundled_stdlib_root() -> Path:
     """
     title: Return the bundled stdlib root shipped inside the arx package.
-    returns:
-      type: Path
+    returns: The bundled stdlib root shipped inside the arx package.
     """
     return (Path(__file__).resolve().parent / STDLIB_NAMESPACE).resolve()
 
@@ -41,10 +40,8 @@ def _is_stdlib_specifier(requested_specifier: str) -> bool:
     """
     title: Return whether one import specifier targets the bundled stdlib.
     parameters:
-      requested_specifier:
-        type: str
-    returns:
-      type: bool
+      requested_specifier: Import specifier requested by the source module.
+    returns: Whether one import specifier targets the bundled stdlib.
     """
     return (
         requested_specifier == STDLIB_NAMESPACE
@@ -56,10 +53,8 @@ def _is_builtin_specifier(requested_specifier: str) -> bool:
     """
     title: Return whether one import specifier targets bundled builtins.
     parameters:
-      requested_specifier:
-        type: str
-    returns:
-      type: bool
+      requested_specifier: Import specifier requested by the source module.
+    returns: Whether one import specifier targets bundled builtins.
     """
     return arx_builtins.is_builtin_module_specifier(requested_specifier)
 
@@ -72,14 +67,10 @@ def _has_imported_name(
     """
     title: Return whether one module already imports a binding by name.
     parameters:
-      module:
-        type: astx.Module
-      module_name:
-        type: str
-      binding_name:
-        type: str
-    returns:
-      type: bool
+      module: Module to process.
+      module_name: Module name to resolve.
+      binding_name: Name of binding.
+    returns: Whether one module already imports a binding by name.
     """
     for node in module.nodes:
         if not isinstance(node, astx.ImportFromStmt):
@@ -100,12 +91,9 @@ def _has_top_level_binding_name(
     """
     title: Return whether one module already binds a top-level name.
     parameters:
-      module:
-        type: astx.Module
-      binding_name:
-        type: str
-    returns:
-      type: bool
+      module: Module to process.
+      binding_name: Name of binding.
+    returns: Whether one module already binds a top-level name.
     """
     for node in module.nodes:
         if isinstance(node, (astx.ImportStmt, astx.ImportFromStmt)):
@@ -147,10 +135,9 @@ def inject_ambient_builtin_imports(module: astx.Module) -> astx.Module:
     """
     title: Inject compiler-provided builtin bindings into one module AST.
     parameters:
-      module:
-        type: astx.Module
-    returns:
-      type: astx.Module
+      module: Module to process.
+    returns: 'Result of this operation: inject compiler-provided builtin
+      bindings into one module AST.'
     """
     from arx.builtin_files import needs_file_builtin  # noqa: PLC0415
 
@@ -211,10 +198,9 @@ def _find_project_source_root(start: Path) -> Path | None:
     """
     title: Find the configured project source root for a path.
     parameters:
-      start:
-        type: Path
-    returns:
-      type: Path | None
+      start: Starting position.
+    returns: 'Result of this operation: find the configured project source
+      root for a path.'
     """
     config = arx_settings.find_config_file(start=start)
     if config is None:
@@ -233,12 +219,10 @@ def _module_name_from_source_root(
     """
     title: Derive one dotted module name relative to a source root.
     parameters:
-      filepath:
-        type: Path
-      source_root:
-        type: Path
-    returns:
-      type: str | None
+      filepath: Filepath.
+      source_root: Source root.
+    returns: 'Result of this operation: derive one dotted module name relative
+      to a source root.'
     """
     resolved = filepath.resolve()
     try:
@@ -263,10 +247,8 @@ def get_module_name_from_file_path(filepath: str) -> str:
     """
     title: Return the module name from the source file name.
     parameters:
-      filepath:
-        type: str
-    returns:
-      type: str
+      filepath: Filepath.
+    returns: The module name from the source file name.
     """
     file_path = Path(filepath)
     source_root = _find_project_source_root(file_path.parent)
@@ -282,14 +264,10 @@ class FileImportResolver:
     """
     title: Resolve import specifiers to Arx source files on disk.
     attributes:
-      input_files:
-        type: tuple[str, Ellipsis]
-      cache:
-        type: dict[str, ParsedModule]
-      _source_root_cache:
-        type: dict[Path, Path | None]
-      _installed_package_index:
-        type: package_index.InstalledArxPackageIndex | None
+      input_files: Input files.
+      cache: Whether to cache generated artifacts.
+      _source_root_cache: Source root cache.
+      _installed_package_index: Index selecting installed package.
     """
 
     input_files: tuple[str, ...]
@@ -303,10 +281,9 @@ class FileImportResolver:
         """
         title: Look up the effective project source root from a manifest.
         parameters:
-          directory:
-            type: Path
-        returns:
-          type: Path | None
+          directory: Directory.
+        returns: 'Result of this operation: look up the effective project
+          source root from a manifest.'
         """
         if directory in self._source_root_cache:
             return self._source_root_cache[directory]
@@ -330,14 +307,11 @@ class FileImportResolver:
         """
         title: Preserve native metadata for actual local or installed origins.
         parameters:
-          module:
-            type: astx.Module
-          key:
-            type: str
-          origin:
-            type: str | None
-        returns:
-          type: ParsedModule
+          module: Module to process.
+          key: Key selecting the entry.
+          origin: Origin.
+        returns: 'Result of this operation: preserve native metadata for
+          actual local or installed origins.'
         """
         if origin is None:
             return ParsedModule(key, module, key)
@@ -363,8 +337,7 @@ class FileImportResolver:
     def _candidate_roots(self) -> tuple[Path, ...]:
         """
         title: Build the ordered search roots for module resolution.
-        returns:
-          type: tuple[Path, Ellipsis]
+        returns: Constructed the ordered search roots for module resolution.
         """
         roots: list[Path] = []
         seen: set[Path] = set()
@@ -373,8 +346,7 @@ class FileImportResolver:
             """
             title: Build the ordered search roots for module resolution.
             parameters:
-              path:
-                type: Path
+              path: Path to the input or output resource.
             """
             resolved = path.resolve()
             if resolved in seen:
@@ -401,8 +373,8 @@ class FileImportResolver:
     def _reserved_namespace_shadow_roots(self) -> tuple[Path, ...]:
         """
         title: Build the local roots that may validly shadow reserved modules.
-        returns:
-          type: tuple[Path, Ellipsis]
+        returns: Constructed the local roots that may validly shadow reserved
+          modules.
         """
         roots: list[Path] = []
         seen: set[Path] = set()
@@ -411,8 +383,7 @@ class FileImportResolver:
             """
             title: Add one unique root for reserved-namespace shadow checks.
             parameters:
-              path:
-                type: Path
+              path: Path to the input or output resource.
             """
             resolved = path.resolve()
             if resolved in seen:
@@ -447,10 +418,8 @@ class FileImportResolver:
         """
         title: Resolve one dotted module specifier to a source file.
         parameters:
-          requested_specifier:
-            type: str
-        returns:
-          type: Path
+          requested_specifier: Import specifier requested by the source module.
+        returns: Resolved one dotted module specifier to a source file.
         """
         if _is_stdlib_specifier(requested_specifier):
             return self._resolve_stdlib_module_file(requested_specifier)
@@ -483,8 +452,7 @@ class FileImportResolver:
     def _installed_package_start(self) -> Path:
         """
         title: Return the manifest search start for installed dependencies.
-        returns:
-          type: Path
+        returns: The manifest search start for installed dependencies.
         """
         if not self.input_files:
             return Path.cwd()
@@ -499,8 +467,8 @@ class FileImportResolver:
     ) -> package_index.InstalledArxPackageIndex:
         """
         title: Lazily discover installed Arx package dependencies.
-        returns:
-          type: package_index.InstalledArxPackageIndex
+        returns: 'Result of this operation: lazily discover installed Arx
+          package dependencies.'
         """
         if self._installed_package_index is None:
             self._installed_package_index = (
@@ -517,10 +485,8 @@ class FileImportResolver:
         """
         title: Resolve one module specifier from installed Arx packages.
         parameters:
-          requested_specifier:
-            type: str
-        returns:
-          type: Path | None
+          requested_specifier: Import specifier requested by the source module.
+        returns: Resolved one module specifier from installed Arx packages.
         """
         specifier_parts = tuple(
             part for part in requested_specifier.split(".") if part
@@ -588,10 +554,8 @@ class FileImportResolver:
         """
         title: Return one local path that attempts to shadow a reserved module.
         parameters:
-          requested_specifier:
-            type: str
-        returns:
-          type: Path | None
+          requested_specifier: Import specifier requested by the source module.
+        returns: One local path that attempts to shadow a reserved module.
         """
         specifier_parts = tuple(
             part for part in requested_specifier.split(".") if part
@@ -614,10 +578,9 @@ class FileImportResolver:
         """
         title: Resolve one stdlib module specifier from bundled package data.
         parameters:
-          requested_specifier:
-            type: str
-        returns:
-          type: Path
+          requested_specifier: Import specifier requested by the source module.
+        returns: Resolved one stdlib module specifier from bundled package
+          data.
         """
         shadowing_path = self._shadowing_reserved_path(requested_specifier)
         if shadowing_path is not None:
@@ -655,10 +618,8 @@ class FileImportResolver:
         """
         title: Resolve one builtin module specifier from packaged resources.
         parameters:
-          requested_specifier:
-            type: str
-        returns:
-          type: ParsedModule
+          requested_specifier: Import specifier requested by the source module.
+        returns: Resolved one builtin module specifier from packaged resources.
         """
         shadowing_path = self._shadowing_reserved_path(requested_specifier)
         if shadowing_path is not None:
@@ -713,10 +674,8 @@ class FileImportResolver:
         """
         title: Resolve the current package path for relative imports.
         parameters:
-          requesting_module_key:
-            type: str
-        returns:
-          type: tuple[str, Ellipsis]
+          requesting_module_key: Requesting module key.
+        returns: Resolved the current package path for relative imports.
         """
         parts = tuple(
             part for part in requesting_module_key.split(".") if part
@@ -747,12 +706,9 @@ class FileImportResolver:
         """
         title: Normalize one requested module specifier to a dotted key.
         parameters:
-          requesting_module_key:
-            type: str
-          requested_specifier:
-            type: str
-        returns:
-          type: str
+          requesting_module_key: Requesting module key.
+          requested_specifier: Import specifier requested by the source module.
+        returns: Normalized one requested module specifier to a dotted key.
         """
         if not requested_specifier.startswith("."):
             return requested_specifier
@@ -789,14 +745,10 @@ class FileImportResolver:
         """
         title: Resolve one import request to a parsed source module.
         parameters:
-          requesting_module_key:
-            type: str
-          import_node:
-            type: astx.ImportStmt | astx.ImportFromStmt
-          requested_specifier:
-            type: str
-        returns:
-          type: ParsedModule
+          requesting_module_key: Requesting module key.
+          import_node: Import node.
+          requested_specifier: Import specifier requested by the source module.
+        returns: Resolved one import request to a parsed source module.
         """
         try:
             return self.resolve(
@@ -818,14 +770,10 @@ class FileImportResolver:
         """
         title: Resolve one import and let expected host failures be wrapped.
         parameters:
-          requesting_module_key:
-            type: str
-          import_node:
-            type: astx.ImportStmt | astx.ImportFromStmt
-          requested_specifier:
-            type: str
-        returns:
-          type: ParsedModule
+          requesting_module_key: Requesting module key.
+          import_node: Import node.
+          requested_specifier: Import specifier requested by the source module.
+        returns: Resolved one import and let expected host failures be wrapped.
         """
         _ = import_node
 
@@ -871,14 +819,10 @@ class ArxMain:
     """
     title: The main class for calling Arx compiler.
     attributes:
-      input_files:
-        type: list[str]
-      output_file:
-        type: str
-      is_lib:
-        type: bool
-      link_mode:
-        type: Literal[auto, pie, no-pie]
+      input_files: Input files.
+      output_file: Destination file for generated output.
+      is_lib: Whether is lib.
+      link_mode: Link mode.
     """
 
     input_files: list[str] = field(default_factory=list)
@@ -890,10 +834,8 @@ class ArxMain:
         """
         title: Format a fallback AST representation.
         parameters:
-          node:
-            type: object
-        returns:
-          type: str
+          node: Syntax node to process.
+        returns: Formatted a fallback AST representation.
         """
         lines: list[str] = []
         seen: set[int] = set()
@@ -906,14 +848,10 @@ class ArxMain:
         """
         title: Walk one AST node for fallback formatting.
         parameters:
-          node:
-            type: object
-          lines:
-            type: list[str]
-          depth:
-            type: int
-          seen:
-            type: set[int]
+          node: Syntax node to process.
+          lines: Source or output lines.
+          depth: Depth.
+          seen: Seen.
         """
         prefix = "  " * depth
         if not isinstance(node, astx.AST):
@@ -950,16 +888,11 @@ class ArxMain:
         """
         title: Walk one AST field for fallback formatting.
         parameters:
-          key:
-            type: str
-          value:
-            type: object
-          lines:
-            type: list[str]
-          depth:
-            type: int
-          seen:
-            type: set[int]
+          key: Key selecting the entry.
+          value: Value to process.
+          lines: Source or output lines.
+          depth: Depth.
+          seen: Seen.
         """
         prefix = "  " * depth
         if isinstance(value, astx.AST):
@@ -982,8 +915,7 @@ class ArxMain:
     def _resolve_output_file(self) -> str:
         """
         title: Resolve the final compiler output path.
-        returns:
-          type: str
+        returns: Resolved the final compiler output path.
         """
         if self.output_file:
             return self.output_file
@@ -994,8 +926,7 @@ class ArxMain:
     def _get_astx(self) -> astx.AST:
         """
         title: Build the parsed AST for the current input files.
-        returns:
-          type: astx.AST
+        returns: Constructed the parsed AST for the current input files.
         """
         lexer = Lexer()
         parser = Parser()
@@ -1017,8 +948,7 @@ class ArxMain:
     def _get_codegen_astx(self) -> astx.AST:
         """
         title: Build the AST used for code generation.
-        returns:
-          type: astx.AST
+        returns: Constructed the AST used for code generation.
         """
         tree_ast = self._get_astx()
         if (
@@ -1038,10 +968,8 @@ class ArxMain:
         """
         title: Return whether one module contains import statements.
         parameters:
-          module:
-            type: astx.Module
-        returns:
-          type: bool
+          module: Module to process.
+        returns: Whether one module contains import statements.
         """
         if any(
             isinstance(node, (astx.ImportStmt, astx.ImportFromStmt))
@@ -1069,10 +997,8 @@ class ArxMain:
         """
         title: Build the IRx multi-module compilation context.
         parameters:
-          module:
-            type: astx.Module
-        returns:
-          type: tuple[ParsedModule, FileImportResolver]
+          module: Module to process.
+        returns: Constructed the IRx multi-module compilation context.
         """
         origin = self.input_files[0] if self.input_files else None
         resolver = FileImportResolver(tuple(self.input_files))
@@ -1088,10 +1014,8 @@ class ArxMain:
         """
         title: Check whether the AST contains a main entry point.
         parameters:
-          node:
-            type: astx.AST
-        returns:
-          type: bool
+          node: Syntax node to process.
+        returns: Whether the AST contains a main entry point.
         """
         modules: list[astx.Module] = []
 
@@ -1118,8 +1042,8 @@ class ArxMain:
         title: Compile the given source code.
         parameters:
           kwargs:
-            type: Any
             variadic: keyword
+            description: Keyword arguments.
         """
         self.input_files = kwargs.get("input_files", [])
         output_file = kwargs.get("output_file")
@@ -1157,10 +1081,9 @@ class ArxMain:
         title: Collect and execute compiled tests from configured paths.
         parameters:
           kwargs:
-            type: Any
             variadic: keyword
-        returns:
-          type: int
+            description: Keyword arguments.
+        returns: Collected and execute compiled tests from configured paths.
         """
         name_filter = str(kwargs.get("name_filter", "")).strip()
         fail_fast = bool(kwargs.get("fail_fast", False))
@@ -1207,10 +1130,9 @@ class ArxMain:
         """
         title: Layer runner defaults, [tests] settings, and CLI args.
         parameters:
-          cli_kwargs:
-            type: dict[str, Any]
-        returns:
-          type: dict[str, Any]
+          cli_kwargs: CLI kwargs.
+        returns: 'Result of this operation: layer runner defaults, [tests]
+          settings, and CLI args.'
         """
         testing_module = importlib.import_module("arx.testing")
         resolved: dict[str, Any] = {
@@ -1252,8 +1174,7 @@ class ArxMain:
     def _load_tests_settings(self) -> Any:
         """
         title: Load ``[tests]`` from ``.arxproject.toml`` if present.
-        returns:
-          type: Any
+        returns: Loaded ``[tests]`` from ``.arxproject.toml`` if present.
         """
         try:
             settings_module = importlib.import_module("arx.settings")
@@ -1319,10 +1240,9 @@ class ArxMain:
     def run_binary(self) -> None:
         """
         title: Run the generated binary.
-        summary: >-
-          Preserve child output and ordinary exit codes. On POSIX, report
-          signal termination without inventing a source location and exit with
-          128 plus the signal number.
+        summary: Preserve child output and ordinary exit codes. On POSIX,
+          report signal termination without inventing a source location and
+          exit with 128 plus the signal number.
         """
         binary_path = Path(self.output_file)
         if not binary_path.is_absolute():
@@ -1347,10 +1267,8 @@ class ArxMain:
         """
         title: Compile the given input file.
         parameters:
-          show_llvm_ir:
-            type: bool
-        returns:
-          type: bool
+          show_llvm_ir: Whether to use show LLVM IR.
+        returns: 'Result of this operation: compile the given input file.'
         """
         _ = show_llvm_ir
         tree_ast = self._get_codegen_astx()

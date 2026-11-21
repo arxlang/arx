@@ -1,8 +1,7 @@
 """
 title: Semantic ownership helpers for runtime-managed values.
-summary: >-
-  Centralize typed access to ownership sidecars without allowing lowering to
-  rediscover resource lifetime from AST shape.
+summary: Centralize typed access to ownership sidecars without allowing
+  lowering to rediscover resource lifetime from AST shape.
 """
 
 from __future__ import annotations
@@ -31,10 +30,8 @@ def resource_ownership(node: astx.AST | None) -> ResourceOwnership | None:
     """
     title: Return one node's typed resource-ownership sidecar.
     parameters:
-      node:
-        type: astx.AST | None
-    returns:
-      type: ResourceOwnership | None
+      node: Syntax node to process.
+    returns: One node's typed resource-ownership sidecar.
     """
     if node is None:
         return None
@@ -53,10 +50,8 @@ def symbol_resource_ownership(
     """
     title: Return the ownership contract attached to a symbol declaration.
     parameters:
-      symbol:
-        type: SemanticSymbol | None
-    returns:
-      type: ResourceOwnership | None
+      symbol: Resolved symbol for the operation.
+    returns: The ownership contract attached to a symbol declaration.
     """
     if symbol is None or symbol.declaration is None:
         return None
@@ -76,18 +71,12 @@ def list_resource_ownership(
     """
     title: Build one dynamic-list ownership contract.
     parameters:
-      kind:
-        type: OwnershipKind
-      owner_symbol_id:
-        type: str | None
-      source_symbol_id:
-        type: str | None
-      transfer_kind:
-        type: OwnershipTransferKind
-      escape_kind:
-        type: OwnershipEscapeKind
-    returns:
-      type: ResourceOwnership
+      kind: Kind of value or operation.
+      owner_symbol_id: Identifier for owner symbol.
+      source_symbol_id: Identifier for source symbol.
+      transfer_kind: Transfer kind.
+      escape_kind: Escape kind.
+    returns: Constructed one dynamic-list ownership contract.
     """
     return ResourceOwnership(
         resource_kind=ResourceKind.LIST,
@@ -112,18 +101,12 @@ def string_resource_ownership(
     """
     title: Build one string ownership contract.
     parameters:
-      kind:
-        type: OwnershipKind
-      owner_symbol_id:
-        type: str | None
-      source_symbol_id:
-        type: str | None
-      transfer_kind:
-        type: OwnershipTransferKind
-      escape_kind:
-        type: OwnershipEscapeKind
-    returns:
-      type: ResourceOwnership
+      kind: Kind of value or operation.
+      owner_symbol_id: Identifier for owner symbol.
+      source_symbol_id: Identifier for source symbol.
+      transfer_kind: Transfer kind.
+      escape_kind: Escape kind.
+    returns: Constructed one string ownership contract.
     """
     return ResourceOwnership(
         resource_kind=ResourceKind.STRING,
@@ -147,16 +130,12 @@ def transfer_resource_ownership(
     """
     title: Derive one ownership record for a validated transfer boundary.
     parameters:
-      ownership:
-        type: ResourceOwnership
-      owner_symbol_id:
-        type: str | None
-      transfer_kind:
-        type: OwnershipTransferKind
-      escape_kind:
-        type: OwnershipEscapeKind
-    returns:
-      type: ResourceOwnership
+      ownership: Resolved resource ownership contract.
+      owner_symbol_id: Identifier for owner symbol.
+      transfer_kind: Transfer kind.
+      escape_kind: Escape kind.
+    returns: 'Result of this operation: derive one ownership record for a
+      validated transfer boundary.'
     """
     return replace(
         ownership,

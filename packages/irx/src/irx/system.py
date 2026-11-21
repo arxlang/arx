@@ -1,5 +1,9 @@
 """
 title: Compatibility aliases for system nodes owned by ASTx.
+attributes:
+  AssertStmt: ASTx assertion node alias.
+  Cast: ASTx cast node alias.
+  PrintExpr: ASTx print node alias.
 """
 
 from typing import TypeAlias

@@ -14,10 +14,8 @@ def _translate_and_validate(module: astx.Module) -> str:
     """
     title: Translate and validate.
     parameters:
-      module:
-        type: astx.Module
-    returns:
-      type: str
+      module: Module to process.
+    returns: 'Result of this operation: translate and validate.'
     """
     builder = Builder()
     ir_text = builder.translate(module)
@@ -29,8 +27,7 @@ def _assert_puts_uses_char_ptr(ir_text: str) -> None:
     """
     title: Assert puts uses char ptr.
     parameters:
-      ir_text:
-        type: str
+      ir_text: IR text.
     """
     assert 'call i32 @"puts"(i8*' in ir_text
     assert 'call i32 @"puts"(i32' not in ir_text

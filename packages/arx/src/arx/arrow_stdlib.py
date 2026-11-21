@@ -1,8 +1,11 @@
 """
 title: Host bindings for the bundled Arrow standard library.
-summary: >-
-  Bind existing ASTx opaque types and explicit IRx native capabilities only
-  while loading the reserved bundled module. No grammar or lowering lives here.
+summary: Bind existing ASTx opaque types and explicit IRx native capabilities
+  only while loading the reserved bundled module. No grammar or lowering
+  lives here.
+attributes:
+  COMPUTE_FUNCTIONS: Compute functions.
+  IO_FUNCTIONS: I/O functions.
 """
 
 import astx
@@ -41,10 +44,9 @@ def type_bindings(module_name: str) -> dict[str, astx.DataType]:
     """
     title: Supply nominal native handle types to the bundled source parser.
     parameters:
-      module_name:
-        type: str
-    returns:
-      type: dict[str, astx.DataType]
+      module_name: Module name to resolve.
+    returns: 'Result of this operation: supply nominal native handle types
+      to the bundled source parser.'
     """
     kinds = {
         "stdlib.arrow": ("Schema", "Batch", "Builder", "Reader", "Writer"),
@@ -66,14 +68,11 @@ def prepare_module(
     """
     title: Attach native capabilities to actual bundled extern declarations.
     parameters:
-      module:
-        type: astx.Module
-      origin:
-        type: str
-      module_name:
-        type: str
-    returns:
-      type: ParsedModule
+      module: Module to process.
+      origin: Origin.
+      module_name: Module name to resolve.
+    returns: 'Result of this operation: attach native capabilities to actual
+      bundled extern declarations.'
     """
     bindings: list[NativeBinding] = []
     if module_name not in MODULE_NAMES:

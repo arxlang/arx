@@ -26,10 +26,8 @@ def test_exception_nodes_fail_before_lowering(
     """
     title: Invalid direct trees fail at the semantic boundary.
     parameters:
-      node:
-        type: astx.AST
-      monkeypatch:
-        type: pytest.MonkeyPatch
+      node: Syntax node to process.
+      monkeypatch: Fixture for temporarily replacing dependencies and settings.
     """
     with pytest.raises(
         SemanticError,
@@ -42,8 +40,7 @@ def test_exception_nodes_fail_before_lowering(
         """
         title: Record accidental entry into backend dispatch.
         parameters:
-          node:
-            type: astx.AST
+          node: Syntax node to process.
         """
         pytest.fail(f"lowering was entered for {type(node).__name__}")
 

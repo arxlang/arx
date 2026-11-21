@@ -33,10 +33,8 @@ def _passthrough(fn: PyFunc) -> PyFunc:
     """
     title: Return the decorated function unchanged.
     parameters:
-      fn:
-        type: PyFunc
-    returns:
-      type: PyFunc
+      fn: Function to process.
+    returns: The decorated function unchanged.
     """
     return fn
 
@@ -46,10 +44,9 @@ def _configured(**_options: Any) -> Callable[[PyFunc], PyFunc]:
     title: Return a passthrough decorator built from keyword options.
     parameters:
       _options:
-        type: Any
         variadic: keyword
-    returns:
-      type: Callable[[PyFunc], PyFunc]
+        description: Options.
+    returns: A passthrough decorator built from keyword options.
     """
     return _passthrough
 
@@ -58,12 +55,9 @@ def sample_add(a: int, b: int) -> int:
     """
     title: Add two integers.
     parameters:
-      a:
-        type: int
-      b:
-        type: int
-    returns:
-      type: int
+      a: First operand.
+      b: Second operand.
+    returns: 'Result of this operation: add two integers.'
     """
     return a + b
 
@@ -74,10 +68,9 @@ def sample_decorated(x: int) -> int:
     """
     title: Double an integer, behind two stacked decorators.
     parameters:
-      x:
-        type: int
-    returns:
-      type: int
+      x: Input value.
+    returns: 'Result of this operation: double an integer, behind two
+      stacked decorators.'
     """
     return x * 2
 
@@ -90,10 +83,9 @@ def sample_multiline_decorated(x: int) -> int:
     """
     title: Negate an integer, behind a multi-line decorator call.
     parameters:
-      x:
-        type: int
-    returns:
-      type: int
+      x: Input value.
+    returns: 'Result of this operation: negate an integer, behind a multi-line
+      decorator call.'
     """
     return -x
 
@@ -102,10 +94,8 @@ async def sample_async(x: int) -> int:
     """
     title: Return the argument, asynchronously.
     parameters:
-      x:
-        type: int
-    returns:
-      type: int
+      x: Input value.
+    returns: The argument, asynchronously.
     """
     return x
 
@@ -117,10 +107,8 @@ def _file_line(lineno: int) -> str:
     """
     title: Return the given one-based line of this test file.
     parameters:
-      lineno:
-        type: int
-    returns:
-      type: str
+      lineno: Lineno.
+    returns: The given one-based line of this test file.
     """
     with open(__file__, encoding="utf-8") as stream:
         return stream.readlines()[lineno - 1]
@@ -176,19 +164,17 @@ def test_multiline_decorator_is_removed() -> None:
 def test_nested_function_is_extracted_verbatim() -> None:
     """
     title: A function defined inside another parses without dedenting.
-    summary: >-
-      The source keeps its original indentation, and the def line of the
-      returned verbatim text is exactly the line found in the real file.
+    summary: The source keeps its original indentation, and the def line
+      of the returned verbatim text is exactly the line found in the real
+      file.
     """
 
     def nested(x: int) -> int:
         """
         title: Increment an integer.
         parameters:
-          x:
-            type: int
-        returns:
-          type: int
+          x: Input value.
+        returns: 'Result of this operation: increment an integer.'
         """
         return x + 1
 
@@ -203,18 +189,16 @@ def test_nested_function_is_extracted_verbatim() -> None:
 def test_nested_function_with_multiline_string_is_extracted() -> None:
     """
     title: Zero-indent lines inside string literals do not break parsing.
-    summary: >-
-      textwrap.dedent would compute a common indentation of zero for this block
-      and the parse would fail with IndentationError; parsing the unmodified
-      block inside the synthetic wrapper succeeds and preserves the string
-      content verbatim.
+    summary: textwrap.dedent would compute a common indentation of zero for
+      this block and the parse would fail with IndentationError; parsing
+      the unmodified block inside the synthetic wrapper succeeds and preserves
+      the string content verbatim.
     """
 
     def nested() -> str:
         """
         title: Return a two-line string.
-        returns:
-          type: str
+        returns: A two-line string.
         """
         value = """first
 second
@@ -236,20 +220,17 @@ second
 def test_column_offsets_point_into_the_real_file() -> None:
     """
     title: Column offsets on nested-function nodes are file-true.
-    summary: >-
-      The source is parsed without removing indentation, so col_offset values
-      index into the real file line (as byte offsets) and need no indentation
-      correction at the diagnostic boundary.
+    summary: The source is parsed without removing indentation, so col_offset
+      values index into the real file line (as byte offsets) and need no
+      indentation correction at the diagnostic boundary.
     """
 
     def nested(x: int) -> int:
         """
         title: Increment an integer.
         parameters:
-          x:
-            type: int
-        returns:
-          type: int
+          x: Input value.
+        returns: 'Result of this operation: increment an integer.'
         """
         return x + 1
 
@@ -291,10 +272,10 @@ def test_async_function_is_extracted() -> None:
 def test_jit_function_is_extracted_with_filename() -> None:
     """
     title: Extracting an actual @jit result keeps the real filename.
-    summary: >-
-      JitFunction sets __wrapped__ via functools.update_wrapper, so both the
-      source retrieval and the filename attribution must resolve to the wrapped
-      function; the extraction also strips the @jit decorator line.
+    summary: JitFunction sets __wrapped__ via functools.update_wrapper,
+      so both the source retrieval and the filename attribution must resolve
+      to the wrapped function; the extraction also strips the @jit decorator
+      line.
     """
 
     @jit
@@ -302,10 +283,8 @@ def test_jit_function_is_extracted_with_filename() -> None:
         """
         title: Double an integer.
         parameters:
-          x:
-            type: int
-        returns:
-          type: int
+          x: Input value.
+        returns: 'Result of this operation: double an integer.'
         """
         return x * 2
 
@@ -321,10 +300,10 @@ def test_jit_function_is_extracted_with_filename() -> None:
 def test_wrapped_function_is_attributed_to_the_original_file() -> None:
     """
     title: A wraps-style wrapper extracts the original, filename included.
-    summary: >-
-      inspect.getsourcelines follows __wrapped__, so the extracted source is
-      the original function's; the reported filename must belong to the same
-      function, even when the wrapper's own code lives in another file.
+    summary: inspect.getsourcelines follows __wrapped__, so the extracted
+      source is the original function's; the reported filename must belong
+      to the same function, even when the wrapper's own code lives in another
+      file.
     """
     namespace: dict[str, Any] = {
         "functools": functools,
@@ -397,10 +376,8 @@ def test_self_wrapped_function_is_rejected() -> None:
         """
         title: Return the argument.
         parameters:
-          x:
-            type: int
-        returns:
-          type: int
+          x: Input value.
+        returns: The argument.
         """
         return x
 
@@ -418,18 +395,15 @@ def test_unparsable_source_is_rejected(
     """
     title: A source block that fails ast.parse raises with a location.
     parameters:
-      monkeypatch:
-        type: pytest.MonkeyPatch
+      monkeypatch: Fixture for temporarily replacing dependencies and settings.
     """
 
     def fake_getsourcelines(fn: Any) -> tuple[list[str], int]:
         """
         title: Return a syntactically broken source block.
         parameters:
-          fn:
-            type: Any
-        returns:
-          type: tuple[list[str], int]
+          fn: Function to process.
+        returns: A syntactically broken source block.
         """
         return (["def broken(:\n"], 7)
 
@@ -446,24 +420,21 @@ def test_indented_unparsable_source_maps_to_file_lines(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """
-    title: A broken indented block reports the file line, not the wrapped one.
-    summary: >-
-      An indented block is parsed inside the synthetic wrapper, which shifts
-      SyntaxError line numbers by one; the diagnostic must still point at the
-      real file line.
+    title: A broken indented block reports the file line, not the wrapped
+      one.
+    summary: An indented block is parsed inside the synthetic wrapper, which
+      shifts SyntaxError line numbers by one; the diagnostic must still point
+      at the real file line.
     parameters:
-      monkeypatch:
-        type: pytest.MonkeyPatch
+      monkeypatch: Fixture for temporarily replacing dependencies and settings.
     """
 
     def fake_getsourcelines(fn: Any) -> tuple[list[str], int]:
         """
         title: Return a broken source block indented like a method.
         parameters:
-          fn:
-            type: Any
-        returns:
-          type: tuple[list[str], int]
+          fn: Function to process.
+        returns: A broken source block indented like a method.
         """
         return (["    def broken(:\n"], 10)
 
@@ -482,18 +453,15 @@ def test_null_byte_source_is_rejected(
     title: Source containing a null byte raises SourceExtractionError.
     summary: The parser's SyntaxError must be translated, never leaked raw.
     parameters:
-      monkeypatch:
-        type: pytest.MonkeyPatch
+      monkeypatch: Fixture for temporarily replacing dependencies and settings.
     """
 
     def fake_getsourcelines(fn: Any) -> tuple[list[str], int]:
         """
         title: Return a source block containing a null byte.
         parameters:
-          fn:
-            type: Any
-        returns:
-          type: tuple[list[str], int]
+          fn: Function to process.
+        returns: A source block containing a null byte.
         """
         return (["def broken():\n", "    return '\0'\n"], 3)
 
@@ -511,26 +479,24 @@ def test_malformed_fstring_column_is_validated(
 ) -> None:
     """
     title: A malformed f-string never yields a misleading column.
-    summary: >-
-      For a malformed f-string, some Python versions report the error offset
-      against a synthetic string built from the replacement expression rather
-      than the real source line, and the exact behavior varies by CPython patch
-      level. The invariant _column_of guarantees is version-independent: the
-      diagnostic column is either absent or a real position within the source
-      line, never a bogus synthetic offset.
+    summary: 'For a malformed f-string, some Python versions report
+      the error offset against a synthetic string built from the
+      replacement expression rather than the real source line, and
+      the exact behavior varies by CPython patch level. The invariant
+      _column_of guarantees is version-independent: the diagnostic
+      column is either absent or a real position within the source
+      line, never a bogus synthetic offset.'
     parameters:
-      monkeypatch:
-        type: pytest.MonkeyPatch
+      monkeypatch: Fixture for temporarily replacing dependencies
+        and settings.
     """
 
     def fake_getsourcelines(fn: Any) -> tuple[list[str], int]:
         """
         title: Return a source block with a malformed f-string.
         parameters:
-          fn:
-            type: Any
-        returns:
-          type: tuple[list[str], int]
+          fn: Function to process.
+        returns: A source block with a malformed f-string.
         """
         return (['x = f"prefix {a b}"\n'], 5)
 
@@ -551,14 +517,13 @@ def test_corrupted_source_file_is_rejected(
 ) -> None:
     """
     title: A file corrupted after import raises SourceExtractionError.
-    summary: >-
-      inspect.getsourcelines tokenizes the file, so a source that becomes
-      unparseable after import (here an unterminated triple-quoted string)
-      makes retrieval raise a raw tokenize.TokenError. It must be translated
-      like every other extraction failure, with no misleading location.
+    summary: inspect.getsourcelines tokenizes the file, so a source that
+      becomes unparseable after import (here an unterminated triple-quoted
+      string) makes retrieval raise a raw tokenize.TokenError. It must be
+      translated like every other extraction failure, with no misleading
+      location.
     parameters:
-      tmp_path:
-        type: pathlib.Path
+      tmp_path: Temporary directory for this test.
     """
     module_path = tmp_path / "corrupt_after_import.py"
     module_path.write_text("def valid_fn(x):\n    return x + 1\n")
@@ -589,23 +554,20 @@ def test_retrieval_token_error_is_translated(
 ) -> None:
     """
     title: A TokenError from retrieval becomes SourceExtractionError.
-    summary: >-
-      The diagnostic uses the tokenizer's own message rather than its raw
-      (message, position) args tuple, and attaches no file location because
-      retrieval fails before the block's start line is known.
+    summary: The diagnostic uses the tokenizer's own message rather than
+      its raw (message, position) args tuple, and attaches no file location
+      because retrieval fails before the block's start line is known.
     parameters:
-      monkeypatch:
-        type: pytest.MonkeyPatch
+      monkeypatch: Fixture for temporarily replacing dependencies and settings.
     """
 
     def fake_getsourcelines(fn: Any) -> tuple[list[str], int]:
         """
         title: Raise a TokenError like a truncated multi-line string.
         parameters:
-          fn:
-            type: Any
-        returns:
-          type: tuple[list[str], int]
+          fn: Function to process.
+        returns: 'Result of this operation: raise a TokenError like a
+          truncated multi-line string.'
         """
         raise tokenize.TokenError("EOF in multi-line string", (3, 8))
 
@@ -625,24 +587,22 @@ def test_retrieval_syntax_error_is_translated(
 ) -> None:
     """
     title: A SyntaxError from retrieval becomes SourceExtractionError.
-    summary: >-
-      inspect.getblock can re-raise a SyntaxError during retrieval; unlike a
-      parse-time SyntaxError it arrives before the block's start line is known,
-      so no file location is attached, and the message drops the block-relative
-      position that str(SyntaxError) would otherwise embed.
+    summary: inspect.getblock can re-raise a SyntaxError during retrieval;
+      unlike a parse-time SyntaxError it arrives before the block's start
+      line is known, so no file location is attached, and the message drops
+      the block-relative position that str(SyntaxError) would otherwise
+      embed.
     parameters:
-      monkeypatch:
-        type: pytest.MonkeyPatch
+      monkeypatch: Fixture for temporarily replacing dependencies and settings.
     """
 
     def fake_getsourcelines(fn: Any) -> tuple[list[str], int]:
         """
         title: Raise a located SyntaxError like a retrieval failure.
         parameters:
-          fn:
-            type: Any
-        returns:
-          type: tuple[list[str], int]
+          fn: Function to process.
+        returns: 'Result of this operation: raise a located SyntaxError
+          like a retrieval failure.'
         """
         raise SyntaxError("bad token", ("<unknown>", 3, 5, "    bad\n"))
 
@@ -661,10 +621,10 @@ def test_retrieval_syntax_error_is_translated(
 def test_retrieval_reason_strips_embedded_locations() -> None:
     """
     title: The retrieval-reason helper keeps only the human message.
-    summary: >-
-      Exercises each branch directly: a TokenError's (message, position) tuple
-      reduces to its message, a SyntaxError drops its location suffix, and any
-      other exception falls back to str().
+    summary: 'Exercises each branch directly: a TokenError''s (message,
+      position) tuple reduces to its message, a SyntaxError drops
+      its location suffix, and any other exception falls back to
+      str().'
     """
     token_error = tokenize.TokenError("EOF in multi-line string", (3, 8))
     assert _retrieval_reason(token_error) == "EOF in multi-line string"
@@ -677,11 +637,12 @@ def test_retrieval_reason_strips_embedded_locations() -> None:
 
 def test_column_validation_of_syntax_errors() -> None:
     """
-    title: The column validator trusts only offsets that match the text.
-    summary: >-
-      Exercises every rejection branch directly with synthetic SyntaxError
-      instances, so the behavior is identical on all Python versions regardless
-      of which parser errors each version produces.
+    title: The column validator trusts only offsets that match the
+      text.
+    summary: Exercises every rejection branch directly with synthetic
+      SyntaxError instances, so the behavior is identical on all
+      Python versions regardless of which parser errors each version
+      produces.
     """
     text = "x = 1\n"
 
@@ -693,14 +654,10 @@ def test_column_validation_of_syntax_errors() -> None:
         """
         title: Build a SyntaxError with the given location attributes.
         parameters:
-          lineno:
-            type: int | None
-          offset:
-            type: int | None
-          error_text:
-            type: str | None
-        returns:
-          type: SyntaxError
+          lineno: Lineno.
+          offset: Offset within the data.
+          error_text: Error text.
+        returns: Constructed a SyntaxError with the given location attributes.
         """
         exc = SyntaxError("boom")
         exc.lineno = lineno
@@ -719,11 +676,10 @@ def test_column_validation_of_syntax_errors() -> None:
 def test_defining_module_namespace_is_preserved() -> None:
     """
     title: Extraction carries the function's defining module namespace.
-    summary: >-
-      Later stages need it to detect module-level shadowing of a name the
-      compiler treats as a builtin, which the AST alone cannot reveal. The
-      namespace is the real module globals, so a name defined in this test
-      module is visible through it.
+    summary: Later stages need it to detect module-level shadowing of a name
+      the compiler treats as a builtin, which the AST alone cannot reveal.
+      The namespace is the real module globals, so a name defined in this
+      test module is visible through it.
     """
     extracted = extract_source(sample_add)
     assert extracted.globalns is not None
@@ -733,10 +689,10 @@ def test_defining_module_namespace_is_preserved() -> None:
 def test_namespace_is_taken_from_the_wrapped_function() -> None:
     """
     title: A wrapper's namespace resolves to the wrapped function's module.
-    summary: >-
-      getsourcelines follows __wrapped__, so the namespace must come from the
-      same function as the retrieved source; here the wrapper is compiled in a
-      bare namespace while the wrapped function belongs to this module.
+    summary: getsourcelines follows __wrapped__, so the namespace must come
+      from the same function as the retrieved source; here the wrapper is
+      compiled in a bare namespace while the wrapped function belongs to
+      this module.
     """
     namespace: dict[str, Any] = {
         "functools": functools,
@@ -764,16 +720,15 @@ def test_namespace_is_taken_from_the_wrapped_function() -> None:
 def test_captured_names_are_preserved() -> None:
     """
     title: Extraction records the names captured from enclosing scopes.
-    summary: >-
-      Later stages need them to tell a closure capture apart from a builtin of
-      the same name; a function that captures nothing records an empty set.
+    summary: Later stages need them to tell a closure capture apart from
+      a builtin of the same name; a function that captures nothing records
+      an empty set.
     """
 
     def outer() -> PyFunc:
         """
         title: Return a nested function capturing one enclosing local.
-        returns:
-          type: PyFunc
+        returns: A nested function capturing one enclosing local.
         """
         captured = 5
 
@@ -781,10 +736,9 @@ def test_captured_names_are_preserved() -> None:
             """
             title: Multiply the argument by the captured value.
             parameters:
-              x:
-                type: int
-            returns:
-              type: int
+              x: Input value.
+            returns: 'Result of this operation: multiply the argument by
+              the captured value.'
             """
             return x * captured
 
@@ -797,8 +751,7 @@ def test_captured_names_are_preserved() -> None:
 def test_namespace_is_excluded_from_repr_and_equality() -> None:
     """
     title: The carried namespace does not affect repr or equality.
-    summary: >-
-      It is incidental runtime context rather than part of the extracted
+    summary: It is incidental runtime context rather than part of the extracted
       source, and a module namespace would otherwise dominate the repr.
     """
     extracted = extract_source(sample_add)
@@ -809,9 +762,9 @@ def test_namespace_is_excluded_from_repr_and_equality() -> None:
 def test_qualified_name_is_carried() -> None:
     """
     title: Extraction records the function's qualified name.
-    summary: >-
-      A method and a module-level function are indistinguishable in the
-      extracted ast, so validation needs the qualified name to tell them apart.
+    summary: A method and a module-level function are indistinguishable
+      in the extracted ast, so validation needs the qualified name to tell
+      them apart.
     """
 
     class Calc:
@@ -823,10 +776,8 @@ def test_qualified_name_is_carried() -> None:
             """
             title: Double the argument.
             parameters:
-              x:
-                type: int
-            returns:
-              type: int
+              x: Input value.
+            returns: 'Result of this operation: double the argument.'
             """
             return x * 2
 

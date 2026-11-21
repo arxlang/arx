@@ -31,12 +31,9 @@ def lower_range_call(
     """
     title: Construct a fixed-size range after checking a nonzero i32 stride.
     parameters:
-      visitor:
-        type: VisitorCore
-      node:
-        type: astx.FunctionCall
-      plan:
-        type: CallResolution
+      visitor: Visitor performing the traversal or lowering.
+      node: Syntax node to process.
+      plan: Resolved semantic execution plan.
     """
     calls: FunctionVisitorMixin = cast("FunctionVisitorMixin", visitor)
     stop, start, step = calls.lower_bound_call_arguments(plan)
@@ -80,14 +77,10 @@ def range_item(
     """
     title: Compute an element after a caller has proved index below length.
     parameters:
-      visitor:
-        type: VisitorCore
-      value:
-        type: ir.Value
-      index:
-        type: ir.Value
-    returns:
-      type: ir.Value
+      visitor: Visitor performing the traversal or lowering.
+      value: Value to process.
+      index: Index selecting the item.
+    returns: Computed an element after a caller has proved index below length.
     """
     builder = visitor._llvm.ir_builder
     wide = builder.add(
@@ -105,12 +98,10 @@ def lower_range_query(
     """
     title: Consume range access metadata without materializing any values.
     parameters:
-      visitor:
-        type: VisitorCore
-      node:
-        type: astx.CollectionLength | astx.SubscriptExpr
-    returns:
-      type: bool
+      visitor: Visitor performing the traversal or lowering.
+      node: Syntax node to process.
+    returns: 'Result of this operation: consume range access metadata
+      without materializing any values.'
     """
     info = getattr(node, "semantic", None)
     base = node.base if isinstance(node, astx.CollectionLength) else node.value

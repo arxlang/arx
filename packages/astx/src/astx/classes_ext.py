@@ -1,8 +1,8 @@
 """
 title: ASTx class AST nodes.
-summary: >-
-  Provide explicit class-type references and class-definition nodes that host
-  compilers can use before higher-level surface syntax exists in Arx.
+summary: Provide explicit class-type references and class-definition nodes
+  that host compilers can use before higher-level surface syntax exists in
+  Arx.
 """
 
 from __future__ import annotations
@@ -24,16 +24,11 @@ class ClassType(AnyType):
     """
     title: Named class type reference.
     attributes:
-      name:
-        type: str
-      resolved_name:
-        type: str | None
-      module_key:
-        type: str | None
-      qualified_name:
-        type: str | None
-      ancestor_qualified_names:
-        type: tuple[str, Ellipsis]
+      name: Name identifying this declaration.
+      resolved_name: Name of resolved.
+      module_key: Canonical module identity.
+      qualified_name: Name of qualified.
+      ancestor_qualified_names: Ancestor qualified names.
     """
 
     name: str
@@ -54,16 +49,11 @@ class ClassType(AnyType):
         """
         title: Initialize one named class type reference.
         parameters:
-          name:
-            type: str
-          resolved_name:
-            type: str | None
-          module_key:
-            type: str | None
-          qualified_name:
-            type: str | None
-          ancestor_qualified_names:
-            type: tuple[str, Ellipsis]
+          name: Name identifying the declaration or operation.
+          resolved_name: Name of resolved.
+          module_key: Canonical module identity.
+          qualified_name: Name of qualified.
+          ancestor_qualified_names: Ancestor qualified names.
         """
         super().__init__()
         self.name = name
@@ -75,8 +65,7 @@ class ClassType(AnyType):
     def __str__(self) -> str:
         """
         title: Render one class type reference as text.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         return f"ClassType[{self.name}]"
 
@@ -84,10 +73,8 @@ class ClassType(AnyType):
         """
         title: Build one repr structure for a class type reference.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: astx.base.ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         key = f"CLASS-TYPE[{self.name}]"
         value = self.qualified_name or self.name
@@ -98,16 +85,12 @@ class ClassType(AnyType):
 class ClassDefStmt(StructDeclStmt):
     """
     title: Explicit class definition statement.
-    summary: >-
-      Represent one top-level class declaration with explicit base-class
+    summary: Represent one top-level class declaration with explicit base-class
       references and inherited struct-like member containers.
     attributes:
-      bases:
-        type: astx.ASTNodes[ClassType]
-      is_abstract:
-        type: bool
-      kind:
-        type: astx.ASTKind
+      bases: Bases.
+      is_abstract: Whether is abstract.
+      kind: Kind of value or operation.
     """
 
     bases: astx.ASTNodes[ClassType]
@@ -134,26 +117,15 @@ class ClassDefStmt(StructDeclStmt):
         """
         title: Initialize one class definition statement.
         parameters:
-          name:
-            type: str
-          bases:
-            type: Iterable[ClassType] | astx.ASTNodes[ClassType]
-          attributes:
-            type: >-
-              Iterable[astx.VariableDeclaration] |
-              astx.ASTNodes[astx.VariableDeclaration]
-          decorators:
-            type: Iterable[astx.Expr] | astx.ASTNodes[astx.Expr]
-          methods:
-            type: Iterable[astx.FunctionDef] | astx.ASTNodes[astx.FunctionDef]
-          visibility:
-            type: VisibilityKind
-          is_abstract:
-            type: bool
-          loc:
-            type: astx.SourceLocation
-          parent:
-            type: astx.ASTNodes[astx.AST] | None
+          name: Name identifying the declaration or operation.
+          bases: Bases.
+          attributes: Attributes.
+          decorators: Decorators.
+          methods: Methods.
+          visibility: Visibility.
+          is_abstract: Whether is abstract.
+          loc: Source coordinates associated with the node.
+          parent: Parent node or enclosing scope.
         """
         super().__init__(
             name=name,
@@ -176,8 +148,7 @@ class ClassDefStmt(StructDeclStmt):
     def __str__(self) -> str:
         """
         title: Render one class definition as text.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         decorators_str = "".join(
             f"@{decorator}\n" for decorator in self.decorators
@@ -204,10 +175,8 @@ class ClassDefStmt(StructDeclStmt):
         """
         title: Build one repr structure for a class definition.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: astx.base.ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         vis = dict(zip(("public", "private", "protected"), ("+", "-", "#")))
         key = f"CLASS-DEF[{vis[self.visibility.name]}{self.name}]"
@@ -253,14 +222,10 @@ class ClassConstruct(astx.DataType):
     """
     title: Class construction with ordered positional and keyword expressions.
     attributes:
-      class_name:
-        type: str
-      type_:
-        type: AnyType
-      args:
-        type: tuple[astx.DataType, Ellipsis]
-      keywords:
-        type: tuple[astx.KeywordArgument, Ellipsis]
+      class_name: Name of class.
+      type_: Type associated with this expression.
+      args: Declared or supplied call arguments.
+      keywords: Keywords.
     """
 
     class_name: str
@@ -279,14 +244,10 @@ class ClassConstruct(astx.DataType):
         """
         title: Initialize one default class construction expression.
         parameters:
-          class_name:
-            type: str
-          args:
-            type: tuple[astx.DataType, Ellipsis]
-          keywords:
-            type: tuple[astx.KeywordArgument, Ellipsis]
-          loc:
-            type: astx.SourceLocation
+          class_name: Name of class.
+          args: Arguments supplied to the operation.
+          keywords: Keywords.
+          loc: Source coordinates associated with the node.
         """
         super().__init__(loc=loc)
         self.class_name = class_name
@@ -297,8 +258,7 @@ class ClassConstruct(astx.DataType):
     def __str__(self) -> str:
         """
         title: Render one class construction expression as text.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         if not self.args and not self.keywords:
             return f"ClassConstruct[{self.class_name}]"
@@ -310,10 +270,8 @@ class ClassConstruct(astx.DataType):
         """
         title: Build one repr structure for class construction.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: astx.base.ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         key = f"CLASS-CONSTRUCT[{self.class_name}]"
         if not self.args and not self.keywords:
@@ -335,16 +293,11 @@ class MethodCall(astx.DataType):
     """
     title: Instance method call expression.
     attributes:
-      receiver:
-        type: astx.AST
-      method_name:
-        type: str
-      args:
-        type: tuple[astx.DataType, Ellipsis]
-      keywords:
-        type: tuple[astx.KeywordArgument, Ellipsis]
-      type_:
-        type: AnyType
+      receiver: Receiver.
+      method_name: Name of method.
+      args: Declared or supplied call arguments.
+      keywords: Keywords.
+      type_: Type associated with this expression.
     """
 
     receiver: astx.AST
@@ -364,14 +317,10 @@ class MethodCall(astx.DataType):
         """
         title: Initialize one instance method call expression.
         parameters:
-          receiver:
-            type: astx.AST
-          method_name:
-            type: str
-          args:
-            type: Iterable[astx.DataType]
-          keywords:
-            type: tuple[astx.KeywordArgument, Ellipsis]
+          receiver: Receiver.
+          method_name: Name of method.
+          args: Arguments supplied to the operation.
+          keywords: Keywords.
         """
         super().__init__()
         self.receiver = receiver
@@ -383,8 +332,7 @@ class MethodCall(astx.DataType):
     def __str__(self) -> str:
         """
         title: Render one instance method call expression as text.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         return f"MethodCall[{self.method_name}]"
 
@@ -392,10 +340,8 @@ class MethodCall(astx.DataType):
         """
         title: Build one repr structure for an instance method call.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: astx.base.ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         key = f"METHOD-CALL[{self.method_name}]"
         arg_nodes = astx.ASTNodes[astx.DataType]("args")
@@ -422,16 +368,11 @@ class StaticMethodCall(astx.DataType):
     """
     title: Class-scoped static method call expression.
     attributes:
-      class_name:
-        type: str
-      method_name:
-        type: str
-      args:
-        type: tuple[astx.DataType, Ellipsis]
-      keywords:
-        type: tuple[astx.KeywordArgument, Ellipsis]
-      type_:
-        type: AnyType
+      class_name: Name of class.
+      method_name: Name of method.
+      args: Declared or supplied call arguments.
+      keywords: Keywords.
+      type_: Type associated with this expression.
     """
 
     class_name: str
@@ -451,14 +392,10 @@ class StaticMethodCall(astx.DataType):
         """
         title: Initialize one static method call expression.
         parameters:
-          class_name:
-            type: str
-          method_name:
-            type: str
-          args:
-            type: Iterable[astx.DataType]
-          keywords:
-            type: tuple[astx.KeywordArgument, Ellipsis]
+          class_name: Name of class.
+          method_name: Name of method.
+          args: Arguments supplied to the operation.
+          keywords: Keywords.
         """
         super().__init__()
         self.class_name = class_name
@@ -470,8 +407,7 @@ class StaticMethodCall(astx.DataType):
     def __str__(self) -> str:
         """
         title: Render one static method call expression as text.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         return f"StaticMethodCall[{self.class_name}.{self.method_name}]"
 
@@ -479,10 +415,8 @@ class StaticMethodCall(astx.DataType):
         """
         title: Build one repr structure for a static method call.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: astx.base.ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         key = f"STATIC-METHOD-CALL[{self.class_name}.{self.method_name}]"
         arg_nodes = astx.ASTNodes[astx.DataType]("args")
@@ -508,12 +442,9 @@ class StaticFieldAccess(astx.DataType):
     """
     title: Class-scoped static field access expression.
     attributes:
-      class_name:
-        type: str
-      field_name:
-        type: str
-      type_:
-        type: AnyType
+      class_name: Name of class.
+      field_name: Name of field.
+      type_: Type associated with this expression.
     """
 
     class_name: str
@@ -528,10 +459,8 @@ class StaticFieldAccess(astx.DataType):
         """
         title: Initialize one static field access expression.
         parameters:
-          class_name:
-            type: str
-          field_name:
-            type: str
+          class_name: Name of class.
+          field_name: Name of field.
         """
         super().__init__()
         self.class_name = class_name
@@ -541,8 +470,7 @@ class StaticFieldAccess(astx.DataType):
     def __str__(self) -> str:
         """
         title: Render one static field access expression as text.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         return f"StaticFieldAccess[{self.class_name}.{self.field_name}]"
 
@@ -550,10 +478,8 @@ class StaticFieldAccess(astx.DataType):
         """
         title: Build one repr structure for a static field access.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: astx.base.ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         key = f"STATIC-FIELD-ACCESS[{self.class_name}.{self.field_name}]"
         return self._prepare_struct(
@@ -568,14 +494,10 @@ class BaseFieldAccess(astx.DataType):
     """
     title: Explicit base-qualified instance field access expression.
     attributes:
-      receiver:
-        type: astx.AST
-      base_class_name:
-        type: str
-      field_name:
-        type: str
-      type_:
-        type: AnyType
+      receiver: Receiver.
+      base_class_name: Name of base class.
+      field_name: Name of field.
+      type_: Type associated with this expression.
     """
 
     receiver: astx.AST
@@ -592,12 +514,9 @@ class BaseFieldAccess(astx.DataType):
         """
         title: Initialize one base-qualified field access expression.
         parameters:
-          receiver:
-            type: astx.AST
-          base_class_name:
-            type: str
-          field_name:
-            type: str
+          receiver: Receiver.
+          base_class_name: Name of base class.
+          field_name: Name of field.
         """
         super().__init__()
         self.receiver = receiver
@@ -608,8 +527,7 @@ class BaseFieldAccess(astx.DataType):
     def __str__(self) -> str:
         """
         title: Render one base-qualified field access expression as text.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         return f"BaseFieldAccess[{self.base_class_name}.{self.field_name}]"
 
@@ -617,10 +535,8 @@ class BaseFieldAccess(astx.DataType):
         """
         title: Build one repr structure for a base-qualified field access.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: astx.base.ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         key = f"BASE-FIELD-ACCESS[{self.base_class_name}.{self.field_name}]"
         value = {
@@ -638,18 +554,12 @@ class BaseMethodCall(astx.DataType):
     """
     title: Explicit base-qualified instance method call expression.
     attributes:
-      receiver:
-        type: astx.AST
-      base_class_name:
-        type: str
-      method_name:
-        type: str
-      args:
-        type: tuple[astx.DataType, Ellipsis]
-      keywords:
-        type: tuple[astx.KeywordArgument, Ellipsis]
-      type_:
-        type: AnyType
+      receiver: Receiver.
+      base_class_name: Name of base class.
+      method_name: Name of method.
+      args: Declared or supplied call arguments.
+      keywords: Keywords.
+      type_: Type associated with this expression.
     """
 
     receiver: astx.AST
@@ -671,16 +581,11 @@ class BaseMethodCall(astx.DataType):
         """
         title: Initialize one base-qualified method call expression.
         parameters:
-          receiver:
-            type: astx.AST
-          base_class_name:
-            type: str
-          method_name:
-            type: str
-          args:
-            type: Iterable[astx.DataType]
-          keywords:
-            type: tuple[astx.KeywordArgument, Ellipsis]
+          receiver: Receiver.
+          base_class_name: Name of base class.
+          method_name: Name of method.
+          args: Arguments supplied to the operation.
+          keywords: Keywords.
         """
         super().__init__()
         self.receiver = receiver
@@ -693,8 +598,7 @@ class BaseMethodCall(astx.DataType):
     def __str__(self) -> str:
         """
         title: Render one base-qualified method call expression as text.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         return f"BaseMethodCall[{self.base_class_name}.{self.method_name}]"
 
@@ -702,10 +606,8 @@ class BaseMethodCall(astx.DataType):
         """
         title: Build one repr structure for a base-qualified method call.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: astx.base.ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         key = f"BASE-METHOD-CALL[{self.base_class_name}.{self.method_name}]"
         arg_nodes = astx.ASTNodes[astx.DataType]("args")

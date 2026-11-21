@@ -1,5 +1,8 @@
 """
 title: Tests for the Arrow runtime feature and lowering path.
+attributes:
+  PRIMITIVE_IMPORT_CASES: Primitive import cases.
+  BUILDER_CASES: Builder cases.
 """
 
 from __future__ import annotations
@@ -62,6 +65,15 @@ from llvmlite import binding as llvm
 
 
 class SupportedPrimitiveMetadata(TypedDict):
+    """
+    title: Ctypes layout for primitive runtime metadata.
+    attributes:
+      type_id: Identifier for type.
+      dtype_token: Dtype token.
+      element_size_bytes: Element size bytes.
+      buffer_view_compatible: Whether to use buffer view compatible.
+    """
+
     type_id: int
     dtype_token: int
     element_size_bytes: int | None
@@ -74,6 +86,10 @@ ArrowSchemaFactory = Callable[[], object]
 
 
 class ArrowSchemaStruct(ctypes.Structure):
+    """
+    title: Ctypes layout for an Arrow C Data schema.
+    """
+
     _fields_ = [
         ("format", ctypes.c_char_p),
         ("name", ctypes.c_char_p),
@@ -88,6 +104,10 @@ class ArrowSchemaStruct(ctypes.Structure):
 
 
 class ArrowArrayStruct(ctypes.Structure):
+    """
+    title: Ctypes layout for an Arrow C Data array.
+    """
+
     _fields_ = [
         ("length", ctypes.c_int64),
         ("null_count", ctypes.c_int64),
@@ -103,6 +123,10 @@ class ArrowArrayStruct(ctypes.Structure):
 
 
 class BufferViewStruct(ctypes.Structure):
+    """
+    title: Ctypes layout for a native buffer view.
+    """
+
     _fields_ = [
         ("data", ctypes.c_void_p),
         ("owner", ctypes.c_void_p),
@@ -227,8 +251,8 @@ BUILDER_CASES: tuple[
 def _find_c_compiler() -> str | None:
     """
     title: Find one usable C compiler for runtime tests.
-    returns:
-      type: str | None
+    returns: 'Result of this operation: find one usable C compiler for runtime
+      tests.'
     """
     return shutil.which("clang") or shutil.which("cc")
 
@@ -237,10 +261,8 @@ def _array_length_module(values: list[int]) -> astx.Module:
     """
     title: Array length module.
     parameters:
-      values:
-        type: list[int]
-    returns:
-      type: astx.Module
+      values: Values to process, in order.
+    returns: 'Result of this operation: array length module.'
     """
     module = astx.Module()
     main_proto = astx.FunctionPrototype(
@@ -261,8 +283,7 @@ def _array_length_module(values: list[int]) -> astx.Module:
 def _plain_main_module() -> astx.Module:
     """
     title: Plain main module.
-    returns:
-      type: astx.Module
+    returns: 'Result of this operation: plain main module.'
     """
     module = astx.Module()
     main_proto = astx.FunctionPrototype(
@@ -278,10 +299,8 @@ def _compile_arrow_harness(source: str) -> subprocess.CompletedProcess[str]:
     """
     title: Compile arrow harness.
     parameters:
-      source:
-        type: str
-    returns:
-      type: subprocess.CompletedProcess[str]
+      source: Source input to process.
+    returns: 'Result of this operation: compile arrow harness.'
     """
     feature = build_array_runtime_feature()
     include_dirs: list[Path] = []
@@ -340,8 +359,7 @@ def _compile_arrow_harness(source: str) -> subprocess.CompletedProcess[str]:
 def _shared_library_suffix() -> str:
     """
     title: Shared library suffix.
-    returns:
-      type: str
+    returns: 'Result of this operation: shared library suffix.'
     """
     if sys.platform == "darwin":
         return ".dylib"
@@ -353,8 +371,7 @@ def _shared_library_suffix() -> str:
 def _load_arrow_runtime_library() -> Iterator[ctypes.CDLL]:
     """
     title: Load arrow runtime library.
-    returns:
-      type: Iterator[ctypes.CDLL]
+    returns: Loaded arrow runtime library.
     """
     if sys.platform == "win32":
         pytest.skip("Arrow C++ shared-library tests require Unix")
@@ -405,8 +422,7 @@ def _configure_arrow_runtime_library(library: ctypes.CDLL) -> None:
     """
     title: Configure arrow runtime library.
     parameters:
-      library:
-        type: ctypes.CDLL
+      library: Library.
     """
     library.irx_arrow_schema_import_copy.argtypes = [
         ctypes.c_void_p,
@@ -583,10 +599,8 @@ def _assert_arrow_ok(library: ctypes.CDLL, code: int) -> None:
     """
     title: Assert arrow ok.
     parameters:
-      library:
-        type: ctypes.CDLL
-      code:
-        type: int
+      library: Library.
+      code: Source code or diagnostic identifier.
     """
     assert code == 0, library.irx_arrow_last_error().decode()
 
@@ -600,16 +614,11 @@ def _build_runtime_array(
     """
     title: Build runtime array.
     parameters:
-      library:
-        type: ctypes.CDLL
-      type_id:
-        type: int
-      append_kind:
-        type: str
-      values:
-        type: Sequence[BuilderValue]
-    returns:
-      type: ctypes.c_void_p
+      library: Library.
+      type_id: Identifier for type.
+      append_kind: Append kind.
+      values: Values to process, in order.
+    returns: Constructed runtime array.
     """
     builder = ctypes.c_void_p()
     array_handle = ctypes.c_void_p()
@@ -682,16 +691,11 @@ def _build_runtime_tensor(
     """
     title: Build one int32 runtime tensor.
     parameters:
-      library:
-        type: ctypes.CDLL
-      values:
-        type: Sequence[int]
-      shape:
-        type: Sequence[int]
-      strides:
-        type: Sequence[int]
-    returns:
-      type: ctypes.c_void_p
+      library: Library.
+      values: Values to process, in order.
+      shape: Declared dimensions or result shape.
+      strides: Strides.
+    returns: Constructed one int32 runtime tensor.
     """
     builder = ctypes.c_void_p()
     tensor_handle = ctypes.c_void_p()
@@ -733,10 +737,8 @@ def _arrow_array_struct(addr: int) -> ArrowArrayStruct:
     """
     title: View one ArrowArray at an address.
     parameters:
-      addr:
-        type: int
-    returns:
-      type: ArrowArrayStruct
+      addr: Addr.
+    returns: 'Result of this operation: view one ArrowArray at an address.'
     """
     return ctypes.cast(addr, ctypes.POINTER(ArrowArrayStruct)).contents
 
@@ -745,10 +747,8 @@ def _arrow_schema_struct(addr: int) -> ArrowSchemaStruct:
     """
     title: View one ArrowSchema at an address.
     parameters:
-      addr:
-        type: int
-    returns:
-      type: ArrowSchemaStruct
+      addr: Addr.
+    returns: 'Result of this operation: view one ArrowSchema at an address.'
     """
     return ctypes.cast(addr, ctypes.POINTER(ArrowSchemaStruct)).contents
 
@@ -757,12 +757,9 @@ def _capsule_pointer(capsule: object, name: bytes) -> int:
     """
     title: Return a PyCapsule pointer as an integer address.
     parameters:
-      capsule:
-        type: object
-      name:
-        type: bytes
-    returns:
-      type: int
+      capsule: Capsule.
+      name: Name identifying the declaration or operation.
+    returns: A PyCapsule pointer as an integer address.
     """
     getter = ctypes.pythonapi.PyCapsule_GetPointer
     getter.argtypes = [ctypes.py_object, ctypes.c_char_p]
@@ -780,12 +777,10 @@ def _pyarrow_c_array(
     """
     title: Export one PyArrow array through Arrow C Data capsules.
     parameters:
-      values:
-        type: Sequence[object]
-      data_type:
-        type: pa.DataType
-    returns:
-      type: tuple[pa.Array, object, object, int, int]
+      values: Values to process, in order.
+      data_type: Declared data type.
+    returns: 'Result of this operation: export one PyArrow array through
+      Arrow C Data capsules.'
     """
     array = pa.array(values, type=data_type)
     schema_capsule, array_capsule = array.__arrow_c_array__()
@@ -805,12 +800,10 @@ def _import_exported_array(
     """
     title: Import exported Arrow C Data into PyArrow.
     parameters:
-      exported_array:
-        type: ArrowArrayStruct
-      exported_schema:
-        type: ArrowSchemaStruct
-    returns:
-      type: pa.Array
+      exported_array: Exported array.
+      exported_schema: Exported schema.
+    returns: 'Result of this operation: import exported Arrow C Data into
+      PyArrow.'
     """
     return pa.Array._import_from_c(
         ctypes.addressof(exported_array),
@@ -822,8 +815,7 @@ def _release_c_array(array: ArrowArrayStruct) -> None:
     """
     title: Release an ArrowArray ctypes value if it owns resources.
     parameters:
-      array:
-        type: ArrowArrayStruct
+      array: Array.
     """
     if array.release is not None:
         release = ctypes.CFUNCTYPE(None, ctypes.c_void_p)(array.release)
@@ -834,8 +826,7 @@ def _release_c_schema(schema: ArrowSchemaStruct) -> None:
     """
     title: Release an ArrowSchema ctypes value if it owns resources.
     parameters:
-      schema:
-        type: ArrowSchemaStruct
+      schema: Declared data schema.
     """
     if schema.release is not None:
         release = ctypes.CFUNCTYPE(None, ctypes.c_void_p)(schema.release)
@@ -846,10 +837,8 @@ def _primitive_spec(name: str) -> tuple[int, int, bool]:
     """
     title: Return one runtime primitive metadata triple.
     parameters:
-      name:
-        type: str
-    returns:
-      type: tuple[int, int, bool]
+      name: Name identifying the declaration or operation.
+    returns: One runtime primitive metadata triple.
     """
     spec = ARRAY_PRIMITIVE_TYPE_SPECS[name]
     return (
@@ -932,12 +921,9 @@ def test_arrow_build_rejects_mixed_versions(
     """
     title: Reject mixed source/header/library builds before compilation.
     parameters:
-      tmp_path:
-        type: Path
-      monkeypatch:
-        type: pytest.MonkeyPatch
-      component:
-        type: str
+      tmp_path: Temporary directory for this test.
+      monkeypatch: Fixture for temporarily replacing dependencies and settings.
+      component: Component.
     """
     if component == "source":
         monkeypatch.setattr(
@@ -992,8 +978,8 @@ def test_arrow_build_rejects_mixed_versions(
 
 def test_arrow_feature_metadata_exposes_supported_primitive_mapping() -> None:
     """
-    title: >-
-      Arrow feature metadata should publish the explicit primitive mapping.
+    title: Arrow feature metadata should publish the explicit primitive
+      mapping.
     """
     feature = build_array_runtime_feature()
     supported = cast(
@@ -1023,8 +1009,8 @@ def test_arrow_feature_metadata_exposes_supported_primitive_mapping() -> None:
 
 def test_arrow_length_build_returns_length() -> None:
     """
-    title: >-
-      Building an array-backed module should link and return the array length.
+    title: Building an array-backed module should link and return the array
+      length.
     """
     if shutil.which("clang") is None:
         pytest.skip("builder.build() currently requires clang")
@@ -1048,8 +1034,8 @@ def test_arrow_length_build_returns_length() -> None:
 
 def test_arrow_runtime_harness_lifecycle() -> None:
     """
-    title: >-
-      Arrow runtime C ABI should support create append finish inspect release.
+    title: Arrow runtime C ABI should support create append finish inspect
+      release.
     """
     result = _compile_arrow_harness(
         """
@@ -1152,8 +1138,8 @@ def test_arrow_runtime_harness_c_data_roundtrip() -> None:
 
 def test_arrow_runtime_harness_buffer_view_bridge() -> None:
     """
-    title: >-
-      Arrow runtime C ABI should expose supported numeric buffers as views.
+    title: Arrow runtime C ABI should expose supported numeric buffers as
+      views.
     """
     result = _compile_arrow_harness(
         """
@@ -1276,14 +1262,10 @@ def test_arrow_runtime_import_export_roundtrips_supported_primitives(
     """
     title: Arrow runtime should roundtrip the supported primitive set.
     parameters:
-      name:
-        type: str
-      schema_factory:
-        type: ArrowSchemaFactory
-      values:
-        type: Sequence[PrimitiveValue]
-      expected:
-        type: Sequence[PrimitiveValue]
+      name: Name identifying the declaration or operation.
+      schema_factory: Schema factory.
+      values: Values to process, in order.
+      expected: Expected result for this case.
     """
     with _load_arrow_runtime_library() as library:
         type_id, _, _ = _primitive_spec(name)
@@ -1405,19 +1387,14 @@ def test_arrow_runtime_builder_supports_supported_primitives(
     expected: Sequence[PrimitiveValue],
 ) -> None:
     """
-    title: >-
-      Arrow runtime builders should produce all supported primitive arrays.
+    title: Arrow runtime builders should produce all supported primitive
+      arrays.
     parameters:
-      name:
-        type: str
-      type_id:
-        type: int
-      append_kind:
-        type: str
-      values:
-        type: Sequence[BuilderValue]
-      expected:
-        type: Sequence[PrimitiveValue]
+      name: Name identifying the declaration or operation.
+      type_id: Identifier for type.
+      append_kind: Append kind.
+      values: Values to process, in order.
+      expected: Expected result for this case.
     """
     with _load_arrow_runtime_library() as library:
         array_handle = _build_runtime_array(

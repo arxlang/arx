@@ -1,5 +1,10 @@
 """
 title: AST classes and functions.
+attributes:
+  PrimitivesStruct: Primitives struct.
+  DataTypesStruct: Data types struct.
+  DictDataTypesStruct: Dict data types struct.
+  ReprStruct: Repr struct.
 """
 
 from __future__ import annotations
@@ -41,8 +46,8 @@ __all__ = [
 def is_using_jupyter_notebook() -> bool:
     """
     title: Check if it is executed in a jupyter notebook.
-    returns:
-      type: bool
+    returns: 'Result of this operation: check if it is executed in a jupyter
+      notebook.'
     """
     try:
         from IPython import get_ipython
@@ -60,23 +65,19 @@ class SourceLocation:
     """
     title: Source coordinates attached to AST nodes.
     attributes:
-      line:
-        type: int
-      col:
-        type: int
+      line: Source line coordinate.
+      col: Source column coordinate.
     """
 
     line: int
     col: int
 
-    def __init__(self, line: int, col: int):
+    def __init__(self, line: int, col: int) -> None:
         """
         title: Initialize the source location.
         parameters:
-          line:
-            type: int
-          col:
-            type: int
+          line: Source line coordinate.
+          col: Source column or column selector.
         """
         self.line = line
         self.col = col
@@ -84,16 +85,14 @@ class SourceLocation:
     def __str__(self) -> str:
         """
         title: Return a string representation of the source location.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         return "{" + f"line: {self.line}, col: {self.col}" + "}"
 
     def __repr__(self) -> str:
         """
         title: Return a representation of the source location.
-        returns:
-          type: str
+        returns: Printable representation of this instance.
         """
         return str(self)
 
@@ -240,8 +239,7 @@ class ASTMeta(type):
     def __str__(cls) -> str:
         """
         title: Return an string that represents the object.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         return cls.__name__
 
@@ -252,16 +250,11 @@ class AST(metaclass=ASTMeta):
     """
     title: AST main expression class.
     attributes:
-      loc:
-        type: SourceLocation
-      kind:
-        type: ASTKind
-      comment:
-        type: str
-      parent:
-        type: Optional[ASTNodes]
-      ref:
-        type: str
+      loc: Source coordinates attached to this node.
+      kind: Kind of value or operation.
+      comment: Comment.
+      parent: Parent node in the syntax tree.
+      ref: Identifier associated with this node.
     """
 
     loc: SourceLocation
@@ -278,10 +271,8 @@ class AST(metaclass=ASTMeta):
         """
         title: Initialize the AST instance.
         parameters:
-          loc:
-            type: SourceLocation
-          parent:
-            type: Optional[ASTNodes]
+          loc: Source coordinates associated with the node.
+          parent: Parent node or enclosing scope.
         """
         self.kind = ASTKind.GenericKind
         self.loc = loc
@@ -293,8 +284,7 @@ class AST(metaclass=ASTMeta):
     def __hash__(self) -> int:
         """
         title: Return a stable hash for the AST structure.
-        returns:
-          type: int
+        returns: Hash of this instance.
         """
         value = sha256(f"{self.get_struct()}".encode("utf8")).digest()
         return int.from_bytes(value, "big")
@@ -302,16 +292,14 @@ class AST(metaclass=ASTMeta):
     def __str__(self) -> str:
         """
         title: Return an string that represents the object.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         return f"{self.__class__.__name__}"
 
     def __repr__(self) -> str:
         """
         title: Return an string that represents the object.
-        returns:
-          type: str
+        returns: Printable representation of this instance.
         """
         if is_using_jupyter_notebook():
             return ""
@@ -325,9 +313,10 @@ class AST(metaclass=ASTMeta):
     def _repr_png_(self) -> None:
         """
         title: Return PNG representation of the Graphviz object.
-        summary: |-
+        summary: >2-
 
           This method is specially recognized by Jupyter Notebook to display
+
           a Graphviz diagram inline.
         """
         # importing it here in order to avoid cyclic import issue
@@ -345,8 +334,7 @@ class AST(metaclass=ASTMeta):
     def _get_metadata(self) -> ReprStruct:
         """
         title: Return the metadata for the requested AST.
-        returns:
-          type: ReprStruct
+        returns: The metadata for the requested AST.
         """
         metadata = {
             "loc": {"line": self.loc.line, "col": self.loc.col},
@@ -365,14 +353,11 @@ class AST(metaclass=ASTMeta):
         """
         title: Prepare a representation structure for the node.
         parameters:
-          key:
-            type: str
-          value:
-            type: PrimitivesStruct | ReprStruct
-          simplified:
-            type: bool
-        returns:
-          type: ReprStruct
+          key: Key selecting the entry.
+          value: Value to process.
+          simplified: Whether to request the compact representation.
+        returns: 'Result of this operation: prepare a representation structure
+          for the node.'
         """
         struct: ReprStruct = (
             {
@@ -391,20 +376,16 @@ class AST(metaclass=ASTMeta):
         """
         title: Return a structure that represents the node object.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
 
     def to_yaml(self, simplified: bool = False) -> str:
         """
         title: Return an yaml string that represents the object.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: str
+          simplified: Whether to request the compact representation.
+        returns: An yaml string that represents the object.
         """
         return str(
             yaml.dump(self.get_struct(simplified=simplified), sort_keys=False)
@@ -414,10 +395,8 @@ class AST(metaclass=ASTMeta):
         """
         title: Return an json string that represents the object.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: str
+          simplified: Whether to request the compact representation.
+        returns: An json string that represents the object.
         """
         return json.dumps(self.get_struct(simplified=simplified), indent=2)
 
@@ -428,22 +407,14 @@ class ASTNodes(Generic[ASTType], AST):
     """
     title: AST with a list of nodes, supporting type-specific elements.
     attributes:
-      loc:
-        type: SourceLocation
-      kind:
-        type: ASTKind
-      comment:
-        type: str
-      parent:
-        type: Optional[ASTNodes]
-      ref:
-        type: str
-      name:
-        type: str
-      nodes:
-        type: list[ASTType]
-      position:
-        type: int
+      loc: Source coordinates attached to this node.
+      kind: Kind of value or operation.
+      comment: Comment.
+      parent: Parent node in the syntax tree.
+      ref: Identifier associated with this node.
+      name: Name identifying this declaration.
+      nodes: Contained syntax nodes in order.
+      position: Position.
     """
 
     name: str
@@ -459,12 +430,9 @@ class ASTNodes(Generic[ASTType], AST):
         """
         title: Initialize the AST instance.
         parameters:
-          name:
-            type: str
-          loc:
-            type: SourceLocation
-          parent:
-            type: Optional[ASTNodes]
+          name: Name identifying the declaration or operation.
+          loc: Source coordinates associated with the node.
+          parent: Parent node or enclosing scope.
         """
         super().__init__(loc=loc, parent=parent)
         self.name = name
@@ -474,8 +442,7 @@ class ASTNodes(Generic[ASTType], AST):
     def __iter__(self) -> Iterator[ASTType]:
         """
         title: Overload `iter` magic function.
-        returns:
-          type: Iterator[ASTType]
+        returns: Iterator over the contained items.
         """
         self.position = 0  # Reset position for fresh iteration
         return self
@@ -483,8 +450,7 @@ class ASTNodes(Generic[ASTType], AST):
     def __next__(self) -> ASTType:
         """
         title: Overload `next` magic function.
-        returns:
-          type: ASTType
+        returns: Next item from the iterator.
         """
         if self.position >= len(self.nodes):
             self.position = 0
@@ -498,8 +464,7 @@ class ASTNodes(Generic[ASTType], AST):
         """
         title: Append a new node to the stack.
         parameters:
-          value:
-            type: ASTType
+          value: Value to process.
         """
         self.nodes.append(value)
 
@@ -507,18 +472,15 @@ class ASTNodes(Generic[ASTType], AST):
         """
         title: Support subscripting to get nodes by index.
         parameters:
-          index:
-            type: int
-        returns:
-          type: ASTType
+          index: Index selecting the item.
+        returns: Item selected by the index.
         """
         return self.nodes[index]
 
     def __len__(self) -> int:
         """
         title: Return the number of nodes, supports len function.
-        returns:
-          type: int
+        returns: Number of contained items.
         """
         return len(self.nodes)
 
@@ -526,10 +488,8 @@ class ASTNodes(Generic[ASTType], AST):
         """
         title: Return a string that represents the object.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         args_nodes = []
 
@@ -547,18 +507,12 @@ class Expr(AST):
     """
     title: AST main expression class.
     attributes:
-      loc:
-        type: SourceLocation
-      kind:
-        type: ASTKind
-      comment:
-        type: str
-      parent:
-        type: Optional[ASTNodes]
-      ref:
-        type: str
-      nbytes:
-        type: int
+      loc: Source coordinates attached to this node.
+      kind: Kind of value or operation.
+      comment: Comment.
+      parent: Parent node in the syntax tree.
+      ref: Identifier associated with this node.
+      nbytes: Nbytes.
     """
 
     nbytes: int = 0
@@ -570,18 +524,12 @@ class ExprType(Expr):
     """
     title: ExprType expression class.
     attributes:
-      loc:
-        type: SourceLocation
-      kind:
-        type: ASTKind
-      comment:
-        type: str
-      parent:
-        type: Optional[ASTNodes]
-      ref:
-        type: str
-      nbytes:
-        type: int
+      loc: Source coordinates attached to this node.
+      kind: Kind of value or operation.
+      comment: Comment.
+      parent: Parent node in the syntax tree.
+      ref: Identifier associated with this node.
+      nbytes: Nbytes.
     """
 
     nbytes: int = 0
@@ -590,10 +538,8 @@ class ExprType(Expr):
         """
         title: Return a structure that represents the node object.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         return {"Type": self.__class__.__name__}
 
@@ -604,28 +550,20 @@ class Undefined(Expr):
     """
     title: Undefined expression class.
     attributes:
-      loc:
-        type: SourceLocation
-      kind:
-        type: ASTKind
-      comment:
-        type: str
-      parent:
-        type: Optional[ASTNodes]
-      ref:
-        type: str
-      nbytes:
-        type: int
+      loc: Source coordinates attached to this node.
+      kind: Kind of value or operation.
+      comment: Comment.
+      parent: Parent node in the syntax tree.
+      ref: Identifier associated with this node.
+      nbytes: Nbytes.
     """
 
     def get_struct(self, simplified: bool = False) -> ReprStruct:
         """
         title: Return a simple structure that represents the object.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         value = "UNDEFINED"
         key = "UNDEFINED"
@@ -644,24 +582,15 @@ class DataType(ExprType):
     """
     title: AST main expression class.
     attributes:
-      loc:
-        type: SourceLocation
-      kind:
-        type: ASTKind
-      comment:
-        type: str
-      parent:
-        type: Optional[ASTNodes]
-      ref:
-        type: str
-      nbytes:
-        type: int
-      type_:
-        type: ExprType
-      name:
-        type: str
-      _tmp_id:
-        type: ClassVar[int]
+      loc: Source coordinates attached to this node.
+      kind: Kind of value or operation.
+      comment: Comment.
+      parent: Parent node in the syntax tree.
+      ref: Identifier associated with this node.
+      nbytes: Nbytes.
+      type_: Type associated with this expression.
+      name: Name identifying this declaration.
+      _tmp_id: Identifier for tmp.
     """
 
     type_: ExprType
@@ -676,10 +605,8 @@ class DataType(ExprType):
         """
         title: Initialize the data type.
         parameters:
-          loc:
-            type: SourceLocation
-          parent:
-            type: Optional[ASTNodes]
+          loc: Source coordinates associated with the node.
+          parent: Parent node or enclosing scope.
         """
         super().__init__(loc=loc, parent=parent)
         self.name = f"temp_{DataType._tmp_id}"
@@ -690,8 +617,7 @@ class DataType(ExprType):
     def __str__(self) -> str:
         """
         title: Return an string that represents the object.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         return f"{self.__class__.__name__}: {self.name}"
 
@@ -699,10 +625,8 @@ class DataType(ExprType):
         """
         title: Return a simple structure that represents the object.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         key = f"DATA-TYPE[{self.__class__.__name__}]"
         value = self.name
@@ -715,24 +639,15 @@ class OperatorType(DataType):
     """
     title: AST main expression class.
     attributes:
-      loc:
-        type: SourceLocation
-      kind:
-        type: ASTKind
-      comment:
-        type: str
-      parent:
-        type: Optional[ASTNodes]
-      ref:
-        type: str
-      nbytes:
-        type: int
-      type_:
-        type: ExprType
-      name:
-        type: str
-      _tmp_id:
-        type: ClassVar[int]
+      loc: Source coordinates attached to this node.
+      kind: Kind of value or operation.
+      comment: Comment.
+      parent: Parent node in the syntax tree.
+      ref: Identifier associated with this node.
+      nbytes: Nbytes.
+      type_: Type associated with this expression.
+      name: Name identifying this declaration.
+      _tmp_id: Identifier for tmp.
     """
 
 
@@ -742,16 +657,11 @@ class StatementType(AST):
     """
     title: AST main expression class.
     attributes:
-      loc:
-        type: SourceLocation
-      kind:
-        type: ASTKind
-      comment:
-        type: str
-      parent:
-        type: Optional[ASTNodes]
-      ref:
-        type: str
+      loc: Source coordinates attached to this node.
+      kind: Kind of value or operation.
+      comment: Comment.
+      parent: Parent node in the syntax tree.
+      ref: Identifier associated with this node.
     """
 
 
@@ -761,26 +671,16 @@ class ParenthesizedExpr(DataType):
     """
     title: AST class for explicitly grouped expressions (parentheses retained).
     attributes:
-      loc:
-        type: SourceLocation
-      comment:
-        type: str
-      parent:
-        type: Optional[ASTNodes]
-      ref:
-        type: str
-      nbytes:
-        type: int
-      name:
-        type: str
-      _tmp_id:
-        type: ClassVar[int]
-      type_:
-        type: DataType
-      kind:
-        type: ASTKind
-      value:
-        type: Expr
+      loc: Source coordinates attached to this node.
+      comment: Comment.
+      parent: Parent node in the syntax tree.
+      ref: Identifier associated with this node.
+      nbytes: Nbytes.
+      name: Name identifying this declaration.
+      _tmp_id: Identifier for tmp.
+      type_: Type associated with this expression.
+      kind: Kind of value or operation.
+      value: Stored value.
     """
 
     type_: DataType
@@ -797,12 +697,9 @@ class ParenthesizedExpr(DataType):
         """
         title: Initialize the ParenthesizedExpr instance.
         parameters:
-          value:
-            type: Expr
-          loc:
-            type: SourceLocation
-          parent:
-            type: Optional[ASTNodes]
+          value: Value to process.
+          loc: Source coordinates associated with the node.
+          parent: Parent node or enclosing scope.
         """
         super().__init__(loc=loc, parent=parent)
         self.type_ = getattr(value, "type_", DataType())
@@ -812,8 +709,7 @@ class ParenthesizedExpr(DataType):
     def __str__(self) -> str:
         """
         title: Return a string representation of the object with parentheses.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         return f"ParenthesizedExpr({self.value})"
 
@@ -821,10 +717,8 @@ class ParenthesizedExpr(DataType):
         """
         title: Return the AST structure of the object.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         key = "PARENTHESIZED-EXPR"
         value = self.value.get_struct(simplified)

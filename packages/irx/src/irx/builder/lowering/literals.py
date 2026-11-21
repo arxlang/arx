@@ -43,10 +43,8 @@ class LiteralVisitorMixin(ClassVisitorMixin):
         """
         title: Return the resolved semantic class construction metadata.
         parameters:
-          node:
-            type: astx.ClassConstruct
-        returns:
-          type: ResolvedClassConstruction
+          node: Syntax node to process.
+        returns: The resolved semantic class construction metadata.
         """
         semantic = getattr(node, "semantic", None)
         resolution = getattr(semantic, "resolved_class_construction", None)
@@ -61,10 +59,8 @@ class LiteralVisitorMixin(ClassVisitorMixin):
         """
         title: Return one canonical empty-string pointer.
         parameters:
-          name_hint:
-            type: str
-        returns:
-          type: ir.Value
+          name_hint: Suggested generated name.
+        returns: One canonical empty-string pointer.
         """
         empty_str_type = ir.ArrayType(self._llvm.INT8_TYPE, 1)
         global_name = f"class_init_empty_str_{name_hint}"
@@ -100,12 +96,9 @@ class LiteralVisitorMixin(ClassVisitorMixin):
         """
         title: Return one runtime default value for class field construction.
         parameters:
-          type_:
-            type: astx.DataType
-          name_hint:
-            type: str
-        returns:
-          type: ir.Value
+          type_: Type expression to process.
+          name_hint: Suggested generated name.
+        returns: One runtime default value for class field construction.
         """
         llvm_type = self._llvm_type_for_ast_type(type_)
         if llvm_type is None:
@@ -147,8 +140,7 @@ class LiteralVisitorMixin(ClassVisitorMixin):
         """
         title: Visit ClassConstruct nodes.
         parameters:
-          node:
-            type: astx.ClassConstruct
+          node: Syntax node to process.
         """
         self.lower_class_construct(
             node, self._semantic_class_construction(node)
@@ -159,8 +151,7 @@ class LiteralVisitorMixin(ClassVisitorMixin):
         """
         title: Emit a source literal using its resolved semantic type.
         parameters:
-          node:
-            type: astx.LiteralInteger | astx.LiteralFloat
+          node: Syntax node to process.
         """
         semantic = require_semantic_metadata(
             getattr(node, "semantic", None),
@@ -187,8 +178,7 @@ class LiteralVisitorMixin(ClassVisitorMixin):
         """
         title: Visit LiteralInt32 nodes.
         parameters:
-          node:
-            type: astx.LiteralInt32
+          node: Syntax node to process.
         """
         self.result_stack.append(
             ir.Constant(self._llvm.INT32_TYPE, node.value)
@@ -199,8 +189,7 @@ class LiteralVisitorMixin(ClassVisitorMixin):
         """
         title: Visit LiteralFloat32 nodes.
         parameters:
-          expr:
-            type: astx.LiteralFloat32
+          expr: Expression to process.
         """
         self.result_stack.append(
             ir.Constant(self._llvm.FLOAT_TYPE, expr.value)
@@ -211,8 +200,7 @@ class LiteralVisitorMixin(ClassVisitorMixin):
         """
         title: Visit LiteralFloat64 nodes.
         parameters:
-          expr:
-            type: astx.LiteralFloat64
+          expr: Expression to process.
         """
         self.result_stack.append(
             ir.Constant(self._llvm.DOUBLE_TYPE, expr.value)
@@ -223,8 +211,7 @@ class LiteralVisitorMixin(ClassVisitorMixin):
         """
         title: Visit LiteralFloat16 nodes.
         parameters:
-          node:
-            type: astx.LiteralFloat16
+          node: Syntax node to process.
         """
         self.result_stack.append(
             ir.Constant(self._llvm.FLOAT16_TYPE, node.value)
@@ -235,8 +222,7 @@ class LiteralVisitorMixin(ClassVisitorMixin):
         """
         title: Visit LiteralNone nodes.
         parameters:
-          expr:
-            type: astx.LiteralNone
+          expr: Expression to process.
         """
         self.result_stack.append(None)
 
@@ -245,8 +231,7 @@ class LiteralVisitorMixin(ClassVisitorMixin):
         """
         title: Visit LiteralBoolean nodes.
         parameters:
-          node:
-            type: astx.LiteralBoolean
+          node: Syntax node to process.
         """
         self.result_stack.append(
             ir.Constant(self._llvm.BOOLEAN_TYPE, int(node.value))
@@ -257,8 +242,7 @@ class LiteralVisitorMixin(ClassVisitorMixin):
         """
         title: Visit LiteralInt64 nodes.
         parameters:
-          node:
-            type: astx.LiteralInt64
+          node: Syntax node to process.
         """
         self.result_stack.append(
             ir.Constant(self._llvm.INT64_TYPE, node.value)
@@ -269,8 +253,7 @@ class LiteralVisitorMixin(ClassVisitorMixin):
         """
         title: Visit LiteralInt8 nodes.
         parameters:
-          node:
-            type: astx.LiteralInt8
+          node: Syntax node to process.
         """
         self.result_stack.append(ir.Constant(self._llvm.INT8_TYPE, node.value))
 
@@ -279,8 +262,7 @@ class LiteralVisitorMixin(ClassVisitorMixin):
         """
         title: Visit LiteralUInt8 nodes.
         parameters:
-          node:
-            type: astx.LiteralUInt8
+          node: Syntax node to process.
         """
         self.result_stack.append(
             ir.Constant(self._llvm.UINT8_TYPE, node.value)
@@ -291,8 +273,7 @@ class LiteralVisitorMixin(ClassVisitorMixin):
         """
         title: Visit LiteralUInt16 nodes.
         parameters:
-          node:
-            type: astx.LiteralUInt16
+          node: Syntax node to process.
         """
         self.result_stack.append(
             ir.Constant(self._llvm.UINT16_TYPE, node.value)
@@ -303,8 +284,7 @@ class LiteralVisitorMixin(ClassVisitorMixin):
         """
         title: Visit LiteralUInt32 nodes.
         parameters:
-          node:
-            type: astx.LiteralUInt32
+          node: Syntax node to process.
         """
         self.result_stack.append(
             ir.Constant(self._llvm.UINT32_TYPE, node.value)
@@ -315,8 +295,7 @@ class LiteralVisitorMixin(ClassVisitorMixin):
         """
         title: Visit LiteralUInt64 nodes.
         parameters:
-          node:
-            type: astx.LiteralUInt64
+          node: Syntax node to process.
         """
         self.result_stack.append(
             ir.Constant(self._llvm.UINT64_TYPE, node.value)
@@ -327,8 +306,7 @@ class LiteralVisitorMixin(ClassVisitorMixin):
         """
         title: Visit LiteralUInt128 nodes.
         parameters:
-          node:
-            type: astx.LiteralUInt128
+          node: Syntax node to process.
         """
         self.result_stack.append(
             ir.Constant(self._llvm.UINT128_TYPE, node.value)
@@ -339,8 +317,7 @@ class LiteralVisitorMixin(ClassVisitorMixin):
         """
         title: Visit LiteralUTF8Char nodes.
         parameters:
-          expr:
-            type: astx.LiteralUTF8Char
+          expr: Expression to process.
         """
         string_value = expr.value
         utf8_bytes = string_value.encode("utf-8")
@@ -372,8 +349,7 @@ class LiteralVisitorMixin(ClassVisitorMixin):
         """
         title: Visit LiteralUTF8String nodes.
         parameters:
-          expr:
-            type: astx.LiteralUTF8String
+          expr: Expression to process.
         """
         string_value = expr.value
         utf8_bytes = string_value.encode("utf-8")
@@ -406,8 +382,7 @@ class LiteralVisitorMixin(ClassVisitorMixin):
         """
         title: Visit LiteralString nodes.
         parameters:
-          expr:
-            type: astx.LiteralString
+          expr: Expression to process.
         """
         self.visit_child(astx.LiteralUTF8String(value=expr.value))
 
@@ -416,8 +391,7 @@ class LiteralVisitorMixin(ClassVisitorMixin):
         """
         title: Visit LiteralList nodes.
         parameters:
-          node:
-            type: astx.LiteralList
+          node: Syntax node to process.
         """
         llvm_elems: list[ir.Value] = []
         for elem in node.elements:
@@ -463,18 +437,15 @@ class LiteralVisitorMixin(ClassVisitorMixin):
         """
         title: Visit LiteralSet nodes.
         parameters:
-          node:
-            type: astx.LiteralSet
+          node: Syntax node to process.
         """
 
         def sort_key(lit: astx.Literal) -> tuple[str, Any]:
             """
             title: Sort key.
             parameters:
-              lit:
-                type: astx.Literal
-            returns:
-              type: tuple[str, Any]
+              lit: Lit.
+            returns: 'Result of this operation: sort key.'
             """
             type_name = type(lit).__name__
             value = getattr(lit, "value", None)
@@ -533,8 +504,7 @@ class LiteralVisitorMixin(ClassVisitorMixin):
         """
         title: Visit LiteralTuple nodes.
         parameters:
-          node:
-            type: astx.LiteralTuple
+          node: Syntax node to process.
         """
         llvm_elems: list[ir.Value] = []
         for elem in node.elements:
@@ -570,8 +540,7 @@ class LiteralVisitorMixin(ClassVisitorMixin):
         """
         title: Visit LiteralDict nodes.
         parameters:
-          node:
-            type: astx.LiteralDict
+          node: Syntax node to process.
         """
         llvm_pairs: list[tuple[ir.Value, ir.Value]] = []
         for key_node, value_node in node.elements.items():
@@ -631,8 +600,7 @@ class LiteralVisitorMixin(ClassVisitorMixin):
         """
         title: Visit SubscriptExpr nodes.
         parameters:
-          node:
-            type: astx.SubscriptExpr
+          node: Syntax node to process.
         """
         if lower_collection_access(self, node):
             return
@@ -700,8 +668,7 @@ class LiteralVisitorMixin(ClassVisitorMixin):
         """
         title: Visit LiteralInt16 nodes.
         parameters:
-          node:
-            type: astx.LiteralInt16
+          node: Syntax node to process.
         """
         self.result_stack.append(
             ir.Constant(self._llvm.INT16_TYPE, node.value)

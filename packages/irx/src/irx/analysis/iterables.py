@@ -2,9 +2,8 @@
 
 """
 title: Iterable capability helpers for semantic analysis.
-summary: >-
-  Resolve known IRx collection types into backend-neutral iteration sidecars so
-  loop and comprehension analysis share one semantic authority.
+summary: Resolve known IRx collection types into backend-neutral iteration
+  sidecars so loop and comprehension analysis share one semantic authority.
 """
 
 from __future__ import annotations
@@ -36,15 +35,12 @@ from irx.typecheck import typechecked
 def list_iteration_owner(node: astx.AST) -> str | None:
     """
     title: Resolve the named storage owner of a list-valued iterable.
-    summary: >-
-      Identifiers borrow their owner's storage; assignment expressions also
-      expose their destination's storage despite producing an owned result.
-      Fresh temporaries and static lists do not borrow a named owner.
+    summary: Identifiers borrow their owner's storage; assignment expressions
+      also expose their destination's storage despite producing an owned
+      result. Fresh temporaries and static lists do not borrow a named owner.
     parameters:
-      node:
-        type: astx.AST
-    returns:
-      type: str | None
+      node: Syntax node to process.
+    returns: Resolved the named storage owner of a list-valued iterable.
     """
     ownership = resource_ownership(node)
     if ownership is None or ownership.resource_kind is not ResourceKind.LIST:
@@ -59,10 +55,9 @@ def list_iteration_owner(node: astx.Cast) -> str | None:
     """
     title: Identity list casts do not retain or copy the source storage.
     parameters:
-      node:
-        type: astx.Cast
-    returns:
-      type: str | None
+      node: Syntax node to process.
+    returns: 'Result of this operation: identity list casts do not retain
+      or copy the source storage.'
     """
     return cast(str | None, list_iteration_owner(node.value))
 
@@ -75,16 +70,13 @@ def resolve_iteration_capability(
 ) -> ResolvedIteration | None:
     """
     title: Resolve one iterable semantic capability.
-    summary: >-
-      Return the canonical iteration sidecar for known concrete iterable types,
-      or None when the expression is not iterable in the current IRx contract.
+    summary: Return the canonical iteration sidecar for known concrete iterable
+      types, or None when the expression is not iterable in the current IRx
+      contract.
     parameters:
-      iterable_node:
-        type: astx.AST
-      iterable_type:
-        type: astx.DataType | None
-    returns:
-      type: ResolvedIteration | None
+      iterable_node: Iterable node.
+      iterable_type: Type of iterable.
+    returns: Resolved one iterable semantic capability.
     """
     if iterable_type is None:
         return None

@@ -24,8 +24,7 @@ HAS_LITERAL_TIME = hasattr(astx, "LiteralTime")
 def _make_int_dict() -> astx.LiteralDict:
     """
     title: Make int dict.
-    returns:
-      type: astx.LiteralDict
+    returns: 'Result of this operation: make int dict.'
     """
     return astx.LiteralDict(
         elements={
@@ -38,8 +37,7 @@ def _make_int_dict() -> astx.LiteralDict:
 def _make_float_dict() -> astx.LiteralDict:
     """
     title: Make float dict.
-    returns:
-      type: astx.LiteralDict
+    returns: 'Result of this operation: make float dict.'
     """
     return astx.LiteralDict(
         elements={
@@ -55,13 +53,11 @@ def _make_lookup_module(
     """
     title: Make lookup module.
     parameters:
-      lookup:
-        type: astx.SubscriptExpr
+      lookup: Lookup.
       setup_nodes:
-        type: astx.AST
         variadic: positional
-    returns:
-      type: astx.Module
+        description: Setup nodes.
+    returns: 'Result of this operation: make lookup module.'
     """
     module = astx.Module()
 
@@ -84,8 +80,7 @@ def test_dict_lookup_hit(builder_class: type[Builder]) -> None:
     """
     title: SubscriptExpr constant key returns the correct value.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     visitor = cast(LLVMVisitor, builder.translator)
@@ -107,8 +102,7 @@ def test_dict_lookup_miss(builder_class: type[Builder]) -> None:
     """
     title: SubscriptExpr constant key raises KeyError for a missing key.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     visitor = cast(LLVMVisitor, builder.translator)
@@ -126,8 +120,7 @@ def test_dict_lookup_build(builder_class: type[Builder]) -> None:
     """
     title: SubscriptExpr constant key compiles and prints the correct value.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     lookup = astx.SubscriptExpr(
@@ -143,12 +136,10 @@ def test_dict_lookup_runtime_variable_key(
     builder_class: type[Builder],
 ) -> None:
     """
-    title: >-
-      SubscriptExpr variable integer key does runtime lookup and returns the
-      correct value.
+    title: SubscriptExpr variable integer key does runtime lookup and returns
+      the correct value.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
 
@@ -172,8 +163,7 @@ def test_dict_lookup_runtime_variable_key_miss_exits(
     """
     title: SubscriptExpr runtime miss lowers to an explicit exit path.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
 
@@ -200,8 +190,7 @@ def test_dict_lookup_empty_dict_runtime_key_raises_keyerror(
     """
     title: Empty dict lookup with a runtime key fails during compilation.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
 
@@ -227,8 +216,7 @@ def test_dict_lookup_runtime_variable_key_mismatched_integer_widths(
     """
     title: SubscriptExpr widens runtime integer keys before switch lookup.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
 
@@ -255,8 +243,7 @@ def test_dict_lookup_rejects_incompatible_constant_key_type(
     """
     title: SubscriptExpr rejects incompatible constant key categories.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     visitor = cast(LLVMVisitor, builder.translator)
@@ -279,8 +266,7 @@ def test_dict_lookup_rejects_unsupported_constant_time_keys(
     """
     title: SubscriptExpr rejects unsupported non-numeric constant key types.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     visitor = cast(LLVMVisitor, builder.translator)
@@ -308,8 +294,7 @@ def test_dict_lookup_runtime_float_variable_key(
     """
     title: SubscriptExpr runtime float key lowers to float comparisons.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
 

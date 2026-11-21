@@ -28,8 +28,7 @@ RUNTIME_FAILURE_SYMBOL_NAME = "__arx_runtime_fail"
 def build_runtime_failure_feature() -> RuntimeFeature:
     """
     title: Build the generic fatal runtime diagnostic feature.
-    returns:
-      type: RuntimeFeature
+    returns: Constructed the generic fatal runtime diagnostic feature.
     """
     native_root = Path(__file__).resolve().parent / "native"
     return RuntimeFeature(
@@ -60,10 +59,9 @@ def _declare_runtime_failure(visitor: VisitorProtocol) -> ir.Function:
     """
     title: Declare the fatal runtime diagnostic function.
     parameters:
-      visitor:
-        type: VisitorProtocol
-    returns:
-      type: ir.Function
+      visitor: Visitor performing the traversal or lowering.
+    returns: 'Result of this operation: declare the fatal runtime diagnostic
+      function.'
     """
     string_pointer = visitor._llvm.INT8_TYPE.as_pointer()
     fn_type = ir.FunctionType(

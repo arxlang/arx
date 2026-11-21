@@ -20,10 +20,8 @@ def _semantic(node: astx.AST) -> SemanticInfo:
     """
     title: Return one node's attached semantic info.
     parameters:
-      node:
-        type: astx.AST
-    returns:
-      type: SemanticInfo
+      node: Syntax node to process.
+    returns: One node's attached semantic info.
     """
     return cast(SemanticInfo, getattr(node, "semantic"))
 
@@ -33,10 +31,9 @@ def _block(*nodes: astx.AST) -> astx.Block:
     title: Build one AST block from the provided nodes.
     parameters:
       nodes:
-        type: astx.AST
         variadic: positional
-    returns:
-      type: astx.Block
+        description: Syntax nodes in source order.
+    returns: Constructed one AST block from the provided nodes.
     """
     block = astx.Block()
     for node in nodes:
@@ -49,10 +46,9 @@ def _main_module(*nodes: astx.AST) -> astx.Module:
     title: Build one small Int32 main module.
     parameters:
       nodes:
-        type: astx.AST
         variadic: positional
-    returns:
-      type: astx.Module
+        description: Syntax nodes in source order.
+    returns: Constructed one small Int32 main module.
     """
     module = astx.Module()
     module.block.append(
@@ -72,13 +68,11 @@ def _int_function(name: str, *nodes: astx.AST) -> astx.FunctionDef:
     """
     title: Build one Int32-returning helper function.
     parameters:
-      name:
-        type: str
+      name: Name identifying the declaration or operation.
       nodes:
-        type: astx.AST
         variadic: positional
-    returns:
-      type: astx.FunctionDef
+        description: Syntax nodes in source order.
+    returns: Constructed one Int32-returning helper function.
     """
     return astx.FunctionDef(
         prototype=astx.FunctionPrototype(
@@ -96,10 +90,9 @@ def _duplicate_prototype(
     """
     title: Build one duplicate function prototype with an optional default.
     parameters:
-      copy_default:
-        type: astx.AST | None
-    returns:
-      type: astx.FunctionPrototype
+      copy_default: Copy default.
+    returns: Constructed one duplicate function prototype with an optional
+      default.
     """
     arguments = [
         astx.Argument("value", astx.Int32()),
@@ -122,10 +115,9 @@ def _duplicate_definition(
     """
     title: Build one duplicate function definition with an optional default.
     parameters:
-      copy_default:
-        type: astx.AST | None
-    returns:
-      type: astx.FunctionDef
+      copy_default: Copy default.
+    returns: Constructed one duplicate function definition with an optional
+      default.
     """
     return astx.FunctionDef(
         prototype=_duplicate_prototype(copy_default),
@@ -135,8 +127,8 @@ def _duplicate_definition(
 
 def test_analyze_attaches_canonical_function_signature() -> None:
     """
-    title: >-
-      Function declarations should expose one canonical semantic signature.
+    title: Function declarations should expose one canonical semantic
+      signature.
     """
     helper = astx.FunctionDef(
         prototype=astx.FunctionPrototype(
@@ -396,8 +388,8 @@ def test_analyze_rejects_invalid_calling_convention() -> None:
 
 def test_analyze_rejects_variadic_irx_defined_function() -> None:
     """
-    title: >-
-      Variadic support should stay limited to explicit extern declarations.
+    title: Variadic support should stay limited to explicit extern
+      declarations.
     """
     prototype = astx.FunctionPrototype(
         "helper",
@@ -787,10 +779,8 @@ def test_parameter_binding_policy(mutable: bool, operation: str) -> None:
     """
     title: Parameter binding policy covers every supported scalar write form.
     parameters:
-      mutable:
-        type: bool
-      operation:
-        type: str
+      mutable: Whether to use mutable.
+      operation: Operation to resolve or execute.
     """
     argument = astx.Argument(
         "value",
@@ -831,8 +821,7 @@ def test_definition_controls_parameter_binding(definition_first: bool) -> None:
     """
     title: A forward prototype cannot override the definition's local policy.
     parameters:
-      definition_first:
-        type: bool
+      definition_first: Whether to use definition first.
     """
     prototype = astx.FunctionPrototype(
         "update",

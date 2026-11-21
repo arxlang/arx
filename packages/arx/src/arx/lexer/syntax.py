@@ -16,8 +16,14 @@ class SyntaxManifest:
     """
     title: Access the canonical lexical syntax manifest.
     attributes:
-      data:
-        type: dict[str, Any]
+      data: Data to process.
+      word_operators: Word operators.
+      reserved_keywords: Reserved keywords.
+      contextual_keywords: Contextual keywords.
+      literal_keywords: Literal keywords.
+      line_comment_delimiters: Line comment delimiters.
+      operator_symbols: Operator symbols.
+      multi_char_operators: Multi char operators.
     """
 
     data: dict[str, Any]
@@ -26,8 +32,7 @@ class SyntaxManifest:
     def word_operators(self) -> set[str]:
         """
         title: Return word operators recognized before ordinary identifiers.
-        returns:
-          type: set[str]
+        returns: Word operators recognized before ordinary identifiers.
         """
         return set(self.data.get("operators", {}).get("word_operators", []))
 
@@ -35,8 +40,7 @@ class SyntaxManifest:
     def reserved_keywords(self) -> set[str]:
         """
         title: Return the set of reserved keywords from the manifest.
-        returns:
-          type: set[str]
+        returns: The set of reserved keywords from the manifest.
         """
         return set(self.data.get("keywords", {}).get("reserved", []))
 
@@ -44,8 +48,7 @@ class SyntaxManifest:
     def contextual_keywords(self) -> set[str]:
         """
         title: Return the set of contextual keywords from the manifest.
-        returns:
-          type: set[str]
+        returns: The set of contextual keywords from the manifest.
         """
         return set(self.data.get("keywords", {}).get("contextual", []))
 
@@ -53,9 +56,7 @@ class SyntaxManifest:
     def literal_keywords(self) -> dict[str, Any]:
         """
         title: Return literal keywords mapped to their token values.
-        returns:
-          type: dict[str, Any]
-          description: Mapping from literal keyword name to its Python value.
+        returns: Mapping from literal keyword name to its Python value.
         """
         literals = self.data.get("literals", {})
         keywords = literals.get("keywords", [])
@@ -73,8 +74,7 @@ class SyntaxManifest:
     def line_comment_delimiters(self) -> tuple[str, ...]:
         """
         title: Return the tuple of line comment delimiters.
-        returns:
-          type: tuple[str, Ellipsis]
+        returns: The tuple of line comment delimiters.
         """
         comment = self.data.get("comment", {})
         line = comment.get("line", {})
@@ -84,8 +84,7 @@ class SyntaxManifest:
     def operator_symbols(self) -> set[str]:
         """
         title: Return the set of operator symbols declared in the manifest.
-        returns:
-          type: set[str]
+        returns: The set of operator symbols declared in the manifest.
         """
         operators = self.data.get("operators", {})
         return set(operators.get("symbols", []))
@@ -93,10 +92,9 @@ class SyntaxManifest:
     @property
     def multi_char_operators(self) -> set[str]:
         """
-        title: >-
-          Return the set of multi-character operators recognized by the lexer.
-        returns:
-          type: set[str]
+        title: Return the set of multi-character operators recognized by
+          the lexer.
+        returns: The set of multi-character operators recognized by the lexer.
         """
         return set(self.data["operators"]["multi_char"])
 
@@ -104,8 +102,7 @@ class SyntaxManifest:
 def load_syntax_manifest() -> SyntaxManifest:
     """
     title: Load the lexer syntax manifest bundled with the package.
-    returns:
-      type: SyntaxManifest
+    returns: Loaded the lexer syntax manifest bundled with the package.
     """
     manifest = resources.files("arx.lexer").joinpath("syntax.json")
     data = json.loads(manifest.read_text(encoding="utf-8"))

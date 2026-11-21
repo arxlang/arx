@@ -34,15 +34,12 @@ def check_sequence_status(
     visitor: VisitorCore, node: astx.AST, status: ir.Value
 ) -> None:
     """
-    title: >-
-      Guard numeric output slots and unwind temporaries before propagating.
+    title: Guard numeric output slots and unwind temporaries before
+      propagating.
     parameters:
-      visitor:
-        type: VisitorCore
-      node:
-        type: astx.AST
-      status:
-        type: ir.Value
+      visitor: Visitor performing the traversal or lowering.
+      node: Syntax node to process.
+      status: Native operation status.
     """
     builder = visitor._llvm.ir_builder
     for value, role, message in (
@@ -75,22 +72,19 @@ def adapt_sequence(
     plan: ResolvedSequenceAccess,
 ) -> ir.Value:
     """
-    title: Pin a call-scoped source and construct the semantically chosen view.
-    summary: >-
-      Tensor owners are retained; Series use independent zero-copy snapshots so
-      later argument effects cannot replace the viewed chunks. Lists borrow
-      their immutable call storage. Descriptors never own or escape a call.
+    title: Pin a call-scoped source and construct the semantically chosen
+      view.
+    summary: Tensor owners are retained; Series use independent zero-copy
+      snapshots so later argument effects cannot replace the viewed chunks.
+      Lists borrow their immutable call storage. Descriptors never own or
+      escape a call.
     parameters:
-      visitor:
-        type: VisitorCore
-      node:
-        type: astx.AST
-      value:
-        type: ir.Value
-      plan:
-        type: ResolvedSequenceAccess
-    returns:
-      type: ir.Value
+      visitor: Visitor performing the traversal or lowering.
+      node: Syntax node to process.
+      value: Value to process.
+      plan: Resolved semantic execution plan.
+    returns: 'Result of this operation: pin a call-scoped source and construct
+      the semantically chosen view.'
     """
     if plan.kind == "sequence":
         return value
@@ -249,18 +243,13 @@ def read_sequence(
     """
     title: Check a nonnegative index and decode exact bits only after success.
     parameters:
-      visitor:
-        type: VisitorCore
-      node:
-        type: astx.AST
-      view:
-        type: ir.Value
-      index:
-        type: ir.Value
-      element_type:
-        type: astx.DataType
-    returns:
-      type: ir.Value
+      visitor: Visitor performing the traversal or lowering.
+      node: Syntax node to process.
+      view: View.
+      index: Index selecting the item.
+      element_type: Type of each element.
+    returns: 'Result of this operation: check a nonnegative index and decode
+      exact bits only after success.'
     """
     builder = visitor._llvm.ir_builder
     integer = ir.IntType(64)
@@ -338,12 +327,10 @@ def lower_sequence_query(
     """
     title: Consume analyzed sequence length or index metadata.
     parameters:
-      visitor:
-        type: VisitorCore
-      node:
-        type: astx.CollectionLength | astx.SubscriptExpr
-    returns:
-      type: bool
+      visitor: Visitor performing the traversal or lowering.
+      node: Syntax node to process.
+    returns: 'Result of this operation: consume analyzed sequence length
+      or index metadata.'
     """
     base = node.base if isinstance(node, astx.CollectionLength) else node.value
     info = getattr(node, "semantic", None)

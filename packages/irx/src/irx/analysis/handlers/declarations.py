@@ -1,7 +1,6 @@
 """
 title: Declaration-oriented semantic visitors.
-summary: >-
-  Preserve the public declaration-handler import path while the split
+summary: Preserve the public declaration-handler import path while the split
   declaration mixins live in the private `_declarations` package.
 """
 

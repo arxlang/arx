@@ -22,10 +22,9 @@ def native_cache(
     """
     title: Allocate one isolated native cache for this pytest worker.
     parameters:
-      tmp_path_factory:
-        type: pytest.TempPathFactory
-    returns:
-      type: NativeObjectCache
+      tmp_path_factory: Factory for shared temporary test directories.
+    returns: 'Result of this operation: allocate one isolated native cache
+      for this pytest worker.'
     """
     return NativeObjectCache(
         tmp_path_factory.mktemp("arx-native"), Path(irx.__file__).parent
@@ -37,12 +36,10 @@ def native_objects(native_cache: NativeObjectCache) -> Iterator[None]:
     """
     title: Reuse objects in Arx tests without patching other packages' tests.
     parameters:
-      native_cache:
-        type: NativeObjectCache
-    returns:
-      type: Iterator[None]
-    yields:
-      type: None
+      native_cache: Native cache.
+    returns: 'Result of this operation: reuse objects in Arx tests without
+      patching other packages'' tests.'
+    yields: Values yielded by this iterator.
     """
     with pytest.MonkeyPatch.context() as patch:
         if not os.environ.get("IRX_NATIVE_CACHE_DIR"):

@@ -18,10 +18,8 @@ def safe_pop(
     """
     title: Safe pop.
     parameters:
-      values:
-        type: builtins.list[ir.Value | ir.Function | None]
-    returns:
-      type: ir.Value | ir.Function | None
+      values: Values to process, in order.
+    returns: 'Result of this operation: safe pop.'
     """
     try:
         return values.pop()

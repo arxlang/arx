@@ -1,8 +1,7 @@
 """
 title: Module-visible binding tables.
-summary: >-
-  Own the per-module namespace that imports and top-level declarations expose,
-  keeping visible-name lookup separate from lexical scope resolution.
+summary: Own the per-module namespace that imports and top-level declarations
+  expose, keeping visible-name lookup separate from lexical scope resolution.
 """
 
 from __future__ import annotations
@@ -29,16 +28,13 @@ from irx.typecheck import typechecked
 class VisibleBindings:
     """
     title: Module-visible binding manager.
-    summary: >-
-      Track top-level and imported names that are visible within each module
-      namespace and enforce conflicts independently from lexical scopes.
+    summary: Track top-level and imported names that are visible within each
+      module namespace and enforce conflicts independently from lexical scopes.
     attributes:
-      context:
-        type: SemanticContext
-      factory:
-        type: SemanticEntityFactory
-      _bindings:
-        type: dict[ModuleKey, dict[str, SemanticBinding]]
+      context: Context for the operation.
+      factory: Factory.
+      _bindings: Bindings.
+      tables: Tables.
     """
 
     context: SemanticContext
@@ -55,12 +51,9 @@ class VisibleBindings:
         """
         title: Initialize VisibleBindings.
         parameters:
-          context:
-            type: SemanticContext
-          factory:
-            type: SemanticEntityFactory
-          bindings:
-            type: dict[ModuleKey, dict[str, SemanticBinding]] | None
+          context: Context for the operation.
+          factory: Factory.
+          bindings: Bindings.
         """
         self.context = context
         self.factory = factory
@@ -70,8 +63,7 @@ class VisibleBindings:
     def tables(self) -> dict[ModuleKey, dict[str, SemanticBinding]]:
         """
         title: Return the backing binding tables.
-        returns:
-          type: dict[ModuleKey, dict[str, SemanticBinding]]
+        returns: The backing binding tables.
         """
         return self._bindings
 
@@ -82,10 +74,8 @@ class VisibleBindings:
         """
         title: Return the active or explicit module key.
         parameters:
-          module_key:
-            type: ModuleKey | None
-        returns:
-          type: ModuleKey
+          module_key: Canonical module identity.
+        returns: The active or explicit module key.
         """
         return module_key or self.context.current_module_key or "<root>"
 
@@ -96,10 +86,8 @@ class VisibleBindings:
         """
         title: Return one module's visible binding table.
         parameters:
-          module_key:
-            type: ModuleKey | None
-        returns:
-          type: dict[str, SemanticBinding]
+          module_key: Canonical module identity.
+        returns: One module's visible binding table.
         """
         current_module_key = self._current_module_key(module_key)
         return self._bindings.setdefault(current_module_key, {})
@@ -112,12 +100,9 @@ class VisibleBindings:
         """
         title: Return True when two bindings disagree.
         parameters:
-          existing:
-            type: SemanticBinding
-          new_binding:
-            type: SemanticBinding
-        returns:
-          type: bool
+          existing: Existing.
+          new_binding: New binding.
+        returns: True when two bindings disagree.
         """
         return (
             existing.kind != new_binding.kind
@@ -135,16 +120,12 @@ class VisibleBindings:
         """
         title: Bind one visible name in a module namespace.
         parameters:
-          local_name:
-            type: str
-          binding:
-            type: SemanticBinding
-          node:
-            type: astx.AST
-          module_key:
-            type: ModuleKey | None
-        returns:
-          type: SemanticBinding
+          local_name: Name of local.
+          binding: Resolved binding for the operation.
+          node: Syntax node to process.
+          module_key: Canonical module identity.
+        returns: 'Result of this operation: bind one visible name in a
+          module namespace.'
         """
         bindings = self.bindings_for(module_key)
         existing = bindings.get(local_name)
@@ -168,16 +149,12 @@ class VisibleBindings:
         """
         title: Bind a function in a module namespace.
         parameters:
-          local_name:
-            type: str
-          function:
-            type: SemanticFunction
-          node:
-            type: astx.AST
-          module_key:
-            type: ModuleKey | None
-        returns:
-          type: SemanticBinding
+          local_name: Name of local.
+          function: Function to process.
+          node: Syntax node to process.
+          module_key: Canonical module identity.
+        returns: 'Result of this operation: bind a function in a
+          module namespace.'
         """
         return self.bind(
             local_name,
@@ -197,16 +174,12 @@ class VisibleBindings:
         """
         title: Bind a struct in a module namespace.
         parameters:
-          local_name:
-            type: str
-          struct:
-            type: SemanticStruct
-          node:
-            type: astx.AST
-          module_key:
-            type: ModuleKey | None
-        returns:
-          type: SemanticBinding
+          local_name: Name of local.
+          struct: Struct.
+          node: Syntax node to process.
+          module_key: Canonical module identity.
+        returns: 'Result of this operation: bind a struct in a module
+          namespace.'
         """
         return self.bind(
             local_name,
@@ -226,16 +199,12 @@ class VisibleBindings:
         """
         title: Bind a class in a module namespace.
         parameters:
-          local_name:
-            type: str
-          class_:
-            type: SemanticClass
-          node:
-            type: astx.AST
-          module_key:
-            type: ModuleKey | None
-        returns:
-          type: SemanticBinding
+          local_name: Name of local.
+          class_: Class being processed.
+          node: Syntax node to process.
+          module_key: Canonical module identity.
+        returns: 'Result of this operation: bind a class in a module
+          namespace.'
         """
         return self.bind(
             local_name,
@@ -255,16 +224,12 @@ class VisibleBindings:
         """
         title: Bind an imported module in a module namespace.
         parameters:
-          local_name:
-            type: str
-          module:
-            type: SemanticModule
-          node:
-            type: astx.AST
-          module_key:
-            type: ModuleKey | None
-        returns:
-          type: SemanticBinding
+          local_name: Name of local.
+          module: Module to process.
+          node: Syntax node to process.
+          module_key: Canonical module identity.
+        returns: 'Result of this operation: bind an imported module in
+          a module namespace.'
         """
         return self.bind(
             local_name,
@@ -282,12 +247,9 @@ class VisibleBindings:
         """
         title: Resolve one visible binding by name.
         parameters:
-          name:
-            type: str
-          module_key:
-            type: ModuleKey | None
-        returns:
-          type: SemanticBinding | None
+          name: Name identifying the declaration or operation.
+          module_key: Canonical module identity.
+        returns: Resolved one visible binding by name.
         """
         current_module_key = self._current_module_key(module_key)
         bindings = self._bindings.get(current_module_key, {})
@@ -297,19 +259,17 @@ class VisibleBindings:
         self, binding: SemanticBinding, requesting_module_key: ModuleKey
     ) -> bool:
         """
-        title: >-
-          Enforce module-local function visibility without changing linkage.
-        summary: >-
-          Public functions may cross module boundaries. A private function is
-          accessible only from its defining module, including through aliases.
-          Other binding kinds retain their existing access rules.
+        title: Enforce module-local function visibility without changing
+          linkage.
+        summary: Public functions may cross module boundaries. A private
+          function is accessible only from its defining module, including
+          through aliases. Other binding kinds retain their existing access
+          rules.
         parameters:
-          binding:
-            type: SemanticBinding
-          requesting_module_key:
-            type: ModuleKey
-        returns:
-          type: bool
+          binding: Resolved binding for the operation.
+          requesting_module_key: Requesting module key.
+        returns: 'Result of this operation: enforce module-local function
+          visibility without changing linkage.'
         """
         function = binding.function
         return (

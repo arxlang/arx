@@ -19,11 +19,10 @@ pytestmark = pytest.mark.skipif(
 
 def test_extended_column_operations(tmp_path: Path) -> None:
     """
-    title: >-
-      Compile reductions, slicing, unary kernels, widening and null values.
+    title: Compile reductions, slicing, unary kernels, widening and null
+      values.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     source = """
 global_value: nullable[i32] = none
@@ -91,11 +90,10 @@ fn main() -> i32:
 
 def test_rich_dataframe_literals(tmp_path: Path) -> None:
     """
-    title: >-
-      Compile nested, decimal, binary and temporal literals into exact IPC.
+    title: Compile nested, decimal, binary and temporal literals into exact
+      IPC.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     annotation = (
         "dataframe[amount:decimal128[8,2], items:arrow_list[nullable[i32]], "

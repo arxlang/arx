@@ -14,8 +14,8 @@ from astx.types.base import AnyType
 @typechecked
 class Temporal(AnyType):
     """
-    title: >-
-      Base class for temporal data types (date, time, timestamp, datetime).
+    title: Base class for temporal data types (date, time, timestamp,
+      datetime).
     """
 
 

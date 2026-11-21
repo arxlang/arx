@@ -25,8 +25,7 @@ class NullableType(AnyType):
     """
     title: A scalar value paired with an explicit validity bit.
     attributes:
-      value_type:
-        type: DataType
+      value_type: Type of the stored value.
     """
 
     value_type: DataType
@@ -35,8 +34,7 @@ class NullableType(AnyType):
         """
         title: Initialize a nullable scalar type.
         parameters:
-          value_type:
-            type: DataType
+          value_type: Type of the stored value.
         """
         super().__init__()
         self.value_type = value_type
@@ -44,8 +42,7 @@ class NullableType(AnyType):
     def __str__(self) -> str:
         """
         title: Render the nullable type.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         return f"nullable[{column_type_name(self.value_type)}]"
 
@@ -53,10 +50,8 @@ class NullableType(AnyType):
         """
         title: Render the node with all typed children.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         return self._prepare_struct(
             "NullableType",
@@ -74,10 +69,8 @@ class ColumnType(AnyType):
     """
     title: Parameterized column storage type, not a standalone scalar.
     attributes:
-      column_kind:
-        type: str
-      arguments:
-        type: tuple[DataType | int | str, Ellipsis]
+      column_kind: Column kind.
+      arguments: Arguments supplied to the call.
     """
 
     column_kind: str
@@ -89,10 +82,8 @@ class ColumnType(AnyType):
         """
         title: Model storage parameters without a backend dependency.
         parameters:
-          name:
-            type: str
-          arguments:
-            type: tuple[DataType | int | str, Ellipsis]
+          name: Name identifying the declaration or operation.
+          arguments: Arguments supplied to the call.
         """
         super().__init__()
         self.column_kind = name
@@ -101,8 +92,7 @@ class ColumnType(AnyType):
     def __str__(self) -> str:
         """
         title: Render all storage parameters.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         parameters = ", ".join(column_type_name(a) for a in self.arguments)
         return f"{self.column_kind}[{parameters}]"
@@ -111,10 +101,8 @@ class ColumnType(AnyType):
         """
         title: Render the node with all typed children.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         return self._prepare_struct(
             "ColumnType",
@@ -140,10 +128,8 @@ class NullCheck(DataType):
     """
     title: Test a scalar validity bit or produce a Series null mask.
     attributes:
-      value:
-        type: Expr
-      type_:
-        type: DataType
+      value: Stored value.
+      type_: Type associated with this expression.
     """
 
     value: Expr
@@ -155,10 +141,8 @@ class NullCheck(DataType):
         """
         title: Initialize a null test.
         parameters:
-          value:
-            type: Expr
-          loc:
-            type: SourceLocation
+          value: Value to process.
+          loc: Source coordinates associated with the node.
         """
         super().__init__(loc=loc)
         self.type_ = AnyType()
@@ -168,10 +152,8 @@ class NullCheck(DataType):
         """
         title: Render the node with all typed children.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         return self._prepare_struct(
             "NullCheck",
@@ -186,12 +168,9 @@ class NullFill(DataType):
     """
     title: Replace nulls with an eagerly evaluated non-null scalar.
     attributes:
-      value:
-        type: Expr
-      replacement:
-        type: Expr
-      type_:
-        type: DataType
+      value: Stored value.
+      replacement: Replacement.
+      type_: Type associated with this expression.
     """
 
     value: Expr
@@ -207,12 +186,9 @@ class NullFill(DataType):
         """
         title: Initialize a null replacement.
         parameters:
-          value:
-            type: Expr
-          replacement:
-            type: Expr
-          loc:
-            type: SourceLocation
+          value: Value to process.
+          replacement: Replacement.
+          loc: Source coordinates associated with the node.
         """
         super().__init__(loc=loc)
         self.type_ = AnyType()
@@ -223,10 +199,8 @@ class NullFill(DataType):
         """
         title: Render the node with all typed children.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         return self._prepare_struct(
             "NullFill",
@@ -247,10 +221,9 @@ def column_type_name(value: DataType | str | int) -> str:
     """
     title: Render deterministic parameter names, independent of AST counters.
     parameters:
-      value:
-        type: DataType | str | int
-    returns:
-      type: str
+      value: Value to process.
+    returns: 'Result of this operation: render deterministic parameter
+      names, independent of AST counters.'
     """
     if isinstance(value, (NullableType, ColumnType)):
         return str(value)
@@ -263,12 +236,9 @@ class SeriesReduction(DataType):
     """
     title: Reduce a column using an explicit null-skipping aggregate.
     attributes:
-      operation:
-        type: str
-      value:
-        type: Expr
-      type_:
-        type: DataType
+      operation: Operation to resolve or execute.
+      value: Stored value.
+      type_: Type associated with this expression.
     """
 
     operation: str
@@ -284,12 +254,9 @@ class SeriesReduction(DataType):
         """
         title: Model a reduction without choosing backend kernel types.
         parameters:
-          operation:
-            type: str
-          value:
-            type: Expr
-          loc:
-            type: SourceLocation
+          operation: Operation to resolve or execute.
+          value: Value to process.
+          loc: Source coordinates associated with the node.
         """
         super().__init__(loc=loc)
         self.operation = operation
@@ -300,10 +267,8 @@ class SeriesReduction(DataType):
         """
         title: Include the operation and operand in structural output.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         return self._prepare_struct(
             "SeriesReduction",

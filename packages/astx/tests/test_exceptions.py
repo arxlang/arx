@@ -44,10 +44,8 @@ def fn_print(
     """
     title: Return a FunctionCall to print a string.
     parameters:
-      arg:
-        type: LiteralString
-    returns:
-      type: FunctionCall
+      arg: Arg.
+    returns: A FunctionCall to print a string.
     """
     proto = FunctionPrototype(
         name="print",
@@ -220,8 +218,8 @@ def test_finallyhandler_stmt_() -> None:
 
 def test_exceptionhandler_stmt_multiplehandlers_finally() -> None:
     """
-    title: >-
-      Test `ExceptionHandlerStmt` class with multiple handlers and finally.
+    title: Test `ExceptionHandlerStmt` class with multiple handlers
+      and finally.
     """
     # Create the "except" block
     exception1_types = [Identifier("A")]

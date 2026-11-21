@@ -44,10 +44,8 @@ def test_binary_op(explicit: BinaryOp, implicit: BinaryOp) -> None:
     """
     title: Test binary operator.
     parameters:
-      explicit:
-        type: BinaryOp
-      implicit:
-        type: BinaryOp
+      explicit: Explicit.
+      implicit: Implicit.
     """
     assert implicit.get_struct() == explicit.get_struct()
 

@@ -4,9 +4,8 @@
 
 """
 title: Declaration block visitors.
-summary: >-
-  Handle modules, blocks, and local variable declarations during declaration
-  analysis.
+summary: Handle modules, blocks, and local variable declarations
+  during declaration analysis.
 """
 
 from __future__ import annotations
@@ -64,10 +63,8 @@ class DeclarationBlockVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Attach the ownership contract for one local declaration.
         parameters:
-          node:
-            type: astx.VariableDeclaration | astx.InlineVariableDeclaration
-          symbol:
-            type: SemanticSymbol
+          node: Syntax node to process.
+          symbol: Resolved symbol for the operation.
         """
         self._semantic(node).resource_ownership = None
         function = self.context.current_function
@@ -254,10 +251,8 @@ class DeclarationBlockVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Attach the ownership contract for one local string declaration.
         parameters:
-          node:
-            type: astx.VariableDeclaration | astx.InlineVariableDeclaration
-          symbol:
-            type: SemanticSymbol
+          node: Syntax node to process.
+          symbol: Resolved symbol for the operation.
         """
         value = node.value
         if value is None or isinstance(value, astx.Undefined):
@@ -365,8 +360,7 @@ class DeclarationBlockVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Visit Module nodes.
         parameters:
-          module:
-            type: astx.Module
+          module: Module to process.
         """
         with self.context.in_module(module.name):
             self._visit_module(module, predeclared=False)
@@ -376,8 +370,7 @@ class DeclarationBlockVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Visit Block nodes.
         parameters:
-          block:
-            type: astx.Block
+          block: Block of statements.
         """
         self._set_type(block, None)
         self._predeclare_block_structs(block)
@@ -392,8 +385,7 @@ class DeclarationBlockVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Resolve declaration types before storage publication.
         parameters:
-          node:
-            type: astx.VariableDeclaration | astx.InlineVariableDeclaration
+          node: Syntax node to process.
         """
         analyzer = cast(SemanticAnalyzerCore, self)
         resolved_type = resolve_initializer_type(analyzer, node)

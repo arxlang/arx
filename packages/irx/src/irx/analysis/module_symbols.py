@@ -1,8 +1,7 @@
 """
 title: Module-aware semantic identity and LLVM mangling helpers.
-summary: >-
-  Centralize module-qualified semantic ids and deterministic LLVM mangling
-  rules for cross-module declarations.
+summary: Centralize module-qualified semantic ids and deterministic LLVM
+  mangling rules for cross-module declarations.
 """
 
 from __future__ import annotations
@@ -22,10 +21,9 @@ def _split_segments(value: str) -> list[str]:
     """
     title: Split a string into LLVM-friendly segments.
     parameters:
-      value:
-        type: str
-    returns:
-      type: list[str]
+      value: Value to process.
+    returns: 'Result of this operation: split a string into LLVM-friendly
+      segments.'
     """
     segments = _SEGMENT_RE.findall(value)
     if segments:
@@ -41,10 +39,10 @@ def _mangle_parts(*parts: str) -> str:
     title: Mangle string parts into a deterministic LLVM name.
     parameters:
       parts:
-        type: str
         variadic: positional
-    returns:
-      type: str
+        description: Parts.
+    returns: 'Result of this operation: mangle string parts into
+      a deterministic LLVM name.'
     """
     segments: list[str] = []
     for part in parts:
@@ -58,12 +56,9 @@ def function_key(module_key: ModuleKey, name: str) -> tuple[ModuleKey, str]:
     """
     title: Return a module-aware function registry key.
     parameters:
-      module_key:
-        type: ModuleKey
-      name:
-        type: str
-    returns:
-      type: tuple[ModuleKey, str]
+      module_key: Canonical module identity.
+      name: Name identifying the declaration or operation.
+    returns: A module-aware function registry key.
     """
     return (module_key, name)
 
@@ -74,12 +69,9 @@ def struct_key(module_key: ModuleKey, name: str) -> tuple[ModuleKey, str]:
     """
     title: Return a module-aware struct registry key.
     parameters:
-      module_key:
-        type: ModuleKey
-      name:
-        type: str
-    returns:
-      type: tuple[ModuleKey, str]
+      module_key: Canonical module identity.
+      name: Name identifying the declaration or operation.
+    returns: A module-aware struct registry key.
     """
     return (module_key, name)
 
@@ -90,12 +82,9 @@ def class_key(module_key: ModuleKey, name: str) -> tuple[ModuleKey, str]:
     """
     title: Return a module-aware class registry key.
     parameters:
-      module_key:
-        type: ModuleKey
-      name:
-        type: str
-    returns:
-      type: tuple[ModuleKey, str]
+      module_key: Canonical module identity.
+      name: Name identifying the declaration or operation.
+    returns: A module-aware class registry key.
     """
     return (module_key, name)
 
@@ -106,12 +95,9 @@ def qualified_function_name(module_key: ModuleKey, name: str) -> str:
     """
     title: Return a qualified semantic function name.
     parameters:
-      module_key:
-        type: ModuleKey
-      name:
-        type: str
-    returns:
-      type: str
+      module_key: Canonical module identity.
+      name: Name identifying the declaration or operation.
+    returns: A qualified semantic function name.
     """
     return f"{module_key}::fn::{name}"
 
@@ -122,12 +108,9 @@ def qualified_class_name(module_key: ModuleKey, name: str) -> str:
     """
     title: Return a qualified semantic class name.
     parameters:
-      module_key:
-        type: ModuleKey
-      name:
-        type: str
-    returns:
-      type: str
+      module_key: Canonical module identity.
+      name: Name identifying the declaration or operation.
+    returns: A qualified semantic class name.
     """
     return f"{module_key}::class::{name}"
 
@@ -138,12 +121,9 @@ def qualified_struct_name(module_key: ModuleKey, name: str) -> str:
     """
     title: Return a qualified semantic struct name.
     parameters:
-      module_key:
-        type: ModuleKey
-      name:
-        type: str
-    returns:
-      type: str
+      module_key: Canonical module identity.
+      name: Name identifying the declaration or operation.
+    returns: A qualified semantic struct name.
     """
     return f"{module_key}::struct::{name}"
 
@@ -159,16 +139,11 @@ def qualified_class_member_name(
     """
     title: Return a qualified semantic class-member name.
     parameters:
-      module_key:
-        type: ModuleKey
-      class_name:
-        type: str
-      member_name:
-        type: str
-      overload_key:
-        type: str | None
-    returns:
-      type: str
+      module_key: Canonical module identity.
+      class_name: Name of class.
+      member_name: Name of member.
+      overload_key: Overload key.
+    returns: A qualified semantic class-member name.
     """
     qualified_name = (
         f"{module_key}::class::{class_name}::member::{member_name}"
@@ -189,16 +164,11 @@ def qualified_class_method_name(
     """
     title: Return a qualified semantic class-method function name.
     parameters:
-      module_key:
-        type: ModuleKey
-      class_name:
-        type: str
-      method_name:
-        type: str
-      overload_key:
-        type: str | None
-    returns:
-      type: str
+      module_key: Canonical module identity.
+      class_name: Name of class.
+      method_name: Name of method.
+      overload_key: Overload key.
+    returns: A qualified semantic class-method function name.
     """
     qualified_name = (
         f"{module_key}::class::{class_name}::method::{method_name}"
@@ -217,14 +187,10 @@ def _class_method_symbol_basename(
     """
     title: Return a deterministic method-symbol basename.
     parameters:
-      class_name:
-        type: str
-      method_name:
-        type: str
-      overload_key:
-        type: str | None
-    returns:
-      type: str
+      class_name: Name of class.
+      method_name: Name of method.
+      overload_key: Overload key.
+    returns: A deterministic method-symbol basename.
     """
     if overload_key is None:
         return _mangle_parts(class_name, "method", method_name)
@@ -248,16 +214,11 @@ def qualified_local_name(
     """
     title: Return a qualified semantic local symbol name.
     parameters:
-      module_key:
-        type: ModuleKey
-      kind:
-        type: str
-      name:
-        type: str
-      symbol_id:
-        type: str
-    returns:
-      type: str
+      module_key: Canonical module identity.
+      kind: Kind of value or operation.
+      name: Name identifying the declaration or operation.
+      symbol_id: Identifier for symbol.
+    returns: A qualified semantic local symbol name.
     """
     return f"{module_key}::{kind}::{name}::{symbol_id}"
 
@@ -271,12 +232,9 @@ def specialized_function_basename(
     """
     title: Return a deterministic specialization basename.
     parameters:
-      function_name:
-        type: str
-      arg_type_names:
-        type: tuple[str, Ellipsis]
-    returns:
-      type: str
+      function_name: Name of function.
+      arg_type_names: Arg type names.
+    returns: A deterministic specialization basename.
     """
     if not arg_type_names:
         return function_name
@@ -290,12 +248,9 @@ def mangle_function_name(module_key: ModuleKey, function_name: str) -> str:
     """
     title: Return a deterministic LLVM function name.
     parameters:
-      module_key:
-        type: ModuleKey
-      function_name:
-        type: str
-    returns:
-      type: str
+      module_key: Canonical module identity.
+      function_name: Name of function.
+    returns: A deterministic LLVM function name.
     """
     return _mangle_parts(str(module_key), function_name)
 
@@ -306,12 +261,9 @@ def mangle_struct_name(module_key: ModuleKey, struct_name: str) -> str:
     """
     title: Return a deterministic LLVM struct name.
     parameters:
-      module_key:
-        type: ModuleKey
-      struct_name:
-        type: str
-    returns:
-      type: str
+      module_key: Canonical module identity.
+      struct_name: Name of struct.
+    returns: A deterministic LLVM struct name.
     """
     return _mangle_parts(str(module_key), struct_name)
 
@@ -322,12 +274,9 @@ def mangle_class_name(module_key: ModuleKey, class_name: str) -> str:
     """
     title: Return a deterministic LLVM class-object name.
     parameters:
-      module_key:
-        type: ModuleKey
-      class_name:
-        type: str
-    returns:
-      type: str
+      module_key: Canonical module identity.
+      class_name: Name of class.
+    returns: A deterministic LLVM class-object name.
     """
     return _mangle_parts(str(module_key), class_name)
 
@@ -341,12 +290,9 @@ def mangle_namespace_name(
     """
     title: Return a deterministic LLVM namespace-handle name.
     parameters:
-      namespace_key:
-        type: ModuleKey
-      namespace_kind:
-        type: str
-    returns:
-      type: str
+      namespace_key: Namespace key.
+      namespace_kind: Namespace kind.
+    returns: A deterministic LLVM namespace-handle name.
     """
     return _mangle_parts(str(namespace_key), namespace_kind, "namespace")
 
@@ -361,14 +307,10 @@ def class_method_symbol_basename(
     """
     title: Return a deterministic class-method symbol basename.
     parameters:
-      class_name:
-        type: str
-      method_name:
-        type: str
-      overload_key:
-        type: str | None
-    returns:
-      type: str
+      class_name: Name of class.
+      method_name: Name of method.
+      overload_key: Overload key.
+    returns: A deterministic class-method symbol basename.
     """
     return _class_method_symbol_basename(
         class_name,
@@ -388,16 +330,11 @@ def mangle_class_method_name(
     """
     title: Return a deterministic LLVM class-method symbol name.
     parameters:
-      module_key:
-        type: ModuleKey
-      class_name:
-        type: str
-      method_name:
-        type: str
-      overload_key:
-        type: str | None
-    returns:
-      type: str
+      module_key: Canonical module identity.
+      class_name: Name of class.
+      method_name: Name of method.
+      overload_key: Overload key.
+    returns: A deterministic LLVM class-method symbol name.
     """
     return _mangle_parts(
         str(module_key),
@@ -418,12 +355,9 @@ def mangle_class_descriptor_name(
     """
     title: Return a deterministic LLVM class-descriptor global name.
     parameters:
-      module_key:
-        type: ModuleKey
-      class_name:
-        type: str
-    returns:
-      type: str
+      module_key: Canonical module identity.
+      class_name: Name of class.
+    returns: A deterministic LLVM class-descriptor global name.
     """
     return _mangle_parts(str(module_key), class_name, "descriptor")
 
@@ -437,12 +371,9 @@ def mangle_class_dispatch_name(
     """
     title: Return a deterministic LLVM class-dispatch global name.
     parameters:
-      module_key:
-        type: ModuleKey
-      class_name:
-        type: str
-    returns:
-      type: str
+      module_key: Canonical module identity.
+      class_name: Name of class.
+    returns: A deterministic LLVM class-dispatch global name.
     """
     return _mangle_parts(str(module_key), class_name, "dispatch")
 
@@ -457,13 +388,9 @@ def mangle_class_static_name(
     """
     title: Return a deterministic LLVM static-member global name.
     parameters:
-      module_key:
-        type: ModuleKey
-      class_name:
-        type: str
-      member_name:
-        type: str
-    returns:
-      type: str
+      module_key: Canonical module identity.
+      class_name: Name of class.
+      member_name: Name of member.
+    returns: A deterministic LLVM static-member global name.
     """
     return _mangle_parts(str(module_key), class_name, "static", member_name)

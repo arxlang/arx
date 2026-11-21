@@ -4,9 +4,8 @@
 
 """
 title: Expression operator visitors.
-summary: >-
-  Analyze unary, binary, cast, and print expressions plus their assignment-like
-  operator behavior.
+summary: Analyze unary, binary, cast, and print expressions plus
+  their assignment-like operator behavior.
 """
 
 from __future__ import annotations
@@ -81,14 +80,12 @@ class ExpressionOperatorVisitorMixin(SemanticVisitorMixinBase):
     def visit(self, node: astx.AugAssign) -> None:
         """
         title: Resolve checked compound mutation of one numeric identifier.
-        summary: >-
-          Accept +=, -=, *=, /=, and %= with lossless operand and store
-          conversions. This internal value-producing operation does not imply
-          expression-context support in a frontend. Reject other modeled
-          opcodes and non-scalar domains before lowering.
+        summary: Accept +=, -=, *=, /=, and %= with lossless operand
+          and store conversions. This internal value-producing operation
+          does not imply expression-context support in a frontend. Reject
+          other modeled opcodes and non-scalar domains before lowering.
         parameters:
-          node:
-            type: astx.AugAssign
+          node: Syntax node to process.
         """
         self._semantic(node).resolved_aug_assignment = None
         if node.op_code not in {"+=", "-=", "*=", "/=", "%="}:
@@ -172,8 +169,7 @@ class ExpressionOperatorVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Visit UnaryOp nodes.
         parameters:
-          node:
-            type: astx.UnaryOp
+          node: Syntax node to process.
         """
         self.visit(node.operand)
         if not self._require_value_expression(
@@ -240,8 +236,7 @@ class ExpressionOperatorVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Visit BinaryOp nodes.
         parameters:
-          node:
-            type: astx.BinaryOp
+          node: Syntax node to process.
         """
         self._semantic(node).resource_ownership = None
         self._semantic(node).resolved_resource_store = None
@@ -538,8 +533,7 @@ class ExpressionOperatorVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Visit Cast nodes.
         parameters:
-          node:
-            type: astx.Cast
+          node: Syntax node to process.
         """
         self._semantic(node).resource_ownership = None
         if node.mode is astx.NumericMode.CHECKED and not (
@@ -678,8 +672,7 @@ class ExpressionOperatorVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Visit IsInstanceExpr nodes.
         parameters:
-          node:
-            type: astx.IsInstanceExpr
+          node: Syntax node to process.
         """
         self.visit(node.value)
         self._resolve_declared_type(node.target_type, node=node)
@@ -700,8 +693,7 @@ class ExpressionOperatorVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Visit PrintExpr nodes.
         parameters:
-          node:
-            type: astx.PrintExpr
+          node: Syntax node to process.
         """
         self.visit(node.message)
         if not self._require_value_expression(
@@ -730,8 +722,7 @@ class ExpressionOperatorVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Visit TypeOfExpr nodes.
         parameters:
-          node:
-            type: astx.TypeOfExpr
+          node: Syntax node to process.
         """
         self.visit(node.value)
         if not self._require_value_expression(

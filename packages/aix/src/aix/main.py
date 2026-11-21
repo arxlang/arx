@@ -24,10 +24,8 @@ def get_module_name_from_file_path(filepath: str) -> str:
     """
     title: Return module name from one AIX source path.
     parameters:
-      filepath:
-        type: str
-    returns:
-      type: str
+      filepath: Filepath.
+    returns: Module name from one AIX source path.
     """
     return Path(filepath).with_suffix("").name
 
@@ -36,14 +34,10 @@ class AixMain:
     """
     title: Main AIX frontend facade used by the CLI.
     attributes:
-      input_files:
-        type: list[str]
-      output_file:
-        type: str
-      is_lib:
-        type: bool
-      link_mode:
-        type: Literal[auto, pie, no-pie]
+      input_files: Input files.
+      output_file: Destination file for generated output.
+      is_lib: Whether is lib.
+      link_mode: Link mode.
     """
 
     input_files: list[str]
@@ -63,8 +57,7 @@ class AixMain:
     def _get_astx(self) -> astx.AST:
         """
         title: Parse configured input files into ASTx nodes.
-        returns:
-          type: astx.AST
+        returns: Parsed configured input files into ASTx nodes.
         """
         parser = Parser()
         modules: list[astx.Module] = []
@@ -84,8 +77,8 @@ class AixMain:
         """
         title: Choose the configured output path or a source-derived default.
         visibility: internal
-        returns:
-          type: str
+        returns: 'Result of this operation: choose the configured output
+          path or a source-derived default.'
         """
         if self.output_file:
             return self.output_file
@@ -98,10 +91,8 @@ class AixMain:
         title: Return module nodes from the frontend result.
         visibility: internal
         parameters:
-          node:
-            type: astx.AST
-        returns:
-          type: list[astx.Module]
+          node: Syntax node to process.
+        returns: Module nodes from the frontend result.
         """
         if isinstance(node, astx.Module):
             return [node]
@@ -116,10 +107,8 @@ class AixMain:
         title: Check whether any module declares a main function.
         visibility: internal
         parameters:
-          node:
-            type: astx.AST
-        returns:
-          type: bool
+          node: Syntax node to process.
+        returns: Whether any module declares a main function.
         """
         modules = self._modules_from_ast(node)
         for module in modules:
@@ -136,10 +125,9 @@ class AixMain:
         title: Adapt frontend entry points for the native backend.
         visibility: internal
         parameters:
-          node:
-            type: astx.AST
-        returns:
-          type: astx.AST
+          node: Syntax node to process.
+        returns: 'Result of this operation: adapt frontend entry points for
+          the native backend.'
         """
         for module in self._modules_from_ast(node):
             self._adapt_module_main_entry(module)
@@ -147,12 +135,11 @@ class AixMain:
 
     def _adapt_module_main_entry(self, module: astx.Module) -> None:
         """
-        title: >-
-          Wrap a parameterless none-returning main with an integer entry point.
+        title: Wrap a parameterless none-returning main with an integer entry
+          point.
         visibility: internal
         parameters:
-          module:
-            type: astx.Module
+          module: Module to process.
         """
         for index, module_node in enumerate(tuple(module.nodes)):
             if not isinstance(module_node, astx.FunctionDef):
@@ -176,14 +163,13 @@ class AixMain:
 
     def _next_entry_helper_name(self, module: astx.Module) -> str:
         """
-        title: >-
-          Choose a helper name that does not collide with module functions.
+        title: Choose a helper name that does not collide with module
+          functions.
         visibility: internal
         parameters:
-          module:
-            type: astx.Module
-        returns:
-          type: str
+          module: Module to process.
+        returns: 'Result of this operation: choose a helper name
+          that does not collide with module functions.'
         """
         used_names = {
             node.prototype.name
@@ -204,12 +190,10 @@ class AixMain:
         title: Build an integer-returning wrapper around the frontend main.
         visibility: internal
         parameters:
-          main_function:
-            type: astx.FunctionDef
-          helper_name:
-            type: str
-        returns:
-          type: astx.FunctionDef
+          main_function: Main function.
+          helper_name: Name of helper.
+        returns: Constructed an integer-returning wrapper around the frontend
+          main.
         """
         call_args: list[astx.DataType] = []
         body = astx.Block(loc=main_function.loc)
@@ -239,8 +223,8 @@ class AixMain:
         title: Run one AIX compiler/frontend action.
         parameters:
           kwargs:
-            type: Any
             variadic: keyword
+            description: Keyword arguments.
         """
         self.input_files = list(kwargs.get("input_files", []))
         output_file = kwargs.get("output_file")
@@ -276,10 +260,10 @@ class AixMain:
         title: Discover and parse AIX test source files.
         parameters:
           kwargs:
-            type: Any
             variadic: keyword
-        returns:
-          type: int
+            description: Keyword arguments.
+        returns: 'Result of this operation: discover and parse AIX test source
+          files.'
         """
         paths = tuple(kwargs.get("paths") or ("tests/aix",))
         file_pattern = str(kwargs.get("file_pattern") or "test_*.aix")
@@ -315,14 +299,11 @@ class AixMain:
         title: Discover included AIX tests under the supplied paths.
         visibility: internal
         parameters:
-          paths:
-            type: tuple[str, Ellipsis]
-          file_pattern:
-            type: str
-          excludes:
-            type: tuple[str, Ellipsis]
-        returns:
-          type: list[Path]
+          paths: Paths to the input or output resources.
+          file_pattern: File pattern.
+          excludes: Excludes.
+        returns: 'Result of this operation: discover included AIX tests under
+          the supplied paths.'
         """
         files: list[Path] = []
         for entry in paths:
@@ -347,12 +328,10 @@ class AixMain:
         title: Filter discovered tests by configured exclusion patterns.
         visibility: internal
         parameters:
-          files:
-            type: list[Path]
-          name_filter:
-            type: str
-        returns:
-          type: list[Path]
+          files: Files.
+          name_filter: Name filter.
+        returns: 'Result of this operation: filter discovered tests
+          by configured exclusion patterns.'
         """
         if not name_filter:
             return files
@@ -367,12 +346,10 @@ class AixMain:
         title: Check a test path against exclusion patterns.
         visibility: internal
         parameters:
-          path:
-            type: Path
-          excludes:
-            type: tuple[str, Ellipsis]
-        returns:
-          type: bool
+          path: Path to the input or output resource.
+          excludes: Excludes.
+        returns: 'Result of this operation: check a test path against
+          exclusion patterns.'
         """
         text = path.as_posix()
         return not any(fnmatch(text, pattern) for pattern in excludes)
@@ -426,10 +403,9 @@ class AixMain:
         """
         title: Compile configured input with the existing IRx backend.
         parameters:
-          show_llvm_ir:
-            type: bool
-        returns:
-          type: bool
+          show_llvm_ir: Whether to use show LLVM IR.
+        returns: 'Result of this operation: compile configured input with
+          the existing IRx backend.'
         """
         _ = show_llvm_ir
         from aix.codegen import AixBuilder

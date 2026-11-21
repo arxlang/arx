@@ -1,13 +1,12 @@
 """
 title: Typed, immutable semantic attachments owned by an analysis generation.
-summary: >-
-  Keys pair a nominal record type with its analysis owner. A record type cannot
-  be claimed by two owners in one store. Updates return a new store;
-  replacement is explicit. Records validate their full payload and expose
-  dependency edges. Analysis entry points invalidate old records before
-  traversal. External snapshots retain their records deliberately; compiler
-  state retains no old generation through this store. deepcopy follows normal
-  AST memoization.
+summary: Keys pair a nominal record type with its analysis owner. A record
+  type cannot be claimed by two owners in one store. Updates return a new
+  store; replacement is explicit. Records validate their full payload and
+  expose dependency edges. Analysis entry points invalidate old records
+  before traversal. External snapshots retain their records deliberately;
+  compiler state retains no old generation through this store. deepcopy
+  follows normal AST memoization.
 """
 
 from __future__ import annotations
@@ -35,33 +34,32 @@ RecordT = TypeVar("RecordT", bound="SemanticFact")
 @typechecked
 class SemanticFact:
     """
-    title: >-
-      Nominal extension contract for checked, traversable semantic records.
+    title: Nominal extension contract for checked, traversable semantic
+      records.
     """
 
     def validate(self) -> None:
         """
-        title: >-
-          Validate all fields and collection members at the store boundary.
+        title: Validate all fields and collection members at the
+          store boundary.
         """
         raise NotImplementedError("semantic facts must validate their payload")
 
     def dependencies(self) -> tuple[astx.AST, ...]:
         """
-        title: >-
-          Expose AST dependencies explicitly, without semantic record wrappers.
-        returns:
-          type: tuple[astx.AST, Ellipsis]
+        title: Expose AST dependencies explicitly, without semantic record
+          wrappers.
+        returns: 'Result of this operation: expose AST dependencies explicitly,
+          without semantic record wrappers.'
         """
         raise NotImplementedError("semantic facts must expose dependencies")
 
     def invalidate(self, node: astx.AST) -> None:
         """
-        title: >-
-          Clear any companion facts owned by this record before reanalysis.
+        title: Clear any companion facts owned by this record before
+          reanalysis.
         parameters:
-          node:
-            type: astx.AST
+          node: Syntax node to process.
         """
 
 
@@ -72,10 +70,8 @@ class FactKey(Generic[RecordT]):
     """
     title: Owner-scoped nominal key with an invariant static record type.
     attributes:
-      owner:
-        type: str
-      record_type:
-        type: type[RecordT]
+      owner: Owner keeping the resource alive.
+      record_type: Type of record.
     """
 
     owner: str
@@ -94,10 +90,8 @@ def validate_key(owner: str, record_type: type[SemanticFact]) -> None:
     """
     title: Reject empty owners and non-record key types.
     parameters:
-      owner:
-        type: str
-      record_type:
-        type: type[SemanticFact]
+      owner: Owner keeping the resource alive.
+      record_type: Type of record.
     """
     if not owner:
         raise ValueError("a semantic fact key requires a provider owner")
@@ -110,12 +104,9 @@ class FactEntry:
     """
     title: Checked heterogeneous storage, not a public lookup interface.
     attributes:
-      owner:
-        type: str
-      record_type:
-        type: type[SemanticFact]
-      value:
-        type: SemanticFact
+      owner: Owner keeping the resource alive.
+      record_type: Type of record.
+      value: Stored value.
     """
 
     owner: str
@@ -137,12 +128,9 @@ def validate_entry(
     """
     title: Validate nominal agreement and recursively checked record fields.
     parameters:
-      owner:
-        type: str
-      record_type:
-        type: type[SemanticFact]
-      value:
-        type: SemanticFact
+      owner: Owner keeping the resource alive.
+      record_type: Type of record.
+      value: Value to process.
     """
     validate_key(owner, record_type)
     if not isinstance(value, record_type):
@@ -155,11 +143,10 @@ def validate_entry(
 @dataclass(frozen=True)
 class SemanticFacts:
     """
-    title: >-
-      Persistent typed attachments; optional lookup never hides corruption.
+    title: Persistent typed attachments; optional lookup never hides
+      corruption.
     attributes:
-      entries:
-        type: tuple[FactEntry, Ellipsis]
+      entries: Entries.
     """
 
     entries: tuple[FactEntry, ...] = ()
@@ -174,17 +161,13 @@ class SemanticFacts:
         self, key: FactKey[RecordT], value: RecordT, *, replace: bool = False
     ) -> SemanticFacts:
         """
-        title: >-
-          Return a checked update, rejecting accidental record replacement.
+        title: Return a checked update, rejecting accidental record
+          replacement.
         parameters:
-          key:
-            type: FactKey[RecordT]
-          value:
-            type: RecordT
-          replace:
-            type: bool
-        returns:
-          type: SemanticFacts
+          key: Key selecting the entry.
+          value: Value to process.
+          replace: Whether to use replace.
+        returns: A checked update, rejecting accidental record replacement.
         """
         previous = self.get(key)
         if previous is not None and not replace:
@@ -203,13 +186,12 @@ class SemanticFacts:
 
     def get(self, key: FactKey[RecordT]) -> RecordT | None:
         """
-        title: >-
-          Return the requested record type or None, checking owner identity.
+        title: Return the requested record type or None, checking
+          owner identity.
         parameters:
-          key:
-            type: FactKey[RecordT]
-        returns:
-          type: RecordT | None
+          key: Key selecting the entry.
+        returns: The requested record type or None, checking owner
+          identity.
         """
         for entry in self.entries:
             if entry.record_type is not key.record_type:
@@ -231,17 +213,14 @@ class SemanticFacts:
         phase: Literal["analysis", "lowering"] = "lowering",
     ) -> RecordT:
         """
-        title: >-
-          Diagnose missing or corrupted required facts at a phase boundary.
+        title: Diagnose missing or corrupted required facts at a
+          phase boundary.
         parameters:
-          key:
-            type: FactKey[RecordT]
-          node:
-            type: astx.AST | None
-          phase:
-            type: Literal[analysis, lowering]
-        returns:
-          type: RecordT
+          key: Key selecting the entry.
+          node: Syntax node to process.
+          phase: Phase.
+        returns: 'Result of this operation: diagnose missing or corrupted
+          required facts at a phase boundary.'
         """
         error_type = (
             LoweringError if phase == "lowering" else IRxDiagnosticError
@@ -280,8 +259,7 @@ class SemanticFacts:
     def dependencies(self) -> tuple[astx.AST, ...]:
         """
         title: Return checked AST edges without exposing record internals.
-        returns:
-          type: tuple[astx.AST, Ellipsis]
+        returns: Checked AST edges without exposing record internals.
         """
         return tuple(
             edge
@@ -293,8 +271,7 @@ class SemanticFacts:
         """
         title: Clear companion metadata before the owner drops this generation.
         parameters:
-          node:
-            type: astx.AST
+          node: Syntax node to process.
         """
         for entry in self.entries:
             entry.value.invalidate(node)
@@ -306,8 +283,7 @@ def validate_entries(entries: tuple[FactEntry, ...]) -> None:
     """
     title: Check every nested record and reject duplicate nominal keys.
     parameters:
-      entries:
-        type: tuple[FactEntry, Ellipsis]
+      entries: Entries.
     """
     seen: set[type[SemanticFact]] = set()
     for entry in entries:

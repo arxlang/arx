@@ -1,6 +1,6 @@
 """
-title: >-
-  Checked numeric source contracts at semantic, LLVM, and native boundaries.
+title: Checked numeric source contracts at semantic, LLVM, and native
+  boundaries.
 """
 
 from __future__ import annotations
@@ -31,12 +31,9 @@ def numeric_program(body: str, definitions: str = "") -> str:
     """
     title: Build a documented source program with a dynamic main body.
     parameters:
-      body:
-        type: str
-      definitions:
-        type: str
-    returns:
-      type: str
+      body: Statements forming the body.
+      definitions: Definitions.
+    returns: Constructed a documented source program with a dynamic main body.
     """
     return (
         "```\ntitle: Checked numeric acceptance\n```\n"
@@ -50,13 +47,12 @@ def numeric_program(body: str, definitions: str = "") -> str:
 @private
 def translate_numeric(source: str) -> tuple[ArxBuilder, str]:
     """
-    title: >-
-      Translate through the normal frontend, module resolver, and analyzer.
+    title: Translate through the normal frontend, module resolver,
+      and analyzer.
     parameters:
-      source:
-        type: str
-    returns:
-      type: tuple[ArxBuilder, str]
+      source: Source input to process.
+    returns: 'Result of this operation: translate through the normal
+      frontend, module resolver, and analyzer.'
     """
     ArxIO.string_to_buffer(source)
     module = Parser().parse(Lexer().lex(), "numeric_é")
@@ -72,14 +68,11 @@ def compile_numeric(tmp_path: Path, source: str, optimization: int) -> Path:
     """
     title: Compile verified numeric LLVM once for isolated native executions.
     parameters:
-      tmp_path:
-        type: Path
-      source:
-        type: str
-      optimization:
-        type: int
-    returns:
-      type: Path
+      tmp_path: Temporary directory for this test.
+      source: Source input to process.
+      optimization: Optimization level.
+    returns: 'Result of this operation: compile verified numeric LLVM once
+      for isolated native executions.'
     """
     if shutil.which("clang") is None:
         pytest.skip("native numeric checks require clang")
@@ -104,16 +97,12 @@ def run_numeric(
     """
     title: Execute verified numeric source at the requested optimization.
     parameters:
-      tmp_path:
-        type: Path
-      body:
-        type: str
-      optimization:
-        type: int
-      definitions:
-        type: str
-    returns:
-      type: subprocess.CompletedProcess[str]
+      tmp_path: Temporary directory for this test.
+      body: Statements forming the body.
+      optimization: Optimization level.
+      definitions: Definitions.
+    returns: 'Result of this operation: execute verified numeric source
+      at the requested optimization.'
     """
     executable = compile_numeric(
         tmp_path, numeric_program(body, definitions), optimization
@@ -135,12 +124,10 @@ def compound_binary(
     """
     title: Compile compound success and recovery cases once per optimization.
     parameters:
-      tmp_path_factory:
-        type: pytest.TempPathFactory
-      request:
-        type: pytest.FixtureRequest
-    returns:
-      type: Path
+      tmp_path_factory: Factory for shared temporary test directories.
+      request: Fixture request providing the current test context.
+    returns: 'Result of this operation: compile compound success and recovery
+      cases once per optimization.'
     """
     definitions = """
 fn rhs_once() -> i32:
@@ -247,8 +234,7 @@ def test_compound_execution_and_recovery(compound_binary: Path) -> None:
     """
     title: Compound operations preserve evaluation order and failure atomicity.
     parameters:
-      compound_binary:
-        type: Path
+      compound_binary: Compound binary.
     """
     result = subprocess.run(
         [str(compound_binary)],
@@ -271,14 +257,13 @@ def remainder_binary(
     tmp_path_factory: pytest.TempPathFactory, request: pytest.FixtureRequest
 ) -> Path:
     """
-    title: Reuse one native artifact per optimization for divisor failures.
+    title: Reuse one native artifact per optimization for divisor
+      failures.
     parameters:
-      tmp_path_factory:
-        type: pytest.TempPathFactory
-      request:
-        type: pytest.FixtureRequest
-    returns:
-      type: Path
+      tmp_path_factory: Factory for shared temporary test directories.
+      request: Fixture request providing the current test context.
+    returns: 'Result of this operation: reuse one native artifact
+      per optimization for divisor failures.'
     """
     source = numeric_program(
         """mode: i32 = getchar()
@@ -308,12 +293,9 @@ def test_remainder_failures(
     """
     title: Remainder guards precede LLVM poison and output publication.
     parameters:
-      remainder_binary:
-        type: Path
-      mode:
-        type: int
-      exception:
-        type: str
+      remainder_binary: Remainder binary.
+      mode: Selected processing mode.
+      exception: Exception being handled.
     """
     result = subprocess.run(
         [str(remainder_binary)],
@@ -351,22 +333,18 @@ def test_native_integer_overflow(
     operator: str,
 ) -> None:
     """
-    title: Each signed/unsigned guard reports failure at O0 and O3.
-    summary: >-
-      IRx's checked-integer oracle covers the complete width/operator matrix.
-      Here every width participates in representative frontend-to-runtime
-      checks, including diagnostics and failure before output publication.
+    title: Each signed/unsigned guard reports failure at
+      O0 and O3.
+    summary: IRx's checked-integer oracle covers the complete
+      width/operator matrix. Here every width participates
+      in representative frontend-to-runtime checks, including
+      diagnostics and failure before output publication.
     parameters:
-      tmp_path:
-        type: Path
-      optimization:
-        type: int
-      width:
-        type: int
-      unsigned:
-        type: bool
-      operator:
-        type: str
+      tmp_path: Temporary directory for this test.
+      optimization: Optimization level.
+      width: Bit width or display width.
+      unsigned: Whether to use unsigned semantics.
+      operator: Operator to apply.
     """
     name = f"{'u' if unsigned else 'i'}{width}"
     maximum = (1 << (width if unsigned else width - 1)) - 1
@@ -409,15 +387,12 @@ def test_native_arithmetic_failures(
     tmp_path: Path, optimization: int, body: str
 ) -> None:
     """
-    title: >-
-      Negation, mutation, division, and generic calls preserve checked intent.
+    title: Negation, mutation, division, and generic calls preserve checked
+      intent.
     parameters:
-      tmp_path:
-        type: Path
-      optimization:
-        type: int
-      body:
-        type: str
+      tmp_path: Temporary directory for this test.
+      optimization: Optimization level.
+      body: Statements forming the body.
     """
     result = run_numeric(
         tmp_path, body, optimization, "import math from stdlib\n"
@@ -447,15 +422,12 @@ def test_native_conversion_failures(
     tmp_path: Path, optimization: int, body: str
 ) -> None:
     """
-    title: >-
-      Narrowing and floating conversions fail before unsafe LLVM instructions.
+    title: Narrowing and floating conversions fail before unsafe
+      LLVM instructions.
     parameters:
-      tmp_path:
-        type: Path
-      optimization:
-        type: int
-      body:
-        type: str
+      tmp_path: Temporary directory for this test.
+      optimization: Optimization level.
+      body: Statements forming the body.
     """
     result = run_numeric(tmp_path, body, optimization)
     assert result.returncode != 0
@@ -467,14 +439,11 @@ def test_numeric_common_and_advanced_workflows(
     tmp_path: Path, optimization: int
 ) -> None:
     """
-    title: >-
-      Widen before math, opt into wrapping, and use contextual generic
+    title: Widen before math, opt into wrapping, and use contextual generic
       literals.
     parameters:
-      tmp_path:
-        type: Path
-      optimization:
-        type: int
+      tmp_path: Temporary directory for this test.
+      optimization: Optimization level.
     """
     body = """narrow: i8 = -12
 assert math.square<i16>(narrow) == 144
@@ -568,11 +537,10 @@ fn choose(value: T, other: T = 3) -> T:
 )
 def test_invalid_numeric_source_is_rejected(body: str) -> None:
     """
-    title: >-
-      Invalid domains and evaluated constant overflow fail during analysis.
+    title: Invalid domains and evaluated constant overflow fail during
+      analysis.
     parameters:
-      body:
-        type: str
+      body: Statements forming the body.
     """
     with pytest.raises(SemanticError):
         translate_numeric(numeric_program(body, "import math from stdlib\n"))
@@ -583,8 +551,7 @@ def test_typed_ast_literals_do_not_become_contextual(value: int) -> None:
     """
     title: Direct ASTx clients cannot smuggle invalid concrete typed constants.
     parameters:
-      value:
-        type: int
+      value: Value to process.
     """
     with pytest.raises(SemanticError, match="not representable"):
         analyze(astx.LiteralInt8(value))
@@ -595,13 +562,11 @@ def test_unevaluated_operations_do_not_fail(
     tmp_path: Path, optimization: int
 ) -> None:
     """
-    title: >-
-      Optimizers neither speculate failures nor discard failing evaluations.
+    title: Optimizers neither speculate failures nor discard failing
+      evaluations.
     parameters:
-      tmp_path:
-        type: Path
-      optimization:
-        type: int
+      tmp_path: Temporary directory for this test.
+      optimization: Optimization level.
     """
     result = run_numeric(
         tmp_path,
@@ -627,14 +592,11 @@ def test_nullable_and_floating_conversion_contracts(
     tmp_path: Path, optimization: int
 ) -> None:
     """
-    title: >-
-      Nullable conversions skip null payloads and floating casts preserve IEEE
-      values.
+    title: Nullable conversions skip null payloads and floating casts preserve
+      IEEE values.
     parameters:
-      tmp_path:
-        type: Path
-      optimization:
-        type: int
+      tmp_path: Temporary directory for this test.
+      optimization: Optimization level.
     """
     result = run_numeric(
         tmp_path,
@@ -666,10 +628,8 @@ def test_nullable_conversion_rejects_present_overflow(
     """
     title: A present nullable payload receives the scalar conversion guard.
     parameters:
-      tmp_path:
-        type: Path
-      optimization:
-        type: int
+      tmp_path: Temporary directory for this test.
+      optimization: Optimization level.
     """
     result = run_numeric(
         tmp_path,
@@ -687,8 +647,7 @@ def test_contextual_mutation_and_container_literals(tmp_path: Path) -> None:
     """
     title: Literal contexts apply to assignments and list append.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     result = run_numeric(
         tmp_path,
@@ -713,11 +672,10 @@ def test_unsupported_storage_conversions_are_semantic_errors(
     body: str,
 ) -> None:
     """
-    title: >-
-      Reject lossy union storage and unsupported collection casts before LLVM.
+    title: Reject lossy union storage and unsupported collection casts before
+      LLVM.
     parameters:
-      body:
-        type: str
+      body: Statements forming the body.
     """
     with pytest.raises(SemanticError):
         translate_numeric(numeric_program(body))
@@ -734,12 +692,10 @@ def test_unsupported_storage_conversions_are_semantic_errors(
 )
 def test_evaluated_constant_and_column_range_errors(body: str) -> None:
     """
-    title: >-
-      Statically evaluated constants and column literals use scalar range
-      rules.
+    title: Statically evaluated constants and column literals use scalar
+      range rules.
     parameters:
-      body:
-        type: str
+      body: Statements forming the body.
     """
     with pytest.raises(SemanticError):
         translate_numeric(numeric_program(body))
@@ -747,11 +703,10 @@ def test_evaluated_constant_and_column_range_errors(body: str) -> None:
 
 def test_generic_union_bound_needs_no_runtime_storage(tmp_path: Path) -> None:
     """
-    title: >-
-      Generic membership accepts domains that cannot share a runtime union.
+    title: Generic membership accepts domains that cannot share a runtime
+      union.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     result = run_numeric(
         tmp_path,
@@ -768,13 +723,11 @@ def test_exact_decimal_literals_across_contexts(
     tmp_path: Path, optimization: int
 ) -> None:
     """
-    title: >-
-      Exact decimals round once through scalar, container and generic paths.
+    title: Exact decimals round once through scalar, container and generic
+      paths.
     parameters:
-      tmp_path:
-        type: Path
-      optimization:
-        type: int
+      tmp_path: Temporary directory for this test.
+      optimization: Optimization level.
     """
     exact = "1.000000059604644830901776231257827021181583404541015625"
     definitions = (

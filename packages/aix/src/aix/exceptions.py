@@ -12,8 +12,7 @@ class ParserException(Exception):
         """
         title: Initialize parser exception.
         parameters:
-          message:
-            type: str
+          message: Diagnostic or output message.
         """
         super().__init__(message)
 
@@ -27,7 +26,6 @@ class CodeGenException(Exception):
         """
         title: Initialize code generation exception.
         parameters:
-          message:
-            type: str
+          message: Diagnostic or output message.
         """
         super().__init__(message)

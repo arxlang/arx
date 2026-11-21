@@ -35,10 +35,8 @@ def numeric_native(tmp_path_factory: pytest.TempPathFactory) -> ctypes.CDLL:
     """
     title: Build the list and buffer C readers once without Arrow.
     parameters:
-      tmp_path_factory:
-        type: pytest.TempPathFactory
-    returns:
-      type: ctypes.CDLL
+      tmp_path_factory: Factory for shared temporary test directories.
+    returns: Constructed the list and buffer C readers once without Arrow.
     """
     compiler = shutil.which("clang")
     if compiler is None:
@@ -110,12 +108,9 @@ def test_numeric_reader_preserves_bits(
     """
     title: Preserve every integer bit and float NaN payload without nulls.
     parameters:
-      numeric_native:
-        type: ctypes.CDLL
-      width:
-        type: int
-      bits:
-        type: int
+      numeric_native: Numeric native.
+      width: Bit width or display width.
+      bits: Exact scalar payload bits.
     """
     scalar = {
         1: ctypes.c_uint8,
@@ -168,8 +163,7 @@ def test_checked_offset_rank_bounds_and_overflow(
     """
     title: Reject malformed rank and overflow before dereferencing memory.
     parameters:
-      numeric_native:
-        type: ctypes.CDLL
+      numeric_native: Numeric native.
     """
     data = (ctypes.c_int32 * 12)(*range(12))
     shape = (ctypes.c_int64 * 2)(2, 3)

@@ -1,13 +1,13 @@
 """
 title: Semantic contracts for checked Unicode text operations.
-summary: >-
-  len and ord take one positional text value. int(text, base=10) accepts ASCII
-  digits/letters with an optional sign and surrounding whitespace, returning
-  i64 without prefixes, underscores, Unicode digits, or partial parse.
-  split(sep=none, maxsplit=-1) and strip(chars=none) use Unicode whitespace by
-  default. Explicit separators preserve empty fields; chars is a code-point
-  set. Indexing and half-open slicing use nonnegative code-point positions,
-  clipped slice bounds, and step 1. Owned results never borrow source storage.
+summary: len and ord take one positional text value. int(text, base=10)
+  accepts ASCII digits/letters with an optional sign and surrounding
+  whitespace, returning i64 without prefixes, underscores, Unicode
+  digits, or partial parse. split(sep=none, maxsplit=-1) and strip(chars=none)
+  use Unicode whitespace by default. Explicit separators preserve
+  empty fields; chars is a code-point set. Indexing and half-open
+  slicing use nonnegative code-point positions, clipped slice bounds,
+  and step 1. Owned results never borrow source storage.
 """
 
 import astx
@@ -38,12 +38,9 @@ def text_error(
     """
     title: Report a text-contract violation at its source expression.
     parameters:
-      analyzer:
-        type: SemanticAnalyzerCore
-      node:
-        type: astx.AST
-      message:
-        type: str
+      analyzer: Semantic analyzer resolving the operation.
+      node: Syntax node to process.
+      message: Diagnostic or output message.
     """
     analyzer.context.diagnostics.add(
         message, node=node, code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH
@@ -62,16 +59,11 @@ def set_text_operation(
     """
     title: Publish a validated operation with explicit result ownership.
     parameters:
-      analyzer:
-        type: SemanticAnalyzerCore
-      node:
-        type: astx.AST
-      kind:
-        type: TextOperationKind
-      evaluations:
-        type: tuple[astx.AST, Ellipsis]
-      indices:
-        type: tuple[int | None, Ellipsis]
+      analyzer: Semantic analyzer resolving the operation.
+      node: Syntax node to process.
+      kind: Kind of value or operation.
+      evaluations: Evaluations.
+      indices: Indices.
     """
     for value in evaluations:
         if not isinstance(value, astx.Expr):
@@ -120,16 +112,14 @@ def text_integer_argument(
     analyzer: SemanticAnalyzerCore, value: astx.AST, name: str
 ) -> bool:
     """
-    title: Require an integer losslessly representable in the signed i64 ABI.
+    title: Require an integer losslessly representable in the signed
+      i64 ABI.
     parameters:
-      analyzer:
-        type: SemanticAnalyzerCore
-      value:
-        type: astx.AST
-      name:
-        type: str
-    returns:
-      type: bool
+      analyzer: Semantic analyzer resolving the operation.
+      value: Value to process.
+      name: Name identifying the declaration or operation.
+    returns: 'Result of this operation: require an integer losslessly
+      representable in the signed i64 ABI.'
     """
     contextualize_literal(value, astx.Int64())
     analyzer.visit(value)
@@ -153,10 +143,8 @@ def resolve_text_call(
     """
     title: Bind builtin text calls without reordering argument evaluation.
     parameters:
-      analyzer:
-        type: SemanticAnalyzerCore
-      node:
-        type: astx.FunctionCall | astx.MethodCall
+      analyzer: Semantic analyzer resolving the operation.
+      node: Syntax node to process.
     """
     method = isinstance(node, astx.MethodCall)
     name = node.method_name if isinstance(node, astx.MethodCall) else node.fn
@@ -237,10 +225,8 @@ def resolve_text_subscript(
     """
     title: Bind a text index or clipped slice after analyzing its receiver.
     parameters:
-      analyzer:
-        type: SemanticAnalyzerCore
-      node:
-        type: astx.SubscriptExpr
+      analyzer: Semantic analyzer resolving the operation.
+      node: Syntax node to process.
     """
     slicing = node.is_slice
     operands = (

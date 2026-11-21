@@ -1,8 +1,7 @@
 """
 title: Template-specialization resolution helpers.
-summary: >-
-  Resolve template arguments and map function or method calls onto concrete
-  specializations.
+summary: Resolve template arguments and map function or method calls onto
+  concrete specializations.
 """
 
 from __future__ import annotations
@@ -49,20 +48,13 @@ class TemplateResolutionVisitorMixin(TemplateBuildVisitorMixin):
         """
         title: Collect inferred template arguments from one parameter pair.
         parameters:
-          expected_type:
-            type: astx.DataType
-          actual_type:
-            type: astx.DataType | None
-          inferred:
-            type: dict[str, astx.DataType]
-          function:
-            type: SemanticFunction
-          node:
-            type: astx.AST
-          diagnose:
-            type: bool
-        returns:
-          type: bool
+          expected_type: Expected semantic or storage type.
+          actual_type: Type of actual.
+          inferred: Inferred.
+          function: Function to process.
+          node: Syntax node to process.
+          diagnose: Whether to use diagnose.
+        returns: Collected inferred template arguments from one parameter pair.
         """
         if isinstance(expected_type, astx.TemplateTypeVar):
             if actual_type is None:
@@ -209,16 +201,11 @@ class TemplateResolutionVisitorMixin(TemplateBuildVisitorMixin):
         """
         title: Resolve explicit or inferred template arguments for one call.
         parameters:
-          function:
-            type: SemanticFunction
-          arg_types:
-            type: list[astx.DataType | None]
-          node:
-            type: astx.AST
-          diagnose:
-            type: bool
-        returns:
-          type: tuple[astx.DataType, Ellipsis] | None
+          function: Function to process.
+          arg_types: Types of arg.
+          node: Syntax node to process.
+          diagnose: Whether to use diagnose.
+        returns: Resolved explicit or inferred template arguments for one call.
         """
         explicit_args = astx.get_template_args(node)
         params = function.template_params
@@ -294,14 +281,11 @@ class TemplateResolutionVisitorMixin(TemplateBuildVisitorMixin):
         """
         title: Resolve one template function call to a concrete specialization.
         parameters:
-          function:
-            type: SemanticFunction
-          arg_types:
-            type: list[astx.DataType | None]
-          node:
-            type: astx.AST
-        returns:
-          type: SemanticFunction | None
+          function: Function to process.
+          arg_types: Types of arg.
+          node: Syntax node to process.
+        returns: Resolved one template function call to a concrete
+          specialization.
         """
         concrete_args = self._resolve_template_arguments(
             function,
@@ -341,16 +325,12 @@ class TemplateResolutionVisitorMixin(TemplateBuildVisitorMixin):
         """
         title: Resolve one template method call to a concrete specialization.
         parameters:
-          function:
-            type: SemanticFunction
-          visible_function:
-            type: SemanticFunction
-          arg_types:
-            type: list[astx.DataType | None]
-          node:
-            type: astx.AST
-        returns:
-          type: SemanticFunction | None
+          function: Function to process.
+          visible_function: Visible function.
+          arg_types: Types of arg.
+          node: Syntax node to process.
+        returns: Resolved one template method call to a concrete
+          specialization.
         """
         visible_template = replace(
             visible_function,

@@ -22,18 +22,15 @@ def attach_collection_operation(
 ) -> bool:
     """
     title: Preserve an analyzed operation for type-independent lowering.
-    summary: >-
-      The original receiver is emitted only by the normalized operation.
-      Lowering consumes this sidecar without reclassifying receiver types.
+    summary: The original receiver is emitted only by the normalized
+      operation. Lowering consumes this sidecar without reclassifying
+      receiver types.
     parameters:
-      analyzer:
-        type: SemanticAnalyzerCore
-      node:
-        type: astx.AST
-      normalized:
-        type: astx.Expr
-    returns:
-      type: bool
+      analyzer: Semantic analyzer resolving the operation.
+      node: Syntax node to process.
+      normalized: Normalized.
+    returns: 'Result of this operation: preserve an analyzed operation
+      for type-independent lowering.'
     """
     normalized.loc = node.loc
     analyzer.visit(normalized)
@@ -52,12 +49,10 @@ def resolve_collection_access(
     """
     title: Reject unsupported internal collection-access node shapes.
     parameters:
-      analyzer:
-        type: SemanticAnalyzerCore
-      node:
-        type: astx.AST
-    returns:
-      type: bool
+      analyzer: Semantic analyzer resolving the operation.
+      node: Syntax node to process.
+    returns: 'Result of this operation: reject unsupported internal
+      collection-access node shapes.'
     raises:
       TypeError: If the caller supplies a non-access node.
     """
@@ -73,19 +68,18 @@ def resolve_collection_access(
     analyzer: SemanticAnalyzerCore, node: astx.MethodCall
 ) -> bool:
     """
-    title: Resolve list append and dataframe metadata from the receiver type.
-    summary: >-
-      DataFrame nrows/ncols take no arguments, keywords, or template arguments
-      and normalize to the canonical i64 count operations. Invalid signatures
-      report a type mismatch at the call's source location; non-DataFrame
-      receivers retain their ordinary method rules.
+    title: Resolve list append and dataframe metadata from the receiver
+      type.
+    summary: DataFrame nrows/ncols take no arguments, keywords, or
+      template arguments and normalize to the canonical i64 count
+      operations. Invalid signatures report a type mismatch at the
+      call's source location; non-DataFrame receivers retain their
+      ordinary method rules.
     parameters:
-      analyzer:
-        type: SemanticAnalyzerCore
-      node:
-        type: astx.MethodCall
-    returns:
-      type: bool
+      analyzer: Semantic analyzer resolving the operation.
+      node: Syntax node to process.
+    returns: Resolved list append and dataframe metadata from the
+      receiver type.
     """
     analyzer._semantic(node).normalized_collection = None
     receiver_type = analyzer._expr_type(node.receiver)
@@ -135,12 +129,10 @@ def resolve_collection_access(
     """
     title: Resolve dataframe field-style access without frontend type guesses.
     parameters:
-      analyzer:
-        type: SemanticAnalyzerCore
-      node:
-        type: astx.FieldAccess
-    returns:
-      type: bool
+      analyzer: Semantic analyzer resolving the operation.
+      node: Syntax node to process.
+    returns: Resolved dataframe field-style access without frontend type
+      guesses.
     """
     analyzer._semantic(node).normalized_collection = None
     if not isinstance(analyzer._expr_type(node.value), astx.DataFrameType):
@@ -158,12 +150,10 @@ def resolve_collection_access(
     """
     title: Resolve dataframe string keys while preserving static-schema checks.
     parameters:
-      analyzer:
-        type: SemanticAnalyzerCore
-      node:
-        type: astx.SubscriptExpr
-    returns:
-      type: bool
+      analyzer: Semantic analyzer resolving the operation.
+      node: Syntax node to process.
+    returns: Resolved dataframe string keys while preserving static-schema
+      checks.
     """
     analyzer._semantic(node).normalized_collection = None
     if not isinstance(analyzer._expr_type(node.value), astx.DataFrameType):

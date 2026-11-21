@@ -24,10 +24,8 @@ def call_evaluations(node: astx.AST) -> tuple[astx.DataType, ...]:
     """
     title: Read positional operands followed by named values in source order.
     parameters:
-      node:
-        type: astx.AST
-    returns:
-      type: tuple[astx.DataType, Ellipsis]
+      node: Syntax node to process.
+    returns: Read positional operands followed by named values in source order.
     """
     args = cast(tuple[astx.DataType, ...], tuple(getattr(node, "args", ())))
     keywords = cast(
@@ -44,17 +42,14 @@ def argument_slots(
     diagnostics: DiagnosticBag | None = None,
 ) -> tuple[int, ...] | None:
     """
-    title: >-
-      Bind against visible declaration names, optionally diagnosing errors.
+    title: Bind against visible declaration names, optionally diagnosing
+      errors.
     parameters:
-      function:
-        type: SemanticFunction
-      node:
-        type: astx.AST
-      diagnostics:
-        type: DiagnosticBag | None
-    returns:
-      type: tuple[int, Ellipsis] | None
+      function: Function to process.
+      node: Syntax node to process.
+      diagnostics: Collected structured diagnostics.
+    returns: 'Result of this operation: bind against visible declaration
+      names, optionally diagnosing errors.'
     """
     params = tuple(function.prototype.args.nodes)
     count = len(tuple(getattr(node, "args", ())))
@@ -66,10 +61,8 @@ def argument_slots(
         """
         title: Report binding failures only for the selected signature.
         parameters:
-          message:
-            type: str
-          location:
-            type: astx.AST
+          message: Diagnostic or output message.
+          location: Source coordinates associated with the operation.
         """
         if diagnostics is not None:
             diagnostics.add(
@@ -132,14 +125,11 @@ def contextualize_null_arguments(
     node: astx.FunctionCall, function: SemanticFunction
 ) -> None:
     """
-    title: >-
-      Box explicit none arguments using the resolved positional or named
-      parameter.
+    title: Box explicit none arguments using the resolved positional or
+      named parameter.
     parameters:
-      node:
-        type: astx.FunctionCall
-      function:
-        type: SemanticFunction
+      node: Syntax node to process.
+      function: Function to process.
     """
     slots = argument_slots(function, node)
     if slots is None:
@@ -174,22 +164,17 @@ def analyze_numeric_arguments(
 ) -> list[astx.DataType | None]:
     """
     title: Bind literal context after typed arguments, independent of order.
-    summary: >-
-      Only semantic traversal is reordered; lowering retains source evaluation
-      order. Concrete arguments still participate in strict same-T inference.
+    summary: Only semantic traversal is reordered; lowering retains source
+      evaluation order. Concrete arguments still participate in strict same-T
+      inference.
     parameters:
-      node:
-        type: astx.AST
-      function:
-        type: SemanticFunction | None
-      visit:
-        type: Callable[[astx.AST], None]
-      type_of:
-        type: Callable[[astx.AST | None], astx.DataType | None]
-      typed_visited:
-        type: bool
-    returns:
-      type: list[astx.DataType | None]
+      node: Syntax node to process.
+      function: Function to process.
+      visit: Visit.
+      type_of: Type of.
+      typed_visited: Whether to use typed visited.
+    returns: 'Result of this operation: bind literal context after typed
+      arguments, independent of order.'
     """
     values = call_evaluations(node)
     if function is None:
@@ -260,16 +245,13 @@ def collect_literal_context(
 ) -> None:
     """
     title: Leave unsupported context trees to authoritative call validation.
-    summary: >-
-      Provisional context never authorizes conversions or resolves conflicts.
-      The template resolver validates every binding after literals are typed.
+    summary: Provisional context never authorizes conversions or resolves
+      conflicts. The template resolver validates every binding after literals
+      are typed.
     parameters:
-      expected:
-        type: astx.DataType
-      actual:
-        type: astx.DataType | None
-      bindings:
-        type: dict[str, astx.DataType]
+      expected: Expected result for this case.
+      actual: Actual.
+      bindings: Bindings.
     """
     del expected, actual, bindings
 
@@ -284,12 +266,9 @@ def collect_literal_context(
     """
     title: Gather concrete sibling context for an unresolved variable.
     parameters:
-      expected:
-        type: astx.TemplateTypeVar
-      actual:
-        type: astx.DataType | None
-      bindings:
-        type: dict[str, astx.DataType]
+      expected: Expected result for this case.
+      actual: Actual.
+      bindings: Bindings.
     """
     if actual is not None:
         bindings.setdefault(expected.name, actual)
@@ -305,12 +284,9 @@ def collect_literal_context(
     """
     title: Gather exact element context through a sequence adapter.
     parameters:
-      expected:
-        type: astx.SequenceType
-      actual:
-        type: astx.DataType | None
-      bindings:
-        type: dict[str, astx.DataType]
+      expected: Expected result for this case.
+      actual: Actual.
+      bindings: Bindings.
     """
     collect_literal_context(
         expected.element_type, sequence_element_type(actual), bindings
@@ -327,12 +303,9 @@ def collect_literal_context(
     """
     title: Gather matching list element contexts without element conversion.
     parameters:
-      expected:
-        type: astx.ListType
-      actual:
-        type: astx.ListType
-      bindings:
-        type: dict[str, astx.DataType]
+      expected: Expected result for this case.
+      actual: Actual.
+      bindings: Bindings.
     """
     if len(expected.element_types) == len(actual.element_types):
         for left, right in zip(expected.element_types, actual.element_types):
@@ -351,12 +324,9 @@ def collect_literal_context(
     """
     title: Preserve nullability while gathering the inner element context.
     parameters:
-      expected:
-        type: astx.NullableType
-      actual:
-        type: astx.NullableType
-      bindings:
-        type: dict[str, astx.DataType]
+      expected: Expected result for this case.
+      actual: Actual.
+      bindings: Bindings.
     """
     collect_literal_context(expected.value_type, actual.value_type, bindings)
 
@@ -371,12 +341,9 @@ def collect_literal_context(
     """
     title: Gather storage element contexts only for matching source kinds.
     parameters:
-      expected:
-        type: astx.SeriesType | astx.TensorType | astx.BufferViewType
-      actual:
-        type: astx.DataType | None
-      bindings:
-        type: dict[str, astx.DataType]
+      expected: Expected result for this case.
+      actual: Actual.
+      bindings: Bindings.
     """
     if type(expected) is type(actual):
         left, right = (

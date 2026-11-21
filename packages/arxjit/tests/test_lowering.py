@@ -45,12 +45,9 @@ def _lower(fn: PyFunc, signature: Signature) -> astx.FunctionDef:
     """
     title: Lower a function and return its single definition (test helper).
     parameters:
-      fn:
-        type: PyFunc
-      signature:
-        type: Signature
-    returns:
-      type: astx.FunctionDef
+      fn: Function to process.
+      signature: Resolved callable signature.
+    returns: Lowered a function and return its single definition (test helper).
     """
     module = lower(extract_source(fn), signature)
     definition = module.block[0]
@@ -61,17 +58,13 @@ def _lower(fn: PyFunc, signature: Signature) -> astx.FunctionDef:
 def _from_source(source: str, signature: Signature) -> astx.FunctionDef:
     """
     title: Lower a hand-built function definition (test helper).
-    summary: >-
-      lower is public and its stages fail closed on nodes validation would have
-      rejected first, so those paths are reached by building the source
-      directly rather than through a decorated function.
+    summary: lower is public and its stages fail closed on nodes validation
+      would have rejected first, so those paths are reached by building the
+      source directly rather than through a decorated function.
     parameters:
-      source:
-        type: str
-      signature:
-        type: Signature
-    returns:
-      type: astx.FunctionDef
+      source: Source input to process.
+      signature: Resolved callable signature.
+    returns: Lowered a hand-built function definition (test helper).
     """
     node = ast.parse(source).body[0]
     assert isinstance(node, ast.FunctionDef)
@@ -86,16 +79,12 @@ def _from_source(source: str, signature: Signature) -> astx.FunctionDef:
 def _module_from_source(source: str, signature: Signature) -> astx.Module:
     """
     title: Lower hand-built source and keep the module (test helper).
-    summary: >-
-      analyze takes the whole module rather than the definition alone, so a
-      test that checks an emitted node is one IRx accepts needs both.
+    summary: analyze takes the whole module rather than the definition alone,
+      so a test that checks an emitted node is one IRx accepts needs both.
     parameters:
-      source:
-        type: str
-      signature:
-        type: Signature
-    returns:
-      type: astx.Module
+      source: Source input to process.
+      signature: Resolved callable signature.
+    returns: Lowered hand-built source and keep the module (test helper).
     """
     node = ast.parse(source).body[0]
     assert isinstance(node, ast.FunctionDef)
@@ -109,10 +98,8 @@ def _returned(module: astx.Module) -> astx.DataType:
     """
     title: Return the value of a single-statement function's return.
     parameters:
-      module:
-        type: astx.Module
-    returns:
-      type: astx.DataType
+      module: Module to process.
+    returns: The value of a single-statement function's return.
     """
     definition = module.block[0]
     assert isinstance(definition, astx.FunctionDef)
@@ -127,14 +114,11 @@ def execute_boolean(
     """
     title: Invoke a generated status-ABI function with its native context.
     parameters:
-      module:
-        type: astx.Module
-      symbol:
-        type: str
-      value:
-        type: float | None
-    returns:
-      type: bool
+      module: Module to process.
+      symbol: Resolved symbol for the operation.
+      value: Value to process.
+    returns: 'Result of this operation: invoke a generated status-ABI function
+      with its native context.'
     """
     builder = Builder()
     llvm_module = llvm.parse_assembly(builder.translate(module))
@@ -206,8 +190,7 @@ def test_literal_return_lowers_to_a_single_function_module() -> None:
     def answer() -> int:
         """
         title: Return a constant.
-        returns:
-          type: int
+        returns: A constant.
         """
         return 42
 
@@ -233,22 +216,18 @@ def test_arguments_take_names_from_the_def_and_types_from_the_signature() -> (
 ):
     """
     title: Argument names come from the definition, types from the signature.
-    summary: >-
-      The signature here is deliberately not the one the annotations would
-      derive: i32 has no Python annotation that produces it, so seeing i32 on
-      the lowered arguments proves the signature drove the types.
+    summary: 'The signature here is deliberately not the one the annotations
+      would derive: i32 has no Python annotation that produces it, so seeing
+      i32 on the lowered arguments proves the signature drove the types.'
     """
 
     def add(a: int, b: int) -> int:
         """
         title: Add two numbers.
         parameters:
-          a:
-            type: int
-          b:
-            type: int
-        returns:
-          type: int
+          a: First operand.
+          b: Second operand.
+        returns: 'Result of this operation: add two numbers.'
         """
         return 0
 
@@ -263,9 +242,9 @@ def test_arguments_take_names_from_the_def_and_types_from_the_signature() -> (
 def test_positional_only_parameters_are_lowered() -> None:
     """
     title: Positional-only parameters become ordinary astx arguments.
-    summary: >-
-      They are positional arguments to a compiled function, and reconciliation
-      already counts them, so lowering must not drop them.
+    summary: They are positional arguments to a compiled function,
+      and reconciliation already counts them, so lowering must not
+      drop them.
     """
     source = "def sample(a, /, b):\n    return 0\n"
     definition = _from_source(source, i64(i64, f64))
@@ -296,20 +275,15 @@ def test_a_literal_is_built_at_its_expected_type(
 ) -> None:
     """
     title: A literal takes the width of the type its context declares.
-    summary: >-
-      IRx only inserts safe widening conversions, so a literal emitted at
-      Python's own width would make an i32 or f32 function fail semantic
+    summary: IRx only inserts safe widening conversions, so a literal emitted
+      at Python's own width would make an i32 or f32 function fail semantic
       analysis. An integer in a float context is converted, which is the
       widening Python itself performs.
     parameters:
-      literal:
-        type: str
-      sig_type:
-        type: SigType
-      expected:
-        type: type[astx.Literal]
-      value:
-        type: object
+      literal: Literal.
+      sig_type: Type of sig.
+      expected: Expected result for this case.
+      value: Value to process.
     """
     source = f"def sample():\n    return {literal}\n"
     definition = _from_source(source, sig_type())
@@ -325,14 +299,13 @@ def test_a_lowered_function_passes_irx_semantic_analysis(
 ) -> None:
     """
     title: Every exported scalar type survives IRx analysis end to end.
-    summary: >-
-      The cross-stage check that pins lowering to what IRx actually accepts
-      rather than to what this package believes about it. Both the entry-point
-      collision and the literal width policy were found by running analysis on
-      a lowered module, and neither is observable from the astx tree alone.
+    summary: The cross-stage check that pins lowering to what IRx actually
+      accepts rather than to what this package believes about it. Both the
+      entry-point collision and the literal width policy were found by running
+      analysis on a lowered module, and neither is observable from the astx
+      tree alone.
     parameters:
-      sig_type:
-        type: SigType
+      sig_type: Type of sig.
     """
     literal = "True" if sig_type is bool_ else "1"
     source = f"def sample():\n    return {literal}\n"
@@ -348,11 +321,10 @@ def test_a_lowered_function_passes_irx_semantic_analysis(
 def test_a_function_named_main_does_not_become_the_irx_entry_point() -> None:
     """
     title: A decorated function called main is emitted under another name.
-    summary: >-
-      IRx reserves main for the program entry point and requires it to take no
-      parameters and return Int32, so lowering it under its own name makes an
-      otherwise valid function fail analysis. Analysis is run here because the
-      rule being avoided is IRx's, not this package's.
+    summary: IRx reserves main for the program entry point and requires it
+      to take no parameters and return Int32, so lowering it under its own
+      name makes an otherwise valid function fail analysis. Analysis is run
+      here because the rule being avoided is IRx's, not this package's.
     """
     source = "def main():\n    return 1\n"
     node = ast.parse(source).body[0]
@@ -371,9 +343,8 @@ def test_a_function_named_main_does_not_become_the_irx_entry_point() -> None:
 def test_an_ordinary_name_is_not_mangled() -> None:
     """
     title: Only a reserved name is renamed.
-    summary: >-
-      The control for the test above: mangling every function would make IR
-      dumps and compiled symbols harder to recognise for no benefit.
+    summary: 'The control for the test above: mangling every function would
+      make IR dumps and compiled symbols harder to recognise for no benefit.'
     """
     definition = _from_source("def sample():\n    return 1\n", i64())
     assert definition.prototype.name == "sample"
@@ -382,10 +353,9 @@ def test_an_ordinary_name_is_not_mangled() -> None:
 def test_reserved_names_match_irx() -> None:
     """
     title: The reserved-name list agrees with IRx's own constant.
-    summary: >-
-      This pins the frontend's reserved-name vocabulary to IRx: if IRx renames
-      or adds an entry point, this fails rather than the mangling quietly
-      ceasing to apply.
+    summary: 'This pins the frontend''s reserved-name vocabulary
+      to IRx: if IRx renames or adds an entry point, this fails rather
+      than the mangling quietly ceasing to apply.'
     """
     assert MAIN_FUNCTION_NAME in RESERVED_NAMES
 
@@ -405,15 +375,13 @@ def test_a_literal_of_the_wrong_kind_is_rejected(
 ) -> None:
     """
     title: A literal must belong to the type its context declares.
-    summary: >-
-      bool is checked before int because it is a subclass of one, so True must
-      not satisfy an integer context by accident. A float in an integer context
-      has no integer value to preserve, so it is refused rather than truncated.
+    summary: bool is checked before int because it is a subclass of one,
+      so True must not satisfy an integer context by accident. A float in
+      an integer context has no integer value to preserve, so it is refused
+      rather than truncated.
     parameters:
-      literal:
-        type: str
-      sig_type:
-        type: SigType
+      literal: Literal.
+      sig_type: Type of sig.
     """
     source = f"def sample():\n    return {literal}\n"
     with pytest.raises(LoweringError) as excinfo:
@@ -435,17 +403,14 @@ def test_a_literal_out_of_range_is_rejected(
 ) -> None:
     """
     title: A literal too large for its type is refused, not mislabelled.
-    summary: >-
-      Python integers are unbounded, so without a range check a value too large
-      to represent would still be emitted as an Int64 literal that misstates
-      its own value. The float cases cover the two ways a value can exceed a
-      target: an integer beyond what a double can hold, and a double beyond
-      what a single can.
+    summary: 'Python integers are unbounded, so without a range check a value
+      too large to represent would still be emitted as an Int64 literal that
+      misstates its own value. The float cases cover the two ways a value
+      can exceed a target: an integer beyond what a double can hold, and
+      a double beyond what a single can.'
     parameters:
-      literal:
-        type: str
-      sig_type:
-        type: SigType
+      literal: Literal.
+      sig_type: Type of sig.
     """
     source = f"def sample():\n    return {literal}\n"
     with pytest.raises(LoweringError) as excinfo:
@@ -467,16 +432,13 @@ def test_a_literal_at_the_edge_of_range_is_accepted(
 ) -> None:
     """
     title: The range check admits the extremes it is meant to admit.
-    summary: >-
-      The boundary partner of the rejection test: an off-by-one bound would
-      pass that test while refusing values the type represents perfectly well.
-      Underflow to zero is precision loss rather than overflow, so a tiny float
-      is accepted.
+    summary: 'The boundary partner of the rejection test: an off-by-one
+      bound would pass that test while refusing values the type represents
+      perfectly well. Underflow to zero is precision loss rather than overflow,
+      so a tiny float is accepted.'
     parameters:
-      literal:
-        type: str
-      sig_type:
-        type: SigType
+      literal: Literal.
+      sig_type: Type of sig.
     """
     source = f"def sample():\n    return {literal}\n"
     definition = _from_source(source, sig_type())
@@ -489,28 +451,24 @@ def test_a_float_overflow_reported_by_exception_is_rejected(
 ) -> None:
     """
     title: An overflow raised rather than returned is still a rejection.
-    summary: >-
-      struct reports a value too large for single precision either by packing
-      it to an infinity or by raising OverflowError, and which one is not
-      portable: the same CPython version does one on some platforms and the
-      other elsewhere. The real out-of-range case above therefore exercises
-      only one of the two paths on any given machine, so the other is forced
-      here, and both are covered on every cell of the matrix.
+    summary: 'struct reports a value too large for single precision either
+      by packing it to an infinity or by raising OverflowError, and which
+      one is not portable: the same CPython version does one on some platforms
+      and the other elsewhere. The real out-of-range case above therefore
+      exercises only one of the two paths on any given machine, so the other
+      is forced here, and both are covered on every cell of the matrix.'
     parameters:
-      monkeypatch:
-        type: pytest.MonkeyPatch
+      monkeypatch: Fixture for temporarily replacing dependencies and settings.
     """
 
     def raising(fmt: str, value: float) -> bytes:
         """
         title: Stand in for struct.pack, always overflowing.
         parameters:
-          fmt:
-            type: str
-          value:
-            type: float
-        returns:
-          type: bytes
+          fmt: Fmt.
+          value: Value to process.
+        returns: 'Result of this operation: stand in for struct.pack,
+          always overflowing.'
         raises:
           OverflowError: Always.
         """
@@ -530,13 +488,12 @@ def test_a_float_overflow_reported_by_exception_is_rejected(
 def test_a_negated_literal_folds_into_one_negative_literal() -> None:
     """
     title: A negative number lowers as a literal, not as an operator.
-    summary: >-
-      Python parses -1 as USub applied to the constant 1, so a negative value
-      never reaches the constant overload on its own. Folding is what makes it
-      lowerable at all, since IRx implements no unary minus, and it is also
-      what admits the exact minimum of a signed type: -2147483648 is a valid
-      i32 while its magnitude, 2147483648, is not. This is the test the
-      previous PR left failing for this one to flip.
+    summary: 'Python parses -1 as USub applied to the constant 1, so a negative
+      value never reaches the constant overload on its own. Folding is what
+      makes it lowerable at all, since IRx implements no unary minus, and
+      it is also what admits the exact minimum of a signed type: -2147483648
+      is a valid i32 while its magnitude, 2147483648, is not. This is the
+      test the previous PR left failing for this one to flip.'
     """
     definition = _from_source(f"def sample():\n    return -{2**31}\n", i32())
     (returned,) = definition.body.nodes
@@ -548,9 +505,8 @@ def test_a_negated_literal_folds_into_one_negative_literal() -> None:
 def test_a_negated_literal_below_the_minimum_is_still_rejected() -> None:
     """
     title: Folding widens what is accepted by exactly one value, not more.
-    summary: >-
-      The boundary partner of the test above: the fold must admit the minimum
-      without also admitting everything past it.
+    summary: 'The boundary partner of the test above: the fold must admit
+      the minimum without also admitting everything past it.'
     """
     with pytest.raises(LoweringError) as excinfo:
         _from_source(f"def sample():\n    return -{2**31 + 1}\n", i32())
@@ -566,14 +522,12 @@ def test_each_arithmetic_operator_lowers_and_analyses(
 ) -> None:
     """
     title: Every supported binary operator survives IRx analysis.
-    summary: >-
-      Run through analysis rather than only inspected, because an op_code astx
-      does not know specializes to no node and only fails later, in codegen.
+    summary: Run through analysis rather than only inspected, because an
+      op_code astx does not know specializes to no node and only fails later,
+      in codegen.
     parameters:
-      operator:
-        type: str
-      op_code:
-        type: str
+      operator: Operator to apply.
+      op_code: Operator spelling.
     """
     source = f"def sample(a, b):\n    return a {operator} b\n"
     node = ast.parse(source).body[0]
@@ -594,11 +548,10 @@ def test_each_arithmetic_operator_lowers_and_analyses(
 def test_a_parameter_read_lowers_to_a_variable() -> None:
     """
     title: A name reads the parameter of that name.
-    summary: >-
-      The reference carries no type: the prototype already declares it, and
-      reconciling a variable with its context is IRx's to do, unlike a literal
-      whose width this stage chooses. The frontend explicitly selects mutable
-      parameter bindings independently of ASTx's constructor default.
+    summary: 'The reference carries no type: the prototype already declares
+      it, and reconciling a variable with its context is IRx''s to do, unlike
+      a literal whose width this stage chooses. The frontend explicitly selects
+      mutable parameter bindings independently of ASTx''s constructor default.'
     """
     module = _module_from_source("def sample(a):\n    return a\n", i64(i64))
     definition = module.block[0]
@@ -618,10 +571,9 @@ def test_a_parameter_read_lowers_to_a_variable() -> None:
 def test_operand_literals_take_the_expected_width() -> None:
     """
     title: A literal inside an expression is built at the declared width.
-    summary: >-
-      The expected type is propagated into both operands, so the same rule that
-      governs a returned literal governs one buried in an expression; an Int64
-      literal here would fail analysis in an i32 function.
+    summary: The expected type is propagated into both operands, so the same
+      rule that governs a returned literal governs one buried in an expression;
+      an Int64 literal here would fail analysis in an i32 function.
     """
     definition = _from_source("def sample(a):\n    return a + 1\n", i32(i32))
     (returned,) = definition.body.nodes
@@ -633,9 +585,8 @@ def test_operand_literals_take_the_expected_width() -> None:
 def test_a_unary_plus_lowers_to_its_operand() -> None:
     """
     title: A unary plus contributes no node.
-    summary: >-
-      It is the identity, and IRx has no operator for it, so the operand is
-      lowered alone rather than wrapped in something codegen would reject.
+    summary: It is the identity, and IRx has no operator for it, so the operand
+      is lowered alone rather than wrapped in something codegen would reject.
     """
     definition = _from_source("def sample(a):\n    return +a\n", i64(i64))
     (returned,) = definition.body.nodes
@@ -669,16 +620,13 @@ def test_a_logical_not_lowers_to_the_astx_operator() -> None:
 def test_an_operator_astx_lacks_is_rejected(operator: str, name: str) -> None:
     """
     title: An operator with no astx entry is refused, not emitted.
-    summary: >-
-      Validation admits both of these, but astx maps neither to a specialized
-      node, so each would reach codegen as "not implemented yet". Refusing here
-      keeps the disagreement between the subset and the backend visible as a
-      diagnostic rather than as a failure much later.
+    summary: Validation admits both of these, but astx maps neither to a
+      specialized node, so each would reach codegen as "not implemented yet".
+      Refusing here keeps the disagreement between the subset and the backend
+      visible as a diagnostic rather than as a failure much later.
     parameters:
-      operator:
-        type: str
-      name:
-        type: str
+      operator: Operator to apply.
+      name: Name identifying the declaration or operation.
     """
     source = f"def sample(a, b):\n    return a {operator} b\n"
     with pytest.raises(LoweringError) as excinfo:
@@ -689,10 +637,9 @@ def test_an_operator_astx_lacks_is_rejected(operator: str, name: str) -> None:
 def test_negating_a_variable_is_rejected() -> None:
     """
     title: Only a literal can be negated.
-    summary: >-
-      IRx implements ++, -- and ! and no unary minus, so a negated variable has
-      no operator to lower onto. Emitting one anyway would produce a module
-      that analyses cleanly and then fails in codegen.
+    summary: IRx implements ++, -- and ! and no unary minus, so a negated
+      variable has no operator to lower onto. Emitting one anyway would produce
+      a module that analyses cleanly and then fails in codegen.
     """
     with pytest.raises(LoweringError) as excinfo:
         _from_source("def sample(a):\n    return -a\n", i64(i64))
@@ -702,10 +649,9 @@ def test_negating_a_variable_is_rejected() -> None:
 def test_a_unary_operator_astx_lacks_is_rejected() -> None:
     """
     title: A unary operator with no astx entry is refused.
-    summary: >-
-      Validation rejects ~ before lowering runs, so this is reached only
-      through the public entry point; IRx implements no bitwise inversion, so
-      it must not be emitted.
+    summary: Validation rejects ~ before lowering runs, so this is reached
+      only through the public entry point; IRx implements no bitwise inversion,
+      so it must not be emitted.
     """
     with pytest.raises(LoweringError) as excinfo:
         _from_source("def sample(a):\n    return ~a\n", i64(i64))
@@ -728,15 +674,13 @@ def test_a_comparison_lowers_to_a_binary_op(
 ) -> None:
     """
     title: Each comparison lowers to the binary node IRx implements.
-    summary: >-
-      astx.CompareOp is what a comparison looks like it should become, but
-      IRx's visitor for it is not implemented, so it would pass this stage and
-      fail codegen. analyze proves the emitted form is one IRx accepts.
+    summary: astx.CompareOp is what a comparison looks like it should become,
+      but IRx's visitor for it is not implemented, so it would pass this
+      stage and fail codegen. analyze proves the emitted form is one IRx
+      accepts.
     parameters:
-      operator:
-        type: str
-      op_code:
-        type: str
+      operator: Operator to apply.
+      op_code: Operator spelling.
     """
     source = f"def sample(a, b):\n    return a {operator} b\n"
     module = _module_from_source(source, bool_(i64, i64))
@@ -749,10 +693,10 @@ def test_a_comparison_lowers_to_a_binary_op(
 def test_a_chained_comparison_is_rejected_until_it_can_short_circuit() -> None:
     """
     title: A chained comparison is not lowered to eager logical operations.
-    summary: >-
-      The final modulo must be unreachable after the first comparison is false.
-      Until lowering can express that control flow and evaluate middle operands
-      exactly once, rejecting the expression preserves Python semantics.
+    summary: The final modulo must be unreachable after the first comparison
+      is false. Until lowering can express that control flow and evaluate
+      middle operands exactly once, rejecting the expression preserves Python
+      semantics.
     """
     source = "def sample():\n    return 0 > 1 > (1 % 0)\n"
     with pytest.raises(LoweringError) as excinfo:
@@ -764,10 +708,10 @@ def test_a_chained_comparison_is_rejected_until_it_can_short_circuit() -> None:
 def test_a_comparison_lowers_its_operands_at_their_own_type() -> None:
     """
     title: An operand is not lowered at the type of the comparison.
-    summary: >-
-      The expected type at a comparison is the bool the comparison yields, and
-      lowering the literal in ``a < 3`` against it would ask for 3 as a bool
-      and refuse a correct program. The operands' own type is used instead.
+    summary: The expected type at a comparison is the bool the comparison
+      yields, and lowering the literal in ``a < 3`` against it would ask
+      for 3 as a bool and refuse a correct program. The operands' own type
+      is used instead.
     """
     source = "def sample(a):\n    return a < 3\n"
     module = _module_from_source(source, bool_(i64))
@@ -780,10 +724,9 @@ def test_a_comparison_lowers_its_operands_at_their_own_type() -> None:
 def test_a_comparison_lowers_its_operands_at_the_wider_type() -> None:
     """
     title: Mixed operands compare at a type that can hold both.
-    summary: >-
-      An integer literal compared against a float parameter is lowered as a
-      float, which is the promotion Python performs, rather than narrowing the
-      parameter to meet the literal.
+    summary: An integer literal compared against a float parameter is lowered
+      as a float, which is the promotion Python performs, rather than narrowing
+      the parameter to meet the literal.
     """
     source = "def sample(a):\n    return a < 3\n"
     module = _module_from_source(source, bool_(f64))
@@ -804,17 +747,13 @@ def test_a_parameter_compares_against_the_inferred_literal_type(
 ) -> None:
     """
     title: Comparisons use the shared integer default and Python float width.
-    summary: >-
-      Small bare integers default to i32 while Python floats remain f64. A
-      comparison does not infer from its Boolean return type; IRx analyzes the
-      resulting operands and inserts only lossless widening.
+    summary: Small bare integers default to i32 while Python floats remain
+      f64. A comparison does not infer from its Boolean return type; IRx
+      analyzes the resulting operands and inserts only lossless widening.
     parameters:
-      literal:
-        type: str
-      sig_type:
-        type: SigType
-      expected:
-        type: type[astx.Literal]
+      literal: Literal.
+      sig_type: Type of sig.
+      expected: Expected result for this case.
     """
     source = f"def sample(a):\n    return a < {literal}\n"
     module = _module_from_source(source, bool_(sig_type))
@@ -833,12 +772,11 @@ def test_a_boolean_operator_is_rejected_until_it_can_short_circuit(
 ) -> None:
     """
     title: and/or are not lowered to eager logical binary operations.
-    summary: >-
-      The modulo is unreachable in Python for both expressions. Rejecting them
-      is safer than emitting an IRx logical operation that evaluates it.
+    summary: The modulo is unreachable in Python for both expressions.
+      Rejecting them is safer than emitting an IRx logical operation
+      that evaluates it.
     parameters:
-      expression:
-        type: str
+      expression: Expression to process.
     """
     source = f"def sample():\n    return {expression}\n"
     with pytest.raises(LoweringError) as excinfo:
@@ -863,14 +801,12 @@ def test_an_n_ary_boolean_expression_is_rejected() -> None:
 def test_a_comparison_irx_lacks_is_rejected(operator: str, name: str) -> None:
     """
     title: A comparison with no IRx op_code is refused, not emitted.
-    summary: >-
-      Validation rejects all four before lowering runs, so these are reached
-      only through the public entry point; none has an operator to lower onto.
+    summary: Validation rejects all four before lowering runs, so these are
+      reached only through the public entry point; none has an operator to
+      lower onto.
     parameters:
-      operator:
-        type: str
-      name:
-        type: str
+      operator: Operator to apply.
+      name: Name identifying the declaration or operation.
     """
     source = f"def sample(a, b):\n    return a {operator} b\n"
     with pytest.raises(LoweringError) as excinfo:
@@ -881,10 +817,10 @@ def test_a_comparison_irx_lacks_is_rejected(operator: str, name: str) -> None:
 def test_a_negated_bool_literal_is_rejected() -> None:
     """
     title: -True is refused rather than folded to an integer.
-    summary: >-
-      bool is a subclass of int and negating one in Python yields an int, so
-      folding -True would put an Int64 literal where the user wrote a bool and
-      slip past the bool-before-int check every other literal path makes.
+    summary: bool is a subclass of int and negating one in Python yields
+      an int, so folding -True would put an Int64 literal where the user
+      wrote a bool and slip past the bool-before-int check every other literal
+      path makes.
     """
     with pytest.raises(LoweringError) as excinfo:
         _from_source("def sample():\n    return -True\n", i64())
@@ -894,10 +830,10 @@ def test_a_negated_bool_literal_is_rejected() -> None:
 def test_a_name_that_is_not_a_parameter_cannot_be_typed() -> None:
     """
     title: Inference refuses a name it has no type for.
-    summary: >-
-      Validation rejects a free variable before lowering runs, so this is
-      reached only through the public entry point; inferring some default type
-      for it would compile a program against a type the name does not have.
+    summary: Validation rejects a free variable before lowering runs, so
+      this is reached only through the public entry point; inferring some
+      default type for it would compile a program against a type the name
+      does not have.
     """
     source = "def sample(a):\n    return a < missing\n"
     with pytest.raises(LoweringError) as excinfo:
@@ -908,9 +844,8 @@ def test_a_name_that_is_not_a_parameter_cannot_be_typed() -> None:
 def test_an_expression_with_no_inference_overload_fails_closed() -> None:
     """
     title: Inference refuses a node it has no rule for.
-    summary: >-
-      Inference and lowering cover the same expressions, so a node reaching
-      inference without a rule means the two have drifted apart.
+    summary: Inference and lowering cover the same expressions, so a node
+      reaching inference without a rule means the two have drifted apart.
     """
     source = "def sample(a):\n    return a < (1 if a else 2)\n"
     with pytest.raises(LoweringError) as excinfo:
@@ -921,9 +856,8 @@ def test_an_expression_with_no_inference_overload_fails_closed() -> None:
 def test_a_literal_of_no_supported_kind_cannot_be_typed() -> None:
     """
     title: Inference refuses a literal kind the subset does not admit.
-    summary: >-
-      Validation rejects a string before lowering runs; inference must not
-      assign it a numeric type on the way past.
+    summary: Validation rejects a string before lowering runs; inference
+      must not assign it a numeric type on the way past.
     """
     source = "def sample(a):\n    return a < 'x'\n"
     with pytest.raises(LoweringError) as excinfo:
@@ -942,16 +876,15 @@ def test_a_literal_operand_is_typed_by_its_python_kind(
     source: str, expected: type[astx.Literal]
 ) -> None:
     """
-    title: A literal standing alone is inferred at the widest type of its kind.
-    summary: >-
-      Nothing in the comparison declares a type for it, so Python's own notion
-      of the literal's type is all there is to go on: its floats are doubles,
-      and a bool is a bool rather than the integer it can stand in for.
+    title: A literal standing alone is inferred at the widest type of its
+      kind.
+    summary: 'Nothing in the comparison declares a type for it, so Python''s
+      own notion of the literal''s type is all there is to go on: its floats
+      are doubles, and a bool is a bool rather than the integer it can stand
+      in for.'
     parameters:
-      source:
-        type: str
-      expected:
-        type: type[astx.Literal]
+      source: Source input to process.
+      expected: Expected result for this case.
     """
     module = _module_from_source(source, bool_(bool_))
     returned = _returned(module)
@@ -962,9 +895,8 @@ def test_a_literal_operand_is_typed_by_its_python_kind(
 def test_an_arithmetic_operand_is_typed_from_its_own_operands() -> None:
     """
     title: A comparison against an arithmetic expression infers through it.
-    summary: >-
-      The float parameter inside the sum makes the whole sum a float, so the
-      integer literal it is compared against is lowered as one too.
+    summary: The float parameter inside the sum makes the whole sum a float,
+      so the integer literal it is compared against is lowered as one too.
     """
     source = "def sample(a, b):\n    return a + 1 < b\n"
     module = _module_from_source(source, bool_(f64, f64))
@@ -981,8 +913,7 @@ def test_execution_host_provides_context_for_runtime_free_function(
     """
     title: The execution host supplies its own native context dependency.
     parameters:
-      expected:
-        type: bool
+      expected: Expected result for this case.
     """
     source = f"def sample():\n    return {expected}\n"
     module = _module_from_source(source, bool_())
@@ -999,8 +930,7 @@ def test_integer_true_division_executes_with_python_semantics(
     """
     title: Integer true division produces a floating-point result at runtime.
     parameters:
-      expression:
-        type: str
+      expression: Expression to process.
     """
     source = f"def sample():\n    return {expression}\n"
     module = _module_from_source(source, bool_())
@@ -1016,9 +946,8 @@ def test_integer_true_division_executes_with_python_semantics(
 def test_integer_literal_and_float32_comparison_executes_at_float64() -> None:
     """
     title: Integer literals are not rounded to Float32 before comparison.
-    summary: >-
-      16,777,217 is the first integer Float32 cannot represent exactly. A
-      Float32 value of 16,777,216 must remain less than that literal.
+    summary: 16,777,217 is the first integer Float32 cannot represent exactly.
+      A Float32 value of 16,777,216 must remain less than that literal.
     """
     source = "def sample(a):\n    return a < 16777217\n"
     module = _module_from_source(source, bool_(f32))
@@ -1051,18 +980,16 @@ def test_a_unary_operand_of_a_binary_operator_is_rejected(
 ) -> None:
     """
     title: not in either operand position is refused with a location.
-    summary: >-
-      astx requires a DataType on both operands of a binary operator and gives
-      its UnaryOp the generic ExprType, so building one raises a bare Exception
-      out of astx with nothing pointing at the user's code. Refusing here
-      reports it the way every other unlowerable expression is reported. The
-      arithmetic form reaches the same wall without this stage lowering
-      comparisons at all, so the refusal covers a path that predates them.
+    summary: astx requires a DataType on both operands of a binary operator
+      and gives its UnaryOp the generic ExprType, so building one raises
+      a bare Exception out of astx with nothing pointing at the user's code.
+      Refusing here reports it the way every other unlowerable expression
+      is reported. The arithmetic form reaches the same wall without this
+      stage lowering comparisons at all, so the refusal covers a path that
+      predates them.
     parameters:
-      source:
-        type: str
-      signature:
-        type: Signature
+      source: Source input to process.
+      signature: Resolved callable signature.
     """
     with pytest.raises(LoweringError) as excinfo:
         _from_source(source, signature)
@@ -1072,10 +999,10 @@ def test_a_unary_operand_of_a_binary_operator_is_rejected(
 def test_a_not_expression_is_inferred_as_a_bool() -> None:
     """
     title: not makes its operand's type irrelevant to what it yields.
-    summary: >-
-      Checked on the inference rule directly, because astx cannot yet hold a
-      unary operation as the operand of a binary one, so there is no expression
-      this stage can build that would show the inferred type instead.
+    summary: Checked on the inference rule directly, because astx cannot
+      yet hold a unary operation as the operand of a binary one, so there
+      is no expression this stage can build that would show the inferred
+      type instead.
     """
     source = "def sample(a):\n    return not a\n"
     node = ast.parse(source).body[0]
@@ -1126,10 +1053,8 @@ def test_a_boolean_expression_is_inferred_as_a_bool(
     """
     title: Boolean inference remains available while lowering is deferred.
     parameters:
-      source:
-        type: str
-      signature:
-        type: Signature
+      source: Source input to process.
+      signature: Resolved callable signature.
     """
     node = ast.parse(source).body[0]
     assert isinstance(node, ast.FunctionDef)
@@ -1146,10 +1071,9 @@ def test_a_boolean_expression_is_inferred_as_a_bool(
 def test_negating_a_literal_of_no_supported_kind_is_rejected() -> None:
     """
     title: Only a numeric literal can be folded into a negative one.
-    summary: >-
-      Validation rejects a string before lowering runs, so this is reached only
-      through the public entry point; it must not be folded into a value
-      negation does not define.
+    summary: Validation rejects a string before lowering runs, so this is
+      reached only through the public entry point; it must not be folded
+      into a value negation does not define.
     """
     with pytest.raises(LoweringError) as excinfo:
         _from_source("def sample():\n    return -'x'\n", i64())
@@ -1159,11 +1083,10 @@ def test_negating_a_literal_of_no_supported_kind_is_rejected() -> None:
 def test_the_comparison_tables_agree_with_irx() -> None:
     """
     title: Every comparison op_code is one IRx resolves.
-    summary: >-
-      IRx returns a type for exactly the op codes it implements and None for
-      anything else, so an entry added here without one there would lower
-      quietly and fail semantic analysis. Read from IRx directly so the check
-      cannot go stale.
+    summary: IRx returns a type for exactly the op codes it implements and
+      None for anything else, so an entry added here without one there would
+      lower quietly and fail semantic analysis. Read from IRx directly so
+      the check cannot go stale.
     """
     for op_code in lowering.COMPARE_OPS.values():
         assert (
@@ -1174,9 +1097,8 @@ def test_the_comparison_tables_agree_with_irx() -> None:
 def test_numeric_promotion_agrees_with_irx_for_every_type_pair() -> None:
     """
     title: ArxJIT and IRx choose the same type for every numeric pair.
-    summary: >-
-      Int32/Float32 selects Float64; Int64/float has no lossless common domain.
-      Checking successes and rejections prevents policy drift.
+    summary: Int32/Float32 selects Float64; Int64/float has no lossless common
+      domain. Checking successes and rejections prevents policy drift.
     """
     numeric_types = (i32, i64, f32, f64)
     source = "def sample():\n    return 1\n"
@@ -1207,10 +1129,8 @@ def test_lossy_typed_pairs_fail_at_the_analysis_boundary(
     """
     title: Typed i64/float operands cannot acquire a lossy common domain.
     parameters:
-      float_type:
-        type: SigType
-      operator:
-        type: str
+      float_type: Type of float.
+      operator: Operator to apply.
     """
     source = f"def sample(a, b):\n    return a {operator} b\n"
     signature = (
@@ -1233,10 +1153,8 @@ def test_integer_literals_in_float_context_must_remain_exact(
     """
     title: Contextual integer literals never silently round into a float.
     parameters:
-      float_type:
-        type: SigType
-      value:
-        type: int
+      float_type: Type of float.
+      value: Value to process.
     """
     source = f"def sample():\n    return {value}\n"
     with pytest.raises(LoweringError, match="not exactly representable"):
@@ -1248,8 +1166,7 @@ def test_i32_float32_pair_analyzes_in_float64(operator: str) -> None:
     """
     title: Arithmetic and comparisons share lossless i32/f32 promotion.
     parameters:
-      operator:
-        type: str
+      operator: Operator to apply.
     """
     source = f"def sample(a, b):\n    return a {operator} b\n"
     signature = bool_(i32, f32) if operator == "<" else f64(i32, f32)
@@ -1266,11 +1183,10 @@ def test_i32_float32_pair_analyzes_in_float64(operator: str) -> None:
 def test_the_operator_tables_agree_with_astx() -> None:
     """
     title: Every operator this stage emits is one astx specializes.
-    summary: >-
-      astx falls back to a plain BinaryOp for an unknown op_code rather than
-      raising, so an operator added here without an entry there would lower
-      quietly and only fail in codegen. Read from astx directly so the check
-      cannot go stale.
+    summary: astx falls back to a plain BinaryOp for an unknown op_code rather
+      than raising, so an operator added here without an entry there would
+      lower quietly and only fail in codegen. Read from astx directly so
+      the check cannot go stale.
     """
     for op_code in lowering.BINARY_OPS.values():
         assert op_code in _BINARY_OP_TYPES
@@ -1294,18 +1210,16 @@ def test_docstring_and_pass_lower_to_nothing() -> None:
 def test_lowered_nodes_carry_real_file_locations() -> None:
     """
     title: astx nodes are located at the user's real source position.
-    summary: >-
-      Locations run through the same builder arxjit reports diagnostics with,
-      so a compiled artifact points back at the file the user wrote, with the
-      one-based character columns Diagnostic documents rather than ast's raw
-      byte offsets.
+    summary: Locations run through the same builder arxjit reports diagnostics
+      with, so a compiled artifact points back at the file the user wrote,
+      with the one-based character columns Diagnostic documents rather than
+      ast's raw byte offsets.
     """
 
     def sample() -> int:
         """
         title: Return a constant.
-        returns:
-          type: int
+        returns: A constant.
         """
         return 5
 
@@ -1325,10 +1239,9 @@ def test_lowered_nodes_carry_real_file_locations() -> None:
 def test_a_node_without_a_position_maps_to_no_location() -> None:
     """
     title: A synthesized node lowers to astx's own no-location value.
-    summary: >-
-      Every node in a parsed function carries a position, so this is the
-      fallback for a hand-built one; it maps to NO_SOURCE_LOCATION rather than
-      inventing a position that would point at unrelated source.
+    summary: Every node in a parsed function carries a position, so this
+      is the fallback for a hand-built one; it maps to NO_SOURCE_LOCATION
+      rather than inventing a position that would point at unrelated source.
     """
     source = "def sample():\n    return 1\n"
     node = ast.parse(source).body[0]
@@ -1354,10 +1267,9 @@ def test_bare_return_is_rejected() -> None:
 def test_an_unlowerable_statement_fails_closed() -> None:
     """
     title: A statement with no overload is reported, not skipped.
-    summary: >-
-      Validation admits while loops, so reaching one here means the subset and
-      the lowerer disagree; the module must not come back quietly missing the
-      loop.
+    summary: Validation admits while loops, so reaching one here means the
+      subset and the lowerer disagree; the module must not come back quietly
+      missing the loop.
     """
     source = "def sample():\n    while True:\n        return 1\n"
     with pytest.raises(LoweringError) as excinfo:
@@ -1368,10 +1280,10 @@ def test_an_unlowerable_statement_fails_closed() -> None:
 def test_an_unlowerable_expression_fails_closed() -> None:
     """
     title: An expression with no overload is reported, not skipped.
-    summary: >-
-      Validation rejects a conditional expression before lowering runs, so this
-      is reached only through the public entry point; an expression this stage
-      cannot map must be refused rather than dropped from the body.
+    summary: Validation rejects a conditional expression before lowering
+      runs, so this is reached only through the public entry point;
+      an expression this stage cannot map must be refused rather
+      than dropped from the body.
     """
     source = "def sample(x):\n    return 1 if x else 2\n"
     with pytest.raises(LoweringError) as excinfo:
@@ -1382,10 +1294,9 @@ def test_an_unlowerable_expression_fails_closed() -> None:
 def test_a_standalone_expression_statement_is_rejected() -> None:
     """
     title: Only a bare string is dropped in statement position.
-    summary: >-
-      Validation rejects any other standalone expression before lowering runs,
-      so this is reached only through the public entry point; it must not
-      discard a statement that computes something.
+    summary: Validation rejects any other standalone expression before lowering
+      runs, so this is reached only through the public entry point; it must
+      not discard a statement that computes something.
     """
     source = "def sample():\n    1 + 1\n    return 1\n"
     with pytest.raises(LoweringError) as excinfo:
@@ -1422,19 +1333,15 @@ def test_an_unsupported_argument_shape_is_rejected(
 ) -> None:
     """
     title: Shapes an astx argument list cannot express are refused.
-    summary: >-
-      Validation rejects all of these first, but lower is public and none of
-      them can be represented: a variadic or keyword-only parameter would
-      simply vanish from the prototype, and a default would silently become a
-      required argument. The count check alone does not catch them, because a
-      function taking only *args counts as taking none.
+    summary: 'Validation rejects all of these first, but lower is public
+      and none of them can be represented: a variadic or keyword-only parameter
+      would simply vanish from the prototype, and a default would silently
+      become a required argument. The count check alone does not catch
+      them, because a function taking only *args counts as taking none.'
     parameters:
-      source:
-        type: str
-      signature:
-        type: Signature
-      expected:
-        type: str
+      source: Source input to process.
+      signature: Resolved callable signature.
+      expected: Expected result for this case.
     """
     with pytest.raises(LoweringError) as excinfo:
         _from_source(source, signature)
@@ -1444,10 +1351,9 @@ def test_an_unsupported_argument_shape_is_rejected(
 def test_signature_arity_disagreeing_with_the_definition_is_rejected() -> None:
     """
     title: A signature describing a different function is refused.
-    summary: >-
-      Reconciliation makes this unreachable through @jit, but lower is public
-      and zip would silently drop the excess, producing a module whose calling
-      convention no caller could satisfy.
+    summary: Reconciliation makes this unreachable through @jit, but lower
+      is public and zip would silently drop the excess, producing a module
+      whose calling convention no caller could satisfy.
     """
     source = "def sample(a, b):\n    return 1\n"
     with pytest.raises(LoweringError) as excinfo:
@@ -1457,11 +1363,12 @@ def test_signature_arity_disagreeing_with_the_definition_is_rejected() -> None:
 
 def test_the_arity_message_pluralizes_the_declared_count() -> None:
     """
-    title: The count of declared types reads correctly when it is not one.
-    summary: >-
-      The singular is covered by the test above. Both are pinned because a
-      conditional expression like this one is invisible to line coverage: the
-      unexercised branch sits on a line the other branch already ran.
+    title: The count of declared types reads correctly when it is not
+      one.
+    summary: 'The singular is covered by the test above. Both are pinned
+      because a conditional expression like this one is invisible to
+      line coverage: the unexercised branch sits on a line the other
+      branch already ran.'
     """
     source = "def sample(a):\n    return 1\n"
     with pytest.raises(LoweringError) as excinfo:
@@ -1483,14 +1390,12 @@ def test_an_unmapped_signature_type_is_rejected() -> None:
 def test_every_sig_type_is_mapped(sig_type: SigType) -> None:
     """
     title: Every exported signature type can be lowered.
-    summary: >-
-      The table is keyed by name, so a SigType added to the public type API
-      without an entry here would only fail when someone first used it. An
-      integer type additionally needs a declared range, without which its
-      literals could not be bounds-checked.
+    summary: The table is keyed by name, so a SigType added to the public
+      type API without an entry here would only fail when someone first used
+      it. An integer type additionally needs a declared range, without which
+      its literals could not be bounds-checked.
     parameters:
-      sig_type:
-        type: SigType
+      sig_type: Type of sig.
     """
     mapped = SCALARS[sig_type.astx_name]
     assert (mapped.bounds is not None) == (mapped.kind == "int")
@@ -1499,10 +1404,9 @@ def test_every_sig_type_is_mapped(sig_type: SigType) -> None:
 def test_the_sig_type_list_covers_the_public_type_api() -> None:
     """
     title: The exhaustiveness test above is itself exhaustive.
-    summary: >-
-      Reads the public types out of the package rather than trusting the
-      parametrized list, so adding a SigType to arxjit without adding it to
-      that list fails here instead of going unnoticed.
+    summary: Reads the public types out of the package rather than trusting
+      the parametrized list, so adding a SigType to arxjit without adding
+      it to that list fails here instead of going unnoticed.
     """
     exported = {
         value.astx_name

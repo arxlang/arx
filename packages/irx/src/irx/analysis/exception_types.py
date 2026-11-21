@@ -1,8 +1,8 @@
 """
 title: Host-registered exception identities and ordinary class construction.
-summary: >-
-  Exception privileges come from declaration identities, never source spelling.
-  Hosts and direct AST clients share one validated builtin hierarchy contract.
+summary: Exception privileges come from declaration identities, never source
+  spelling. Hosts and direct AST clients share one validated builtin hierarchy
+  contract.
 """
 
 from __future__ import annotations
@@ -50,13 +50,14 @@ EXCEPTION_HIERARCHY = (
 @typechecked
 def builtin_exception_module() -> ParsedModule:
     """
-    title: Build language-neutral builtin exceptions for direct AST hosts.
-    summary: >-
-      Return fresh declaration identities and their explicit ParsedModule
-      capability, suitable for a host resolver without source parsing. The
-      hierarchy uses the same schema validated for frontend-supplied builtins.
-    returns:
-      type: ParsedModule
+    title: Build language-neutral builtin exceptions for direct AST
+      hosts.
+    summary: Return fresh declaration identities and their explicit
+      ParsedModule capability, suitable for a host resolver without
+      source parsing. The hierarchy uses the same schema validated
+      for frontend-supplied builtins.
+    returns: Constructed language-neutral builtin exceptions for
+      direct AST hosts.
     """
     module = astx.Module("builtins.exceptions")
     declarations: list[astx.ClassDefStmt] = []
@@ -97,12 +98,9 @@ def exception_error(
     """
     title: Report an invalid nominal exception contract.
     parameters:
-      analyzer:
-        type: SemanticAnalyzerCore
-      node:
-        type: astx.AST
-      message:
-        type: str
+      analyzer: Semantic analyzer resolving the operation.
+      node: Syntax node to process.
+      message: Diagnostic or output message.
     """
     analyzer.context.diagnostics.add(
         message, node=node, code=DiagnosticCodes.SEMANTIC_INVALID_EXCEPTION
@@ -115,10 +113,9 @@ def exception_class_type(class_: SemanticClass) -> astx.ClassType:
     """
     title: Preserve nominal ancestry in an exception expression type.
     parameters:
-      class_:
-        type: SemanticClass
-    returns:
-      type: astx.ClassType
+      class_: Class being processed.
+    returns: 'Result of this operation: preserve nominal ancestry
+      in an exception expression type.'
     """
     return astx.ClassType(
         class_.name,
@@ -137,8 +134,7 @@ def register_exception_types(analyzer: SemanticAnalyzerCore) -> None:
     """
     title: Attach validated base slots and nominal identities after layout.
     parameters:
-      analyzer:
-        type: SemanticAnalyzerCore
+      analyzer: Semantic analyzer resolving the operation.
     """
     declarations = analyzer.context.exception_declarations
     if not declarations:
@@ -278,12 +274,9 @@ def resolve_exception_construction(
     """
     title: Bind inherited message construction without special source names.
     parameters:
-      analyzer:
-        type: SemanticAnalyzerCore
-      node:
-        type: astx.ClassConstruct | astx.FunctionCall | astx.MethodCall
-      class_:
-        type: SemanticClass
+      analyzer: Semantic analyzer resolving the operation.
+      node: Syntax node to process.
+      class_: Class being processed.
     """
     assert class_.initialization is not None
     assert class_.exception_type is not None
@@ -353,10 +346,8 @@ def bind_direct_exception_names(
     """
     title: Bind direct-AST ambient names without replacing user declarations.
     parameters:
-      analyzer:
-        type: SemanticAnalyzerCore
-      node:
-        type: astx.AST
+      analyzer: Semantic analyzer resolving the operation.
+      node: Syntax node to process.
     """
     module_key = node.name if isinstance(node, astx.Module) else "<root>"
     declared: set[str] = set()

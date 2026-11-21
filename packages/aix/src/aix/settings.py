@@ -30,10 +30,8 @@ def _default_build_system_dependency(requires_arx: str | None) -> str:
     """
     title: Build the default Arx compiler dependency requirement.
     parameters:
-      requires_arx:
-        type: str | None
-    returns:
-      type: str
+      requires_arx: Requires arx.
+    returns: Constructed the default Arx compiler dependency requirement.
     """
     if requires_arx is None:
         return _ARXLANG_DISTRIBUTION_NAME
@@ -44,10 +42,8 @@ def _requirement_name(value: str) -> str | None:
     """
     title: Parse and return one requirement distribution name.
     parameters:
-      value:
-        type: str
-    returns:
-      type: str | None
+      value: Value to process.
+    returns: Parsed and return one requirement distribution name.
     """
     try:
         return Requirement(value).name
@@ -59,10 +55,8 @@ def _has_arxlang_dependency(dependencies: tuple[str, ...]) -> bool:
     """
     title: Return whether dependencies already include ``arxlang``.
     parameters:
-      dependencies:
-        type: tuple[str, Ellipsis]
-    returns:
-      type: bool
+      dependencies: Dependencies.
+    returns: Whether dependencies already include ``arxlang``.
     """
     arxlang_name = canonicalize_name(_ARXLANG_DISTRIBUTION_NAME)
     for dependency in dependencies:
@@ -81,12 +75,10 @@ def _normalize_build_system_dependencies(
     """
     title: Ensure build-system dependencies include the Arx compiler package.
     parameters:
-      dependencies:
-        type: tuple[str, Ellipsis]
-      requires_arx:
-        type: str | None
-    returns:
-      type: tuple[str, Ellipsis]
+      dependencies: Dependencies.
+      requires_arx: Requires arx.
+    returns: 'Result of this operation: ensure build-system dependencies
+      include the Arx compiler package.'
     """
     if _has_arxlang_dependency(dependencies):
         return dependencies
@@ -104,10 +96,8 @@ class Author:
     """
     title: One author entry declared in ``[project].authors``.
     attributes:
-      name:
-        type: str
-      email:
-        type: str | None
+      name: Name identifying this declaration.
+      email: Email.
     """
 
     name: str
@@ -119,22 +109,14 @@ class Project:
     """
     title: Parsed project section of .arxproject.toml.
     attributes:
-      name:
-        type: str
-      version:
-        type: str
-      edition:
-        type: str | None
-      description:
-        type: str | None
-      license:
-        type: str | None
-      authors:
-        type: tuple[Author, Ellipsis]
-      dependencies:
-        type: tuple[str, Ellipsis]
-      requires_arx:
-        type: str | None
+      name: Name identifying this declaration.
+      version: Package version metadata.
+      edition: Edition.
+      description: Description.
+      license: License.
+      authors: Authors.
+      dependencies: Dependencies.
+      requires_arx: Requires arx.
     """
 
     name: str
@@ -152,8 +134,7 @@ class DependencyGroupInclude:
     """
     title: Include one named dependency group inside another group.
     attributes:
-      include_group:
-        type: str
+      include_group: Include group.
     """
 
     include_group: str
@@ -167,12 +148,9 @@ class Environment:
     """
     title: Parsed environment section of .arxproject.toml.
     attributes:
-      kind:
-        type: str | None
-      name:
-        type: str | None
-      path:
-        type: str | None
+      kind: Kind of value or operation.
+      name: Name identifying this declaration.
+      path: Path to the input or output resource.
     """
 
     kind: str | None = None
@@ -185,14 +163,10 @@ class Build:
     """
     title: Parsed build section of .arxproject.toml.
     attributes:
-      src_dir:
-        type: str | None
-      package:
-        type: str | None
-      out_dir:
-        type: str | None
-      mode:
-        type: str | None
+      src_dir: Src dir.
+      package: Package.
+      out_dir: Out dir.
+      mode: Selected processing mode.
     """
 
     src_dir: str | None = None
@@ -206,8 +180,7 @@ class BuildSystem:
     """
     title: Parsed build-system section of .arxproject.toml.
     attributes:
-      dependencies:
-        type: tuple[str, Ellipsis]
+      dependencies: Dependencies.
     """
 
     dependencies: tuple[str, ...] = ()
@@ -218,8 +191,7 @@ class ArxpmDependencyGroup:
     """
     title: Legacy placeholder for removed ``[arxpm.*]`` sections.
     attributes:
-      dependencies:
-        type: tuple[str, Ellipsis]
+      dependencies: Dependencies.
     """
 
     dependencies: tuple[str, ...] = ()
@@ -230,12 +202,9 @@ class Arxpm:
     """
     title: Legacy placeholder for the removed ``[arxpm]`` section.
     attributes:
-      dependencies:
-        type: ArxpmDependencyGroup | None
-      dependencies_dev:
-        type: ArxpmDependencyGroup | None
-      extras:
-        type: dict[str, Any]
+      dependencies: Dependencies.
+      dependencies_dev: Dependencies dev.
+      extras: Extras.
     """
 
     dependencies: ArxpmDependencyGroup | None = None
@@ -248,14 +217,10 @@ class Tests:
     """
     title: Parsed tests section of .arxproject.toml.
     attributes:
-      paths:
-        type: tuple[str, Ellipsis] | None
-      exclude:
-        type: tuple[str, Ellipsis] | None
-      file_pattern:
-        type: str | None
-      function_pattern:
-        type: str | None
+      paths: Paths to the input or output resources.
+      exclude: Exclude.
+      file_pattern: File pattern.
+      function_pattern: Function pattern.
     """
 
     paths: tuple[str, ...] | None = None
@@ -269,22 +234,14 @@ class ArxProject:
     """
     title: Full parsed ``.arxproject.toml`` document.
     attributes:
-      project:
-        type: Project
-      environment:
-        type: Environment | None
-      build:
-        type: Build | None
-      build_system:
-        type: BuildSystem
-      dependency_groups:
-        type: dict[str, tuple[DependencyGroupEntry, Ellipsis]]
-      arxpm:
-        type: Arxpm | None
-      tests:
-        type: Tests | None
-      source_path:
-        type: Path | None
+      project: Project.
+      environment: Environment used by the subprocess or compiler.
+      build: Build.
+      build_system: Build system.
+      dependency_groups: Dependency groups.
+      arxpm: Arxpm.
+      tests: Tests.
+      source_path: Path to source.
     """
 
     project: Project
@@ -317,8 +274,7 @@ class ArxProject:
 def _schema() -> dict[str, Any]:
     """
     title: Load and cache the ``.arxproject.toml`` JSON schema.
-    returns:
-      type: dict[str, Any]
+    returns: Loaded and cache the ``.arxproject.toml`` JSON schema.
     """
     with (
         files("aix.schema")
@@ -332,10 +288,8 @@ def _build_author(data: dict[str, Any]) -> Author:
     """
     title: Build one Author dataclass from its validated mapping.
     parameters:
-      data:
-        type: dict[str, Any]
-    returns:
-      type: Author
+      data: Data to process.
+    returns: Constructed one Author dataclass from its validated mapping.
     """
     return Author(name=data["name"], email=data.get("email"))
 
@@ -344,10 +298,8 @@ def _build_project(data: dict[str, Any]) -> Project:
     """
     title: Build the Project dataclass from its validated mapping.
     parameters:
-      data:
-        type: dict[str, Any]
-    returns:
-      type: Project
+      data: Data to process.
+    returns: Constructed the Project dataclass from its validated mapping.
     """
     authors = tuple(_build_author(entry) for entry in data.get("authors", []))
     return Project(
@@ -368,10 +320,9 @@ def _build_dependency_group_entry(
     """
     title: Build one dependency-group entry from validated manifest data.
     parameters:
-      data:
-        type: str | dict[str, Any]
-    returns:
-      type: DependencyGroupEntry
+      data: Data to process.
+    returns: Constructed one dependency-group entry from validated manifest
+      data.
     """
     if isinstance(data, str):
         return data
@@ -384,10 +335,8 @@ def _build_dependency_groups(
     """
     title: Build dependency groups from their validated mapping.
     parameters:
-      data:
-        type: dict[str, Any] | None
-    returns:
-      type: dict[str, tuple[DependencyGroupEntry, Ellipsis]]
+      data: Data to process.
+    returns: Constructed dependency groups from their validated mapping.
     """
     if data is None:
         return {}
@@ -402,10 +351,8 @@ def _build_tests(data: dict[str, Any] | None) -> Tests | None:
     """
     title: Build the Tests dataclass from its validated mapping.
     parameters:
-      data:
-        type: dict[str, Any] | None
-    returns:
-      type: Tests | None
+      data: Data to process.
+    returns: Constructed the Tests dataclass from its validated mapping.
     """
     if data is None:
         return None
@@ -426,12 +373,9 @@ def _build_build_system(
     """
     title: Build the BuildSystem dataclass with effective defaults.
     parameters:
-      data:
-        type: dict[str, Any] | None
-      project:
-        type: Project
-    returns:
-      type: BuildSystem
+      data: Data to process.
+      project: Project.
+    returns: Constructed the BuildSystem dataclass with effective defaults.
     """
     if data is None:
         return BuildSystem(
@@ -453,10 +397,8 @@ def _resolved_src_dir(build: Build | None) -> str:
     """
     title: Resolve the effective source directory for one project.
     parameters:
-      build:
-        type: Build | None
-    returns:
-      type: str
+      build: Build.
+    returns: Resolved the effective source directory for one project.
     """
     if build is None or build.src_dir is None:
         return _DEFAULT_SRC_DIR
@@ -467,10 +409,8 @@ def resolve_source_root(project: ArxProject) -> Path:
     """
     title: Resolve the effective source root from manifest defaults.
     parameters:
-      project:
-        type: ArxProject
-    returns:
-      type: Path
+      project: Project.
+    returns: Resolved the effective source root from manifest defaults.
     """
     if project.source_path is None:
         raise ArxProjectError(
@@ -485,8 +425,7 @@ def _reject_arxpm_sections(data: dict[str, Any]) -> None:
     """
     title: Reject removed ``[arxpm]`` manifest sections with a clear error.
     parameters:
-      data:
-        type: dict[str, Any]
+      data: Data to process.
     """
     if "arxpm" not in data:
         return
@@ -501,8 +440,7 @@ def _reject_toolchain_sections(data: dict[str, Any]) -> None:
     """
     title: Reject removed ``[toolchain]`` manifest sections.
     parameters:
-      data:
-        type: dict[str, Any]
+      data: Data to process.
     """
     if "toolchain" not in data:
         return
@@ -517,10 +455,8 @@ def _validate_dependency(value: str, location: str) -> None:
     """
     title: Validate one dependency entry from ``.arxproject.toml``.
     parameters:
-      value:
-        type: str
-      location:
-        type: str
+      value: Value to process.
+      location: Source coordinates associated with the operation.
     """
     try:
         Requirement(value)
@@ -536,8 +472,7 @@ def _validate_project(data: dict[str, Any]) -> None:
     """
     title: Validate project-only settings rules after schema validation.
     parameters:
-      data:
-        type: dict[str, Any]
+      data: Data to process.
     """
     requires_arx = data.get("requires-arx")
     if requires_arx is not None:
@@ -551,10 +486,8 @@ def _validate_build_system_dependency(value: str, location: str) -> None:
     """
     title: Validate one installable build-system dependency requirement.
     parameters:
-      value:
-        type: str
-      location:
-        type: str
+      value: Value to process.
+      location: Source coordinates associated with the operation.
     """
     try:
         Requirement(value)
@@ -572,10 +505,8 @@ def _validate_build_system(
     """
     title: Validate build-system-only settings after schema validation.
     parameters:
-      data:
-        type: dict[str, Any] | None
-      project:
-        type: dict[str, Any]
+      data: Data to process.
+      project: Project.
     """
     raw_dependencies: tuple[str, ...] = ()
     if data is not None:
@@ -602,8 +533,7 @@ def _validate_requires_arx(value: str) -> None:
     """
     title: Validate a ``project.requires-arx`` version specifier.
     parameters:
-      value:
-        type: str
+      value: Value to process.
     """
     if not value.strip():
         raise ArxProjectError(
@@ -623,10 +553,8 @@ def _validate_dependency_group_name(name: str, location: str) -> None:
     """
     title: Validate one dependency-group name.
     parameters:
-      name:
-        type: str
-      location:
-        type: str
+      name: Name identifying the declaration or operation.
+      location: Source coordinates associated with the operation.
     """
     if _DEPENDENCY_GROUP_NAME_PATTERN.fullmatch(name) is not None:
         return
@@ -640,10 +568,8 @@ def _normalize_dependency_group_name(name: str) -> str:
     """
     title: Normalize one dependency-group name for semantic comparison.
     parameters:
-      name:
-        type: str
-    returns:
-      type: str
+      name: Name identifying the declaration or operation.
+    returns: Normalized one dependency-group name for semantic comparison.
     """
     return _DEPENDENCY_GROUP_NORMALIZE_PATTERN.sub("-", name).lower()
 
@@ -654,10 +580,9 @@ def _dependency_group_name_mapping(
     """
     title: Map normalized dependency-group names to their declared names.
     parameters:
-      dependency_groups:
-        type: dict[str, list[Any]]
-    returns:
-      type: dict[str, str]
+      dependency_groups: Dependency groups.
+    returns: 'Result of this operation: map normalized dependency-group names
+      to their declared names.'
     """
     normalized_names: dict[str, str] = {}
     for name in dependency_groups:
@@ -677,10 +602,8 @@ def _dependency_group_includes(entries: list[Any]) -> tuple[str, ...]:
     """
     title: Collect included group names from raw dependency-group entries.
     parameters:
-      entries:
-        type: list[Any]
-    returns:
-      type: tuple[str, Ellipsis]
+      entries: Entries.
+    returns: Collected included group names from raw dependency-group entries.
     """
     includes: list[str] = []
     for entry in entries:
@@ -699,10 +622,8 @@ def _detect_dependency_group_cycles(
     """
     title: Reject dependency-group include cycles.
     parameters:
-      dependency_groups:
-        type: dict[str, list[Any]]
-      normalized_names:
-        type: dict[str, str]
+      dependency_groups: Dependency groups.
+      normalized_names: Normalized names.
     """
     visited: set[str] = set()
 
@@ -710,10 +631,8 @@ def _detect_dependency_group_cycles(
         """
         title: Visit one dependency group while checking for include cycles.
         parameters:
-          name:
-            type: str
-          ancestry:
-            type: list[str]
+          name: Name identifying the declaration or operation.
+          ancestry: Ancestry.
         """
         if name in ancestry:
             cycle_start = ancestry.index(name)
@@ -746,8 +665,7 @@ def _validate_dependency_groups(data: dict[str, Any]) -> None:
     """
     title: Validate dependency-group rules after schema validation.
     parameters:
-      data:
-        type: dict[str, Any]
+      data: Data to process.
     """
     raw_dependency_groups = data.get("dependency-groups")
     if raw_dependency_groups is None:
@@ -816,8 +734,7 @@ def _reject_legacy_environment_kind(data: dict[str, Any] | None) -> None:
     """
     title: Reject removed environment kinds with a migration hint.
     parameters:
-      data:
-        type: dict[str, Any] | None
+      data: Data to process.
     """
     if data is None:
         return
@@ -836,8 +753,7 @@ def _validate_environment(data: dict[str, Any] | None) -> None:
     """
     title: Validate environment-only settings rules after schema validation.
     parameters:
-      data:
-        type: dict[str, Any] | None
+      data: Data to process.
     """
     if data is None:
         return
@@ -874,8 +790,7 @@ def _validate_data(data: dict[str, Any]) -> None:
     """
     title: Validate parsed ``.arxproject.toml`` data before building models.
     parameters:
-      data:
-        type: dict[str, Any]
+      data: Data to process.
     """
     _reject_arxpm_sections(data)
     _reject_toolchain_sections(data)
@@ -901,12 +816,9 @@ def _build_arx_project(
     """
     title: Build the ArxProject dataclass from its validated mapping.
     parameters:
-      data:
-        type: dict[str, Any]
-      source_path:
-        type: Path | None
-    returns:
-      type: ArxProject
+      data: Data to process.
+      source_path: Path to source.
+    returns: Constructed the ArxProject dataclass from its validated mapping.
     """
     environment_data = data.get("environment")
     build_data = data.get("build")
@@ -932,10 +844,8 @@ def _author_to_mapping(author: Author) -> dict[str, str]:
     """
     title: Convert one Author dataclass into a TOML-safe mapping.
     parameters:
-      author:
-        type: Author
-    returns:
-      type: dict[str, str]
+      author: Author.
+    returns: Converted one Author dataclass into a TOML-safe mapping.
     """
     data = {"name": author.name}
     if author.email is not None:
@@ -947,10 +857,8 @@ def _settings_to_data(settings: ArxProject) -> dict[str, Any]:
     """
     title: Convert settings dataclasses into raw manifest data.
     parameters:
-      settings:
-        type: ArxProject
-    returns:
-      type: dict[str, Any]
+      settings: Settings.
+    returns: Converted settings dataclasses into raw manifest data.
     """
     if settings.arxpm is not None:
         raise ArxProjectError(
@@ -1057,10 +965,9 @@ def _format_toml_string(value: str) -> str:
     """
     title: Quote one TOML basic string with JSON-compatible escapes.
     parameters:
-      value:
-        type: str
-    returns:
-      type: str
+      value: Value to process.
+    returns: 'Result of this operation: quote one TOML basic string with
+      JSON-compatible escapes.'
     """
     return json.dumps(value, ensure_ascii=False)
 
@@ -1073,12 +980,9 @@ def _append_string_array(
     """
     title: Append a canonical multiline string array to TOML output.
     parameters:
-      lines:
-        type: list[str]
-      key:
-        type: str
-      values:
-        type: tuple[str, Ellipsis] | list[str]
+      lines: Source or output lines.
+      key: Key selecting the entry.
+      values: Values to process, in order.
     """
     lines.append(f"{key} = [")
     for value in values:
@@ -1094,12 +998,9 @@ def _append_dependency_group_array(
     """
     title: Append one dependency-group entry array to TOML output.
     parameters:
-      lines:
-        type: list[str]
-      key:
-        type: str
-      values:
-        type: tuple[DependencyGroupEntry, Ellipsis]
+      lines: Source or output lines.
+      key: Key selecting the entry.
+      values: Values to process, in order.
     """
     lines.append(f"{_format_toml_string(key)} = [")
     for value in values:
@@ -1118,10 +1019,8 @@ def _append_project(lines: list[str], project: Project) -> None:
     """
     title: Append the canonical ``[project]`` section.
     parameters:
-      lines:
-        type: list[str]
-      project:
-        type: Project
+      lines: Source or output lines.
+      project: Project.
     """
     lines.append("[project]")
     lines.append(f"name = {_format_toml_string(project.name)}")
@@ -1157,10 +1056,8 @@ def _append_dependency_groups(
     """
     title: Append the canonical ``[dependency-groups]`` section.
     parameters:
-      lines:
-        type: list[str]
-      dependency_groups:
-        type: dict[str, tuple[DependencyGroupEntry, Ellipsis]]
+      lines: Source or output lines.
+      dependency_groups: Dependency groups.
     """
     if not dependency_groups:
         return
@@ -1177,10 +1074,8 @@ def _append_environment(
     """
     title: Append the canonical ``[environment]`` section when present.
     parameters:
-      lines:
-        type: list[str]
-      environment:
-        type: Environment | None
+      lines: Source or output lines.
+      environment: Environment used by the subprocess or compiler.
     """
     if environment is None:
         return
@@ -1197,10 +1092,8 @@ def _append_build(lines: list[str], build: Build | None) -> None:
     """
     title: Append the canonical ``[build]`` section when present.
     parameters:
-      lines:
-        type: list[str]
-      build:
-        type: Build | None
+      lines: Source or output lines.
+      build: Build.
     """
     if build is None:
         return
@@ -1223,12 +1116,9 @@ def _append_build_system(
     """
     title: Append the canonical ``[build-system]`` section when needed.
     parameters:
-      lines:
-        type: list[str]
-      build_system:
-        type: BuildSystem
-      project:
-        type: Project
+      lines: Source or output lines.
+      build_system: Build system.
+      project: Project.
     """
     default_dependencies = _normalize_build_system_dependencies(
         (),
@@ -1244,10 +1134,8 @@ def _append_tests(lines: list[str], tests: Tests | None) -> None:
     """
     title: Append the canonical ``[tests]`` section when present.
     parameters:
-      lines:
-        type: list[str]
-      tests:
-        type: Tests | None
+      lines: Source or output lines.
+      tests: Tests.
     """
     if tests is None:
         return
@@ -1268,12 +1156,12 @@ def _append_tests(lines: list[str], tests: Tests | None) -> None:
 
 def dump_settings(settings: ArxProject) -> str:
     """
-    title: Serialize settings into canonical ``.arxproject.toml`` text.
+    title: Serialize settings into canonical ``.arxproject.toml``
+      text.
     parameters:
-      settings:
-        type: ArxProject
-    returns:
-      type: str
+      settings: Settings.
+    returns: 'Result of this operation: serialize settings into canonical
+      ``.arxproject.toml`` text.'
     """
     _validate_data(_settings_to_data(settings))
 
@@ -1294,12 +1182,10 @@ def write_settings(
     """
     title: Write canonical ``.arxproject.toml`` text to disk.
     parameters:
-      settings:
-        type: ArxProject
-      path:
-        type: str | Path
-    returns:
-      type: Path
+      settings: Settings.
+      path: Path to the input or output resource.
+    returns: 'Result of this operation: write canonical ``.arxproject.toml``
+      text to disk.'
     """
     target = Path(path)
     target.write_text(dump_settings(settings), encoding="utf-8")
@@ -1310,10 +1196,9 @@ def find_config_file(start: Path | None = None) -> Path | None:
     """
     title: Walk upward from ``start`` to locate ``.arxproject.toml``.
     parameters:
-      start:
-        type: Path | None
-    returns:
-      type: Path | None
+      start: Starting position.
+    returns: 'Result of this operation: walk upward from ``start``
+      to locate ``.arxproject.toml``.'
     """
     current = (start or Path.cwd()).resolve()
     while True:
@@ -1332,12 +1217,9 @@ def load_settings_from_text(
     """
     title: Parse and validate one ``.arxproject.toml`` string.
     parameters:
-      content:
-        type: str
-      source_path:
-        type: Path | None
-    returns:
-      type: ArxProject
+      content: Content to process.
+      source_path: Path to source.
+    returns: Parsed and validate one ``.arxproject.toml`` string.
     """
     try:
         data = tomllib.loads(content)
@@ -1354,10 +1236,8 @@ def load_settings(path: str | Path | None = None) -> ArxProject:
     """
     title: Load and validate ``.arxproject.toml`` into a typed dataclass.
     parameters:
-      path:
-        type: str | Path | None
-    returns:
-      type: ArxProject
+      path: Path to the input or output resource.
+    returns: Loaded and validate ``.arxproject.toml`` into a typed dataclass.
     """
     if path is None:
         discovered = find_config_file()

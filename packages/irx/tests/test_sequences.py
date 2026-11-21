@@ -1,5 +1,7 @@
 """
 title: Exact numeric sequence semantics and shared consumer lowering.
+attributes:
+  SCALARS: Scalars.
 """
 
 import shutil
@@ -39,10 +41,9 @@ def block(*nodes: astx.AST) -> astx.Block:
     title: Build a block in source evaluation order.
     parameters:
       nodes:
-        type: astx.AST
         variadic: positional
-    returns:
-      type: astx.Block
+        description: Syntax nodes in source order.
+    returns: Constructed a block in source evaluation order.
     """
     result = astx.Block()
     for node in nodes:
@@ -53,8 +54,8 @@ def block(*nodes: astx.AST) -> astx.Block:
 def consumer() -> astx.FunctionDef:
     """
     title: Build one generic consumer, shared by every adapter and width.
-    returns:
-      type: astx.FunctionDef
+    returns: Constructed one generic consumer, shared by every adapter and
+      width.
     """
     bound = astx.UnionType(tuple(type_ for type_, _, _ in SCALARS))
     variable = astx.TemplateTypeVar("T", bound=bound)
@@ -112,8 +113,8 @@ def consumer() -> astx.FunctionDef:
 def matrix_module() -> astx.Module:
     """
     title: Exercise inferred and explicit calls with exact scalar metadata.
-    returns:
-      type: astx.Module
+    returns: 'Result of this operation: exercise inferred and explicit calls
+      with exact scalar metadata.'
     """
     body: list[astx.AST] = []
     for number, (type_, literal, maximum) in enumerate(SCALARS):
@@ -168,10 +169,9 @@ def sequence_matrix_binary(tmp_path_factory: pytest.TempPathFactory) -> Path:
     """
     title: Compile one generic definition for all numeric source families.
     parameters:
-      tmp_path_factory:
-        type: pytest.TempPathFactory
-    returns:
-      type: Path
+      tmp_path_factory: Factory for shared temporary test directories.
+    returns: 'Result of this operation: compile one generic definition for
+      all numeric source families.'
     """
     if shutil.which("clang") is None:
         pytest.skip("native sequence checks require clang")
@@ -204,8 +204,7 @@ def test_sequence_matrix_semantics_and_execution(
     """
     title: Execute all widths and source kinds using one verified artifact.
     parameters:
-      sequence_matrix_binary:
-        type: Path
+      sequence_matrix_binary: Sequence matrix binary.
     """
     result = subprocess.run(
         [str(sequence_matrix_binary)], capture_output=True, check=False
@@ -228,11 +227,10 @@ def test_sequence_rejects_implicit_conversion(
     source_type: astx.DataType,
 ) -> None:
     """
-    title: >-
-      Reject Boolean, widening, nullable erasure, flattening and iterators.
+    title: Reject Boolean, widening, nullable erasure, flattening
+      and iterators.
     parameters:
-      source_type:
-        type: astx.DataType
+      source_type: Type of the source value.
     """
     target = astx.FunctionDef(
         astx.FunctionPrototype(
@@ -279,8 +277,7 @@ def test_sequence_borrows_cannot_escape(storage: astx.DataType) -> None:
     """
     title: Reject sequence descriptors in locals, returns, and containers.
     parameters:
-      storage:
-        type: astx.DataType
+      storage: Storage.
     """
     module = make_main_module(
         astx.VariableDeclaration("escape", storage),
@@ -322,10 +319,8 @@ def test_materialization_validates_unsized_bounds(
     """
     title: Reject missing, unknown, negative, and inexact iterator bounds.
     parameters:
-      keywords:
-        type: tuple[astx.KeywordArgument, Ellipsis]
-      message:
-        type: str
+      keywords: Keywords.
+      message: Diagnostic or output message.
     """
     function = astx.FunctionDef(
         astx.FunctionPrototype(
@@ -352,11 +347,10 @@ def test_materialization_validates_unsized_bounds(
 @pytest.mark.parametrize("empty", [False, True])
 def test_bytes_materialization_metadata(empty: bool) -> None:
     """
-    title: >-
-      Reanalysis preserves checked octet construction and read-only access.
+    title: Reanalysis preserves checked octet construction and read-only
+      access.
     parameters:
-      empty:
-        type: bool
+      empty: Whether to use empty.
     """
     source = astx.FunctionCall(
         "bytes", [] if empty else [astx.ListExpr([astx.LiteralInt64(255)])]

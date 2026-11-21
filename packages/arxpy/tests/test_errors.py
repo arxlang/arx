@@ -14,10 +14,8 @@ def _diagnostic(message: str) -> Diagnostic:
     """
     title: Build a minimal Diagnostic for tests.
     parameters:
-      message:
-        type: str
-    returns:
-      type: Diagnostic
+      message: Diagnostic or output message.
+    returns: Constructed a minimal Diagnostic for tests.
     """
     return Diagnostic(
         severity=DiagnosticSeverity.ERROR,

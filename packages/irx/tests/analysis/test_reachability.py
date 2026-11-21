@@ -18,14 +18,11 @@ def unused_resolver(
     """
     title: No imports are needed by this isolated graph traversal.
     parameters:
-      requesting_module_key:
-        type: str
-      import_node:
-        type: astx.ImportStmt | astx.ImportFromStmt
-      requested_specifier:
-        type: str
-    returns:
-      type: ParsedModule
+      requesting_module_key: Requesting module key.
+      import_node: Import node.
+      requested_specifier: Import specifier requested by the source module.
+    returns: 'Result of this operation: no imports are needed by this isolated
+      graph traversal.'
     """
     raise AssertionError(
         f"unexpected import {requested_specifier} from "

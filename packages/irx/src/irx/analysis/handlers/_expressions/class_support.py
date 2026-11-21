@@ -1,8 +1,7 @@
 """
 title: Expression class-resolution helpers.
-summary: >-
-  Resolve class members, overload sets, and field metadata shared by the class-
-  oriented expression visitors.
+summary: Resolve class members, overload sets, and field metadata shared
+  by the class- oriented expression visitors.
 """
 
 from __future__ import annotations
@@ -42,12 +41,9 @@ class ExpressionClassSupportVisitorMixin(ClassMemberFormattingVisitorMixin):
         """
         title: Return whether one class is derived from another.
         parameters:
-          class_:
-            type: SemanticClass | None
-          ancestor:
-            type: SemanticClass
-        returns:
-          type: bool
+          class_: Class being processed.
+          ancestor: Ancestor.
+        returns: Whether one class is derived from another.
         """
         if class_ is None:
             return False
@@ -64,12 +60,9 @@ class ExpressionClassSupportVisitorMixin(ClassMemberFormattingVisitorMixin):
         """
         title: Return declared class members with one source name.
         parameters:
-          class_:
-            type: SemanticClass
-          name:
-            type: str
-        returns:
-          type: tuple[SemanticClassMember, Ellipsis]
+          class_: Class being processed.
+          name: Name identifying the declaration or operation.
+        returns: Declared class members with one source name.
         """
         matches: list[SemanticClassMember] = []
         for owner in class_.mro:
@@ -90,14 +83,11 @@ class ExpressionClassSupportVisitorMixin(ClassMemberFormattingVisitorMixin):
         """
         title: Return declared methods hidden from the effective lookup group.
         parameters:
-          class_:
-            type: SemanticClass
-          method_name:
-            type: str
-          is_static:
-            type: bool
-        returns:
-          type: tuple[SemanticClassMember, Ellipsis]
+          class_: Class being processed.
+          method_name: Name of method.
+          is_static: Whether the member belongs to the class rather than
+            an instance.
+        returns: Declared methods hidden from the effective lookup group.
         """
         visible_members = class_.method_groups.get(method_name, ())
         visible_names = {member.qualified_name for member in visible_members}
@@ -117,12 +107,9 @@ class ExpressionClassSupportVisitorMixin(ClassMemberFormattingVisitorMixin):
         """
         title: Return declared attributes hidden from effective lookup.
         parameters:
-          class_:
-            type: SemanticClass
-          field_name:
-            type: str
-        returns:
-          type: tuple[SemanticClassMember, Ellipsis]
+          class_: Class being processed.
+          field_name: Name of field.
+        returns: Declared attributes hidden from effective lookup.
         """
         visible_member = class_.member_table.get(field_name)
         visible_name = (
@@ -147,14 +134,10 @@ class ExpressionClassSupportVisitorMixin(ClassMemberFormattingVisitorMixin):
         """
         title: Resolve one visible class attribute candidate by source name.
         parameters:
-          class_:
-            type: SemanticClass
-          field_name:
-            type: str
-          node:
-            type: astx.AST
-        returns:
-          type: SemanticClassMember | None
+          class_: Class being processed.
+          field_name: Name of field.
+          node: Syntax node to process.
+        returns: Resolved one visible class attribute candidate by source name.
         """
         member = class_.member_table.get(field_name)
         if member is not None:
@@ -218,14 +201,10 @@ class ExpressionClassSupportVisitorMixin(ClassMemberFormattingVisitorMixin):
         """
         title: Return one resolved class-instance storage slot.
         parameters:
-          class_:
-            type: SemanticClass
-          member:
-            type: SemanticClassMember
-          visible_name:
-            type: str | None
-        returns:
-          type: SemanticClassLayoutField
+          class_: Class being processed.
+          member: Member.
+          visible_name: Name of visible.
+        returns: One resolved class-instance storage slot.
         """
         if class_.layout is None:
             raise TypeError("class field access requires a resolved layout")
@@ -249,14 +228,10 @@ class ExpressionClassSupportVisitorMixin(ClassMemberFormattingVisitorMixin):
         """
         title: Return one resolved class-static storage binding.
         parameters:
-          class_:
-            type: SemanticClass
-          member:
-            type: SemanticClassMember
-          field_name:
-            type: str
-        returns:
-          type: SemanticClassStaticStorage
+          class_: Class being processed.
+          member: Member.
+          field_name: Name of field.
+        returns: One resolved class-static storage binding.
         """
         if class_.layout is None:
             raise TypeError(
@@ -278,10 +253,8 @@ class ExpressionClassSupportVisitorMixin(ClassMemberFormattingVisitorMixin):
         """
         title: Return whether the current analysis context may access a member.
         parameters:
-          member:
-            type: SemanticClassMember
-        returns:
-          type: bool
+          member: Member.
+        returns: Whether the current analysis context may access a member.
         """
         if member.visibility is astx.VisibilityKind.public:
             return True
@@ -304,12 +277,9 @@ class ExpressionClassSupportVisitorMixin(ClassMemberFormattingVisitorMixin):
         """
         title: Resolve one class name from visible bindings.
         parameters:
-          name:
-            type: str
-          node:
-            type: astx.AST
-        returns:
-          type: SemanticClass | None
+          name: Name identifying the declaration or operation.
+          node: Syntax node to process.
+        returns: Resolved one class name from visible bindings.
         """
         binding = self.bindings.resolve(name)
         if (
@@ -336,16 +306,11 @@ class ExpressionClassSupportVisitorMixin(ClassMemberFormattingVisitorMixin):
         """
         title: Resolve the receiver class and one explicit base view.
         parameters:
-          receiver_type:
-            type: astx.DataType | None
-          base_class_name:
-            type: str
-          node:
-            type: astx.AST
-          context:
-            type: str
-        returns:
-          type: tuple[SemanticClass, SemanticClass] | None
+          receiver_type: Type of receiver.
+          base_class_name: Name of base class.
+          node: Syntax node to process.
+          context: Context for the operation.
+        returns: Resolved the receiver class and one explicit base view.
         """
         receiver_class = self._resolve_class_from_type(
             receiver_type,
@@ -382,15 +347,12 @@ class ExpressionClassSupportVisitorMixin(ClassMemberFormattingVisitorMixin):
         member: SemanticClassMember,
     ) -> SemanticFunction:
         """
-        title: >-
-          Return one visible-signature callable wrapper for a class method.
+        title: Return one visible-signature callable wrapper for a class
+          method.
         parameters:
-          class_:
-            type: SemanticClass
-          member:
-            type: SemanticClassMember
-        returns:
-          type: SemanticFunction
+          class_: Class being processed.
+          member: Member.
+        returns: One visible-signature callable wrapper for a class method.
         """
         declaration = member.declaration
         if member.signature is None or not isinstance(
@@ -419,14 +381,11 @@ class ExpressionClassSupportVisitorMixin(ClassMemberFormattingVisitorMixin):
         """
         title: Return one human-facing requested method signature.
         parameters:
-          method_name:
-            type: str
-          arg_types:
-            type: list[astx.DataType | None]
-          is_static:
-            type: bool
-        returns:
-          type: str
+          method_name: Name of method.
+          arg_types: Types of arg.
+          is_static: Whether the member belongs to the class rather than
+            an instance.
+        returns: One human-facing requested method signature.
         """
         parameters = ", ".join(display_type_name(arg) for arg in arg_types)
         suffix = " static" if is_static else ""
@@ -442,21 +401,16 @@ class ExpressionClassSupportVisitorMixin(ClassMemberFormattingVisitorMixin):
         exact: bool,
     ) -> bool:
         """
-        title: >-
-          Match a candidate's own keyword names without speculative visits.
+        title: Match a candidate's own keyword names without speculative
+          visits.
         parameters:
-          class_:
-            type: SemanticClass
-          member:
-            type: SemanticClassMember
-          arg_types:
-            type: list[astx.DataType | None]
-          node:
-            type: astx.AST
-          exact:
-            type: bool
-        returns:
-          type: bool
+          class_: Class being processed.
+          member: Member.
+          arg_types: Types of arg.
+          node: Syntax node to process.
+          exact: Whether to use exact.
+        returns: 'Result of this operation: match a candidate''s own keyword
+          names without speculative visits.'
         """
         function = self._visible_method_function(class_, member)
         slots = argument_slots(function, node)
@@ -493,20 +447,13 @@ class ExpressionClassSupportVisitorMixin(ClassMemberFormattingVisitorMixin):
         """
         title: Resolve one class-method overload from the effective group.
         parameters:
-          class_:
-            type: SemanticClass
-          method_name:
-            type: str
-          arg_types:
-            type: list[astx.DataType | None]
-          is_static:
-            type: bool
-          node:
-            type: astx.AST
-        returns:
-          type: >-
-            tuple[SemanticClassMember, tuple[SemanticClassMember, Ellipsis]] |
-            None
+          class_: Class being processed.
+          method_name: Name of method.
+          arg_types: Types of arg.
+          is_static: Whether the member belongs to the class rather than
+            an instance.
+          node: Syntax node to process.
+        returns: Resolved one class-method overload from the effective group.
         """
         member = class_.member_table.get(method_name)
         group = class_.method_groups.get(method_name, ())

@@ -3,9 +3,8 @@
 
 """
 title: Expression Tensor visitors.
-summary: >-
-  Handle tensor literals, views, indexing, and lifetime helper expressions
-  using the shared tensor-and-buffer support mixin.
+summary: Handle tensor literals, views, indexing, and lifetime helper
+  expressions using the shared tensor-and-buffer support mixin.
 """
 
 from __future__ import annotations
@@ -55,8 +54,7 @@ class ExpressionTensorVisitorMixin(ExpressionTensorBufferSupportVisitorMixin):
         """
         title: Visit TensorLiteral nodes.
         parameters:
-          node:
-            type: astx.TensorLiteral
+          node: Syntax node to process.
         """
         for item in node.values:
             contextualize_literal(item, node.element_type)
@@ -155,8 +153,7 @@ class ExpressionTensorVisitorMixin(ExpressionTensorBufferSupportVisitorMixin):
         """
         title: Visit TensorView nodes.
         parameters:
-          node:
-            type: astx.TensorView
+          node: Syntax node to process.
         """
         self.visit(node.base)
         base_type = self._expr_type(node.base)
@@ -316,8 +313,7 @@ class ExpressionTensorVisitorMixin(ExpressionTensorBufferSupportVisitorMixin):
         """
         title: Visit TensorIndex nodes.
         parameters:
-          node:
-            type: astx.TensorIndex
+          node: Syntax node to process.
         """
         self.visit(node.base)
         for index in node.indices:
@@ -337,8 +333,7 @@ class ExpressionTensorVisitorMixin(ExpressionTensorBufferSupportVisitorMixin):
         """
         title: Visit TensorStore nodes.
         parameters:
-          node:
-            type: astx.TensorStore
+          node: Syntax node to process.
         """
         self.visit(node.base)
         for index in node.indices:
@@ -366,8 +361,7 @@ class ExpressionTensorVisitorMixin(ExpressionTensorBufferSupportVisitorMixin):
         """
         title: Visit TensorNDim nodes.
         parameters:
-          node:
-            type: astx.TensorNDim
+          node: Syntax node to process.
         """
         self.visit(node.base)
         if not isinstance(self._expr_type(node.base), astx.TensorType):
@@ -383,8 +377,7 @@ class ExpressionTensorVisitorMixin(ExpressionTensorBufferSupportVisitorMixin):
         """
         title: Visit TensorShape nodes.
         parameters:
-          node:
-            type: astx.TensorShape
+          node: Syntax node to process.
         """
         self.visit(node.base)
         if not isinstance(self._expr_type(node.base), astx.TensorType):
@@ -413,8 +406,7 @@ class ExpressionTensorVisitorMixin(ExpressionTensorBufferSupportVisitorMixin):
         """
         title: Visit TensorStride nodes.
         parameters:
-          node:
-            type: astx.TensorStride
+          node: Syntax node to process.
         """
         self.visit(node.base)
         if not isinstance(self._expr_type(node.base), astx.TensorType):
@@ -443,8 +435,7 @@ class ExpressionTensorVisitorMixin(ExpressionTensorBufferSupportVisitorMixin):
         """
         title: Visit TensorElementCount nodes.
         parameters:
-          node:
-            type: astx.TensorElementCount
+          node: Syntax node to process.
         """
         self.visit(node.base)
         if not isinstance(self._expr_type(node.base), astx.TensorType):
@@ -466,8 +457,7 @@ class ExpressionTensorVisitorMixin(ExpressionTensorBufferSupportVisitorMixin):
         """
         title: Visit TensorByteOffset nodes.
         parameters:
-          node:
-            type: astx.TensorByteOffset
+          node: Syntax node to process.
         """
         self.visit(node.base)
         for index in node.indices:
@@ -485,8 +475,7 @@ class ExpressionTensorVisitorMixin(ExpressionTensorBufferSupportVisitorMixin):
         """
         title: Visit TensorRetain nodes.
         parameters:
-          node:
-            type: astx.TensorRetain
+          node: Syntax node to process.
         """
         self.visit(node.base)
         if not isinstance(self._expr_type(node.base), astx.TensorType):
@@ -507,8 +496,7 @@ class ExpressionTensorVisitorMixin(ExpressionTensorBufferSupportVisitorMixin):
         """
         title: Visit TensorRelease nodes.
         parameters:
-          node:
-            type: astx.TensorRelease
+          node: Syntax node to process.
         """
         self.visit(node.base)
         if not isinstance(self._expr_type(node.base), astx.TensorType):

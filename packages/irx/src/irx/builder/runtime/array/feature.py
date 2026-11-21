@@ -48,10 +48,8 @@ def _build_runtime_feature(feature_name: str) -> RuntimeFeature:
     """
     title: Build one runtime feature specification.
     parameters:
-      feature_name:
-        type: str
-    returns:
-      type: RuntimeFeature
+      feature_name: Name of feature.
+    returns: Constructed one runtime feature specification.
     """
     runtime_root = Path(__file__).resolve().parent
     native_root = (runtime_root.parent / "arrow" / "native").resolve()
@@ -241,8 +239,7 @@ def _build_runtime_feature(feature_name: str) -> RuntimeFeature:
 def build_array_runtime_feature() -> RuntimeFeature:
     """
     title: Build the builtin array runtime feature specification.
-    returns:
-      type: RuntimeFeature
+    returns: Constructed the builtin array runtime feature specification.
     """
     return _build_runtime_feature("array")
 
@@ -257,16 +254,11 @@ def _declare_function(
     """
     title: Declare one Arrow runtime symbol.
     parameters:
-      visitor:
-        type: VisitorProtocol
-      name:
-        type: str
-      return_type:
-        type: ir.Type
-      arg_types:
-        type: list[ir.Type]
-    returns:
-      type: ir.Function
+      visitor: Visitor performing the traversal or lowering.
+      name: Name identifying the declaration or operation.
+      return_type: Declared result type.
+      arg_types: Types of arg.
+    returns: 'Result of this operation: declare one Arrow runtime symbol.'
     """
     fn_type = ir.FunctionType(return_type, arg_types)
     return declare_external_function(visitor._llvm.module, name, fn_type)
@@ -277,10 +269,8 @@ def _opaque_handle_type(visitor: VisitorProtocol) -> ir.Type:
     """
     title: Return one opaque runtime handle type.
     parameters:
-      visitor:
-        type: VisitorProtocol
-    returns:
-      type: ir.Type
+      visitor: Visitor performing the traversal or lowering.
+    returns: One opaque runtime handle type.
     """
     return visitor._llvm.OPAQUE_POINTER_TYPE
 
@@ -290,10 +280,8 @@ def _declare_schema_import_copy(visitor: VisitorProtocol) -> ir.Function:
     """
     title: Declare Arrow schema import copy.
     parameters:
-      visitor:
-        type: VisitorProtocol
-    returns:
-      type: ir.Function
+      visitor: Visitor performing the traversal or lowering.
+    returns: 'Result of this operation: declare Arrow schema import copy.'
     """
     return _declare_function(
         visitor,
@@ -311,10 +299,8 @@ def _declare_schema_export(visitor: VisitorProtocol) -> ir.Function:
     """
     title: Declare Arrow schema export.
     parameters:
-      visitor:
-        type: VisitorProtocol
-    returns:
-      type: ir.Function
+      visitor: Visitor performing the traversal or lowering.
+    returns: 'Result of this operation: declare Arrow schema export.'
     """
     return _declare_function(
         visitor,
@@ -332,10 +318,8 @@ def _declare_schema_type_id(visitor: VisitorProtocol) -> ir.Function:
     """
     title: Declare Arrow schema type id.
     parameters:
-      visitor:
-        type: VisitorProtocol
-    returns:
-      type: ir.Function
+      visitor: Visitor performing the traversal or lowering.
+    returns: 'Result of this operation: declare Arrow schema type id.'
     """
     return _declare_function(
         visitor,
@@ -350,10 +334,8 @@ def _declare_schema_is_nullable(visitor: VisitorProtocol) -> ir.Function:
     """
     title: Declare Arrow schema is nullable.
     parameters:
-      visitor:
-        type: VisitorProtocol
-    returns:
-      type: ir.Function
+      visitor: Visitor performing the traversal or lowering.
+    returns: 'Result of this operation: declare Arrow schema is nullable.'
     """
     return _declare_function(
         visitor,
@@ -368,10 +350,8 @@ def _declare_schema_retain(visitor: VisitorProtocol) -> ir.Function:
     """
     title: Declare Arrow schema retain.
     parameters:
-      visitor:
-        type: VisitorProtocol
-    returns:
-      type: ir.Function
+      visitor: Visitor performing the traversal or lowering.
+    returns: 'Result of this operation: declare Arrow schema retain.'
     """
     return _declare_function(
         visitor,
@@ -386,10 +366,8 @@ def _declare_schema_release(visitor: VisitorProtocol) -> ir.Function:
     """
     title: Declare Arrow schema release.
     parameters:
-      visitor:
-        type: VisitorProtocol
-    returns:
-      type: ir.Function
+      visitor: Visitor performing the traversal or lowering.
+    returns: 'Result of this operation: declare Arrow schema release.'
     """
     return _declare_function(
         visitor,
@@ -404,10 +382,8 @@ def _declare_builder_new(visitor: VisitorProtocol) -> ir.Function:
     """
     title: Declare Arrow builder new.
     parameters:
-      visitor:
-        type: VisitorProtocol
-    returns:
-      type: ir.Function
+      visitor: Visitor performing the traversal or lowering.
+    returns: 'Result of this operation: declare Arrow builder new.'
     """
     return _declare_function(
         visitor,
@@ -425,10 +401,8 @@ def _declare_builder_append_null(visitor: VisitorProtocol) -> ir.Function:
     """
     title: Declare Arrow builder append null.
     parameters:
-      visitor:
-        type: VisitorProtocol
-    returns:
-      type: ir.Function
+      visitor: Visitor performing the traversal or lowering.
+    returns: 'Result of this operation: declare Arrow builder append null.'
     """
     return _declare_function(
         visitor,
@@ -446,10 +420,8 @@ def _declare_builder_append_int(visitor: VisitorProtocol) -> ir.Function:
     """
     title: Declare Arrow builder append int.
     parameters:
-      visitor:
-        type: VisitorProtocol
-    returns:
-      type: ir.Function
+      visitor: Visitor performing the traversal or lowering.
+    returns: 'Result of this operation: declare Arrow builder append int.'
     """
     return _declare_function(
         visitor,
@@ -467,10 +439,8 @@ def _declare_builder_append_uint(visitor: VisitorProtocol) -> ir.Function:
     """
     title: Declare Arrow builder append uint.
     parameters:
-      visitor:
-        type: VisitorProtocol
-    returns:
-      type: ir.Function
+      visitor: Visitor performing the traversal or lowering.
+    returns: 'Result of this operation: declare Arrow builder append uint.'
     """
     return _declare_function(
         visitor,
@@ -488,10 +458,8 @@ def _declare_builder_append_double(visitor: VisitorProtocol) -> ir.Function:
     """
     title: Declare Arrow builder append double.
     parameters:
-      visitor:
-        type: VisitorProtocol
-    returns:
-      type: ir.Function
+      visitor: Visitor performing the traversal or lowering.
+    returns: 'Result of this operation: declare Arrow builder append double.'
     """
     return _declare_function(
         visitor,
@@ -509,10 +477,8 @@ def _declare_builder_int32_new(visitor: VisitorProtocol) -> ir.Function:
     """
     title: Declare Arrow builder int32 new.
     parameters:
-      visitor:
-        type: VisitorProtocol
-    returns:
-      type: ir.Function
+      visitor: Visitor performing the traversal or lowering.
+    returns: 'Result of this operation: declare Arrow builder int32 new.'
     """
     return _declare_function(
         visitor,
@@ -527,10 +493,8 @@ def _declare_builder_append_int32(visitor: VisitorProtocol) -> ir.Function:
     """
     title: Declare Arrow builder append int32.
     parameters:
-      visitor:
-        type: VisitorProtocol
-    returns:
-      type: ir.Function
+      visitor: Visitor performing the traversal or lowering.
+    returns: 'Result of this operation: declare Arrow builder append int32.'
     """
     return _declare_function(
         visitor,
@@ -548,10 +512,8 @@ def _declare_builder_finish(visitor: VisitorProtocol) -> ir.Function:
     """
     title: Declare Arrow builder finish.
     parameters:
-      visitor:
-        type: VisitorProtocol
-    returns:
-      type: ir.Function
+      visitor: Visitor performing the traversal or lowering.
+    returns: 'Result of this operation: declare Arrow builder finish.'
     """
     return _declare_function(
         visitor,
@@ -569,10 +531,8 @@ def _declare_builder_release(visitor: VisitorProtocol) -> ir.Function:
     """
     title: Declare Arrow builder release.
     parameters:
-      visitor:
-        type: VisitorProtocol
-    returns:
-      type: ir.Function
+      visitor: Visitor performing the traversal or lowering.
+    returns: 'Result of this operation: declare Arrow builder release.'
     """
     return _declare_function(
         visitor,
@@ -587,10 +547,8 @@ def _declare_array_length(visitor: VisitorProtocol) -> ir.Function:
     """
     title: Declare Arrow array length.
     parameters:
-      visitor:
-        type: VisitorProtocol
-    returns:
-      type: ir.Function
+      visitor: Visitor performing the traversal or lowering.
+    returns: 'Result of this operation: declare Arrow array length.'
     """
     return _declare_function(
         visitor,
@@ -605,10 +563,8 @@ def _declare_array_offset(visitor: VisitorProtocol) -> ir.Function:
     """
     title: Declare Arrow array offset.
     parameters:
-      visitor:
-        type: VisitorProtocol
-    returns:
-      type: ir.Function
+      visitor: Visitor performing the traversal or lowering.
+    returns: 'Result of this operation: declare Arrow array offset.'
     """
     return _declare_function(
         visitor,
@@ -623,10 +579,8 @@ def _declare_array_null_count(visitor: VisitorProtocol) -> ir.Function:
     """
     title: Declare Arrow array null count.
     parameters:
-      visitor:
-        type: VisitorProtocol
-    returns:
-      type: ir.Function
+      visitor: Visitor performing the traversal or lowering.
+    returns: 'Result of this operation: declare Arrow array null count.'
     """
     return _declare_function(
         visitor,
@@ -641,10 +595,8 @@ def _declare_array_type_id(visitor: VisitorProtocol) -> ir.Function:
     """
     title: Declare Arrow array type id.
     parameters:
-      visitor:
-        type: VisitorProtocol
-    returns:
-      type: ir.Function
+      visitor: Visitor performing the traversal or lowering.
+    returns: 'Result of this operation: declare Arrow array type id.'
     """
     return _declare_function(
         visitor,
@@ -659,10 +611,8 @@ def _declare_array_is_nullable(visitor: VisitorProtocol) -> ir.Function:
     """
     title: Declare Arrow array is nullable.
     parameters:
-      visitor:
-        type: VisitorProtocol
-    returns:
-      type: ir.Function
+      visitor: Visitor performing the traversal or lowering.
+    returns: 'Result of this operation: declare Arrow array is nullable.'
     """
     return _declare_function(
         visitor,
@@ -679,10 +629,9 @@ def _declare_array_has_validity_bitmap(
     """
     title: Declare Arrow array has validity bitmap.
     parameters:
-      visitor:
-        type: VisitorProtocol
-    returns:
-      type: ir.Function
+      visitor: Visitor performing the traversal or lowering.
+    returns: 'Result of this operation: declare Arrow array has validity
+      bitmap.'
     """
     return _declare_function(
         visitor,
@@ -699,10 +648,9 @@ def _declare_array_can_borrow_buffer_view(
     """
     title: Declare Arrow array can borrow buffer view.
     parameters:
-      visitor:
-        type: VisitorProtocol
-    returns:
-      type: ir.Function
+      visitor: Visitor performing the traversal or lowering.
+    returns: 'Result of this operation: declare Arrow array can borrow buffer
+      view.'
     """
     return _declare_function(
         visitor,
@@ -717,10 +665,8 @@ def _declare_array_schema_copy(visitor: VisitorProtocol) -> ir.Function:
     """
     title: Declare Arrow array schema copy.
     parameters:
-      visitor:
-        type: VisitorProtocol
-    returns:
-      type: ir.Function
+      visitor: Visitor performing the traversal or lowering.
+    returns: 'Result of this operation: declare Arrow array schema copy.'
     """
     return _declare_function(
         visitor,
@@ -738,10 +684,8 @@ def _declare_array_export(visitor: VisitorProtocol) -> ir.Function:
     """
     title: Declare Arrow array export.
     parameters:
-      visitor:
-        type: VisitorProtocol
-    returns:
-      type: ir.Function
+      visitor: Visitor performing the traversal or lowering.
+    returns: 'Result of this operation: declare Arrow array export.'
     """
     return _declare_function(
         visitor,
@@ -760,10 +704,8 @@ def _declare_array_import_copy(visitor: VisitorProtocol) -> ir.Function:
     """
     title: Declare Arrow array import copy.
     parameters:
-      visitor:
-        type: VisitorProtocol
-    returns:
-      type: ir.Function
+      visitor: Visitor performing the traversal or lowering.
+    returns: 'Result of this operation: declare Arrow array import copy.'
     """
     return _declare_function(
         visitor,
@@ -782,10 +724,8 @@ def _declare_array_import_move(visitor: VisitorProtocol) -> ir.Function:
     """
     title: Declare Arrow array import move.
     parameters:
-      visitor:
-        type: VisitorProtocol
-    returns:
-      type: ir.Function
+      visitor: Visitor performing the traversal or lowering.
+    returns: 'Result of this operation: declare Arrow array import move.'
     """
     return _declare_function(
         visitor,
@@ -804,10 +744,8 @@ def _declare_array_validity_bitmap(visitor: VisitorProtocol) -> ir.Function:
     """
     title: Declare Arrow array validity bitmap.
     parameters:
-      visitor:
-        type: VisitorProtocol
-    returns:
-      type: ir.Function
+      visitor: Visitor performing the traversal or lowering.
+    returns: 'Result of this operation: declare Arrow array validity bitmap.'
     """
     return _declare_function(
         visitor,
@@ -829,10 +767,9 @@ def _declare_array_borrow_buffer_view(
     """
     title: Declare Arrow array borrow buffer view.
     parameters:
-      visitor:
-        type: VisitorProtocol
-    returns:
-      type: ir.Function
+      visitor: Visitor performing the traversal or lowering.
+    returns: 'Result of this operation: declare Arrow array borrow buffer
+      view.'
     """
     return _declare_function(
         visitor,
@@ -850,10 +787,8 @@ def _declare_array_retain(visitor: VisitorProtocol) -> ir.Function:
     """
     title: Declare Arrow array retain.
     parameters:
-      visitor:
-        type: VisitorProtocol
-    returns:
-      type: ir.Function
+      visitor: Visitor performing the traversal or lowering.
+    returns: 'Result of this operation: declare Arrow array retain.'
     """
     return _declare_function(
         visitor,
@@ -868,10 +803,8 @@ def _declare_array_release(visitor: VisitorProtocol) -> ir.Function:
     """
     title: Declare Arrow array release.
     parameters:
-      visitor:
-        type: VisitorProtocol
-    returns:
-      type: ir.Function
+      visitor: Visitor performing the traversal or lowering.
+    returns: 'Result of this operation: declare Arrow array release.'
     """
     return _declare_function(
         visitor,
@@ -886,10 +819,8 @@ def _declare_last_error(visitor: VisitorProtocol) -> ir.Function:
     """
     title: Declare Arrow last error.
     parameters:
-      visitor:
-        type: VisitorProtocol
-    returns:
-      type: ir.Function
+      visitor: Visitor performing the traversal or lowering.
+    returns: 'Result of this operation: declare Arrow last error.'
     """
     return _declare_function(
         visitor,

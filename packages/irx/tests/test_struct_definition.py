@@ -19,10 +19,8 @@ def _struct_type(name: str) -> astx.StructType:
     """
     title: Build one named struct type reference.
     parameters:
-      name:
-        type: str
-    returns:
-      type: astx.StructType
+      name: Name identifying the declaration or operation.
+    returns: Constructed one named struct type reference.
     """
     return astx.StructType(name)
 
@@ -31,12 +29,9 @@ def _field(value: astx.AST, name: str) -> astx.FieldAccess:
     """
     title: Build one field access node.
     parameters:
-      value:
-        type: astx.AST
-      name:
-        type: str
-    returns:
-      type: astx.FieldAccess
+      value: Value to process.
+      name: Name identifying the declaration or operation.
+    returns: Constructed one field access node.
     """
     return astx.FieldAccess(value, name)
 
@@ -49,14 +44,10 @@ def _mutable_var(
     """
     title: Build one mutable local variable declaration.
     parameters:
-      name:
-        type: str
-      type_:
-        type: astx.DataType
-      value:
-        type: astx.DataType | astx.Undefined
-    returns:
-      type: astx.VariableDeclaration
+      name: Name identifying the declaration or operation.
+      type_: Type expression to process.
+      value: Value to process.
+    returns: Constructed one mutable local variable declaration.
     """
     return astx.VariableDeclaration(
         name=name,
@@ -69,8 +60,7 @@ def _mutable_var(
 def _point_struct() -> astx.StructDefStmt:
     """
     title: Build a simple point struct.
-    returns:
-      type: astx.StructDefStmt
+    returns: Constructed a simple point struct.
     """
     return astx.StructDefStmt(
         name="Point",
@@ -86,10 +76,9 @@ def _main_int32(*body_nodes: astx.AST) -> astx.FunctionDef:
     title: Build a small int32-returning main function.
     parameters:
       body_nodes:
-        type: astx.AST
         variadic: positional
-    returns:
-      type: astx.FunctionDef
+        description: Body nodes.
+    returns: Constructed a small int32-returning main function.
     """
     body = astx.Block()
     for node in body_nodes:
@@ -111,8 +100,7 @@ def test_struct_definition_simple(builder_class: type[Builder]) -> None:
     """
     title: Simple struct definitions lower to identified LLVM structs.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     module = make_module("main", _point_struct(), _main_int32())
@@ -131,8 +119,7 @@ def test_struct_field_layout_stays_in_declaration_order(
     """
     title: Field order stays stable in the emitted LLVM type.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     record = astx.StructDefStmt(
@@ -156,8 +143,7 @@ def test_nested_struct_layout_is_stable(builder_class: type[Builder]) -> None:
     """
     title: Nested structs preserve declaration-order layout transitively.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     inner = astx.StructDefStmt(
@@ -193,8 +179,7 @@ def test_struct_field_reads_and_writes_use_stable_indices(
     """
     title: Field access uses declaration-order indices for reads and writes.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     triple = astx.StructDefStmt(
@@ -253,8 +238,7 @@ def test_nested_field_access_reads_and_writes(
     """
     title: Nested field access lowers through semantic field indices.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     inner = astx.StructDefStmt(
@@ -301,8 +285,7 @@ def test_struct_parameter_by_value_is_supported(
     """
     title: Struct parameters lower by value in IRx-defined functions.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     read_point = astx.FunctionDef(
@@ -348,8 +331,7 @@ def test_struct_return_by_value_and_assignment_from_call(
     """
     title: Struct-returning functions round-trip by value through locals.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     make_point_body = astx.Block()
@@ -402,8 +384,7 @@ def test_nested_struct_return_by_value_is_supported(
     """
     title: Nested structs can be returned by value without hidden fields.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     inner = astx.StructDefStmt(
@@ -469,8 +450,7 @@ def test_duplicate_struct_name_is_rejected(
     """
     title: Duplicate struct names are semantic errors.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     module = make_module(
@@ -504,8 +484,7 @@ def test_duplicate_field_name_is_rejected(
     """
     title: Duplicate field names are semantic errors.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     module = make_module(
@@ -532,8 +511,7 @@ def test_unknown_field_type_is_rejected(builder_class: type[Builder]) -> None:
     """
     title: Unknown field types are semantic errors.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     module = make_module(
@@ -559,8 +537,7 @@ def test_empty_structs_are_rejected(builder_class: type[Builder]) -> None:
     """
     title: Empty structs are explicitly unsupported for now.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     module = make_module(
@@ -583,8 +560,7 @@ def test_invalid_field_access_is_rejected(
     """
     title: Unknown fields are rejected before lowering.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     main_fn = _main_int32(
@@ -607,8 +583,7 @@ def test_direct_recursive_struct_is_rejected(
     """
     title: Direct by-value recursive structs are forbidden.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     module = make_module(
@@ -639,8 +614,7 @@ def test_mutual_recursive_structs_are_rejected(
     """
     title: Mutual by-value recursive structs are forbidden.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     module = make_module(

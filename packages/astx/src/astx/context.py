@@ -1,8 +1,7 @@
 """
 title: ASTx context-manager AST nodes.
-summary: >-
-  Provide a small facade node for Python-like ``with`` statements until
-  upstream ASTx exposes a canonical context-manager construct.
+summary: Provide a small facade node for Python-like ``with`` statements
+  until upstream ASTx exposes a canonical context-manager construct.
 """
 
 from __future__ import annotations
@@ -19,17 +18,13 @@ from astx.tools.typing import typechecked
 class WithStmt(astx.StatementType):
     """
     title: Internal context-manager statement node.
-    summary: >-
-      Model source forms equivalent to ``with manager as target: body`` while
-      keeping the manager expression, optional target, and body as regular ASTx
-      child nodes.
+    summary: 'Model source forms equivalent to ``with manager as target:
+      body`` while keeping the manager expression, optional target, and body
+      as regular ASTx child nodes.'
     attributes:
-      manager:
-        type: astx.AST
-      body:
-        type: astx.Block
-      target:
-        type: astx.AST | None
+      manager: Manager.
+      body: Statements forming the body.
+      target: Destination of the operation.
     """
 
     manager: astx.AST
@@ -47,16 +42,11 @@ class WithStmt(astx.StatementType):
         """
         title: Initialize one with statement.
         parameters:
-          manager:
-            type: astx.AST
-          body:
-            type: astx.Block
-          target:
-            type: astx.AST | None
-          loc:
-            type: SourceLocation
-          parent:
-            type: astx.ASTNodes | None
+          manager: Manager.
+          body: Statements forming the body.
+          target: Destination of the operation.
+          loc: Source coordinates associated with the node.
+          parent: Parent node or enclosing scope.
         """
         super().__init__(loc=loc, parent=parent)
         self.manager = manager
@@ -66,8 +56,7 @@ class WithStmt(astx.StatementType):
     def __str__(self) -> str:
         """
         title: Return a compact display string.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         return "WithStmt"
 
@@ -75,10 +64,8 @@ class WithStmt(astx.StatementType):
         """
         title: Return the structured representation.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         key = f"WITH-STMT[{id(self)}]" if simplified else "WITH-STMT"
         target = (

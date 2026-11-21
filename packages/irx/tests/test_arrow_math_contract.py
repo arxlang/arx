@@ -1,11 +1,16 @@
 """
 title: Shared independent f64 math contract oracles.
-summary: >-
-  PyArrow, native ABI and installed-source tests reuse these vectors and bounds
-  for the approved sqrt/exp slice. Log/power remain candidate contracts, not
-  implemented Arx APIs. Decimal references use 200 significant digits and round
-  only at the final conversion to binary64. These checks alone do not qualify
-  the declared CI matrix or a clean installed-wheel environment.
+summary: PyArrow, native ABI and installed-source tests reuse these vectors
+  and bounds for the approved sqrt/exp slice. Log/power remain candidate
+  contracts, not implemented Arx APIs. Decimal references use 200 significant
+  digits and round only at the final conversion to binary64. These checks
+  alone do not qualify the declared CI matrix or a clean installed-wheel
+  environment.
+attributes:
+  KERNELS: Kernels.
+  ULPS: Ulps.
+  FINITE: Finite.
+  SPECIAL: Special.
 """
 
 from __future__ import annotations
@@ -90,12 +95,10 @@ def decimal_reference(
     """
     title: Calculate finite-input references without using the Arrow kernel.
     parameters:
-      operation:
-        type: Operation
-      arguments:
-        type: tuple[float, Ellipsis]
-    returns:
-      type: float
+      operation: Operation to resolve or execute.
+      arguments: Arguments supplied to the call.
+    returns: 'Result of this operation: calculate finite-input references
+      without using the Arrow kernel.'
     """
     with localcontext() as context:
         context.prec = 200
@@ -113,10 +116,9 @@ def ordered_bits(value: float) -> int:
     """
     title: Order finite binary64 encodings for an integer ULP distance.
     parameters:
-      value:
-        type: float
-    returns:
-      type: int
+      value: Value to process.
+    returns: 'Result of this operation: order finite binary64 encodings for
+      an integer ULP distance.'
     """
     bits = int.from_bytes(struct.pack(">d", value), "big")
     sign = 1 << 63
@@ -129,12 +131,9 @@ def assert_result(
     """
     title: Compare dtype, validity, IEEE class/sign and finite ULP error.
     parameters:
-      operation:
-        type: Operation
-      result:
-        type: pa.Scalar
-      expected:
-        type: float | None
+      operation: Operation to resolve or execute.
+      result: Result of the operation.
+      expected: Expected result for this case.
     """
     assert result.type == pa.float64()
     value = cast(float | None, result.as_py())
@@ -161,8 +160,7 @@ def test_scalar_array_math_contract(operation: Operation) -> None:
     """
     title: Apply one independent oracle to scalar, sliced and chunked inputs.
     parameters:
-      operation:
-        type: Operation
+      operation: Operation to resolve or execute.
     """
     vectors = [
         (arguments, decimal_reference(operation, arguments))

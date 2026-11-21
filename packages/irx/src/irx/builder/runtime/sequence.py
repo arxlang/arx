@@ -1,9 +1,8 @@
 """
 title: Borrowed sequence descriptor and exact numeric callback ABI.
-summary: >-
-  A descriptor carries borrowed context, i64 length, a checked read callback,
-  and adapter configuration. Readers publish scalar bits and validity only on
-  status zero. No Arrow implementation layout is part of this ABI.
+summary: A descriptor carries borrowed context, i64 length, a checked read
+  callback, and adapter configuration. Readers publish scalar bits and validity
+  only on status zero. No Arrow implementation layout is part of this ABI.
 """
 
 from typing import TYPE_CHECKING
@@ -22,9 +21,10 @@ if TYPE_CHECKING:
 @typechecked
 def sequence_reader_type() -> ir.FunctionType:
     """
-    title: Define status(context, index, configuration, bits-out, valid-out).
-    returns:
-      type: ir.FunctionType
+    title: Define status(context, index, configuration, bits-out,
+      valid-out).
+    returns: 'Result of this operation: define status(context, index,
+      configuration, bits-out, valid-out).'
     """
     return ir.FunctionType(
         ir.IntType(32),
@@ -43,8 +43,8 @@ def sequence_reader_type() -> ir.FunctionType:
 def sequence_view_type() -> ir.LiteralStructType:
     """
     title: Define the call-scoped borrowed numeric descriptor.
-    returns:
-      type: ir.LiteralStructType
+    returns: 'Result of this operation: define the call-scoped borrowed
+      numeric descriptor.'
     """
     return ir.LiteralStructType(
         [
@@ -62,14 +62,13 @@ def declare_sequence_reader(
     visitor: "VisitorProtocol", name: str
 ) -> ir.Function:
     """
-    title: Declare a registered collection-specific checked numeric reader.
+    title: Declare a registered collection-specific checked
+      numeric reader.
     parameters:
-      visitor:
-        type: VisitorProtocol
-      name:
-        type: str
-    returns:
-      type: ir.Function
+      visitor: Visitor performing the traversal or lowering.
+      name: Name identifying the declaration or operation.
+    returns: 'Result of this operation: declare a registered
+      collection-specific checked numeric reader.'
     """
     return declare_external_function(
         visitor._llvm.module, name, sequence_reader_type()

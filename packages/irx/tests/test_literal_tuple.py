@@ -23,10 +23,8 @@ def _struct_int_values(const: ir.Constant) -> list[int]:
     """
     title: Extract integer values from struct constant
     parameters:
-      const:
-        type: ir.Constant
-    returns:
-      type: list[int]
+      const: Const.
+    returns: Extracted integer values from struct constant.
     """
     return [int(v) for v in re.findall(r"i\d+\s+(-?\d+)", str(const))]
 
@@ -36,8 +34,7 @@ def test_literal_tuple_empty(builder_class: type[Builder]) -> None:
     """
     title: Empty LiteralTuple lowering
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     visitor = cast(LLVMVisitor, builder.translator)
@@ -58,8 +55,7 @@ def test_literal_tuple_homogeneous_ints(
     """
     title: Homogeneous LiteralTuple lowering
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     visitor = cast(LLVMVisitor, builder.translator)
@@ -93,8 +89,7 @@ def test_literal_tuple_heterogeneous_unsupported(
     """
     title: Heterogeneous LiteralTuple rejection
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     visitor = cast(LLVMVisitor, builder.translator)

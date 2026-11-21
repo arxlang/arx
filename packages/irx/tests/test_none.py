@@ -19,8 +19,7 @@ def test_none_as_placeholder_in_expression(
     """
     title: Ensure LiteralNone pushes None on result stack without emitting IR.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     module = builder.module()

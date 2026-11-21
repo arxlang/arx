@@ -1,9 +1,10 @@
 """
 title: Logical value signatures for checked RecordBatch native facades.
-summary: >-
-  The registered C ABI returns i32 status and appends an output pointer for
-  non-void results followed by a caller-owned error buffer. These logical
+summary: The registered C ABI returns i32 status and appends an output pointer
+  for non-void results followed by a caller-owned error buffer. These logical
   signatures drive both declarations and generated-call adaptation.
+attributes:
+  ARROW_API_SIGNATURES: Arrow API signatures.
 """
 
 from public import private
@@ -185,14 +186,11 @@ def is_checked_native_facade(
     """
     title: Select exact registered facade symbols using their native identity.
     parameters:
-      symbol_name:
-        type: str
-      feature_name:
-        type: str
-      abi_version:
-        type: object
-    returns:
-      type: bool
+      symbol_name: Name of symbol.
+      feature_name: Name of feature.
+      abi_version: ABI version.
+    returns: 'Result of this operation: select exact registered facade symbols
+      using their native identity.'
     notes: Raw exports in the same feature retain their original C signatures.
     """
     owner = "parquet" if symbol_name in PARQUET_API_SYMBOLS else "record_batch"

@@ -40,8 +40,7 @@ class ArrowTableCast:
     """
     title: Checked table-to-table conversion without combining chunks.
     attributes:
-      schema_ipc:
-        type: bytes | None
+      schema_ipc: Schema IPC.
     """
 
     schema_ipc: bytes | None
@@ -54,16 +53,11 @@ class ArrowConversion:
     """
     title: Resolved native conversion plan; no lookup remains for lowering.
     attributes:
-      to_dataframe:
-        type: bool
-      class_:
-        type: SemanticClass
-      handle_index:
-        type: int
-      columns:
-        type: tuple[tuple[str, int, bool], Ellipsis] | None
-      schema_ipc:
-        type: bytes | None
+      to_dataframe: Whether to use to dataframe.
+      class_: Class being processed.
+      handle_index: Index selecting handle.
+      columns: Column declarations or values.
+      schema_ipc: Schema IPC.
     """
 
     to_dataframe: bool
@@ -84,16 +78,12 @@ def arrow_ownership(
     """
     title: Describe a native table or column reference.
     parameters:
-      type_:
-        type: astx.DataType
-      kind:
-        type: OwnershipKind
-      symbol:
-        type: str | None
-      transfer:
-        type: OwnershipTransferKind
-    returns:
-      type: ResourceOwnership
+      type_: Type expression to process.
+      kind: Kind of value or operation.
+      symbol: Resolved symbol for the operation.
+      transfer: Transfer.
+    returns: 'Result of this operation: describe a native table or column
+      reference.'
     """
     if not isinstance(type_, astx.DataFrameType | astx.SeriesType):
         raise TypeError("Arrow ownership requires a DataFrame or Series")
@@ -118,12 +108,9 @@ def arrow_local(
     """
     title: Acquire an independently owned reference for a local binding.
     parameters:
-      analyzer:
-        type: SemanticAnalyzerCore
-      node:
-        type: astx.VariableDeclaration | astx.InlineVariableDeclaration
-      symbol:
-        type: SemanticSymbol
+      analyzer: Semantic analyzer resolving the operation.
+      node: Syntax node to process.
+      symbol: Resolved symbol for the operation.
     """
     function = analyzer.context.current_function
     if (
@@ -161,15 +148,13 @@ def resolve_arrow_cast(
     analyzer: SemanticAnalyzerCore, node: astx.Cast
 ) -> bool:
     """
-    title: >-
-      Resolve only host-registered RecordBatch conversions, not pointer casts.
+    title: Resolve only host-registered RecordBatch conversions, not pointer
+      casts.
     parameters:
-      analyzer:
-        type: SemanticAnalyzerCore
-      node:
-        type: astx.Cast
-    returns:
-      type: bool
+      analyzer: Semantic analyzer resolving the operation.
+      node: Syntax node to process.
+    returns: Resolved only host-registered RecordBatch conversions, not pointer
+      casts.
     """
     info = analyzer._semantic(node)
     info.extras.pop(ARROW_CONVERSION, None)
@@ -350,14 +335,10 @@ def resolve_arrow_store(
     """
     title: Resolve an owned Arrow local replacement without losing aliases.
     parameters:
-      analyzer:
-        type: SemanticAnalyzerCore
-      node:
-        type: astx.BinaryOp
-      symbol:
-        type: SemanticSymbol
-    returns:
-      type: bool
+      analyzer: Semantic analyzer resolving the operation.
+      node: Syntax node to process.
+      symbol: Resolved symbol for the operation.
+    returns: Resolved an owned Arrow local replacement without losing aliases.
     """
     type_ = analyzer._expr_type(node.lhs)
     if not isinstance(type_, astx.DataFrameType | astx.SeriesType):
@@ -389,10 +370,9 @@ def contains_arrow(type_: astx.DataType | None) -> bool:
     """
     title: Detect Arrow ownership hidden in unsupported aggregate storage.
     parameters:
-      type_:
-        type: astx.DataType | None
-    returns:
-      type: bool
+      type_: Type expression to process.
+    returns: 'Result of this operation: detect Arrow ownership hidden in
+      unsupported aggregate storage.'
     """
     if isinstance(type_, astx.DataFrameType | astx.SeriesType):
         return True

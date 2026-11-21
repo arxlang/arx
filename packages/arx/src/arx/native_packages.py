@@ -20,16 +20,14 @@ from arx.native_config import NativeFeatureConfig
 
 def package_path(root: Path, value: str, *, directory: bool = False) -> Path:
     """
-    title: Resolve a contained package file or directory, including symlinks.
+    title: Resolve a contained package file or directory, including
+      symlinks.
     parameters:
-      root:
-        type: Path
-      value:
-        type: str
-      directory:
-        type: bool
-    returns:
-      type: Path
+      root: Root module or resource.
+      value: Value to process.
+      directory: Whether to use directory.
+    returns: Resolved a contained package file or directory, including
+      symlinks.
     """
     path = Path(value)
     if path.is_absolute() or PureWindowsPath(value).is_absolute():
@@ -53,14 +51,10 @@ def resolve_feature(
     """
     title: Convert validated configuration to resolved IRx native inputs.
     parameters:
-      name:
-        type: str
-      config:
-        type: NativeFeatureConfig
-      root:
-        type: Path
-    returns:
-      type: NativeFeature
+      name: Name identifying the declaration or operation.
+      config: Config.
+      root: Root module or resource.
+    returns: Converted validated configuration to resolved IRx native inputs.
     """
     return NativeFeature(
         name,
@@ -81,12 +75,12 @@ def resolve_feature(
 
 def native_project(manifest: Path) -> settings.ArxProject | None:
     """
-    title: Load native settings without changing legacy source-only manifests.
+    title: Load native settings without changing legacy source-only
+      manifests.
     parameters:
-      manifest:
-        type: Path
-    returns:
-      type: settings.ArxProject | None
+      manifest: Manifest.
+    returns: Loaded native settings without changing legacy source-only
+      manifests.
     """
     try:
         data = tomllib.loads(manifest.read_text(encoding="utf-8"))
@@ -111,22 +105,15 @@ def prepare_module(
     """
     title: Attach native capabilities only to a module's actual package origin.
     parameters:
-      module:
-        type: astx.Module
-      key:
-        type: str
-      origin:
-        type: Path
-      manifest:
-        type: Path | None
-      owner:
-        type: str | None
-      package_name:
-        type: str | None
-      source_root:
-        type: Path | None
-    returns:
-      type: ParsedModule
+      module: Module to process.
+      key: Key selecting the entry.
+      origin: Origin.
+      manifest: Manifest.
+      owner: Owner keeping the resource alive.
+      package_name: Name of package.
+      source_root: Source root.
+    returns: 'Result of this operation: attach native capabilities only to
+      a module''s actual package origin.'
     """
     manifest = manifest or settings.find_config_file(origin.parent)
     project = native_project(manifest) if manifest is not None else None

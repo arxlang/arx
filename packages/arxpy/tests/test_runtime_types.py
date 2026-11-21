@@ -92,8 +92,7 @@ def test_public_errors_reject_invalid_messages(
     """
     title: Every public exception class enforces its inherited constructor.
     parameters:
-      error_type:
-        type: type[ArxError]
+      error_type: Type of error.
     """
     with pytest.raises(TypeCheckError, match="message"):
         error_type(12)  # type: ignore[arg-type]
@@ -127,12 +126,9 @@ def test_compiler_operations_reject_invalid_primary_arguments(
     """
     title: Every compiler operation validates its primary public argument.
     parameters:
-      method_name:
-        type: str
-      args:
-        type: tuple[object, Ellipsis]
-      kwargs:
-        type: dict[str, object]
+      method_name: Name of method.
+      args: Arguments supplied to the operation.
+      kwargs: Keyword arguments.
     """
     method = getattr(Compiler(), method_name)
     with pytest.raises(TypeCheckError):
@@ -161,8 +157,7 @@ def test_run_rejects_scalar_command_arguments(args: object) -> None:
     """
     title: Scalar strings and bytes are never expanded as command arguments.
     parameters:
-      args:
-        type: object
+      args: Arguments supplied to the operation.
     """
     artifact = CompilationArtifact(
         ArtifactKind.EXECUTABLE,

@@ -18,8 +18,7 @@ def test_class_hook_spellings_are_identifiers(name: str) -> None:
     """
     title: Lifecycle names use existing identifiers, not new lexer keywords.
     parameters:
-      name:
-        type: str
+      name: Name identifying the declaration or operation.
     """
     ArxIO.string_to_buffer(name)
     assert Lexer().get_token() == Token(kind=TokenKind.identifier, value=name)
@@ -70,8 +69,7 @@ def test_advance(value: str) -> None:
     """
     title: Test advance lexer method.
     parameters:
-      value:
-        type: str
+      value: Value to process.
     """
     ArxIO.string_to_buffer(value)
     lexer = Lexer()
@@ -102,10 +100,8 @@ def test_loop_transfer_keywords(word: str, kind: TokenKind) -> None:
     """
     title: Loop keywords preserve identifier boundaries and Unicode columns.
     parameters:
-      word:
-        type: str
-      kind:
-        type: TokenKind
+      word: Word.
+      kind: Kind of value or operation.
     """
     manifest = load_syntax_manifest()
     assert word in manifest.reserved_keywords
@@ -348,8 +344,7 @@ def test_compound_operator_tokens(operator: str) -> None:
     """
     title: Compound spellings are single tokens without merging spaced symbols.
     parameters:
-      operator:
-        type: str
+      operator: Operator to apply.
     """
     manifest = load_syntax_manifest()
     assert operator in manifest.multi_char_operators
@@ -575,8 +570,7 @@ def test_lexer_rejects_tab_indentation(body: str) -> None:
     """
     title: Arx rejects tab indentation at the lexer boundary.
     parameters:
-      body:
-        type: str
+      body: Statements forming the body.
     """
     ArxIO.string_to_buffer("fn main() -> i32:\n" + body)
 
@@ -626,14 +620,10 @@ def test_lexer_eof_location_does_not_drift(
     """
     title: Trailing trivia yields only stable EOF, never indentation.
     parameters:
-      source:
-        type: str
-      identifiers:
-        type: tuple[str, Ellipsis]
-      line:
-        type: int
-      col:
-        type: int
+      source: Source input to process.
+      identifiers: Identifiers.
+      line: Source line coordinate.
+      col: Source column or column selector.
     """
     ArxIO.string_to_buffer(source)
     lexer = Lexer()
@@ -654,8 +644,7 @@ def test_lexer_rejects_excessive_nesting(
     """
     title: Lexical nesting has a stable resource-limit diagnostic.
     parameters:
-      monkeypatch:
-        type: pytest.MonkeyPatch
+      monkeypatch: Fixture for temporarily replacing dependencies and settings.
     """
     monkeypatch.setattr(lexer_core, "MAX_NESTING_DEPTH", 3)
     ArxIO.string_to_buffer("((((1))))")
@@ -672,8 +661,7 @@ def test_lexer_rejects_oversized_numeric_literal(
     """
     title: Numeric token size is bounded before Python integer conversion.
     parameters:
-      monkeypatch:
-        type: pytest.MonkeyPatch
+      monkeypatch: Fixture for temporarily replacing dependencies and settings.
     """
     monkeypatch.setattr(lexer_core, "MAX_NUMERIC_LITERAL_CHARS", 4)
     ArxIO.string_to_buffer("12345")
@@ -688,8 +676,7 @@ def test_lexer_rejects_excessive_token_count(
     """
     title: Token creation is bounded by a stable resource-limit diagnostic.
     parameters:
-      monkeypatch:
-        type: pytest.MonkeyPatch
+      monkeypatch: Fixture for temporarily replacing dependencies and settings.
     """
     monkeypatch.setattr(lexer_core, "MAX_TOKEN_COUNT", 3)
     ArxIO.string_to_buffer("a b c d")
@@ -850,8 +837,7 @@ def test_unsigned_type_aliases_are_identifiers(name: str) -> None:
     """
     title: Unsigned type aliases preserve the identifier-based type grammar.
     parameters:
-      name:
-        type: str
+      name: Name identifying the declaration or operation.
     """
     ArxIO.string_to_buffer(name)
     assert Lexer().get_token() == Token(kind=TokenKind.identifier, value=name)
@@ -864,8 +850,7 @@ def test_nullable_surface_names_remain_identifiers(name: str) -> None:
     """
     title: Column and null builtins use identifiers, not new lexer keywords.
     parameters:
-      name:
-        type: str
+      name: Name identifying the declaration or operation.
     """
     ArxIO.string_to_buffer(name)
     assert Lexer().get_token() == Token(kind=TokenKind.identifier, value=name)

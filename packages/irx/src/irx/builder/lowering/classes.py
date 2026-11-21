@@ -41,10 +41,8 @@ class ClassVisitorMixin(FileVisitorMixin):
         """
         title: Convert only the public payload pointer to the native ABI.
         parameters:
-          value:
-            type: ir.Value
-        returns:
-          type: ir.Value
+          value: Value to process.
+        returns: Converted only the public payload pointer to the native ABI.
         """
         pointer = self._llvm.INT8_TYPE.as_pointer()
         return (
@@ -57,10 +55,9 @@ class ClassVisitorMixin(FileVisitorMixin):
         """
         title: Locate base-view fields through the concrete descriptor.
         parameters:
-          class_:
-            type: SemanticClass
-        returns:
-          type: ir.Function
+          class_: Class being processed.
+        returns: 'Result of this operation: locate base-view fields through
+          the concrete descriptor.'
         """
         layout = require_semantic_metadata(
             class_.layout,
@@ -123,12 +120,10 @@ class ClassVisitorMixin(FileVisitorMixin):
         """
         title: Snapshot string fields before later expression effects.
         parameters:
-          node:
-            type: astx.AST
-          value:
-            type: ir.Value
-        returns:
-          type: ir.Value
+          node: Syntax node to process.
+          value: Value to process.
+        returns: 'Result of this operation: snapshot string fields before
+          later expression effects.'
         """
         self.class_pin(node, value)
         ownership = resource_ownership(node)
@@ -147,12 +142,9 @@ class ClassVisitorMixin(FileVisitorMixin):
         """
         title: Emit a checked operation on a semantically resolved reference.
         parameters:
-          node:
-            type: astx.AST
-          operation:
-            type: str
-          value:
-            type: ir.Value
+          node: Syntax node to process.
+          operation: Operation to resolve or execute.
+          value: Value to process.
         """
         ownership = resource_ownership(node)
         if (
@@ -198,14 +190,10 @@ class ClassVisitorMixin(FileVisitorMixin):
         """
         title: Release one reference or the current generation of a binding.
         parameters:
-          node:
-            type: astx.AST
-          value:
-            type: ir.Value
-          owner:
-            type: str | None
-          storage:
-            type: bool
+          node: Syntax node to process.
+          value: Value to process.
+          owner: Owner keeping the resource alive.
+          storage: Whether to use storage.
         """
 
         ownership = resource_ownership(node)
@@ -224,8 +212,8 @@ class ClassVisitorMixin(FileVisitorMixin):
 
         def release() -> None:
             """
-            title: >-
-              Release only the references owned by this binding or temporary.
+            title: Release only the references owned by this binding
+              or temporary.
             """
             current = self._llvm.ir_builder.load(value) if storage else value
             if counted:
@@ -247,10 +235,8 @@ class ClassVisitorMixin(FileVisitorMixin):
         """
         title: Pin an evaluated class through the full expression.
         parameters:
-          node:
-            type: astx.AST
-          value:
-            type: ir.Value
+          node: Syntax node to process.
+          value: Value to process.
         """
         info = getattr(node, "semantic", None)
         ownership = resource_ownership(node)
@@ -266,14 +252,13 @@ class ClassVisitorMixin(FileVisitorMixin):
 
     def class_acquire(self, node: astx.AST, value: ir.Value) -> ir.Value:
         """
-        title: Implement the analyzed retain-versus-move decision of a store.
+        title: Implement the analyzed retain-versus-move decision
+          of a store.
         parameters:
-          node:
-            type: astx.AST
-          value:
-            type: ir.Value
-        returns:
-          type: ir.Value
+          node: Syntax node to process.
+          value: Value to process.
+        returns: 'Result of this operation: implement the analyzed
+          retain-versus-move decision of a store.'
         """
         info = getattr(node, "semantic", None)
         store = (
@@ -295,10 +280,9 @@ class ClassVisitorMixin(FileVisitorMixin):
         """
         title: Generate a concrete drop callback from resolved phases.
         parameters:
-          class_:
-            type: SemanticClass
-        returns:
-          type: ir.Function
+          class_: Class being processed.
+        returns: 'Result of this operation: generate a concrete drop callback
+          from resolved phases.'
         """
         initialization = require_semantic_metadata(
             class_.initialization,
@@ -467,10 +451,8 @@ class ClassVisitorMixin(FileVisitorMixin):
         """
         title: Construct an owner with ordered arguments and phase progress.
         parameters:
-          node:
-            type: astx.AST
-          resolution:
-            type: ResolvedClassConstruction
+          node: Syntax node to process.
+          resolution: Resolution.
         """
         from irx.builder.lowering.literals import (  # noqa: PLC0415
             LiteralVisitorMixin,
@@ -722,13 +704,11 @@ class ClassVisitorMixin(FileVisitorMixin):
 
     def arrow_temporary(self, node: astx.AST, value: ir.Value) -> None:
         """
-        title: >-
-          Register a temporary Arrow reference unless moved into a binding.
+        title: Register a temporary Arrow reference unless moved
+          into a binding.
         parameters:
-          node:
-            type: astx.AST
-          value:
-            type: ir.Value
+          node: Syntax node to process.
+          value: Value to process.
         """
         ownership = require_semantic_metadata(
             resource_ownership(node),
@@ -741,14 +721,12 @@ class ClassVisitorMixin(FileVisitorMixin):
 
     def arrow_reference_count(self, owner: str) -> ir.Value:
         """
-        title: >-
-          Fetch a resolved binding's reference counter, not its object
-          refcount.
+        title: Fetch a resolved binding's reference counter, not
+          its object refcount.
         parameters:
-          owner:
-            type: str
-        returns:
-          type: ir.Value
+          owner: Owner keeping the resource alive.
+        returns: 'Result of this operation: fetch a resolved binding''s
+          reference counter, not its object refcount.'
         """
         return self.named_values[f"arrow.references:{owner}"]
 
@@ -756,15 +734,12 @@ class ClassVisitorMixin(FileVisitorMixin):
         self, node: astx.AST, value: ir.Value, owner: str
     ) -> None:
         """
-        title: >-
-          Drop all references held by a binding, including explicit retains.
+        title: Drop all references held by a binding, including explicit
+          retains.
         parameters:
-          node:
-            type: astx.AST
-          value:
-            type: ir.Value
-          owner:
-            type: str
+          node: Syntax node to process.
+          value: Value to process.
+          owner: Owner keeping the resource alive.
         """
         builder = self._llvm.ir_builder
         count = self.arrow_reference_count(owner)
@@ -791,15 +766,12 @@ class ClassVisitorMixin(FileVisitorMixin):
         self, node: astx.AST, value: ir.Value, *, retain: bool
     ) -> None:
         """
-        title: >-
-          Reconcile explicit ASTx lifetime operations with scoped ownership.
+        title: Reconcile explicit ASTx lifetime operations with scoped
+          ownership.
         parameters:
-          node:
-            type: astx.AST
-          value:
-            type: ir.Value
-          retain:
-            type: bool
+          node: Syntax node to process.
+          value: Value to process.
+          retain: Whether to use retain.
         """
         if not isinstance(node, astx.Identifier):
             if retain:

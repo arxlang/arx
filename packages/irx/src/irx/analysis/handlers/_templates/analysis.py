@@ -1,8 +1,7 @@
 """
 title: Template-specialization analysis helpers.
-summary: >-
-  Prepare generated specializations and analyze their concrete function bodies
-  during template processing.
+summary: Prepare generated specializations and analyze their concrete function
+  bodies during template processing.
 """
 
 from __future__ import annotations
@@ -39,8 +38,7 @@ class TemplateAnalysisVisitorMixin(TemplateResolutionVisitorMixin):
         """
         title: Materialize all concrete specializations for one template func.
         parameters:
-          function:
-            type: SemanticFunction
+          function: Function to process.
         """
         if (
             not function.template_params
@@ -72,8 +70,7 @@ class TemplateAnalysisVisitorMixin(TemplateResolutionVisitorMixin):
         """
         title: Materialize specialization skeletons for module templates.
         parameters:
-          module:
-            type: astx.Module
+          module: Module to process.
         """
         for node in module.nodes:
             if isinstance(node, astx.FunctionPrototype):
@@ -114,8 +111,7 @@ class TemplateAnalysisVisitorMixin(TemplateResolutionVisitorMixin):
         """
         title: Analyze one generated concrete specialization body.
         parameters:
-          function:
-            type: SemanticFunction
+          function: Function to process.
         """
         definition = function.definition
         if definition is None:
@@ -165,8 +161,7 @@ class TemplateAnalysisVisitorMixin(TemplateResolutionVisitorMixin):
         """
         title: Analyze one prepared concrete specialization once.
         parameters:
-          function:
-            type: SemanticFunction
+          function: Function to process.
         """
         definition = function.definition
         if definition is None:
@@ -205,8 +200,7 @@ class TemplateAnalysisVisitorMixin(TemplateResolutionVisitorMixin):
         """
         title: Analyze all prepared specializations for one template function.
         parameters:
-          function:
-            type: SemanticFunction
+          function: Function to process.
         """
         for specialization in tuple(function.specializations.values()):
             self._analyze_prepared_template_specialization(specialization)
@@ -218,8 +212,7 @@ class TemplateAnalysisVisitorMixin(TemplateResolutionVisitorMixin):
         """
         title: Analyze the generated specializations attached to one module.
         parameters:
-          module:
-            type: astx.Module
+          module: Module to process.
         """
         for node in astx.generated_template_nodes(module):
             semantic = getattr(node, "semantic", None)

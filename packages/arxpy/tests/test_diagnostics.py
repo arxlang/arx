@@ -16,20 +16,19 @@ class _FakeSource:
     """
     title: Stand-in for an irx SourceLocation (line/col only, no filename).
     attributes:
-      line:
-        description: One-based source line, or None.
-      col:
-        description: One-based source column, or None.
+      line: One-based source line, or None.
+      col: One-based source column, or None.
     """
+
+    line: int | None
+    col: int | None
 
     def __init__(self, line: int | None, col: int | None) -> None:
         """
         title: Initialize the fake source location.
         parameters:
-          line:
-            type: int | None
-          col:
-            type: int | None
+          line: Source line coordinate.
+          col: Source column or column selector.
         """
         self.line = line
         self.col = col
@@ -39,17 +38,18 @@ class _FakeRecord:
     """
     title: Stand-in for an irx structured Diagnostic.
     attributes:
-      message:
-        description: The diagnostic message.
-      source:
-        description: The source location, when present.
-      severity:
-        description: The raw severity string, e.g. "error".
-      code:
-        description: Stable diagnostic code, when present.
-      module_key:
-        description: Module attribution, when present.
+      message: The diagnostic message.
+      source: The source location, when present.
+      severity: The raw severity string, e.g. "error".
+      code: Stable diagnostic code, when present.
+      module_key: Module attribution, when present.
     """
+
+    message: str
+    source: _FakeSource | None
+    severity: str
+    code: str | None
+    module_key: str | None
 
     def __init__(
         self,
@@ -63,16 +63,11 @@ class _FakeRecord:
         """
         title: Initialize the fake record.
         parameters:
-          message:
-            type: str
-          source:
-            type: _FakeSource | None
-          severity:
-            type: str
-          code:
-            type: str | None
-          module_key:
-            type: str | None
+          message: Diagnostic or output message.
+          source: Source input to process.
+          severity: Severity.
+          code: Source code or diagnostic identifier.
+          module_key: Canonical module identity.
         """
         self.message = message
         self.source = source
@@ -83,16 +78,14 @@ class _FakeRecord:
     def resolved_source(self) -> _FakeSource | None:
         """
         title: Return the resolved source location.
-        returns:
-          type: _FakeSource | None
+        returns: The resolved source location.
         """
         return self.source
 
     def resolved_module_key(self) -> str | None:
         """
         title: Return the resolved module attribution.
-        returns:
-          type: str | None
+        returns: The resolved module attribution.
         """
         return self.module_key
 

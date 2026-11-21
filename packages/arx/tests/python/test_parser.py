@@ -18,12 +18,9 @@ def _parse_module(code: str, module_name: str = "main") -> astx.Module:
     """
     title: Parse one module-sized source snippet.
     parameters:
-      code:
-        type: str
-      module_name:
-        type: str
-    returns:
-      type: astx.Module
+      code: Source code or diagnostic identifier.
+      module_name: Module name to resolve.
+    returns: Parsed one module-sized source snippet.
     """
     ArxIO.string_to_buffer(code)
     tree = Parser().parse(Lexer().lex(), module_name)
@@ -39,8 +36,7 @@ def test_loop_transfers_are_statements(header: str) -> None:
     """
     title: Loop transfers retain semicolons and Unicode source locations.
     parameters:
-      header:
-        type: str
+      header: Header.
     """
     line = '    print("é"); break; continue # trailing comment'
     module = _parse_module(
@@ -66,10 +62,8 @@ def test_loop_transfer_statement_endings(keyword: str, suffix: str) -> None:
     """
     title: Bare loop transfers terminate at EOF, comments, or separators.
     parameters:
-      keyword:
-        type: str
-      suffix:
-        type: str
+      keyword: Keyword.
+      suffix: Suffix.
     """
     module = _parse_module(f"fn main() -> none:\n  {keyword}{suffix}")
     function = module.nodes[0]
@@ -87,10 +81,8 @@ def test_loop_transfers_reject_operands(keyword: str, suffix: str) -> None:
     """
     title: Loop transfers never discard unexpected same-line input.
     parameters:
-      keyword:
-        type: str
-      suffix:
-        type: str
+      keyword: Keyword.
+      suffix: Suffix.
     """
     with pytest.raises(ParserException, match="takes no operand") as error:
         _parse_module(f"fn main() -> none:\n  {keyword}{suffix}")
@@ -114,8 +106,7 @@ def test_loop_transfers_reject_expression_positions(source: str) -> None:
     """
     title: Transfers cannot become initializer, call, or update values.
     parameters:
-      source:
-        type: str
+      source: Source input to process.
     """
     with pytest.raises(ParserException, match="not expression operands"):
         _parse_module(source)
@@ -126,8 +117,7 @@ def test_resource_scope_syntax(binding: str) -> None:
     """
     title: Resource scopes preserve manager expressions and target locations.
     parameters:
-      binding:
-        type: str
+      binding: Resolved binding for the operation.
     """
     line = f'  with factory("é"){binding}:'
     module = _parse_module(
@@ -186,8 +176,7 @@ def test_resource_scope_rejects_invalid_headers(source: str) -> None:
     """
     title: Resource headers require one expression and an indented body.
     parameters:
-      source:
-        type: str
+      source: Source input to process.
     """
     with pytest.raises(ParserException) as error:
         _parse_module(source)
@@ -247,10 +236,8 @@ def test_prefix_and_remainder_grouping(source: str, grouped: str) -> None:
     """
     title: Word negation binds comparisons while remainder associates left.
     parameters:
-      source:
-        type: str
-      grouped:
-        type: str
+      source: Source input to process.
+      grouped: Grouped.
     """
     expressions: list[astx.AST] = []
     for code in (source, grouped):
@@ -282,10 +269,8 @@ def test_invalid_prefix_operand(source: str, message: str) -> None:
     """
     title: Reject misplaced word negation and missing remainder operands.
     parameters:
-      source:
-        type: str
-      message:
-        type: str
+      source: Source input to process.
+      message: Diagnostic or output message.
     """
     ArxIO.string_to_buffer(source)
     parser = Parser(Lexer().lex())
@@ -318,10 +303,8 @@ def test_postfix_mutation_reports_operator(source: str, operator: str) -> None:
     """
     title: Unsupported postfix mutation fails at its own operator token.
     parameters:
-      source:
-        type: str
-      operator:
-        type: str
+      source: Source input to process.
+      operator: Operator to apply.
     """
     code = source.format(operator=operator)
     before_operator = code.split(operator, 1)[0]
@@ -346,10 +329,8 @@ def test_prefix_mutation_after_statement_separator(
     """
     title: A new statement's prefix is not the prior expression's postfix.
     parameters:
-      operator:
-        type: str
-      separator:
-        type: str
+      operator: Operator to apply.
+      separator: Separator.
     """
     tree = _parse_module(f"x{separator}{operator}y")
     assert len(tree.nodes) == 2
@@ -366,8 +347,7 @@ def test_compound_statement_locations_and_precedence(operator: str) -> None:
     """
     title: Compound statements retain operand locations and normal precedence.
     parameters:
-      operator:
-        type: str
+      operator: Operator to apply.
     """
     tree = _parse_module(f"café {operator} 2 + 3 * 4\n")
     node = tree.nodes[0]
@@ -390,8 +370,7 @@ def test_compound_operator_detection_ignores_literal_contents(
     """
     title: Literal text cannot be consumed as an operator or a missing operand.
     parameters:
-      text:
-        type: str
+      text: Text to process.
     """
     tree = _parse_module(f'x\n"{text}"\n')
     assert len(tree.nodes) == 2
@@ -457,8 +436,7 @@ def test_compound_assignment_rejects_invalid_surface_contexts(
     """
     title: Unsupported targets and expression contexts fail before analysis.
     parameters:
-      source:
-        type: str
+      source: Source input to process.
     """
     with pytest.raises(ParserException) as captured:
         _parse_module(source)
@@ -595,8 +573,7 @@ def test_parse_elif_chain(with_else: bool) -> None:
     """
     title: Elif chains use nested IfStmt nodes with real keyword locations.
     parameters:
-      with_else:
-        type: bool
+      with_else: Whether to use with else.
     """
     source = "if a:\n  first\nelif b:\n  second\nelif café:\n  third\n"
     if with_else:
@@ -763,14 +740,10 @@ def test_invalid_elif_chain(
     """
     title: Malformed clauses fail at the parser boundary with real locations.
     parameters:
-      source:
-        type: str
-      message:
-        type: str
-      line:
-        type: int
-      column:
-        type: int
+      source: Source input to process.
+      message: Diagnostic or output message.
+      line: Source line coordinate.
+      column: Column to process.
     """
     with pytest.raises(ParserException) as captured:
         _parse_module(source)
@@ -1123,16 +1096,11 @@ def test_parse_import_statements(
     """
     title: Import syntax should build the expected IRx AST nodes.
     parameters:
-      code:
-        type: str
-      stmt_type:
-        type: type[astx.AST]
-      expected_module:
-        type: str | None
-      expected_level:
-        type: int
-      expected_names:
-        type: list[tuple[str, str]]
+      code: Source code or diagnostic identifier.
+      stmt_type: Type of stmt.
+      expected_module: Expected module.
+      expected_level: Expected level.
+      expected_names: Expected names.
     """
     tree = _parse_module(code)
 
@@ -1205,10 +1173,8 @@ def test_parse_invalid_import_syntax(code: str, match: str) -> None:
     """
     title: Invalid import syntax should raise clear parser errors.
     parameters:
-      code:
-        type: str
-      match:
-        type: str
+      code: Source code or diagnostic identifier.
+      match: Match.
     """
     with pytest.raises(ParserException, match=match):
         _parse_module(code)
@@ -1475,8 +1441,7 @@ def test_parse_block_with_comment_and_blank_lines(suffix: str) -> None:
     """
     title: Trivia cannot change block or clause attachment, including at EOF.
     parameters:
-      suffix:
-        type: str
+      suffix: Suffix.
     """
     ArxIO.string_to_buffer(
         "fn main() -> i32:\n"
@@ -1523,8 +1488,7 @@ def test_name_first_binding_modifiers(modifier: str) -> None:
     """
     title: Explicit and implicit binding policies map to reusable ASTx nodes.
     parameters:
-      modifier:
-        type: str
+      modifier: Modifier.
     """
     module = _parse_module(f"value: {modifier}i32 = 1\n")
     declaration = module.nodes[0]
@@ -1609,10 +1573,8 @@ def test_name_first_declaration_errors(source: str, message: str) -> None:
     """
     title: Malformed and obsolete declaration forms fail closed.
     parameters:
-      source:
-        type: str
-      message:
-        type: str
+      source: Source input to process.
+      message: Diagnostic or output message.
     """
     with pytest.raises(ParserException, match=message):
         _parse_module(source)
@@ -1625,8 +1587,7 @@ def test_inferred_declaration_requires_initializer(source: str) -> None:
     """
     title: An inference request cannot be default-initialized.
     parameters:
-      source:
-        type: str
+      source: Source input to process.
     """
     with pytest.raises(
         ParserException, match="requires an explicit initializer"
@@ -1647,8 +1608,7 @@ def test_auto_is_not_a_general_type(source: str) -> None:
     """
     title: Inference markers cannot appear in general type expressions.
     parameters:
-      source:
-        type: str
+      source: Source input to process.
     """
     with pytest.raises(ParserException, match="only allowed on initialized"):
         _parse_module(source)
@@ -1679,11 +1639,10 @@ def test_function_head_preserves_name_and_optional_spacing(
     spacing: str,
 ) -> None:
     """
-    title: >-
-      Function syntax stays keyword-first while arguments accept modifiers.
+    title: Function syntax stays keyword-first while arguments accept
+      modifiers.
     parameters:
-      spacing:
-        type: str
+      spacing: Spacing.
     """
     function = _parse_module(
         f"fn distance{spacing}(record: const :: str) -> i64:\n"
@@ -1724,14 +1683,10 @@ def test_inference_marker_cannot_name_a_type(
     """
     title: Type declarations cannot shadow inference, even when never used.
     parameters:
-      source:
-        type: str
-      target:
-        type: str
-      line:
-        type: int
-      column:
-        type: int
+      source: Source input to process.
+      target: Destination of the operation.
+      line: Source line coordinate.
+      column: Column to process.
     """
     with pytest.raises(
         ParserException, match=f"cannot name a {target}"
@@ -1781,8 +1736,7 @@ def test_callable_declaration_modifiers(modifier: str) -> None:
     """
     title: Callable visibility is independent of arguments and return types.
     parameters:
-      modifier:
-        type: str
+      modifier: Modifier.
     """
     module = _parse_module(
         f"fn calculate(value: const :: i32) -> {modifier}i32:\n"
@@ -1808,8 +1762,8 @@ def test_callable_declaration_modifiers(modifier: str) -> None:
 
 def test_multiline_callable_headers_keep_body_and_sibling_boundaries() -> None:
     """
-    title: >-
-      Wrapped headers do not redefine body indentation or swallow siblings.
+    title: Wrapped headers do not redefine body indentation or swallow
+      siblings.
     """
     module = _parse_module(
         "@[abstract]\nclass Calculator:\n"
@@ -1910,13 +1864,11 @@ def test_callable_modifiers_and_layout_fail_closed(
     source: str, message: str
 ) -> None:
     """
-    title: >-
-      Invalid header policies and incomplete continuations fail in parsing.
+    title: Invalid header policies and incomplete continuations fail
+      in parsing.
     parameters:
-      source:
-        type: str
-      message:
-        type: str
+      source: Source input to process.
+      message: Diagnostic or output message.
     """
     with pytest.raises(ParserException, match=message):
         _parse_module(source)

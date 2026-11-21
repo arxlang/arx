@@ -31,8 +31,7 @@ class UnaryOpVisitorMixin(VisitorMixinBase):
         """
         title: Visit UnaryOp nodes.
         parameters:
-          node:
-            type: astx.UnaryOp
+          node: Syntax node to process.
         """
         if cast(NullableVisitorMixin, self).lower_column_operation(node):
             return

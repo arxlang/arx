@@ -576,7 +576,7 @@ groups:
         hooks:
           pre-run:
             - task: docs.build
-        run: python -m http.server --bind 127.0.0.1 --directory build 8000
+        run: python -m http.server --bind 127.0.0.1 --directory build/docs 8000
 
   release:
     vars:

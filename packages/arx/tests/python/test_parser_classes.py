@@ -19,10 +19,8 @@ def _parse_module(code: str) -> astx.Module:
     """
     title: Parse one snippet into an AST module.
     parameters:
-      code:
-        type: str
-    returns:
-      type: astx.Module
+      code: Source code or diagnostic identifier.
+    returns: Parsed one snippet into an AST module.
     """
     ArxIO.string_to_buffer(code)
     return Parser().parse(Lexer().lex())
@@ -626,10 +624,8 @@ def test_parse_class_modifier_errors(code: str, message: str) -> None:
     """
     title: Reject invalid annotation and class-member modifier combinations.
     parameters:
-      code:
-        type: str
-      message:
-        type: str
+      code: Source code or diagnostic identifier.
+      message: Diagnostic or output message.
     """
     with pytest.raises(ParserException, match=message):
         _parse_module(code)

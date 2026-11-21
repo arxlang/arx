@@ -24,10 +24,8 @@ def _semantic(node: astx.AST) -> SemanticInfo:
     """
     title: Return one node's semantic info.
     parameters:
-      node:
-        type: astx.AST
-    returns:
-      type: SemanticInfo
+      node: Syntax node to process.
+    returns: One node's semantic info.
     """
     return cast(SemanticInfo, getattr(node, "semantic"))
 
@@ -42,19 +40,14 @@ def _extern_prototype(
     """
     title: Build one explicit extern prototype.
     parameters:
-      name:
-        type: str
-      return_type:
-        type: astx.DataType
-      symbol_name:
-        type: str | None
-      runtime_feature:
-        type: str | None
+      name: Name identifying the declaration or operation.
+      return_type: Declared result type.
+      symbol_name: Name of symbol.
+      runtime_feature: Runtime feature.
       args:
-        type: astx.Argument
         variadic: positional
-    returns:
-      type: astx.FunctionPrototype
+        description: Positional arguments.
+    returns: Constructed one explicit extern prototype.
     """
     prototype = astx.FunctionPrototype(
         name,
@@ -109,8 +102,7 @@ def test_runtime_feature_validation_ignores_builder_registry_mutations(
     """
     title: Semantic capabilities do not depend on a mutable builder registry.
     parameters:
-      monkeypatch:
-        type: pytest.MonkeyPatch
+      monkeypatch: Fixture for temporarily replacing dependencies and settings.
     """
     registry = RuntimeFeatureRegistry()
     monkeypatch.setattr(

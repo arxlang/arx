@@ -1,6 +1,6 @@
 """
-title: >-
-  Compiled unified data files, nullable DataFrames and Parquet scan options.
+title: Compiled unified data files, nullable DataFrames and Parquet scan
+  options.
 """
 
 import subprocess
@@ -29,11 +29,10 @@ FRAME = (
 
 def test_compiled_nullable_file_conversion(tmp_path: Path) -> None:
     """
-    title: >-
-      Nullable unsigned, string and temporal columns survive compiled casts.
+    title: Nullable unsigned, string and temporal columns survive compiled
+      casts.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     source = f"""
 import (ParquetStream, ParquetOptions, where) from stdlib.parquet
@@ -103,8 +102,7 @@ def test_compiled_nullable_literal_and_filter(tmp_path: Path) -> None:
     """
     title: Construct nullable literals and push a native predicate into a scan.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     source = """
 import (ParquetStream, ParquetOptions, where) from stdlib.parquet
@@ -151,8 +149,7 @@ def test_compiled_temporal_literals(tmp_path: Path) -> None:
     """
     title: Resolve nullable calendar literals to exact Arrow epoch units.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     source = """
 import ParquetStream from stdlib.parquet
@@ -190,12 +187,10 @@ fn main() -> i32:
 
 def test_compiled_recursive_copy_with_encryption(tmp_path: Path) -> None:
     """
-    title: >-
-      Compiled programs copy recursive batches and use caller-configured
+    title: Compiled programs copy recursive batches and use caller-configured
       encryption.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     source = """
 import (ParquetStream, ParquetOptions, where) from stdlib.parquet

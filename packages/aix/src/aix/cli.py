@@ -1,5 +1,7 @@
 """
 title: AIX command-line interface.
+attributes:
+  KNOWN_SUBCOMMANDS: Known subcommands.
 """
 
 from __future__ import annotations
@@ -25,8 +27,7 @@ class CustomHelpFormatter(argparse.RawTextHelpFormatter):
 def get_args() -> argparse.ArgumentParser:
     """
     title: Build the AIX CLI argument parser.
-    returns:
-      type: argparse.ArgumentParser
+    returns: Constructed the AIX CLI argument parser.
     """
     parser = argparse.ArgumentParser(
         prog="aix",
@@ -94,8 +95,7 @@ def get_args() -> argparse.ArgumentParser:
 def get_test_args() -> argparse.ArgumentParser:
     """
     title: Build parser for `aix test`.
-    returns:
-      type: argparse.ArgumentParser
+    returns: Constructed parser for `aix test`.
     """
     parser = argparse.ArgumentParser(
         prog="aix test",
@@ -140,10 +140,9 @@ def _looks_like_subcommand_attempt(token: str) -> bool:
     title: Recognize command-like input before parsing CLI arguments.
     visibility: internal
     parameters:
-      token:
-        type: str
-    returns:
-      type: bool
+      token: Token being processed.
+    returns: 'Result of this operation: recognize command-like input before
+      parsing CLI arguments.'
     """
     if not token or token.startswith("-"):
         return False
@@ -160,8 +159,7 @@ def app(argv: Sequence[str] | None = None) -> None:
     """
     title: Run the AIX CLI.
     parameters:
-      argv:
-        type: Sequence[str] | None
+      argv: Argv.
     """
     raw_args = list(sys.argv[1:] if argv is None else argv)
 

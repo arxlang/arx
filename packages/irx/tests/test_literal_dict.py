@@ -23,8 +23,7 @@ def test_literal_dict_empty(builder_class: type[Builder]) -> None:
     """
     title: Empty LiteralDict lowering
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     visitor = cast(LLVMVisitor, builder.translator)
@@ -45,8 +44,7 @@ def test_literal_dict_homogeneous_int_constants(
     """
     title: Homogeneous LiteralDict lowering
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     visitor = cast(LLVMVisitor, builder.translator)
@@ -81,8 +79,7 @@ def test_literal_dict_heterogeneous_constants_unsupported(
     """
     title: Heterogeneous LiteralDict rejection
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     visitor = cast(LLVMVisitor, builder.translator)

@@ -35,30 +35,18 @@ class Parser(
     """
     title: Parser class.
     attributes:
-      bin_op_precedence:
-        type: dict[str, int]
-      indent_level:
-        type: int
-      known_class_names:
-        type: set[str]
-      imported_type_names:
-        type: set[str]
-      namespace_roots:
-        type: set[str]
-      builtin_type_bindings:
-        type: dict[str, astx.DataType]
-      tensor_scopes:
-        type: list[dict[str, TensorBinding | None]]
-      return_type_scopes:
-        type: list[astx.DataType]
-      template_type_scopes:
-        type: list[dict[str, astx.DataType]]
-      type_aliases:
-        type: dict[str, astx.DataType]
-      value_scopes:
-        type: list[set[str]]
-      tokens:
-        type: TokenList
+      bin_op_precedence: Bin op precedence.
+      indent_level: Indent level.
+      known_class_names: Known class names.
+      imported_type_names: Imported type names.
+      namespace_roots: Namespace roots.
+      builtin_type_bindings: Builtin type bindings.
+      tensor_scopes: Tensor scopes.
+      return_type_scopes: Return type scopes.
+      template_type_scopes: Template type scopes.
+      type_aliases: Type aliases.
+      value_scopes: Value scopes.
+      tokens: Tokens in source order.
     """
 
     bin_op_precedence: dict[str, int] = {}
@@ -82,16 +70,14 @@ class Parser(
         builtin_types: dict[str, astx.DataType] | None = None,
     ) -> astx.Module:
         """
-        title: Parse tokens and attach the active token location to failures.
+        title: Parse tokens and attach the active token location
+          to failures.
         parameters:
-          tokens:
-            type: TokenList
-          module_name:
-            type: str
-          builtin_types:
-            type: dict[str, astx.DataType] | None
-        returns:
-          type: astx.Module
+          tokens: Tokens in source order.
+          module_name: Module name to resolve.
+          builtin_types: Types of builtin.
+        returns: Parsed tokens and attach the active token location
+          to failures.
         """
         try:
             return super().parse(

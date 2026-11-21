@@ -1,9 +1,9 @@
 """
 title: Simple native CSV and Parquet table I/O.
-summary: >-
-  Eager reads return independently owned PyArrow tables; writes borrow their
-  input and check finalization. Importing this module performs no native build
-  or optional Parquet loading. Format engines remain in the IRx native runtime.
+summary: Eager reads return independently owned PyArrow tables; writes borrow
+  their input and check finalization. Importing this module performs no native
+  build or optional Parquet loading. Format engines remain in the IRx native
+  runtime.
 """
 
 from __future__ import annotations
@@ -46,8 +46,7 @@ class ParquetFilter:
     """
     title: Immutable AND predicate group with independent composition.
     attributes:
-      predicates:
-        type: tuple[ParquetPredicate, Ellipsis]
+      predicates: Predicates.
     """
 
     predicates: tuple[ParquetPredicate, ...]
@@ -56,8 +55,7 @@ class ParquetFilter:
         """
         title: Check all predicate items even for directly constructed groups.
         parameters:
-          predicates:
-            type: tuple[ParquetPredicate, Ellipsis]
+          predicates: Predicates.
         """
         object.__setattr__(self, "predicates", predicates)
 
@@ -70,14 +68,10 @@ class ParquetFilter:
         """
         title: Return a new group, preserving the original and its aliases.
         parameters:
-          column:
-            type: str
-          operation:
-            type: str
-          value:
-            type: str | int | float | bool | None
-        returns:
-          type: ParquetFilter
+          column: Column to process.
+          operation: Operation to resolve or execute.
+          value: Value to process.
+        returns: A new group, preserving the original and its aliases.
         """
         return ParquetFilter(
             (*self.predicates, *where(column, operation, value).predicates)
@@ -94,14 +88,11 @@ def where(
     """
     title: Create a checked predicate without serialized values or type tags.
     parameters:
-      column:
-        type: str
-      operation:
-        type: str
-      value:
-        type: str | int | float | bool | None
-    returns:
-      type: ParquetFilter
+      column: Column to process.
+      operation: Operation to resolve or execute.
+      value: Value to process.
+    returns: Created a checked predicate without serialized values or type
+      tags.
     """
     operators = {
         "==": "eq",
@@ -146,10 +137,9 @@ def table_library(parquet: bool = False) -> ctypes.CDLL:
     """
     title: Bind table symbols lazily and reject stale native overrides.
     parameters:
-      parquet:
-        type: bool
-    returns:
-      type: ctypes.CDLL
+      parquet: Whether to use parquet.
+    returns: 'Result of this operation: bind table symbols lazily and reject
+      stale native overrides.'
     """
     lib = parquet_library() if parquet else c_data_library()
     p = ctypes.c_void_p
@@ -200,10 +190,8 @@ def check_arrow(status: int, lib: ctypes.CDLL) -> None:
     """
     title: Check the Arrow runtime status before reading any output slots.
     parameters:
-      status:
-        type: int
-      lib:
-        type: ctypes.CDLL
+      status: Native operation status.
+      lib: Lib.
     """
     if status != 0:
         raise RuntimeError(lib.irx_arrow_last_error().decode("utf-8"))
@@ -215,12 +203,10 @@ def export_table(handle: ctypes.c_void_p, lib: ctypes.CDLL) -> pa.Table:
     """
     title: Transfer independent table references through the C Stream ABI.
     parameters:
-      handle:
-        type: ctypes.c_void_p
-      lib:
-        type: ctypes.CDLL
-    returns:
-      type: pa.Table
+      handle: Opaque native handle.
+      lib: Lib.
+    returns: 'Result of this operation: transfer independent table references
+      through the C Stream ABI.'
     """
     stream = ArrowArrayStream()
     address = ctypes.addressof(stream)
@@ -240,14 +226,13 @@ def import_table(
     table: pa.Table, lib: ctypes.CDLL
 ) -> Iterator[ctypes.c_void_p]:
     """
-    title: Borrow a PyArrow table through chunk-preserving C Stream references.
+    title: Borrow a PyArrow table through chunk-preserving C Stream
+      references.
     parameters:
-      table:
-        type: pa.Table
-      lib:
-        type: ctypes.CDLL
-    returns:
-      type: Iterator[ctypes.c_void_p]
+      table: Table.
+      lib: Lib.
+    returns: 'Result of this operation: borrow a PyArrow table through
+      chunk-preserving C Stream references.'
     """
     table.validate(full=True)
     for field in table.schema:
@@ -276,10 +261,9 @@ def schema_handle(
     """
     title: Keep an optional imported schema alive through a native read.
     parameters:
-      schema:
-        type: pa.Schema | None
-    returns:
-      type: Iterator[ctypes.c_void_p | None]
+      schema: Declared data schema.
+    returns: 'Result of this operation: keep an optional imported schema
+      alive through a native read.'
     """
     if schema is None:
         yield None
@@ -299,14 +283,11 @@ def selection(
     """
     title: Validate and snapshot string selectors before native side effects.
     parameters:
-      values:
-        type: Sequence[str] | None
-      name:
-        type: str
-      allow_empty:
-        type: bool
-    returns:
-      type: tuple[str, Ellipsis] | None
+      values: Values to process, in order.
+      name: Name identifying the declaration or operation.
+      allow_empty: Whether to use allow empty.
+    returns: 'Result of this operation: validate and snapshot string selectors
+      before native side effects.'
     """
     if values is None:
         return None
@@ -336,16 +317,12 @@ def csv_options(
     """
     title: Own checked native CSV options for one operation.
     parameters:
-      lib:
-        type: ctypes.CDLL
-      integers:
-        type: dict[str, int]
-      texts:
-        type: dict[str, str]
-      lists:
-        type: dict[str, tuple[str, Ellipsis] | None]
-    returns:
-      type: Iterator[ctypes.c_void_p]
+      lib: Lib.
+      integers: Integers.
+      texts: Texts.
+      lists: Lists.
+    returns: 'Result of this operation: own checked native CSV options
+      for one operation.'
     """
     handle = ctypes.c_void_p(lib.irx_csv_options_new())
     if not handle:
@@ -397,39 +374,25 @@ def read_csv(
 ) -> pa.Table:
     """
     title: Read all CSV rows with strict parsing before optional projection.
-    summary: >-
-      The eager result must fit in memory. Inference freezes after the first
-      block; schema controls parsing. Names require header=False and no schema.
-      Quoted empty strings remain strings, unlike default unquoted empty nulls.
+    summary: The eager result must fit in memory. Inference freezes after
+      the first block; schema controls parsing. Names require header=False
+      and no schema. Quoted empty strings remain strings, unlike default
+      unquoted empty nulls.
     parameters:
-      path:
-        type: str | os.PathLike[str]
-      schema:
-        type: pa.Schema | None
-      columns:
-        type: Sequence[str] | None
-      names:
-        type: Sequence[str] | None
-      delimiter:
-        type: str
-      header:
-        type: bool
-      quotechar:
-        type: str
-      doublequote:
-        type: bool
-      escapechar:
-        type: str
-      skiprows:
-        type: int
-      skip_blank_lines:
-        type: bool
-      null_values:
-        type: Sequence[str]
-      block_size:
-        type: int
-    returns:
-      type: pa.Table
+      path: Path to the input or output resource.
+      schema: Declared data schema.
+      columns: Column declarations or values.
+      names: Names.
+      delimiter: Delimiter.
+      header: Whether to use header.
+      quotechar: Quotechar.
+      doublequote: Whether to use doublequote.
+      escapechar: Escapechar.
+      skiprows: Skiprows.
+      skip_blank_lines: Whether to use skip blank lines.
+      null_values: Null values.
+      block_size: Size of block.
+    returns: Read all CSV rows with strict parsing before optional projection.
     """
     path_bytes = parquet_path(path)
     selected = selection(columns, "columns")
@@ -478,25 +441,19 @@ def write_csv(
     quoting: Literal["needed", "all_valid", "none"] = "needed",
 ) -> None:
     """
-    title: Write all chunks and check finalization without consuming the table.
-    summary: >-
-      CSV is nontransactional. Custom null tokens can collide with non-null
-      data; use matching read null_values. Do not assume lossless roundtrips.
+    title: Write all chunks and check finalization without consuming the
+      table.
+    summary: CSV is nontransactional. Custom null tokens can collide with
+      non-null data; use matching read null_values. Do not assume lossless
+      roundtrips.
     parameters:
-      frame:
-        type: pa.Table
-      path:
-        type: str | os.PathLike[str]
-      delimiter:
-        type: str
-      header:
-        type: bool
-      lineterminator:
-        type: str
-      na_rep:
-        type: str
-      quoting:
-        type: Literal[needed, all_valid, none]
+      frame: Frame.
+      path: Path to the input or output resource.
+      delimiter: Delimiter.
+      header: Whether to use header.
+      lineterminator: Lineterminator.
+      na_rep: Na rep.
+      quoting: Quoting.
     """
     path_bytes = parquet_path(path)
     lib = table_library()
@@ -531,26 +488,18 @@ def read_parquet(
 ) -> pa.Table:
     """
     title: Read exact rows, discovering files or Hive datasets by default.
-    summary: >-
-      Explicit keywords replace options snapshots without mutating the input.
-      None means an omitted override. Schema asserts the final projected types.
+    summary: Explicit keywords replace options snapshots without mutating
+      the input. None means an omitted override. Schema asserts the final
+      projected types.
     parameters:
-      path:
-        type: str | os.PathLike[str]
-      schema:
-        type: pa.Schema | None
-      columns:
-        type: Sequence[str] | None
-      filters:
-        type: ParquetFilter | None
-      row_groups:
-        type: Sequence[int] | None
-      options:
-        type: ParquetOptions | None
-      batch_size:
-        type: int | None
-    returns:
-      type: pa.Table
+      path: Path to the input or output resource.
+      schema: Declared data schema.
+      columns: Column declarations or values.
+      filters: Filters.
+      row_groups: Row groups.
+      options: Validated operation options.
+      batch_size: Size of batch.
+    returns: Read exact rows, discovering files or Hive datasets by default.
     """
     selected = selection(columns, "columns")
     effective = options or ParquetOptions()
@@ -600,29 +549,20 @@ def write_parquet(
 ) -> None:
     """
     title: Write exact table types using explicit overrides and checked close.
-    summary: >-
-      Default compression is snappy; row-group size is 1048576. Atomic writes
-      are opt-in and POSIX-local; None means no keyword override. Partitioned
-      output selects Hive dataset mode unless explicit options say otherwise.
+    summary: Default compression is snappy; row-group size is 1048576. Atomic
+      writes are opt-in and POSIX-local; None means no keyword override.
+      Partitioned output selects Hive dataset mode unless explicit options
+      say otherwise.
     parameters:
-      frame:
-        type: pa.Table
-      path:
-        type: str | os.PathLike[str]
-      compression:
-        type: str | None
-      row_group_size:
-        type: int | None
-      atomic:
-        type: bool | None
-      durable:
-        type: bool | None
-      append:
-        type: bool | None
-      partition_columns:
-        type: Sequence[str] | None
-      options:
-        type: ParquetOptions | None
+      frame: Frame.
+      path: Path to the input or output resource.
+      compression: Compression.
+      row_group_size: Size of row group.
+      atomic: Whether to use atomic.
+      durable: Whether to use durable.
+      append: Whether to use append.
+      partition_columns: Partition columns.
+      options: Validated operation options.
     """
     effective = options or ParquetOptions()
     if compression is not None:

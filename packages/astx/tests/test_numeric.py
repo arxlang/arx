@@ -33,8 +33,8 @@ def test_numeric_intent_is_structural() -> None:
 
 def test_contextual_literals_preserve_exact_values() -> None:
     """
-    title: >-
-      Source literals are not prematurely narrowed to concrete typed nodes.
+    title: Source literals are not prematurely narrowed to concrete typed
+      nodes.
     """
     large = astx.LiteralInteger(2**100)
     assert large.value == 2**100
@@ -48,8 +48,7 @@ def test_contextual_literals_preserve_exact_values() -> None:
 
 def test_numeric_intent_runtime_validation() -> None:
     """
-    title: >-
-      Invalid source values and untyped intent strings fail at the AST
+    title: Invalid source values and untyped intent strings fail at the AST
       boundary.
     """
     with pytest.raises(TypeCheckError):
@@ -84,8 +83,7 @@ def test_exact_floating_literal_requires_finite_decimal(text: str) -> None:
     """
     title: Invalid and nonfinite exact payloads fail at the modeling boundary.
     parameters:
-      text:
-        type: str
+      text: Text to process.
     """
     with pytest.raises(ValueError, match="decimal value"):
         astx.LiteralFloat(text)

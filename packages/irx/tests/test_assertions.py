@@ -27,12 +27,10 @@ def _module_with_assert(
     """
     title: Build one small module whose main body contains one assertion.
     parameters:
-      assert_stmt:
-        type: AssertStmt
-      module_name:
-        type: str
-    returns:
-      type: astx.Module
+      assert_stmt: Assert stmt.
+      module_name: Module name to resolve.
+    returns: Constructed one small module whose main body contains
+      one assertion.
     """
     module = astx.Module(name=module_name)
     main_proto = astx.FunctionPrototype(
@@ -81,8 +79,7 @@ def test_constant_c_string_pointer_reuses_one_deterministic_global(
     """
     title: Deterministic assertion strings should reuse one interned global.
     parameters:
-      llvm_visitor_in_function:
-        type: LLVMVisitor
+      llvm_visitor_in_function: LLVM visitor in function.
     """
     visitor = llvm_visitor_in_function
 
@@ -116,8 +113,8 @@ def test_assert_stmt_passes_without_failure_output() -> None:
 
 def test_assert_stmt_failure_uses_default_message() -> None:
     """
-    title: >-
-      A failing AssertStmt should report source, location, and default text.
+    title: A failing AssertStmt should report source, location, and default
+      text.
     """
     builder = LLVMBuilder()
     expected_exit_code = 1

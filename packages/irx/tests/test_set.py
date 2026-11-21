@@ -26,10 +26,9 @@ def _array_i32_values(const: ir.Constant) -> list[int]:
     """
     title: Extract i32-like values from array constant via regex (suite style).
     parameters:
-      const:
-        type: ir.Constant
-    returns:
-      type: list[int]
+      const: Const.
+    returns: Extracted i32-like values from array constant via regex (suite
+      style).
     """
     return [int(v) for v in re.findall(r"i\d+\s+(-?\d+)", str(const))]
 
@@ -40,10 +39,8 @@ def _make_visitor_in_function(
     """
     title: Return a visitor whose ir_builder is inside a live basic block.
     parameters:
-      builder_class:
-        type: type[Builder]
-    returns:
-      type: LLVMVisitor
+      builder_class: Builder implementation under test.
+    returns: A visitor whose ir_builder is inside a live basic block.
     """
     builder = builder_class()
     visitor = cast(LLVMVisitor, builder.translator)
@@ -61,8 +58,7 @@ def test_literal_set_empty(builder_class: type[Builder]) -> None:
     """
     title: Empty set lowers to constant [0 x i32].
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     visitor = cast(LLVMVisitor, builder.translator)
@@ -82,8 +78,7 @@ def test_literal_set_homogeneous_ints(builder_class: type[Builder]) -> None:
     """
     title: Homogeneous integer constants lower to constant array [N x i32].
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     visitor = cast(LLVMVisitor, builder.translator)
@@ -114,8 +109,7 @@ def test_literal_set_mixed_int_widths(builder_class: type[Builder]) -> None:
     """
     title: Mixed-width integer constants lower correctly.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     visitor = cast(LLVMVisitor, builder.translator)
@@ -147,8 +141,7 @@ def test_literal_set_non_integer_unsupported(
     """
     title: Non-integer homogeneous sets are not yet supported.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     visitor = cast(LLVMVisitor, builder.translator)
@@ -167,10 +160,9 @@ def _make_set(*vals: int) -> astx.LiteralSet:
     title: Make set.
     parameters:
       vals:
-        type: int
         variadic: positional
-    returns:
-      type: astx.LiteralSet
+        description: Vals.
+    returns: 'Result of this operation: make set.'
     """
     return astx.LiteralSet(elements={astx.LiteralInt32(v) for v in vals})
 
@@ -179,10 +171,8 @@ def _set_values(const: ir.Value) -> list[int]:
     """
     title: Set values.
     parameters:
-      const:
-        type: ir.Value
-    returns:
-      type: list[int]
+      const: Const.
+    returns: 'Result of this operation: set values.'
     """
     return _array_i32_values(const)
 
@@ -192,8 +182,7 @@ def test_set_union(builder_class: type[Builder]) -> None:
     """
     title: BinaryOp | on two LiteralSets produces their union.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     visitor = cast(LLVMVisitor, builder.translator)
@@ -213,8 +202,7 @@ def test_set_intersection(builder_class: type[Builder]) -> None:
     """
     title: BinaryOp & on two LiteralSets produces their intersection.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     visitor = cast(LLVMVisitor, builder.translator)
@@ -235,8 +223,7 @@ def test_set_difference(builder_class: type[Builder]) -> None:
     """
     title: BinaryOp - on two LiteralSets produces their difference.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     visitor = cast(LLVMVisitor, builder.translator)
@@ -257,8 +244,7 @@ def test_set_symmetric_difference(builder_class: type[Builder]) -> None:
     """
     title: BinaryOp ^ on two LiteralSets produces their symmetric difference.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     visitor = cast(LLVMVisitor, builder.translator)
@@ -279,8 +265,7 @@ def test_set_disjoint_intersection_is_empty(
     """
     title: Intersection of disjoint sets is an empty constant array.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     visitor = cast(LLVMVisitor, builder.translator)
@@ -302,8 +287,7 @@ def test_set_union_mixed_widths_in_function(
     """
     title: Mixed-width set union stays constant in function context.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     visitor = _make_visitor_in_function(builder_class)
 
@@ -333,8 +317,7 @@ def test_nested_set_binary_ops_preserve_set_semantics(
     """
     title: Chained set binary ops keep using set semantics.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     visitor = cast(LLVMVisitor, builder.translator)
@@ -366,8 +349,7 @@ def test_literal_list_binary_or_does_not_use_set_semantics(
     """
     title: LiteralList operands do not opt into set binary operators.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     visitor = cast(LLVMVisitor, builder.translator)

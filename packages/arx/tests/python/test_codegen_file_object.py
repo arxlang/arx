@@ -41,10 +41,8 @@ class DummyTargetMachine:
         """
         title: Return a stable object payload for tests.
         parameters:
-          module:
-            type: object
-        returns:
-          type: bytes
+          module: Module to process.
+        returns: A stable object payload for tests.
         """
         assert module == "parsed-module"
         return b"OBJ"
@@ -58,16 +56,14 @@ class DummyRuntimeFeatures:
     def native_artifacts(self) -> tuple[str, ...]:
         """
         title: Return sentinel native artifacts.
-        returns:
-          type: tuple[str, Ellipsis]
+        returns: Sentinel native artifacts.
         """
         return ("artifact",)
 
     def linker_flags(self) -> tuple[str, ...]:
         """
         title: Return sentinel linker flags.
-        returns:
-          type: tuple[str, Ellipsis]
+        returns: Sentinel linker flags.
         """
         return ("-lm",)
 
@@ -75,14 +71,11 @@ class DummyRuntimeFeatures:
 class DummyTranslator(ArxVisitor):
     """
     title: Test double for the IRx translator surface.
-    summary: >-
-      Supplies only the target machine and runtime-feature access used by
-      ArxBuilder build-path tests.
+    summary: Supplies only the target machine and runtime-feature access
+      used by ArxBuilder build-path tests.
     attributes:
-      target_machine:
-        type: DummyTargetMachine
-      runtime_features:
-        type: RuntimeFeatureState
+      target_machine: Target machine.
+      runtime_features: Runtime features.
     """
 
     def __init__(self) -> None:
@@ -100,10 +93,8 @@ def _parse_min_module(code: str = _MIN_MAIN) -> astx.Module:
     """
     title: Parse a minimal module for codegen tests.
     parameters:
-      code:
-        type: str
-    returns:
-      type: astx.Module
+      code: Source code or diagnostic identifier.
+    returns: Parsed a minimal module for codegen tests.
     """
     ArxIO.string_to_buffer(code)
     tree = Parser().parse(Lexer().lex())
@@ -124,8 +115,7 @@ def test_object_generation(code: str) -> None:
     """
     title: Test object generation.
     parameters:
-      code:
-        type: str
+      code: Source code or diagnostic identifier.
     """
     lexer = Lexer()
     parser = Parser()
@@ -144,8 +134,7 @@ def test_trailing_blank_line_builds_and_runs(tmp_path: Path) -> None:
     """
     title: Exact file bytes with spaces at EOF compile like string input.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     code = (
         "```\ntitle: Trailing blank line\n```\n"
@@ -183,8 +172,7 @@ def test_integer_division_by_zero_reports_runtime_diagnostic(
     """
     title: Arx integer division failures use the stable runtime record.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     module_ast = _parse_min_module(
         "fn main() -> i32:\n  zero: i32 = 0\n  return 1 / zero\n"
@@ -212,8 +200,7 @@ def test_namespace_import_program_builds_and_runs(tmp_path: Path) -> None:
     """
     title: Namespace-imported module calls should survive full build and run.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     project_root = tmp_path / "workspace"
     package_dir = project_root / "src" / "samplepkg"
@@ -283,8 +270,7 @@ def test_class_program_builds_and_runs(tmp_path: Path) -> None:
     """
     title: Class-heavy programs should survive full build and execution.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     module_ast = _parse_min_module(
         dedent(
@@ -339,8 +325,7 @@ def test_tensor_program_builds_and_runs(tmp_path: Path) -> None:
     """
     title: Tensor literals and indexing should survive full build and run.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     module_ast = _parse_min_module(
         dedent(
@@ -376,8 +361,7 @@ def test_bundled_stdlib_math_program_builds_and_runs(tmp_path: Path) -> None:
     """
     title: Bundled stdlib math helpers should survive full build and run.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     source = tmp_path / "main.x"
     source.write_text(
@@ -432,8 +416,7 @@ def test_template_program_builds_and_runs(tmp_path: Path) -> None:
     """
     title: Template calls should survive full build and execution.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     module_ast = _parse_min_module(
         dedent(
@@ -478,8 +461,7 @@ def test_type_alias_union_and_type_builtins_build_and_run(
     """
     title: Type aliases, unions, and type-aware builtins should build.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     module_ast = _parse_min_module(
         dedent(
@@ -531,8 +513,7 @@ def test_isinstance_uses_membership_not_numeric_widening(
     """
     title: isinstance should not treat assignable numeric types as identical.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     module_ast = _parse_min_module(
         dedent(
@@ -568,10 +549,8 @@ def test_build_without_link_writes_object_file(
     """
     title: Build should write raw object bytes when linking is disabled.
     parameters:
-      monkeypatch:
-        type: pytest.MonkeyPatch
-      tmp_path:
-        type: Path
+      monkeypatch: Fixture for temporarily replacing dependencies and settings.
+      tmp_path: Temporary directory for this test.
     """
     ir = ArxBuilder()
     ir.translator = DummyTranslator()
@@ -591,11 +570,11 @@ def test_build_without_link_writes_object_file(
         title: Fail if link_executable is called unexpectedly.
         parameters:
           args:
-            type: object
             variadic: positional
+            description: Positional arguments.
           kwargs:
-            type: object
             variadic: keyword
+            description: Keyword arguments.
         """
         link_calls.append((*args, kwargs))
 
@@ -620,8 +599,7 @@ def test_build_rejects_unknown_link_mode(tmp_path: Path) -> None:
     """
     title: Unknown link_mode raises before invoking the linker.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     module_ast = _parse_min_module()
 
@@ -654,14 +632,10 @@ def test_linked_build_forwards_runtime_link_inputs(
     """
     title: Linked builds should forward runtime artifacts and link flags.
     parameters:
-      link_mode:
-        type: str
-      expected_flags:
-        type: tuple[str, Ellipsis]
-      monkeypatch:
-        type: pytest.MonkeyPatch
-      tmp_path:
-        type: Path
+      link_mode: Link mode.
+      expected_flags: Expected flags.
+      monkeypatch: Fixture for temporarily replacing dependencies and settings.
+      tmp_path: Temporary directory for this test.
     """
     ir = ArxBuilder()
     ir.translator = DummyTranslator()
@@ -685,14 +659,10 @@ def test_linked_build_forwards_runtime_link_inputs(
         """
         title: Record the linker inputs forwarded by ArxBuilder.
         parameters:
-          primary_object:
-            type: Path
-          output_file:
-            type: Path
-          artifacts:
-            type: tuple[str, Ellipsis]
-          linker_flags:
-            type: tuple[str, Ellipsis]
+          primary_object: Primary object.
+          output_file: Destination file for generated output.
+          artifacts: Artifacts.
+          linker_flags: Linker flags.
         """
         captured["primary_object"] = primary_object
         captured["output_file"] = output_file

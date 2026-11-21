@@ -54,15 +54,13 @@ FLAT_TYPES = [
 
 def export_batch(native: ctypes.CDLL, batch: RecordBatch) -> pa.RecordBatch:
     """
-    title: >-
-      Export an independent Arrow snapshot for exact interoperability checks.
+    title: Export an independent Arrow snapshot for exact interoperability
+      checks.
     parameters:
-      native:
-        type: ctypes.CDLL
-      batch:
-        type: RecordBatch
-    returns:
-      type: pa.RecordBatch
+      native: Loaded native runtime used by the ABI test.
+      batch: Batch.
+    returns: 'Result of this operation: export an independent Arrow snapshot
+      for exact interoperability checks.'
     """
     array = ffi.new("struct ArrowArray *")
     schema = ffi.new("struct ArrowSchema *")
@@ -82,12 +80,9 @@ def test_parquet_exact_types(
     """
     title: Preserve all supported types, nulls, field metadata and timezones.
     parameters:
-      native:
-        type: ctypes.CDLL
-      tmp_path:
-        type: Path
-      type_:
-        type: pa.DataType
+      native: Loaded native runtime used by the ABI test.
+      tmp_path: Temporary directory for this test.
+      type_: Type expression to process.
     """
     batch_size = 2
     values: list[object] = [0, None, 1, 2, 3]
@@ -133,10 +128,8 @@ def test_parquet_empty_and_schema_ownership(
     """
     title: Empty output retains its schema and snapshots survive closed owners.
     parameters:
-      tmp_path:
-        type: Path
-      codec:
-        type: str
+      tmp_path: Temporary directory for this test.
+      codec: Codec.
     """
     schema = RecordBatchSchema().add_field("id", rb.IrxColumnType.INT64, False)
     path = tmp_path / "empty.parquet"
@@ -169,12 +162,9 @@ def test_reject_temporal_normalization_before_truncation(
     """
     title: Reject coercing types and clear output slots before touching output.
     parameters:
-      native:
-        type: ctypes.CDLL
-      tmp_path:
-        type: Path
-      type_:
-        type: pa.DataType
+      native: Loaded native runtime used by the ABI test.
+      tmp_path: Temporary directory for this test.
+      type_: Type expression to process.
     """
     path = tmp_path / "sentinel"
     path.write_bytes(b"untouched")
@@ -212,10 +202,8 @@ def test_newly_supported_read_schema(
     """
     title: Read former exclusions through the owned recursive schema interface.
     parameters:
-      tmp_path:
-        type: Path
-      type_:
-        type: pa.DataType
+      tmp_path: Temporary directory for this test.
+      type_: Type expression to process.
     """
     path = tmp_path / "unsupported.parquet"
     pq.write_table(
@@ -235,13 +223,11 @@ def test_newly_supported_read_schema(
 @pytest.mark.parametrize("value", [0, -1, True, 2**63, "10", 1.5])
 def test_invalid_sizes(tmp_path: Path, value: object) -> None:
     """
-    title: >-
-      Validate size types and bounds before ctypes truncation or file access.
+    title: Validate size types and bounds before ctypes truncation or file
+      access.
     parameters:
-      tmp_path:
-        type: Path
-      value:
-        type: object
+      tmp_path: Temporary directory for this test.
+      value: Value to process.
     """
     schema = RecordBatchSchema().add_field("id", rb.IrxColumnType.INT64)
     path = tmp_path / "sentinel"
@@ -265,10 +251,8 @@ def test_stream_exports_have_no_legacy_aliases(
     """
     title: Python exports explicitly named streams without legacy aliases.
     parameters:
-      stream_name:
-        type: str
-      legacy_name:
-        type: str
+      stream_name: Name of stream.
+      legacy_name: Name of legacy.
     """
     assert stream_name in rb.__all__
     assert getattr(rb, stream_name).__name__ == stream_name
@@ -281,13 +265,11 @@ def test_unified_modes_and_reopen(
     tmp_path: Path, format_: type[CSVStream] | type[ParquetStream]
 ) -> None:
     """
-    title: >-
-      Enforce one active mode, shared aliases and reusable successful close.
+    title: Enforce one active mode, shared aliases and reusable successful
+      close.
     parameters:
-      tmp_path:
-        type: Path
-      format_:
-        type: type[CSVStream] | type[ParquetStream]
+      tmp_path: Temporary directory for this test.
+      format_: Format.
     """
     schema = RecordBatchSchema().add_field("id", rb.IrxColumnType.INT64)
     path = tmp_path / "data"
@@ -323,13 +305,11 @@ def test_unified_modes_and_reopen(
 )
 def test_exact_expected_schema(tmp_path: Path, changed: str) -> None:
     """
-    title: >-
-      Expected Parquet schemas assert types and metadata without conversion.
+    title: Expected Parquet schemas assert types and metadata without
+      conversion.
     parameters:
-      tmp_path:
-        type: Path
-      changed:
-        type: str
+      tmp_path: Temporary directory for this test.
+      changed: Changed.
     """
     path = tmp_path / "data.parquet"
     kwargs = (
@@ -359,10 +339,8 @@ def test_retained_batch_and_schema(
     """
     title: Schema and data snapshots survive reader closure and writer release.
     parameters:
-      native:
-        type: ctypes.CDLL
-      tmp_path:
-        type: Path
+      native: Loaded native runtime used by the ABI test.
+      tmp_path: Temporary directory for this test.
     """
     path = tmp_path / "data.parquet"
     expected = pa.table({"id": [1, None]})
@@ -382,13 +360,11 @@ def test_retained_batch_and_schema(
 
 def test_native_stream_transfer(native: ctypes.CDLL, tmp_path: Path) -> None:
     """
-    title: >-
-      Exported readers own the parent Parquet reader and random-access file.
+    title: Exported readers own the parent Parquet reader and random-access
+      file.
     parameters:
-      native:
-        type: ctypes.CDLL
-      tmp_path:
-        type: Path
+      native: Loaded native runtime used by the ABI test.
+      tmp_path: Temporary directory for this test.
     """
     path = tmp_path / "data.parquet"
     expected = pa.table({"id": range(100)})
@@ -412,10 +388,8 @@ def test_nonnullable_actual_nulls(native: ctypes.CDLL, tmp_path: Path) -> None:
     """
     title: Reject physical nulls despite a non-nullable schema declaration.
     parameters:
-      native:
-        type: ctypes.CDLL
-      tmp_path:
-        type: Path
+      native: Loaded native runtime used by the ABI test.
+      tmp_path: Temporary directory for this test.
     """
     schema = pa.schema([pa.field("id", pa.int64(), False)])
     handle = import_batch(
@@ -445,11 +419,10 @@ def test_nonnullable_actual_nulls(native: ctypes.CDLL, tmp_path: Path) -> None:
 
 def test_failed_session_and_exception_cleanup(tmp_path: Path) -> None:
     """
-    title: >-
-      Preserve the first write failure and forbid reopening failed sessions.
+    title: Preserve the first write failure and forbid reopening
+      failed sessions.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     path = tmp_path / "input.parquet"
     pq.write_table(pa.table({"other": [1]}), path)
@@ -472,12 +445,10 @@ def test_failed_session_and_exception_cleanup(tmp_path: Path) -> None:
 
 def test_invalid_paths_options_and_corruption(tmp_path: Path) -> None:
     """
-    title: >-
-      Errors during open leave the owner closed and validation is
-      nondestructive.
+    title: Errors during open leave the owner closed and validation
+      is nondestructive.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     path = tmp_path / "data"
     schema = RecordBatchSchema().add_field("id", rb.IrxColumnType.INT64)
@@ -502,11 +473,11 @@ def test_invalid_paths_options_and_corruption(tmp_path: Path) -> None:
 
 def test_missing_optional_symbols(monkeypatch: pytest.MonkeyPatch) -> None:
     """
-    title: >-
-      Old overrides report actionable errors only when Parquet is requested.
+    title: Old overrides report actionable errors only when Parquet
+      is requested.
     parameters:
-      monkeypatch:
-        type: pytest.MonkeyPatch
+      monkeypatch: Fixture for temporarily replacing dependencies
+        and settings.
     """
     monkeypatch.setattr(rb, "_get_lib", object)
     monkeypatch.setenv(rb.IRX_RECORD_BATCH_LIBRARY_ENV, "legacy-override")
@@ -522,11 +493,10 @@ def test_missing_optional_symbols(monkeypatch: pytest.MonkeyPatch) -> None:
 )
 def test_footer_failure_is_sticky(tmp_path: Path) -> None:
     """
-    title: >-
-      Real finalization failures are not reported as successful repeated close.
+    title: Real finalization failures are not reported as successful repeated
+      close.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     script = """
 import resource, signal, sys
@@ -559,13 +529,11 @@ def test_codec_properties_and_zero_row_write(
     tmp_path: Path, codec: str
 ) -> None:
     """
-    title: >-
-      Compression applies to real row groups and empty batches are harmless.
+    title: Compression applies to real row groups and empty batches
+      are harmless.
     parameters:
-      tmp_path:
-        type: Path
-      codec:
-        type: str
+      tmp_path: Temporary directory for this test.
+      codec: Codec.
     """
     schema = RecordBatchSchema().add_field("id", rb.IrxColumnType.INT64)
     builder = rb.RecordBatchBuilder(schema)
@@ -593,15 +561,12 @@ def test_schema_validation_precedes_truncation(
     native: ctypes.CDLL, tmp_path: Path, case: str
 ) -> None:
     """
-    title: >-
-      Reject invalid schemas and metadata without modifying an existing file.
+    title: Reject invalid schemas and metadata without modifying an existing
+      file.
     parameters:
-      native:
-        type: ctypes.CDLL
-      tmp_path:
-        type: Path
-      case:
-        type: str
+      native: Loaded native runtime used by the ABI test.
+      tmp_path: Temporary directory for this test.
+      case: Case.
     """
     field = pa.field("id", pa.int64())
     schemas = {
@@ -634,13 +599,11 @@ def test_snapshot_rebuild_preserves_timezone(
     native: ctypes.CDLL, tmp_path: Path
 ) -> None:
     """
-    title: >-
-      Reader schema snapshots are usable by builders without losing timezones.
+    title: Reader schema snapshots are usable by builders without losing
+      timezones.
     parameters:
-      native:
-        type: ctypes.CDLL
-      tmp_path:
-        type: Path
+      native: Loaded native runtime used by the ABI test.
+      tmp_path: Temporary directory for this test.
     """
     type_ = pa.timestamp("ns", tz="America/Sao_Paulo")
     schema = pa.schema(
@@ -665,11 +628,10 @@ def test_snapshot_rebuild_preserves_timezone(
 
 def test_late_corruption_is_not_eof(tmp_path: Path) -> None:
     """
-    title: >-
-      Corrupt later pages fail after valid batches instead of ending silently.
+    title: Corrupt later pages fail after valid batches instead of ending
+      silently.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     path = tmp_path / "corrupt.parquet"
     expected = pa.table({"id": range(40)})
@@ -699,12 +661,10 @@ def test_late_corruption_is_not_eof(tmp_path: Path) -> None:
 
 def test_plain_external_schema_and_float_specials(tmp_path: Path) -> None:
     """
-    title: >-
-      Read ordinary Parquet without embedded Arrow schema and preserve IEEE
-      values.
+    title: Read ordinary Parquet without embedded Arrow schema and preserve
+      IEEE values.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     import math  # noqa: PLC0415
 

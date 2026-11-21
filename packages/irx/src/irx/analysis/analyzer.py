@@ -1,8 +1,8 @@
 """
 title: Semantic analyzer orchestration.
-summary: >-
-  Compose the specialized semantic visitor mixins around a shared analyzer core
-  so traversal, registration, bindings, and rule logic live in smaller modules.
+summary: Compose the specialized semantic visitor mixins around a shared
+  analyzer core so traversal, registration, bindings, and rule logic live
+  in smaller modules.
 """
 
 from __future__ import annotations
@@ -32,7 +32,6 @@ class SemanticAnalyzer(
 ):
     """
     title: Concrete semantic analyzer.
-    summary: >-
-      Walk AST nodes, attach semantic sidecars, and delegate reusable policy to
-      the extracted factories, registries, and binding tables.
+    summary: Walk AST nodes, attach semantic sidecars, and delegate reusable
+      policy to the extracted factories, registries, and binding tables.
     """

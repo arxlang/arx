@@ -30,19 +30,14 @@ def _extern_prototype(
     """
     title: Build one explicit extern prototype.
     parameters:
-      name:
-        type: str
-      return_type:
-        type: astx.DataType
-      symbol_name:
-        type: str | None
-      runtime_feature:
-        type: str | None
+      name: Name identifying the declaration or operation.
+      return_type: Declared result type.
+      symbol_name: Name of symbol.
+      runtime_feature: Runtime feature.
       args:
-        type: astx.Argument
         variadic: positional
-    returns:
-      type: astx.FunctionPrototype
+        description: Positional arguments.
+    returns: Constructed one explicit extern prototype.
     """
     prototype = astx.FunctionPrototype(
         name,
@@ -62,10 +57,9 @@ def _main_module(*body_nodes: astx.AST) -> astx.Module:
     title: Build one small Int32 main module.
     parameters:
       body_nodes:
-        type: astx.AST
         variadic: positional
-    returns:
-      type: astx.Module
+        description: Body nodes.
+    returns: Constructed one small Int32 main module.
     """
     module = astx.Module()
     main = astx.FunctionDef(
@@ -86,8 +80,8 @@ def _main_module(*body_nodes: astx.AST) -> astx.Module:
 
 def test_plain_extern_symbol_does_not_activate_runtime_feature() -> None:
     """
-    title: >-
-      Plain extern declarations should rely on the system linker by default.
+    title: Plain extern declarations should rely on the system linker by
+      default.
     """
     builder = Builder()
     module = _main_module(
@@ -150,8 +144,8 @@ def test_translate_feature_backed_extern_activates_runtime_feature() -> None:
 
 def test_translate_pointer_and_opaque_handle_externs() -> None:
     """
-    title: >-
-      Pointer and opaque-handle externs should lower through one public path.
+    title: Pointer and opaque-handle externs should lower through one public
+      path.
     """
     builder = Builder()
     module = _main_module(
@@ -260,11 +254,10 @@ def test_translate_struct_extern_by_value() -> None:
 @pytest.mark.skipif(not HAS_CLANG, reason="clang is not available")
 def test_build_feature_backed_libm_extern_call(tmp_path: Path) -> None:
     """
-    title: >-
-      Feature-backed externs should link with their runtime feature inputs.
+    title: Feature-backed externs should link with their runtime feature
+      inputs.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     builder = Builder()
     module = _main_module(
@@ -315,8 +308,7 @@ def test_invalid_ffi_string_ownership_is_rejected(ownership: object) -> None:
     """
     title: Reject unsupported ownership contracts before lowering.
     parameters:
-      ownership:
-        type: object
+      ownership: Resolved resource ownership contract.
     """
     prototype = _extern_prototype("text", return_type=astx.String())
     setattr(prototype, "ffi_return_ownership", ownership)

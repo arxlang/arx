@@ -46,8 +46,7 @@ class SystemVisitorMixin(ClassVisitorMixin):
         """
         title: Visit Cast nodes.
         parameters:
-          node:
-            type: astx.Cast
+          node: Syntax node to process.
         """
         if isinstance(node.target_type, astx.NullableType) and isinstance(
             node.value, astx.LiteralNone
@@ -167,8 +166,7 @@ class SystemVisitorMixin(ClassVisitorMixin):
         """
         title: Visit IsInstanceExpr nodes.
         parameters:
-          node:
-            type: astx.IsInstanceExpr
+          node: Syntax node to process.
         """
         self.visit_child(node.value)
         _ = safe_pop(self.result_stack)
@@ -182,8 +180,7 @@ class SystemVisitorMixin(ClassVisitorMixin):
         """
         title: Visit PrintExpr nodes.
         parameters:
-          node:
-            type: astx.PrintExpr
+          node: Syntax node to process.
         """
         self.visit_child(node.message)
         message_value = safe_pop(self.result_stack)
@@ -237,8 +234,7 @@ class SystemVisitorMixin(ClassVisitorMixin):
         """
         title: Visit TypeOfExpr nodes.
         parameters:
-          node:
-            type: astx.TypeOfExpr
+          node: Syntax node to process.
         """
         self.visit_child(node.value)
         _ = safe_pop(self.result_stack)
@@ -255,12 +251,9 @@ class SystemVisitorMixin(ClassVisitorMixin):
         """
         title: Check every table chunk while preserving independent ownership.
         parameters:
-          node:
-            type: astx.Cast
-          value:
-            type: ir.Value
-          plan:
-            type: ArrowTableCast
+          node: Syntax node to process.
+          value: Value to process.
+          plan: Resolved semantic execution plan.
         """
         builder = self._llvm.ir_builder
         if plan.schema_ipc is None:
@@ -304,15 +297,12 @@ class SystemVisitorMixin(ClassVisitorMixin):
         self, node: astx.Cast, value: ir.Value, plan: ArrowConversion
     ) -> None:
         """
-        title: >-
-          Lower a resolved RecordBatch conversion through checked runtime APIs.
+        title: Lower a resolved RecordBatch conversion through checked runtime
+          APIs.
         parameters:
-          node:
-            type: astx.Cast
-          value:
-            type: ir.Value
-          plan:
-            type: ArrowConversion
+          node: Syntax node to process.
+          value: Value to process.
+          plan: Resolved semantic execution plan.
         """
         builder = self._llvm.ir_builder
         zero = ir.Constant(ir.IntType(32), 0)

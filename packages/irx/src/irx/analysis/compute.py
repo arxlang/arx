@@ -1,14 +1,14 @@
 """
-title: Closed f64 math capabilities and compilation-local semantic call plans.
-summary: >-
-  Lowering consumes these plans through the shared versioned Arrow runtime.
-  sqrt and exp use Arrow 26.0.1 unchecked IEEE kernels, with null propagation,
-  no options or fast-math, and finite error budgets of 4 and 8 ULP
-  respectively. sqrt preserves signed zero and maps negative inputs to NaN. exp
-  overflow produces positive infinity; underflow produces subnormals or
-  positive zero. NaN payloads and output chunk boundaries are not guaranteed.
-  Scalars retain native transport; Series results own references and preserve
-  order/length.
+title: Closed f64 math capabilities and compilation-local semantic
+  call plans.
+summary: Lowering consumes these plans through the shared versioned
+  Arrow runtime. sqrt and exp use Arrow 26.0.1 unchecked IEEE kernels,
+  with null propagation, no options or fast-math, and finite error
+  budgets of 4 and 8 ULP respectively. sqrt preserves signed zero
+  and maps negative inputs to NaN. exp overflow produces positive
+  infinity; underflow produces subnormals or positive zero. NaN payloads
+  and output chunk boundaries are not guaranteed. Scalars retain
+  native transport; Series results own references and preserve order/length.
 """
 
 from __future__ import annotations
@@ -50,10 +50,9 @@ def compute_shape(type_: astx.DataType) -> ComputeShape | None:
     """
     title: Recognize only the approved f64 storage and compute shapes.
     parameters:
-      type_:
-        type: astx.DataType
-    returns:
-      type: ComputeShape | None
+      type_: Type expression to process.
+    returns: 'Result of this operation: recognize only the approved f64 storage
+      and compute shapes.'
     """
     if isinstance(type_, astx.Float64):
         return "scalar"
@@ -75,22 +74,14 @@ class ComputeOperation(CallOperation):
     """
     title: One approved kernel identity supplied by trusted host metadata.
     attributes:
-      kernel:
-        type: ComputeKernel
-      operation_id:
-        type: int
-      arrow_version:
-        type: Literal[26.0.1]
-      arrow_type_id:
-        type: int
-      required_runtime_features:
-        type: tuple[str, Ellipsis]
-      null_policy:
-        type: Literal[propagate]
-      domain_policy:
-        type: Literal[ieee]
-      max_ulps:
-        type: int
+      kernel: Kernel.
+      operation_id: Approved operation identifier.
+      arrow_version: Arrow version.
+      arrow_type_id: Identifier for arrow type.
+      required_runtime_features: Required runtime features.
+      null_policy: Null policy.
+      domain_policy: Domain policy.
+      max_ulps: Max ulps.
     """
 
     kernel: ComputeKernel
@@ -106,8 +97,7 @@ class ComputeOperation(CallOperation):
         """
         title: Validate the closed kernel identifier, including runtime inputs.
         parameters:
-          kernel:
-            type: ComputeKernel
+          kernel: Kernel.
         """
         validate_compute_kernel(kernel)
         object.__setattr__(self, "kernel", kernel)
@@ -133,20 +123,13 @@ class ComputePlan(CallPlan):
     """
     title: Resolved unary math meaning; no name or type lookup remains.
     attributes:
-      operation:
-        type: ComputeOperation
-      function:
-        type: SemanticFunction
-      argument:
-        type: astx.AST
-      result_type:
-        type: astx.DataType
-      shape:
-        type: ComputeShape
-      conversion:
-        type: ImplicitConversion
-      ownership:
-        type: ResourceOwnership | None
+      operation: Operation to resolve or execute.
+      function: Function to process.
+      argument: Argument.
+      result_type: Resolved result type.
+      shape: Declared dimensions or result shape.
+      conversion: Conversion.
+      ownership: Resolved resource ownership contract.
     """
 
     operation: ComputeOperation
@@ -180,8 +163,8 @@ class ComputePlan(CallPlan):
     def dependencies(self) -> tuple[astx.AST, ...]:
         """
         title: Expose the operand to declaration reachability and invalidation.
-        returns:
-          type: tuple[astx.AST, Ellipsis]
+        returns: 'Result of this operation: expose the operand to declaration
+          reachability and invalidation.'
         """
         return (self.argument,)
 
@@ -189,8 +172,7 @@ class ComputePlan(CallPlan):
         """
         title: Remove owned result metadata before analyzing a reused tree.
         parameters:
-          node:
-            type: astx.AST
+          node: Syntax node to process.
         """
         info = getattr(node, "semantic", None)
         if isinstance(info, SemanticInfo):
@@ -212,20 +194,13 @@ def validate_compute_plan(
     """
     title: Reject invalid record fields and lossy or mismatched conversions.
     parameters:
-      operation:
-        type: ComputeOperation
-      function:
-        type: SemanticFunction
-      argument:
-        type: astx.AST
-      result_type:
-        type: astx.DataType
-      shape:
-        type: ComputeShape
-      conversion:
-        type: ImplicitConversion
-      ownership:
-        type: ResourceOwnership | None
+      operation: Operation to resolve or execute.
+      function: Function to process.
+      argument: Argument.
+      result_type: Resolved result type.
+      shape: Declared dimensions or result shape.
+      conversion: Conversion.
+      ownership: Resolved resource ownership contract.
     """
     if operation != ComputeOperation(operation.kernel) or (
         function.signature.operation != operation
@@ -254,8 +229,7 @@ def validate_compute_registration(declaration: astx.FunctionPrototype) -> None:
     """
     title: Validate a unary shape-preserving declaration, including templates.
     parameters:
-      declaration:
-        type: astx.FunctionPrototype
+      declaration: Declaration being processed.
     """
     args = declaration.args.nodes
     if any(
@@ -305,10 +279,8 @@ class ComputeAnalysisVisitor(TableIOAnalysisVisitor):
         """
         title: Resolve one typed unary call after ordinary symbol lookup.
         parameters:
-          operation:
-            type: ComputeOperation
-          call:
-            type: AnalysisCall
+          operation: Operation to resolve or execute.
+          call: Call being processed.
         """
         node, info = call.node, call.info
         info.resolved_type = None

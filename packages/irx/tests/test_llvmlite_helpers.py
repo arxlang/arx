@@ -54,18 +54,15 @@ class _NoFmaBuilder:
     """
     title: Proxy IRBuilder that hides fma to exercise intrinsic fallback.
     attributes:
-      _real:
-        type: ir.IRBuilder
-      called:
-        type: list[str]
+      _real: Real.
+      called: Called.
     """
 
     def __init__(self, real: ir.IRBuilder) -> None:
         """
         title: Initialize _NoFmaBuilder.
         parameters:
-          real:
-            type: ir.IRBuilder
+          real: Real.
         """
         self._real: ir.IRBuilder = real
         self.called: list[str] = []
@@ -74,10 +71,8 @@ class _NoFmaBuilder:
         """
         title: Return one attribute.
         parameters:
-          name:
-            type: str
-        returns:
-          type: Any
+          name: Name identifying the declaration or operation.
+        returns: One attribute.
         """
         if name == "fma":
             raise AttributeError
@@ -92,14 +87,10 @@ class _NoFmaBuilder:
         """
         title: Call.
         parameters:
-          fn:
-            type: ir.Function
-          args:
-            type: list[ir.Value]
-          name:
-            type: str | None
-        returns:
-          type: ir.Instruction
+          fn: Function to process.
+          args: Arguments supplied to the operation.
+          name: Name identifying the declaration or operation.
+        returns: 'Result of this operation: call.'
         """
         self.called.append(fn.name)
         return self._real.call(fn, args, name=name)
@@ -109,8 +100,7 @@ def _prime_builder(visitor: Visitor) -> None:
     """
     title: Prime builder.
     parameters:
-      visitor:
-        type: Visitor
+      visitor: Visitor performing the traversal or lowering.
     """
     float_ty = visitor._llvm.FLOAT_TYPE
     fn_ty = ir.FunctionType(float_ty, [])
@@ -227,10 +217,9 @@ def test_unify_promotes_scalar_int_to_vector() -> None:
 def test_unify_vector_float_rank_matches_double() -> None:
     """
     title: Double scalar casts down to match float vector element type.
-    summary: >-
-      When a scalar and a vector have different FP precision, the vector's
-      element type wins — the scalar is cast to match, not the other way
-      around.
+    summary: When a scalar and a vector have different FP precision, the
+      vector's element type wins — the scalar is cast to match, not the other
+      way around.
     """
     visitor = Visitor()
     _prime_builder(visitor)
@@ -280,8 +269,8 @@ def test_safe_pop_empty_returns_none() -> None:
 
 def test_get_data_type_aliases_and_invalid() -> None:
     """
-    title: >-
-      VariablesLLVM.get_data_type should resolve aliases and reject invalid.
+    title: VariablesLLVM.get_data_type should resolve aliases and reject
+      invalid.
     """
     visitor = Visitor()
     llvm_vars = visitor._llvm
@@ -325,8 +314,8 @@ def test_get_size_t_type_from_triple_32bit_family_with_64_tag() -> None:
 
 def test_get_size_t_type_from_triple_fallback() -> None:
     """
-    title: >-
-      Test _get_size_t_type_from_triple fallback for unknown architectures.
+    title: Test _get_size_t_type_from_triple fallback for unknown
+      architectures.
     """
     visitor = Visitor()
 
@@ -341,8 +330,8 @@ def test_get_size_t_type_from_triple_fallback() -> None:
 
 def test_get_fma_function_vector_half_and_cache() -> None:
     """
-    title: >-
-      Vector-half FMA intrinsic naming should include lane count and cache.
+    title: Vector-half FMA intrinsic naming should include lane count and
+      cache.
     """
     visitor = Visitor()
     vec_ty = ir.VectorType(visitor._llvm.FLOAT16_TYPE, 4)

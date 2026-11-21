@@ -1,8 +1,9 @@
 """
 title: Host-facing module interfaces for multi-module analysis.
-summary: >-
-  Define the parser-agnostic types that hosts pass into IRx for multi-module
-  compilation.
+summary: Define the parser-agnostic types that hosts pass into IRx
+  for multi-module compilation.
+attributes:
+  ModuleKey: Module key.
 """
 
 from __future__ import annotations
@@ -25,10 +26,9 @@ ModuleKey: TypeAlias = str
 class ImportResolutionError(LookupError):
     """
     title: Expected host failure while resolving or parsing an import.
-    summary: >-
-      Hosts raise this type for user-actionable import failures. Unexpected
-      resolver exceptions cross the IRx boundary unchanged so compiler bugs are
-      not mislabeled as source diagnostics.
+    summary: Hosts raise this type for user-actionable import failures.
+      Unexpected resolver exceptions cross the IRx boundary unchanged
+      so compiler bugs are not mislabeled as source diagnostics.
     """
 
 
@@ -38,36 +38,23 @@ class ImportResolutionError(LookupError):
 class ParsedModule:
     """
     title: One parsed module supplied by the host compiler.
-    summary: >-
-      Bundle a host-owned module key with the parsed AST and optional human-
-      facing origin metadata.
+    summary: Bundle a host-owned module key with the parsed AST and optional
+      human- facing origin metadata.
     attributes:
-      key:
-        type: ModuleKey
-      ast:
-        type: astx.Module
-      display_name:
-        type: str | None
-      origin:
-        type: str | None
-      native_file_class:
-        type: astx.ClassDefStmt | None
-      native_features:
-        type: tuple[NativeFeature, Ellipsis]
-      native_bindings:
-        type: tuple[NativeBinding, Ellipsis]
-      native_record_batch_class:
-        type: astx.ClassDefStmt | None
-      lazy_declarations:
-        type: bool
-      native_arrow_classes:
-        type: tuple[astx.ClassDefStmt, Ellipsis]
-      exception_classes:
-        type: tuple[astx.ClassDefStmt, Ellipsis]
-        description: >-
-          Explicit declaration identities for one complete builtin exception
-          hierarchy. IRx validates its nominal bases and native storage schema;
-          matching source names alone never register an exception capability.
+      key: Key selecting the entry.
+      ast: AST.
+      display_name: Name of display.
+      origin: Origin.
+      native_file_class: Native file class.
+      native_features: Native features.
+      native_bindings: Native bindings.
+      native_record_batch_class: Native record batch class.
+      lazy_declarations: Whether to use lazy declarations.
+      native_arrow_classes: Native arrow classes.
+      exception_classes: Explicit declaration identities for one complete
+        builtin exception hierarchy. IRx validates its nominal bases and
+        native storage schema; matching source names alone never register
+        an exception capability.
     """
 
     key: ModuleKey
@@ -110,10 +97,8 @@ def validate_exception_registration(
     """
     title: Validate all exception capability items and declaration membership.
     parameters:
-      declarations:
-        type: tuple[astx.ClassDefStmt, Ellipsis]
-      module:
-        type: astx.Module
+      declarations: Declarations.
+      module: Module to process.
     """
     if len({id(item) for item in declarations}) != len(declarations):
         raise ValueError("duplicate exception class registration")
@@ -132,12 +117,9 @@ def validate_native_registration(
     """
     title: Validate capabilities against actual top-level extern identities.
     parameters:
-      features:
-        type: tuple[NativeFeature, Ellipsis]
-      bindings:
-        type: tuple[NativeBinding, Ellipsis]
-      module:
-        type: astx.Module
+      features: Features.
+      bindings: Bindings.
+      module: Module to process.
     """
     names = tuple(feature.name for feature in features)
     if len(names) != len(set(names)):
@@ -168,13 +150,11 @@ def validate_table_io_registration(
     declaration: astx.FunctionPrototype, operation: TableIOOperation
 ) -> None:
     """
-    title: >-
-      Reject malformed trusted prototypes before relaxing the FFI boundary.
+    title: Reject malformed trusted prototypes before relaxing the
+      FFI boundary.
     parameters:
-      declaration:
-        type: astx.FunctionPrototype
-      operation:
-        type: TableIOOperation
+      declaration: Declaration being processed.
+      operation: Operation to resolve or execute.
     """
     handle = astx.OpaqueHandleType(
         "IrxRbApiCsv" if operation.startswith("csv_") else "IrxRbApiParquet"
@@ -235,10 +215,8 @@ def validate_file_registration(
     """
     title: Require native File privileges to reference a host-supplied node.
     parameters:
-      declaration:
-        type: astx.ClassDefStmt | None
-      module:
-        type: astx.Module
+      declaration: Declaration being processed.
+      module: Module to process.
     """
     if declaration is not None and not any(
         node is declaration for node in module.nodes
@@ -251,9 +229,8 @@ def validate_file_registration(
 class ImportResolver(Protocol):
     """
     title: Host callback that resolves imports to parsed modules.
-    summary: >-
-      Describe the host-owned callback IRx uses to turn import specifiers into
-      already-parsed modules.
+    summary: Describe the host-owned callback IRx uses to turn import
+      specifiers into already-parsed modules.
     """
 
     def __call__(
@@ -264,19 +241,14 @@ class ImportResolver(Protocol):
     ) -> ParsedModule:
         """
         title: Resolve one import request.
-        summary: >-
-          Return the parsed module selected by the host for one import edge.
-          Raise ImportResolutionError for expected user-actionable failures;
-          other exceptions are treated as internal resolver failures.
+        summary: Return the parsed module selected by the host for one import
+          edge. Raise ImportResolutionError for expected user-actionable
+          failures; other exceptions are treated as internal resolver failures.
         parameters:
-          requesting_module_key:
-            type: ModuleKey
-          import_node:
-            type: astx.ImportStmt | astx.ImportFromStmt
-          requested_specifier:
-            type: str
-        returns:
-          type: ParsedModule
+          requesting_module_key: Requesting module key.
+          import_node: Import node.
+          requested_specifier: Import specifier requested by the source module.
+        returns: Resolved one import request.
         """
         _ = requesting_module_key
         _ = import_node

@@ -16,9 +16,8 @@ from astx.types import AnyType
 class NamespaceKind(str, Enum):
     """
     title: Stable namespace categories.
-    summary: >-
-      Distinguish the semantic origin of one namespace-valued binding while
-      keeping the user-facing expression model uniform.
+    summary: Distinguish the semantic origin of one namespace-valued binding
+      while keeping the user-facing expression model uniform.
     """
 
     MODULE = "module"
@@ -30,16 +29,13 @@ class NamespaceKind(str, Enum):
 class NamespaceType(AnyType):
     """
     title: Semantic-only namespace type.
-    summary: >-
-      Represent one imported namespace value during semantic analysis and
-      lowering without modeling it as a user-defined runtime aggregate.
+    summary: Represent one imported namespace value during semantic analysis
+      and lowering without modeling it as a user-defined runtime aggregate.
     attributes:
-      namespace_key:
-        type: str
-      namespace_kind:
-        type: NamespaceKind
-      display_name:
-        type: str | None
+      namespace_key: Namespace key.
+      namespace_kind: Namespace kind.
+      display_name: Name of display.
+      module_key: Canonical module identity.
     """
 
     namespace_key: str
@@ -56,12 +52,9 @@ class NamespaceType(AnyType):
         """
         title: Initialize one namespace type.
         parameters:
-          namespace_key:
-            type: str
-          namespace_kind:
-            type: NamespaceKind
-          display_name:
-            type: str | None
+          namespace_key: Namespace key.
+          namespace_kind: Namespace kind.
+          display_name: Name of display.
         """
         super().__init__()
         self.namespace_key = namespace_key
@@ -72,16 +65,14 @@ class NamespaceType(AnyType):
     def module_key(self) -> str:
         """
         title: Return the legacy module-key alias for this namespace.
-        returns:
-          type: str
+        returns: The legacy module-key alias for this namespace.
         """
         return self.namespace_key
 
     def __str__(self) -> str:
         """
         title: Render one namespace type as text.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         visible_name = self.display_name or self.namespace_key
         return f"NamespaceType[{self.namespace_kind.value}:{visible_name}]"
@@ -90,10 +81,8 @@ class NamespaceType(AnyType):
         """
         title: Build one repr structure for a namespace type.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: astx.base.ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         visible_name = self.display_name or self.namespace_key
         key = f"NAMESPACE[{self.namespace_kind.value}:{visible_name}]"

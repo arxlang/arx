@@ -1,8 +1,7 @@
 """
 title: Tensor layout helpers layered on the builtin tensor runtime.
-summary: >-
-  Define IRx's backend-neutral Tensor metadata helpers on top of the canonical
-  buffer/view substrate and the Arrow C++ backed tensor runtime.
+summary: Define IRx's backend-neutral Tensor metadata helpers on top of the
+  canonical buffer/view substrate and the Arrow C++ backed tensor runtime.
 """
 
 from __future__ import annotations
@@ -55,16 +54,14 @@ class TensorOrder(str, Enum):
 class TensorLayout:
     """
     title: Static Tensor layout metadata.
-    summary: >-
-      Represent the logical rank, shape, strides, and byte offset of one Tensor
-      value without duplicating the lower-level storage machinery.
+    summary: Represent the logical rank, shape, strides, and byte
+      offset of one Tensor value without duplicating the lower-level
+      storage machinery.
     attributes:
-      shape:
-        type: tuple[int, Ellipsis]
-      strides:
-        type: tuple[int, Ellipsis]
-      offset_bytes:
-        type: int
+      shape: Declared dimensions or result shape.
+      strides: Strides.
+      offset_bytes: Offset bytes.
+      ndim: Ndim.
     """
 
     shape: tuple[int, ...]
@@ -75,8 +72,7 @@ class TensorLayout:
     def ndim(self) -> int:
         """
         title: Return the rank encoded by the layout.
-        returns:
-          type: int
+        returns: The rank encoded by the layout.
         """
         return len(self.shape)
 
@@ -86,10 +82,9 @@ def _shape_extent(shape: tuple[int, ...]) -> int:
     """
     title: Multiply one shape tuple into a logical element count.
     parameters:
-      shape:
-        type: tuple[int, Ellipsis]
-    returns:
-      type: int
+      shape: Declared dimensions or result shape.
+    returns: 'Result of this operation: multiply one shape tuple into a logical
+      element count.'
     """
     extent = 1
     for dim in shape:
@@ -103,10 +98,8 @@ def tensor_element_count(layout: TensorLayout) -> int:
     """
     title: Return the logical element count for one layout.
     parameters:
-      layout:
-        type: TensorLayout
-    returns:
-      type: int
+      layout: Layout.
+    returns: The logical element count for one layout.
     """
     return _shape_extent(layout.shape)
 
@@ -122,14 +115,10 @@ def tensor_default_strides(
     """
     title: Return canonical byte strides for one contiguous Tensor shape.
     parameters:
-      shape:
-        type: tuple[int, Ellipsis]
-      item_size_bytes:
-        type: int
-      order:
-        type: TensorOrder
-    returns:
-      type: tuple[int, Ellipsis]
+      shape: Declared dimensions or result shape.
+      item_size_bytes: Item size bytes.
+      order: Order.
+    returns: Canonical byte strides for one contiguous Tensor shape.
     """
     if item_size_bytes <= 0:
         raise ValueError("tensor item_size_bytes must be positive")
@@ -160,12 +149,9 @@ def tensor_is_c_contiguous(
     """
     title: Return whether one layout matches canonical C-order strides.
     parameters:
-      layout:
-        type: TensorLayout
-      item_size_bytes:
-        type: int
-    returns:
-      type: bool
+      layout: Layout.
+      item_size_bytes: Item size bytes.
+    returns: Whether one layout matches canonical C-order strides.
     """
     return layout.strides == tensor_default_strides(
         layout.shape,
@@ -183,12 +169,9 @@ def tensor_is_f_contiguous(
     """
     title: Return whether one layout matches canonical Fortran-order strides.
     parameters:
-      layout:
-        type: TensorLayout
-      item_size_bytes:
-        type: int
-    returns:
-      type: bool
+      layout: Layout.
+      item_size_bytes: Item size bytes.
+    returns: Whether one layout matches canonical Fortran-order strides.
     """
     return layout.strides == tensor_default_strides(
         layout.shape,
@@ -205,10 +188,8 @@ def validate_tensor_layout(
     """
     title: Validate one static Tensor layout.
     parameters:
-      layout:
-        type: TensorLayout
-    returns:
-      type: tuple[str, Ellipsis]
+      layout: Layout.
+    returns: 'Result of this operation: validate one static Tensor layout.'
     """
     errors: list[str] = []
 
@@ -231,14 +212,12 @@ def tensor_byte_bounds(
 ) -> tuple[int, int] | None:
     """
     title: Return the minimum and maximum element-start byte offsets.
-    summary: >-
-      The result is relative to the underlying data pointer. None means the
-      logical layout has zero extent and therefore addresses no elements.
+    summary: The result is relative to the underlying data pointer. None
+      means the logical layout has zero extent and therefore addresses no
+      elements.
     parameters:
-      layout:
-        type: TensorLayout
-    returns:
-      type: tuple[int, int] | None
+      layout: Layout.
+    returns: The minimum and maximum element-start byte offsets.
     """
     if tensor_element_count(layout) == 0:
         return None
@@ -264,10 +243,8 @@ def tensor_primitive_type_name(type_: astx.DataType | None) -> str | None:
     """
     title: Return the builtin primitive storage name for one Tensor element.
     parameters:
-      type_:
-        type: astx.DataType | None
-    returns:
-      type: str | None
+      type_: Type expression to process.
+    returns: The builtin primitive storage name for one Tensor element.
     """
     if isinstance(type_, astx.Boolean):
         return "bool"
@@ -300,10 +277,8 @@ def tensor_element_size_bytes(type_: astx.DataType | None) -> int | None:
     """
     title: Return the byte width for one Tensor element type.
     parameters:
-      type_:
-        type: astx.DataType | None
-    returns:
-      type: int | None
+      type_: Type expression to process.
+    returns: The byte width for one Tensor element type.
     """
     primitive_name = tensor_primitive_type_name(type_)
     if primitive_name is None:
@@ -320,10 +295,8 @@ def tensor_buffer_dtype(type_: astx.DataType | None) -> BufferHandle | None:
     """
     title: Return the canonical buffer dtype handle for one Tensor element.
     parameters:
-      type_:
-        type: astx.DataType | None
-    returns:
-      type: BufferHandle | None
+      type_: Type expression to process.
+    returns: The canonical buffer dtype handle for one Tensor element.
     """
     primitive_name = tensor_primitive_type_name(type_)
     if primitive_name is None:
@@ -346,22 +319,15 @@ def tensor_buffer_view_metadata(
     """
     title: Bridge one Tensor layout into canonical buffer/view metadata.
     parameters:
-      data:
-        type: BufferHandle
-      owner:
-        type: BufferHandle
-      dtype:
-        type: BufferHandle
-      layout:
-        type: TensorLayout
-      ownership:
-        type: BufferOwnership
-      mutability:
-        type: BufferMutability
-      has_validity_bitmap:
-        type: bool
-    returns:
-      type: BufferViewMetadata
+      data: Data to process.
+      owner: Owner keeping the resource alive.
+      dtype: Element data type.
+      layout: Layout.
+      ownership: Resolved resource ownership contract.
+      mutability: Mutability.
+      has_validity_bitmap: Whether has validity bitmap.
+    returns: 'Result of this operation: bridge one Tensor layout into
+      canonical buffer/view metadata.'
     """
     c_contiguous = False
     f_contiguous = False
@@ -396,10 +362,8 @@ def tensor_element_size_bytes_from_dtype(dtype: BufferHandle) -> int | None:
     """
     title: Return the byte width for one canonical primitive dtype handle.
     parameters:
-      dtype:
-        type: BufferHandle
-    returns:
-      type: int | None
+      dtype: Element data type.
+    returns: The byte width for one canonical primitive dtype handle.
     """
     if dtype.is_null:
         return None

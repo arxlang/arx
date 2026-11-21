@@ -2,9 +2,8 @@
 
 """
 title: Common collection method lowering.
-summary: >-
-  Lower backend-neutral list, tuple, set, and dictionary query nodes using the
-  semantic collection sidecars attached during analysis.
+summary: Lower backend-neutral list, tuple, set, and dictionary query nodes
+  using the semantic collection sidecars attached during analysis.
 """
 
 from __future__ import annotations
@@ -45,10 +44,8 @@ class CollectionVisitorMixin(VisitorMixinBase):
         """
         title: Return resolved collection method metadata.
         parameters:
-          node:
-            type: astx.AST
-        returns:
-          type: ResolvedCollectionMethod
+          node: Syntax node to process.
+        returns: Resolved collection method metadata.
         """
         semantic = getattr(node, "semantic", None)
         resolution = getattr(semantic, "resolved_collection_method", None)
@@ -63,10 +60,8 @@ class CollectionVisitorMixin(VisitorMixinBase):
         """
         title: Return a statically known collection length.
         parameters:
-          base:
-            type: astx.AST
-        returns:
-          type: int | None
+          base: Base value or declaration.
+        returns: A statically known collection length.
         """
         if isinstance(base, (astx.LiteralList, astx.LiteralTuple)):
             return len(base.elements)
@@ -84,10 +79,8 @@ class CollectionVisitorMixin(VisitorMixinBase):
         """
         title: Lower one dynamic list length without narrowing.
         parameters:
-          base:
-            type: astx.AST
-        returns:
-          type: ir.Value
+          base: Base value or declaration.
+        returns: Lowered one dynamic list length without narrowing.
         """
         list_ptr = cast(Any, self)._list_pointer_for_call(
             base,
@@ -115,10 +108,8 @@ class CollectionVisitorMixin(VisitorMixinBase):
         """
         title: Lower one collection length to an Int64 value.
         parameters:
-          base:
-            type: astx.AST
-        returns:
-          type: ir.Value
+          base: Base value or declaration.
+        returns: Lowered one collection length to an Int64 value.
         """
         static_length = self._static_collection_length(base)
         if static_length is not None:
@@ -145,20 +136,14 @@ class CollectionVisitorMixin(VisitorMixinBase):
         """
         title: Emit one equality comparison for collection search.
         parameters:
-          lhs:
-            type: ir.Value
-          rhs:
-            type: ir.Value
-          lhs_type:
-            type: astx.DataType | None
-          unsigned:
-            type: bool
-          name:
-            type: str
-          resolution:
-            type: ResolvedCollectionMethod
-        returns:
-          type: ir.Value
+          lhs: Left operand.
+          rhs: Right operand.
+          lhs_type: Type of left operand.
+          unsigned: Whether to use unsigned semantics.
+          name: Name identifying the declaration or operation.
+          resolution: Resolution.
+        returns: 'Result of this operation: emit one equality comparison
+          for collection search.'
         """
         visitor = cast(Any, self)
         if visitor._is_numeric_value(lhs) and visitor._is_numeric_value(rhs):
@@ -224,10 +209,8 @@ class CollectionVisitorMixin(VisitorMixinBase):
         """
         title: Return literal entries that participate in containment.
         parameters:
-          base:
-            type: astx.AST
-        returns:
-          type: tuple[astx.AST, Ellipsis]
+          base: Base value or declaration.
+        returns: Literal entries that participate in containment.
         """
         if isinstance(base, (astx.LiteralList, astx.LiteralTuple)):
             return tuple(base.elements)
@@ -251,14 +234,10 @@ class CollectionVisitorMixin(VisitorMixinBase):
         """
         title: Return whether one literal entry can match a probe value.
         parameters:
-          entry_type:
-            type: astx.DataType | None
-          probe_type:
-            type: astx.DataType | None
-          resolution:
-            type: ResolvedCollectionMethod
-        returns:
-          type: bool
+          entry_type: Type of entry.
+          probe_type: Type of probe.
+          resolution: Resolution.
+        returns: Whether one literal entry can match a probe value.
         """
         if entry_type is None or probe_type is None:
             return True
@@ -277,14 +256,10 @@ class CollectionVisitorMixin(VisitorMixinBase):
         """
         title: Lower containment for a literal collection.
         parameters:
-          base:
-            type: astx.AST
-          value:
-            type: astx.AST
-          resolution:
-            type: ResolvedCollectionMethod
-        returns:
-          type: ir.Value
+          base: Base value or declaration.
+          value: Value to process.
+          resolution: Resolution.
+        returns: Lowered containment for a literal collection.
         """
         entries = self._literal_contains_entries(base)
         if not entries:
@@ -334,16 +309,11 @@ class CollectionVisitorMixin(VisitorMixinBase):
         """
         title: Lower dynamic-list containment, index, or count.
         parameters:
-          base:
-            type: astx.AST
-          value:
-            type: astx.AST
-          method:
-            type: CollectionMethodKind
-          resolution:
-            type: ResolvedCollectionMethod
-        returns:
-          type: ir.Value
+          base: Base value or declaration.
+          value: Value to process.
+          method: Method.
+          resolution: Resolution.
+        returns: Lowered dynamic-list containment, index, or count.
         """
         list_type = self._resolved_ast_type(base)
         element_type = list_element_type(list_type)
@@ -456,10 +426,8 @@ class CollectionVisitorMixin(VisitorMixinBase):
         """
         title: Return the initial Int32 list-search result.
         parameters:
-          method:
-            type: CollectionMethodKind
-        returns:
-          type: ir.Constant
+          method: Method.
+        returns: The initial Int32 list-search result.
         """
         if method is CollectionMethodKind.INDEX:
             return ir.Constant(self._llvm.INT32_TYPE, -1)
@@ -473,10 +441,8 @@ class CollectionVisitorMixin(VisitorMixinBase):
         """
         title: Update count result for one dynamic-list match.
         parameters:
-          match:
-            type: ir.Value
-          result_addr:
-            type: ir.Value
+          match: Match.
+          result_addr: Result addr.
         """
         builder = self._llvm.ir_builder
         current = builder.load(result_addr, name="collection_count_current")
@@ -502,12 +468,9 @@ class CollectionVisitorMixin(VisitorMixinBase):
         """
         title: Store the found result for list contains or index.
         parameters:
-          method:
-            type: CollectionMethodKind
-          result_addr:
-            type: ir.Value
-          index:
-            type: ir.Value
+          method: Method.
+          result_addr: Result addr.
+          index: Index selecting the item.
         """
         if method is CollectionMethodKind.CONTAINS:
             self._llvm.ir_builder.store(
@@ -535,16 +498,11 @@ class CollectionVisitorMixin(VisitorMixinBase):
         """
         title: Lower collection search for literals or dynamic lists.
         parameters:
-          base:
-            type: astx.AST
-          value:
-            type: astx.AST
-          method:
-            type: CollectionMethodKind
-          resolution:
-            type: ResolvedCollectionMethod
-        returns:
-          type: ir.Value
+          base: Base value or declaration.
+          value: Value to process.
+          method: Method.
+          resolution: Resolution.
+        returns: Lowered collection search for literals or dynamic lists.
         """
         if isinstance(
             base,
@@ -600,16 +558,11 @@ class CollectionVisitorMixin(VisitorMixinBase):
         """
         title: Lower index or count for a literal list or tuple.
         parameters:
-          base:
-            type: astx.AST
-          value:
-            type: astx.AST
-          method:
-            type: CollectionMethodKind
-          resolution:
-            type: ResolvedCollectionMethod
-        returns:
-          type: ir.Value
+          base: Base value or declaration.
+          value: Value to process.
+          method: Method.
+          resolution: Resolution.
+        returns: Lowered index or count for a literal list or tuple.
         """
         entries = self._literal_contains_entries(base)
         if not isinstance(base, (astx.LiteralList, astx.LiteralTuple)):
@@ -658,14 +611,10 @@ class CollectionVisitorMixin(VisitorMixinBase):
         """
         title: Return the next literal count result.
         parameters:
-          result:
-            type: ir.Value
-          match:
-            type: ir.Value
-          index:
-            type: int
-        returns:
-          type: ir.Value
+          result: Result of the operation.
+          match: Match.
+          index: Index selecting the item.
+        returns: The next literal count result.
         """
         incremented = self._llvm.ir_builder.add(
             result,
@@ -691,14 +640,10 @@ class CollectionVisitorMixin(VisitorMixinBase):
         """
         title: Return the next literal index result.
         parameters:
-          result:
-            type: ir.Value
-          match:
-            type: ir.Value
-          index:
-            type: int
-        returns:
-          type: ir.Value
+          result: Result of the operation.
+          match: Match.
+          index: Index selecting the item.
+        returns: The next literal index result.
         """
         not_found = self._llvm.ir_builder.icmp_signed(
             "==",
@@ -726,8 +671,7 @@ class CollectionVisitorMixin(VisitorMixinBase):
         """
         title: Visit CollectionLength nodes.
         parameters:
-          node:
-            type: astx.CollectionLength
+          node: Syntax node to process.
         """
         if (
             lower_range_query(cast(VisitorCore, self), node)
@@ -745,8 +689,7 @@ class CollectionVisitorMixin(VisitorMixinBase):
         """
         title: Visit CollectionIsEmpty nodes.
         parameters:
-          node:
-            type: astx.CollectionIsEmpty
+          node: Syntax node to process.
         """
         resolution = self._resolved_collection_method(node)
         if resolution.method is not CollectionMethodKind.IS_EMPTY:
@@ -766,8 +709,7 @@ class CollectionVisitorMixin(VisitorMixinBase):
         """
         title: Visit CollectionContains nodes.
         parameters:
-          node:
-            type: astx.CollectionContains
+          node: Syntax node to process.
         """
         resolution = self._resolved_collection_method(node)
         if resolution.method is not CollectionMethodKind.CONTAINS:
@@ -786,8 +728,7 @@ class CollectionVisitorMixin(VisitorMixinBase):
         """
         title: Visit CollectionIndex nodes.
         parameters:
-          node:
-            type: astx.CollectionIndex
+          node: Syntax node to process.
         """
         resolution = self._resolved_collection_method(node)
         if resolution.method is not CollectionMethodKind.INDEX:
@@ -806,8 +747,7 @@ class CollectionVisitorMixin(VisitorMixinBase):
         """
         title: Visit CollectionCount nodes.
         parameters:
-          node:
-            type: astx.CollectionCount
+          node: Syntax node to process.
         """
         resolution = self._resolved_collection_method(node)
         if resolution.method is not CollectionMethodKind.COUNT:

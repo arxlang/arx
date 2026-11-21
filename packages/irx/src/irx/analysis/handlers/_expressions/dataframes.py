@@ -3,9 +3,8 @@
 
 """
 title: Expression DataFrame visitors.
-summary: >-
-  Handle DataFrame literals, column access, metadata queries, and lifetime
-  helper expressions.
+summary: Handle DataFrame literals, column access, metadata queries, and
+  lifetime helper expressions.
 """
 
 from __future__ import annotations
@@ -58,8 +57,7 @@ class ExpressionDataFrameVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Resolve a scalar validity test or an owned Series null mask.
         parameters:
-          node:
-            type: astx.NullCheck
+          node: Syntax node to process.
         """
         self.visit(node.value)
         source = self._expr_type(node.value)
@@ -89,8 +87,7 @@ class ExpressionDataFrameVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Resolve eager same-type scalar null replacement.
         parameters:
-          node:
-            type: astx.NullFill
+          node: Syntax node to process.
         """
         self.visit(node.value)
         source = self._expr_type(node.value)
@@ -127,8 +124,7 @@ class ExpressionDataFrameVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Resolve an explicitly named null-skipping Series reduction.
         parameters:
-          node:
-            type: astx.SeriesReduction
+          node: Syntax node to process.
         """
         resolve_series_reduction(cast(SemanticAnalyzerCore, self), node)
 
@@ -139,10 +135,8 @@ class ExpressionDataFrameVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Return static DataFrame schema metadata for one expression.
         parameters:
-          node:
-            type: astx.AST
-        returns:
-          type: DataFrameSchema | None
+          node: Syntax node to process.
+        returns: Static DataFrame schema metadata for one expression.
         """
         semantic = getattr(node, "semantic", None)
         extras = getattr(semantic, "extras", {})
@@ -164,10 +158,8 @@ class ExpressionDataFrameVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Attach static DataFrame schema metadata when available.
         parameters:
-          node:
-            type: astx.AST
-          schema:
-            type: DataFrameSchema | None
+          node: Syntax node to process.
+          schema: Declared data schema.
         """
         if schema is not None:
             self._semantic(node).extras[DATAFRAME_SCHEMA_EXTRA] = schema
@@ -179,8 +171,7 @@ class ExpressionDataFrameVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Visit shared DataFrame column access semantics.
         parameters:
-          node:
-            type: astx.DataFrameColumnAccess
+          node: Syntax node to process.
         """
         self.visit(node.base)
         base_type = self._expr_type(node.base)
@@ -234,8 +225,7 @@ class ExpressionDataFrameVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Visit DataFrameLiteral nodes.
         parameters:
-          node:
-            type: astx.DataFrameLiteral
+          node: Syntax node to process.
         """
         schema = schema_from_type(node.type_)
         if schema is not None and any(
@@ -389,8 +379,7 @@ class ExpressionDataFrameVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Visit DataFrameColumnAccess nodes.
         parameters:
-          node:
-            type: astx.DataFrameColumnAccess
+          node: Syntax node to process.
         """
         self._visit_dataframe_column_access(node)
 
@@ -399,8 +388,7 @@ class ExpressionDataFrameVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Visit DataFrameStringColumnAccess nodes.
         parameters:
-          node:
-            type: astx.DataFrameStringColumnAccess
+          node: Syntax node to process.
         """
         self._visit_dataframe_column_access(node)
 
@@ -409,8 +397,7 @@ class ExpressionDataFrameVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Visit DataFrameRowCount nodes.
         parameters:
-          node:
-            type: astx.DataFrameRowCount
+          node: Syntax node to process.
         """
         self.visit(node.base)
         if not isinstance(self._expr_type(node.base), astx.DataFrameType):
@@ -426,8 +413,7 @@ class ExpressionDataFrameVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Visit DataFrameColumnCount nodes.
         parameters:
-          node:
-            type: astx.DataFrameColumnCount
+          node: Syntax node to process.
         """
         self.visit(node.base)
         if not isinstance(self._expr_type(node.base), astx.DataFrameType):
@@ -443,8 +429,7 @@ class ExpressionDataFrameVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Visit DataFrameRetain nodes.
         parameters:
-          node:
-            type: astx.DataFrameRetain
+          node: Syntax node to process.
         """
         self.visit(node.base)
         if not isinstance(self._expr_type(node.base), astx.DataFrameType):
@@ -460,8 +445,7 @@ class ExpressionDataFrameVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Visit DataFrameRelease nodes.
         parameters:
-          node:
-            type: astx.DataFrameRelease
+          node: Syntax node to process.
         """
         self.visit(node.base)
         if not isinstance(self._expr_type(node.base), astx.DataFrameType):
@@ -489,8 +473,7 @@ class ExpressionDataFrameVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Visit SeriesRetain nodes.
         parameters:
-          node:
-            type: astx.SeriesRetain
+          node: Syntax node to process.
         """
         self.visit(node.base)
         if not isinstance(self._expr_type(node.base), astx.SeriesType):
@@ -506,8 +489,7 @@ class ExpressionDataFrameVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Visit SeriesRelease nodes.
         parameters:
-          node:
-            type: astx.SeriesRelease
+          node: Syntax node to process.
         """
         self.visit(node.base)
         if not isinstance(self._expr_type(node.base), astx.SeriesType):

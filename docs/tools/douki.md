@@ -24,19 +24,20 @@ def add(a: int, b: int = 0) -> int:
     """
     title: Add two integers
     parameters:
-      a:
-        type: int
+      a: First integer to add.
       b:
-        type: int
+        description: Second integer to add.
         default: 0
-    returns:
-      type: int
+    returns: Sum of the two integers.
     """
     return a + b
 ```
 
-The CLI exposes `check`, `sync`, and `migrate` commands. See the Douki
-repository for the options supported by the installed release.
+Python annotations supply types; authored docstrings contain descriptions, not
+`type` fields. `douki sync` scaffolds missing entries; replace its `...`
+placeholders with meaningful descriptions, then run `douki check`. Use
+`douki format` to format existing YAML. See the Douki repository for the options
+supported by the installed release.
 
 ## Use in Arx source
 

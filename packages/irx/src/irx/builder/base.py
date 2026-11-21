@@ -29,14 +29,11 @@ class CommandResult:
     """
     title: Structured result from a shell command.
     attributes:
-      stdout:
-        type: str
-      stderr:
-        type: str
-      returncode:
-        type: int
-      command:
-        type: Sequence[str]
+      stdout: Stdout.
+      stderr: Stderr.
+      returncode: Returncode.
+      command: Command.
+      success: Whether to use success.
     """
 
     stdout: str
@@ -48,8 +45,7 @@ class CommandResult:
     def success(self) -> bool:
         """
         title: Return True if the command exited with code 0.
-        returns:
-          type: bool
+        returns: True if the command exited with code 0.
         """
         return self.returncode == 0
 
@@ -59,16 +55,14 @@ class CommandError(RuntimeError):
     """
     title: Raised when a shell command exits with a non-zero status.
     attributes:
-      result:
-        type: CommandResult
+      result: Result of the operation.
     """
 
     def __init__(self, result: CommandResult) -> None:
         """
         title: Initialize CommandError.
         parameters:
-          result:
-            type: CommandResult
+          result: Result of the operation.
         """
         self.result: CommandResult = result
         super().__init__(
@@ -88,19 +82,18 @@ def run_command(
     """
     title: Run a shell command and return a structured CommandResult.
     parameters:
-      command:
-        type: Sequence[str]
+      command: Command.
       capture_stderr:
-        type: bool
         default: true
+        description: Whether to use capture stderr.
       raise_on_error:
-        type: bool
         default: true
+        description: Whether to use raise on error.
       debug:
-        type: bool
         default: false
-    returns:
-      type: CommandResult
+        description: Whether to use debug.
+    returns: 'Result of this operation: run a shell command and return a
+      structured CommandResult.'
     raises:
       CommandError: When the command exits non-zero and raise_on_error=True.
     """
@@ -160,8 +153,7 @@ class BuilderVisitor(BaseVisitor):
         """
         title: Visit AST nodes.
         parameters:
-          node:
-            type: astx.AST
+          node: Syntax node to process.
         """
         super().visit(node)
 
@@ -169,8 +161,7 @@ class BuilderVisitor(BaseVisitor):
         """
         title: Forward a child AST node through the public visit dispatcher.
         parameters:
-          node:
-            type: astx.AST
+          node: Syntax node to process.
         """
         self.visit(node)
 
@@ -178,12 +169,12 @@ class BuilderVisitor(BaseVisitor):
         """
         title: Translate an ASTx expression to string.
         parameters:
-          expr:
-            type: astx.AST
-        returns:
-          type: str
-        examples: |-
+          expr: Expression to process.
+        returns: 'Result of this operation: translate an ASTx expression
+          to string.'
+        examples: >-
           self.visit(expr)
+
           return str(self.result)
         """
         raise Exception("Not implemented yet.")
@@ -194,16 +185,11 @@ class Builder(ABC):
     """
     title: ASTx Builder.
     attributes:
-      translator:
-        type: BuilderVisitor
-      tmp_path:
-        type: str
-      output_file:
-        type: str
-      sh_args:
-        type: dict[str, Any]
-      runtime_feature_names:
-        type: set[str]
+      translator: Translator.
+      tmp_path: Temporary directory for this test.
+      output_file: Destination file for generated output.
+      sh_args: Sh args.
+      runtime_feature_names: Runtime feature names.
     """
 
     translator: BuilderVisitor
@@ -232,8 +218,7 @@ class Builder(ABC):
     def module(self) -> astx.Module:
         """
         title: Create a new ASTx Module.
-        returns:
-          type: astx.Module
+        returns: Created a new ASTx Module.
         """
         return astx.Module()
 
@@ -241,10 +226,8 @@ class Builder(ABC):
         """
         title: Transpile ASTx to LLVM-IR.
         parameters:
-          expr:
-            type: astx.AST
-        returns:
-          type: str
+          expr: Expression to process.
+        returns: 'Result of this operation: transpile ASTx to LLVM-IR.'
         """
         return self.translator.translate(expr)
 
@@ -252,8 +235,7 @@ class Builder(ABC):
         """
         title: Activate a native runtime feature for this compilation unit.
         parameters:
-          feature_name:
-            type: str
+          feature_name: Name of feature.
         """
         self.runtime_feature_names.add(feature_name)
 
@@ -266,10 +248,8 @@ class Builder(ABC):
         """
         title: Transpile ASTx to LLVM-IR and build an executable file.
         parameters:
-          expr:
-            type: astx.AST
-          output_file:
-            type: str
+          expr: Expression to process.
+          output_file: Destination file for generated output.
         """
         ...
 
@@ -284,16 +264,15 @@ class Builder(ABC):
         title: Run the generated executable.
         parameters:
           capture_stderr:
-            type: bool
             default: true
+            description: Whether to use capture stderr.
           raise_on_error:
-            type: bool
             default: true
+            description: Whether to use raise on error.
           debug:
-            type: bool
             default: false
-        returns:
-          type: CommandResult
+            description: Whether to use debug.
+        returns: 'Result of this operation: run the generated executable.'
         """
         return run_command(
             [self.output_file],

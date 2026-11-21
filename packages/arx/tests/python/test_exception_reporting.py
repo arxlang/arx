@@ -16,10 +16,8 @@ def test_test_runner_preserves_exception_chain(
     """
     title: Report a failure chain without losing the root exception category.
     parameters:
-      tmp_path:
-        type: Path
-      capsys:
-        type: pytest.CaptureFixture[str]
+      tmp_path: Temporary directory for this test.
+      capsys: Fixture capturing standard output and error streams.
     """
     runner = ArxTestRunner(paths=(str(tmp_path),))
     case = DiscoveredTestCase("test_failure", "test_failure", tmp_path / "a.x")
@@ -48,8 +46,7 @@ def test_uncaught_assertion_keeps_assertion_classification(
     """
     title: Classify an assertion after it reaches the host boundary.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     runner = ArxTestRunner(paths=(str(tmp_path),))
     case = DiscoveredTestCase("test_failure", "test_failure", tmp_path / "a.x")

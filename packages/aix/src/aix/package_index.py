@@ -1,7 +1,7 @@
 """
 title: Discover installed Arx source packages.
-summary: >-
-  Build a scoped index of Arx packages installed as Python distributions.
+summary: Build a scoped index of Arx packages installed as Python
+  distributions.
 """
 
 from __future__ import annotations
@@ -39,12 +39,9 @@ class InstalledArxPackage:
     """
     title: One installed Arx source package.
     attributes:
-      module_name:
-        type: str
-      source_root:
-        type: Path
-      distribution_name:
-        type: str
+      module_name: Module name to resolve.
+      source_root: Source root.
+      distribution_name: Name of distribution.
     """
 
     module_name: str
@@ -57,12 +54,9 @@ class InstalledArxPackageIndex:
     """
     title: Indexed installed Arx source packages.
     attributes:
-      packages:
-        type: dict[str, InstalledArxPackage]
-      missing_distributions:
-        type: frozenset[str]
-      conflicts:
-        type: dict[str, tuple[InstalledArxPackage, Ellipsis]]
+      packages: Packages.
+      missing_distributions: Missing distributions.
+      conflicts: Conflicts.
     """
 
     packages: dict[str, InstalledArxPackage] = field(default_factory=dict)
@@ -75,10 +69,8 @@ class InstalledArxPackageIndex:
         """
         title: Return a missing distribution matching one import head.
         parameters:
-          module_name:
-            type: str
-        returns:
-          type: str | None
+          module_name: Module name to resolve.
+        returns: A missing distribution matching one import head.
         """
         normalized = normalize_distribution_name(module_name)
         for distribution_name in self.missing_distributions:
@@ -91,10 +83,8 @@ def normalize_distribution_name(name: str) -> str:
     """
     title: Normalize a Python distribution name for comparisons.
     parameters:
-      name:
-        type: str
-    returns:
-      type: str
+      name: Name identifying the declaration or operation.
+    returns: Normalized a Python distribution name for comparisons.
     """
     return _DISTRIBUTION_NORMALIZE_PATTERN.sub("-", name).lower()
 
@@ -103,10 +93,8 @@ def extract_dependency_name(dependency: str) -> str | None:
     """
     title: Extract the distribution name from one dependency string.
     parameters:
-      dependency:
-        type: str
-    returns:
-      type: str | None
+      dependency: Dependency.
+    returns: Extracted the distribution name from one dependency string.
     """
     try:
         return Requirement(dependency).name
@@ -123,10 +111,8 @@ def active_requirement_name(requirement_text: str) -> str | None:
     """
     title: Return the distribution name for an active metadata requirement.
     parameters:
-      requirement_text:
-        type: str
-    returns:
-      type: str | None
+      requirement_text: Requirement text.
+    returns: The distribution name for an active metadata requirement.
     """
     try:
         requirement = Requirement(requirement_text)
@@ -144,10 +130,9 @@ def discover_installed_arx_packages(
     """
     title: Discover installed Arx packages from project dependencies.
     parameters:
-      start:
-        type: Path | None
-    returns:
-      type: InstalledArxPackageIndex
+      start: Starting position.
+    returns: 'Result of this operation: discover installed Arx packages from
+      project dependencies.'
     """
     config = arx_settings.find_config_file(start=start)
     if config is None:
@@ -169,10 +154,9 @@ def discover_installed_arx_packages_from_dependencies(
     """
     title: Discover installed Arx packages from dependency strings.
     parameters:
-      dependencies:
-        type: Iterable[str]
-    returns:
-      type: InstalledArxPackageIndex
+      dependencies: Dependencies.
+    returns: 'Result of this operation: discover installed Arx packages from
+      dependency strings.'
     """
     package_entries: dict[str, InstalledArxPackage] = {}
     conflict_entries: dict[str, tuple[InstalledArxPackage, ...]] = {}
@@ -223,12 +207,9 @@ def _add_package(
     """
     title: Add one package to the mutable package index.
     parameters:
-      packages:
-        type: dict[str, InstalledArxPackage]
-      conflicts:
-        type: dict[str, tuple[InstalledArxPackage, Ellipsis]]
-      package:
-        type: InstalledArxPackage
+      packages: Packages.
+      conflicts: Conflicts.
+      package: Package.
     """
     conflict = conflicts.get(package.module_name)
     if conflict is not None:
@@ -250,10 +231,8 @@ def _arx_packages_from_distribution(
     """
     title: Extract Arx package roots from one installed distribution.
     parameters:
-      distribution:
-        type: importlib_metadata.Distribution
-    returns:
-      type: tuple[InstalledArxPackage, Ellipsis]
+      distribution: Distribution.
+    returns: Extracted arx package roots from one installed distribution.
     """
     files = distribution.files
     if files is None:
@@ -288,10 +267,8 @@ def _distribution_name(
     """
     title: Return the canonical display name for one distribution.
     parameters:
-      distribution:
-        type: importlib_metadata.Distribution
-    returns:
-      type: str
+      distribution: Distribution.
+    returns: The canonical display name for one distribution.
     """
     try:
         return str(distribution.metadata["Name"])
@@ -303,10 +280,8 @@ def _has_arx_sources(source_root: Path) -> bool:
     """
     title: Return whether one package root contains Arx source files.
     parameters:
-      source_root:
-        type: Path
-    returns:
-      type: bool
+      source_root: Source root.
+    returns: Whether one package root contains Arx source files.
     """
     for source_path in source_root.rglob("*"):
         if source_path.suffix in _SOURCE_SUFFIXES and source_path.is_file():
@@ -321,12 +296,9 @@ def _package_from_manifest(
     """
     title: Build one installed Arx package entry from a manifest.
     parameters:
-      distribution_name:
-        type: str
-      manifest_path:
-        type: Path
-    returns:
-      type: InstalledArxPackage | None
+      distribution_name: Name of distribution.
+      manifest_path: Path to manifest.
+    returns: Constructed one installed Arx package entry from a manifest.
     """
     data = _load_manifest_data(manifest_path)
     if data is None:
@@ -360,10 +332,8 @@ def _load_manifest_data(manifest_path: Path) -> dict[str, Any] | None:
     """
     title: Load a packaged manifest without full project validation.
     parameters:
-      manifest_path:
-        type: Path
-    returns:
-      type: dict[str, Any] | None
+      manifest_path: Path to manifest.
+    returns: Loaded a packaged manifest without full project validation.
     """
     try:
         data = tomllib.loads(manifest_path.read_text(encoding="utf-8"))
@@ -379,10 +349,8 @@ def _manifest_package_name(data: dict[str, Any]) -> str | None:
     """
     title: Extract an optional ``[build].package`` value.
     parameters:
-      data:
-        type: dict[str, Any]
-    returns:
-      type: str | None
+      data: Data to process.
+    returns: Extracted an optional ``[build].package`` value.
     """
     build = data.get("build")
     if not isinstance(build, dict):
@@ -398,10 +366,8 @@ def _manifest_src_dir(data: dict[str, Any]) -> str | None:
     """
     title: Extract an optional explicit ``[build].src_dir`` value.
     parameters:
-      data:
-        type: dict[str, Any]
-    returns:
-      type: str | None
+      data: Data to process.
+    returns: Extracted an optional explicit ``[build].src_dir`` value.
     """
     build = data.get("build")
     if not isinstance(build, dict):
@@ -421,14 +387,10 @@ def _manifest_source_root(
     """
     title: Resolve the installed source root for one manifest.
     parameters:
-      data:
-        type: dict[str, Any]
-      manifest_parent:
-        type: Path
-      module_name:
-        type: str | None
-    returns:
-      type: Path | None
+      data: Data to process.
+      manifest_parent: Manifest parent.
+      module_name: Module name to resolve.
+    returns: Resolved the installed source root for one manifest.
     """
     candidates = _source_root_candidates(
         manifest_parent,
@@ -450,14 +412,10 @@ def _source_root_candidates(
     """
     title: Build candidate installed source roots in precedence order.
     parameters:
-      manifest_parent:
-        type: Path
-      src_dir:
-        type: str | None
-      module_name:
-        type: str | None
-    returns:
-      type: tuple[Path, Ellipsis]
+      manifest_parent: Manifest parent.
+      src_dir: Src dir.
+      module_name: Module name to resolve.
+    returns: Constructed candidate installed source roots in precedence order.
     """
     if src_dir is not None:
         source_root = manifest_parent / src_dir

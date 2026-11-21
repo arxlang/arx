@@ -1,5 +1,7 @@
 """
 title: ASTx BinaryOp node specializations.
+attributes:
+  _BINARY_OP_TYPES: Binary op types.
 """
 
 from __future__ import annotations
@@ -157,10 +159,8 @@ def binary_op_type_for_opcode(op_code: str) -> type[BinaryOp]:
     """
     title: Return the specialized BinaryOp subclass for an opcode.
     parameters:
-      op_code:
-        type: str
-    returns:
-      type: type[BinaryOp]
+      op_code: Operator spelling.
+    returns: The specialized BinaryOp subclass for an opcode.
     """
     return _BINARY_OP_TYPES.get(op_code, BinaryOp)
 
@@ -170,10 +170,8 @@ def specialize_binary_op(node: BinaryOp) -> BinaryOp:
     """
     title: Return a specialized BinaryOp instance for the given opcode.
     parameters:
-      node:
-        type: BinaryOp
-    returns:
-      type: BinaryOp
+      node: Syntax node to process.
+    returns: A specialized BinaryOp instance for the given opcode.
     """
     target_type = binary_op_type_for_opcode(node.op_code)
     if target_type is BinaryOp or isinstance(node, target_type):

@@ -3,9 +3,8 @@
 
 """
 title: Expression buffer-view visitors.
-summary: >-
-  Handle buffer-view descriptors, indexing, writes, and lifetime helper
-  expressions using the shared tensor-and-buffer support mixin.
+summary: Handle buffer-view descriptors, indexing, writes, and lifetime
+  helper expressions using the shared tensor-and-buffer support mixin.
 """
 
 from __future__ import annotations
@@ -43,8 +42,7 @@ class ExpressionBufferViewVisitorMixin(
         """
         title: Visit BufferViewDescriptor nodes.
         parameters:
-          node:
-            type: astx.BufferViewDescriptor
+          node: Syntax node to process.
         """
         for error in validate_buffer_view_metadata(node.metadata):
             self.context.diagnostics.add(error, node=node)
@@ -60,8 +58,7 @@ class ExpressionBufferViewVisitorMixin(
         """
         title: Visit BufferViewIndex nodes.
         parameters:
-          node:
-            type: astx.BufferViewIndex
+          node: Syntax node to process.
         """
         self.visit(node.base)
         for index in node.indices:
@@ -81,8 +78,7 @@ class ExpressionBufferViewVisitorMixin(
         """
         title: Visit BufferViewStore nodes.
         parameters:
-          node:
-            type: astx.BufferViewStore
+          node: Syntax node to process.
         """
         self.visit(node.base)
         for index in node.indices:
@@ -109,8 +105,7 @@ class ExpressionBufferViewVisitorMixin(
         """
         title: Visit BufferViewWrite nodes.
         parameters:
-          node:
-            type: astx.BufferViewWrite
+          node: Syntax node to process.
         """
         if node.byte_offset < 0:
             self.context.diagnostics.add(
@@ -156,8 +151,7 @@ class ExpressionBufferViewVisitorMixin(
         """
         title: Visit BufferViewRetain nodes.
         parameters:
-          node:
-            type: astx.BufferViewRetain
+          node: Syntax node to process.
         """
         self.visit(node.view)
         if not isinstance(self._expr_type(node.view), astx.BufferViewType):
@@ -178,8 +172,7 @@ class ExpressionBufferViewVisitorMixin(
         """
         title: Visit BufferViewRelease nodes.
         parameters:
-          node:
-            type: astx.BufferViewRelease
+          node: Syntax node to process.
         """
         self.visit(node.view)
         if not isinstance(self._expr_type(node.view), astx.BufferViewType):

@@ -30,8 +30,7 @@ class TemporalVisitorMixin(VisitorMixinBase):
         """
         title: Lower a semantically validated date as epoch days.
         parameters:
-          node:
-            type: astx.LiteralDate
+          node: Syntax node to process.
         """
         info = cast(SemanticInfo | None, getattr(node, "semantic", None))
         days = require_semantic_metadata(
@@ -49,8 +48,7 @@ class TemporalVisitorMixin(VisitorMixinBase):
         """
         title: Visit LiteralTime nodes.
         parameters:
-          node:
-            type: astx.LiteralTime
+          node: Syntax node to process.
         """
         hour_minute_count = 2
         hour_minute_second_count = 3
@@ -118,8 +116,7 @@ class TemporalVisitorMixin(VisitorMixinBase):
         """
         title: Visit LiteralTimestamp nodes.
         parameters:
-          node:
-            type: astx.LiteralTimestamp
+          node: Syntax node to process.
         """
         nanosecond_digits = 9
         max_hour = 23
@@ -216,8 +213,7 @@ class TemporalVisitorMixin(VisitorMixinBase):
         """
         title: Visit LiteralDateTime nodes.
         parameters:
-          node:
-            type: astx.LiteralDateTime
+          node: Syntax node to process.
         """
         hour_minute_count = 2
         hour_minute_second_count = 3

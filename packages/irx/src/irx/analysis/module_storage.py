@@ -24,19 +24,17 @@ def resolve_module_storage(
     symbol: SemanticSymbol,
 ) -> None:
     """
-    title: Validate module scalar literals before authorizing static storage.
-    summary: >-
-      Ordinary mutable scalars default to zero; nullable scalars default to
-      none. Constants require an initializer. Unsupported module storage and
-      nonliteral initializers fail in analysis, including unused declarations.
-      Clear old plans when a declaration is reanalyzed or becomes a local.
+    title: Validate module scalar literals before authorizing static
+      storage.
+    summary: Ordinary mutable scalars default to zero; nullable scalars
+      default to none. Constants require an initializer. Unsupported
+      module storage and nonliteral initializers fail in analysis,
+      including unused declarations. Clear old plans when a declaration
+      is reanalyzed or becomes a local.
     parameters:
-      analyzer:
-        type: SemanticAnalyzerCore
-      node:
-        type: astx.VariableDeclaration | astx.InlineVariableDeclaration
-      symbol:
-        type: SemanticSymbol
+      analyzer: Semantic analyzer resolving the operation.
+      node: Syntax node to process.
+      symbol: Resolved symbol for the operation.
     """
     info = analyzer._semantic(node)
     info.module_storage = None

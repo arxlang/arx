@@ -20,12 +20,9 @@ def test_constant_remainder_truncates(
     """
     title: Constant remainder uses the dividend sign, not Python floor modulo.
     parameters:
-      left:
-        type: int
-      right:
-        type: int
-      expected:
-        type: int
+      left: Left operand.
+      right: Right operand.
+      expected: Expected result for this case.
     """
     expression = astx.BinaryOp(
         "%", astx.LiteralInt32(left), astx.LiteralInt32(right)
@@ -49,8 +46,7 @@ def test_remainder_requires_numeric_scalars(operand: astx.DataType) -> None:
     """
     title: Unsupported remainder domains fail before scalar LLVM lowering.
     parameters:
-      operand:
-        type: astx.DataType
+      operand: Operand.
     """
     with pytest.raises(SemanticError, match="non-nullable numeric scalars"):
         analyze(astx.BinaryOp("%", operand, astx.LiteralInt32(2)))
@@ -60,10 +56,8 @@ def _semantic_type(node: astx.AST) -> astx.DataType | None:
     """
     title: Return the resolved semantic type attached to one node.
     parameters:
-      node:
-        type: astx.AST
-    returns:
-      type: astx.DataType | None
+      node: Syntax node to process.
+    returns: The resolved semantic type attached to one node.
     """
     return getattr(getattr(node, "semantic", None), "resolved_type", None)
 
@@ -104,8 +98,8 @@ def test_analyze_marks_signed_result_when_signed_operand_is_wider() -> None:
 
 def test_mixed_comparison_uses_lossless_signed_domain() -> None:
     """
-    title: >-
-      Mixed integer comparisons use a signed domain containing both operands.
+    title: Mixed integer comparisons use a signed domain containing both
+      operands.
     """
     expr = astx.BinaryOp(
         ">",
@@ -122,8 +116,8 @@ def test_mixed_comparison_uses_lossless_signed_domain() -> None:
 
 def test_analyze_widens_at_equal_width_boundary() -> None:
     """
-    title: >-
-      Equal-width signed and unsigned integers require a wider signed type.
+    title: Equal-width signed and unsigned integers require a wider signed
+      type.
     """
     expr = astx.BinaryOp(
         "+",
@@ -140,8 +134,8 @@ def test_analyze_widens_at_equal_width_boundary() -> None:
 
 def test_analyze_rejects_implicit_signed_to_unsigned_assignment() -> None:
     """
-    title: >-
-      Implicit signed-to-unsigned assignment should require an explicit cast.
+    title: Implicit signed-to-unsigned assignment should require an explicit
+      cast.
     """
     module = astx.Module()
     proto = astx.FunctionPrototype(

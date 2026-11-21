@@ -59,8 +59,7 @@ def test_native_object_reuse_tracks_headers_and_flags(tmp_path: Path) -> None:
     """
     title: Reuse only identical compiler inputs and never cache failed builds.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     if shutil.which("clang") is None:
         pytest.skip("native object reuse requires clang")
@@ -95,10 +94,8 @@ def project(tmp_path: Path) -> Path:
     """
     title: Create an external package's local development tree.
     parameters:
-      tmp_path:
-        type: Path
-    returns:
-      type: Path
+      tmp_path: Temporary directory for this test.
+    returns: Created an external package's local development tree.
     """
     root = tmp_path / "package with spaces"
     shutil.copytree(FIXTURE, root)
@@ -111,10 +108,8 @@ def execute(source: Path, work: Path) -> None:
     """
     title: Check, verify LLVM, build, and run the same imported native graph.
     parameters:
-      source:
-        type: Path
-      work:
-        type: Path
+      source: Source input to process.
+      work: Work.
     """
     if shutil.which("clang") is None:
         pytest.skip("native package execution requires clang")
@@ -143,11 +138,10 @@ def execute(source: Path, work: Path) -> None:
 
 def test_native_package_local_development(tmp_path: Path) -> None:
     """
-    title: >-
-      Local native metadata reaches analysis, kwargs, linking, and cleanup.
+    title: Local native metadata reaches analysis, kwargs, linking,
+      and cleanup.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     execute(project(tmp_path), tmp_path)
 
@@ -156,8 +150,7 @@ def installed_package(site: Path) -> None:
     """
     title: Install source resources and standard distribution metadata locally.
     parameters:
-      site:
-        type: Path
+      site: Site.
     """
     root = site / "native_resource"
     shutil.copytree(FIXTURE, root)
@@ -183,12 +176,9 @@ def test_installed_native_dependency(
     """
     title: An independent installed source distribution supplies native assets.
     parameters:
-      tmp_path:
-        type: Path
-      monkeypatch:
-        type: pytest.MonkeyPatch
-      transitive:
-        type: bool
+      tmp_path: Temporary directory for this test.
+      monkeypatch: Fixture for temporarily replacing dependencies and settings.
+      transitive: Whether to use transitive.
     """
     site = tmp_path / "site"
     installed_package(site)
@@ -217,8 +207,7 @@ def test_native_manifest_roundtrip(tmp_path: Path) -> None:
     """
     title: Native records survive canonical settings serialization.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     source = project(tmp_path)
     settings = load_settings(source.parents[1] / ".arxproject.toml")
@@ -277,8 +266,7 @@ def test_native_invalid_configuration(replacement: tuple[str, str]) -> None:
     """
     title: Invalid native metadata fails at configuration validation.
     parameters:
-      replacement:
-        type: tuple[str, str]
+      replacement: Replacement.
     """
     text = (FIXTURE / ".arxproject.toml").read_text()
     with pytest.raises(ArxProjectError):
@@ -292,10 +280,8 @@ def test_native_paths_are_contained(tmp_path: Path, path: str) -> None:
     """
     title: Native package assets cannot escape their declaring root.
     parameters:
-      tmp_path:
-        type: Path
-      path:
-        type: str
+      tmp_path: Temporary directory for this test.
+      path: Path to the input or output resource.
     """
     with pytest.raises(ArxProjectError):
         package_path(tmp_path, path)
@@ -305,8 +291,7 @@ def test_native_symlink_escape(tmp_path: Path) -> None:
     """
     title: Symlink targets are checked after canonical path resolution.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     root = tmp_path / "root"
     root.mkdir()
@@ -321,8 +306,7 @@ def test_native_missing_artifact_is_actionable(tmp_path: Path) -> None:
     """
     title: Missing packaged assets are not silently omitted from a build.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     source = project(tmp_path)
     (source.parents[1] / "native" / "fixture.c").unlink()
@@ -337,8 +321,7 @@ def test_jpeg_fixture_is_decodable(tmp_path: Path) -> None:
     """
     title: Verify the fixed JPEG payload with an independent installed decoder.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     decoder = shutil.which("djpeg")
     if decoder is None:
@@ -361,13 +344,11 @@ def test_jpeg_fixture_is_decodable(tmp_path: Path) -> None:
 @pytest.mark.parametrize("kind", ["cxx_source", "object", "static_library"])
 def test_native_artifact_kinds(tmp_path: Path, kind: str) -> None:
     """
-    title: >-
-      C++ sources and prebuilt object/archive inputs use registered linking.
+    title: C++ sources and prebuilt object/archive inputs use registered
+      linking.
     parameters:
-      tmp_path:
-        type: Path
-      kind:
-        type: str
+      tmp_path: Temporary directory for this test.
+      kind: Kind of value or operation.
     """
     source = project(tmp_path)
     root = source.parents[1]
@@ -415,8 +396,7 @@ def test_native_root_configuration_error_is_structured(tmp_path: Path) -> None:
     """
     title: Root-module native metadata errors cross the public facade cleanly.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     source = project(tmp_path)
     manifest = source.parents[1] / ".arxproject.toml"
@@ -433,8 +413,7 @@ def test_native_module_must_belong_to_package(tmp_path: Path) -> None:
     """
     title: A package cannot map native privileges to another module namespace.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     source = project(tmp_path)
     manifest = source.parents[1] / ".arxproject.toml"
@@ -451,13 +430,12 @@ def test_local_shadow_does_not_inherit_native_metadata(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """
-    title: >-
-      A local module with the same spelling gains no installed capabilities.
+    title: A local module with the same spelling gains no installed
+      capabilities.
     parameters:
-      tmp_path:
-        type: Path
-      monkeypatch:
-        type: pytest.MonkeyPatch
+      tmp_path: Temporary directory for this test.
+      monkeypatch: Fixture for temporarily replacing dependencies
+        and settings.
     """
     site = tmp_path / "site"
     installed_package(site)
@@ -488,11 +466,10 @@ def test_local_shadow_does_not_inherit_native_metadata(
 
 def test_native_missing_system_library_is_a_link_error(tmp_path: Path) -> None:
     """
-    title: >-
-      Declared native libraries are linked explicitly, never auto-installed.
+    title: Declared native libraries are linked explicitly, never
+      auto-installed.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     if shutil.which("clang") is None:
         pytest.skip("native package linking requires clang")
@@ -516,8 +493,7 @@ def test_native_header_failure_is_structured(tmp_path: Path) -> None:
     """
     title: Native compiler failures retain their phase and diagnostic code.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     if shutil.which("clang") is None:
         pytest.skip("native compilation requires clang")
@@ -537,11 +513,10 @@ def test_native_header_failure_is_structured(tmp_path: Path) -> None:
 
 def test_native_package_cli_build_and_run(tmp_path: Path) -> None:
     """
-    title: >-
-      Ordinary CLI consumers can build native dependencies without patches.
+    title: Ordinary CLI consumers can build native dependencies without
+      patches.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     command = shutil.which("arx")
     if command is None or shutil.which("clang") is None:

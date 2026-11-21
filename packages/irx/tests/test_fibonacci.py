@@ -37,12 +37,9 @@ def test_function_call_fibonacci(
     """
     title: Test the FunctionCall class with Fibonacci.
     parameters:
-      builder_class:
-        type: type[Builder]
-      int_type:
-        type: type
-      literal_type:
-        type: type
+      builder_class: Builder implementation under test.
+      int_type: Type of int.
+      literal_type: Literal type used by this case.
     """
     builder = builder_class()
     module = builder.module()

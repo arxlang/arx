@@ -24,8 +24,8 @@ FILE_ERROR_CAPACITY = 256
 def build_file_runtime_feature() -> RuntimeFeature:
     """
     title: Declare the optional checked C stdio runtime.
-    returns:
-      type: RuntimeFeature
+    returns: 'Result of this operation: declare the optional checked C stdio
+      runtime.'
     """
     native = Path(__file__).resolve().parent / "native"
     symbols: dict[str, ExternalSymbolSpec] = {}
@@ -49,12 +49,10 @@ def build_file_runtime_feature() -> RuntimeFeature:
             """
             title: Declare a file operation with fixed-width output slots.
             parameters:
-              visitor:
-                type: VisitorProtocol
-              operation:
-                type: str
-            returns:
-              type: ir.Function
+              visitor: Visitor performing the traversal or lowering.
+              operation: Operation to resolve or execute.
+            returns: 'Result of this operation: declare a file operation
+              with fixed-width output slots.'
             """
             pointer = visitor._llvm.OPAQUE_POINTER_TYPE
             cstring = visitor._llvm.INT8_TYPE.as_pointer()

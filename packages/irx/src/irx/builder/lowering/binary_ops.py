@@ -77,14 +77,11 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
         """
         title: Apply an analyzed lossless scalar compound conversion.
         parameters:
-          node:
-            type: astx.AugAssign
-          value:
-            type: ir.Value
-          conversion:
-            type: ImplicitConversion
-        returns:
-          type: ir.Value
+          node: Syntax node to process.
+          value: Value to process.
+          conversion: Conversion.
+        returns: 'Result of this operation: apply an analyzed lossless scalar
+          compound conversion.'
         """
         numeric = require_semantic_metadata(
             conversion.numeric,
@@ -107,13 +104,12 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
     def visit(self, node: astx.AugAssign) -> None:
         """
         title: Load, compute, and store a resolved scalar compound mutation.
-        summary: >-
-          Snapshot the target before evaluating the RHS once. Guards and
-          conversions precede the single store; failure preserves the target
-          except for independent RHS effects. Push only the stored result.
+        summary: Snapshot the target before evaluating the RHS once.
+          Guards and conversions precede the single store; failure preserves
+          the target except for independent RHS effects. Push only the
+          stored result.
         parameters:
-          node:
-            type: astx.AugAssign
+          node: Syntax node to process.
         """
         semantic = require_semantic_metadata(
             cast(SemanticInfo | None, getattr(node, "semantic", None)),
@@ -197,10 +193,8 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
         """
         title: Resolved binary variant.
         parameters:
-          node:
-            type: astx.BinaryOp
-        returns:
-          type: astx.BinaryOp
+          node: Syntax node to process.
+        returns: 'Result of this operation: resolved binary variant.'
         """
         semantic = getattr(node, "semantic", None)
         extras = getattr(semantic, "extras", None)
@@ -219,12 +213,9 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
         """
         title: Load binary operands.
         parameters:
-          node:
-            type: astx.BinaryOp
-          unify_numeric:
-            type: bool
-        returns:
-          type: tuple[ir.Value, ir.Value, bool]
+          node: Syntax node to process.
+          unify_numeric: Whether to use unify numeric.
+        returns: Loaded binary operands.
         """
         self.visit_child(node.lhs)
         llvm_lhs = safe_pop(self.result_stack)
@@ -313,14 +304,10 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
         """
         title: Emit vector add.
         parameters:
-          node:
-            type: AddBinOp
-          llvm_lhs:
-            type: ir.Value
-          llvm_rhs:
-            type: ir.Value
-        returns:
-          type: ir.Value | None
+          node: Syntax node to process.
+          llvm_lhs: LLVM left operand.
+          llvm_rhs: LLVM right operand.
+        returns: 'Result of this operation: emit vector add.'
         """
         if not (is_vector(llvm_lhs) and is_vector(llvm_rhs)):
             return None
@@ -350,10 +337,8 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
         """
         title: Load Boolean operands for logical operators.
         parameters:
-          node:
-            type: astx.BinaryOp
-        returns:
-          type: tuple[ir.Value, ir.Value]
+          node: Syntax node to process.
+        returns: Loaded boolean operands for logical operators.
         """
         llvm_lhs, llvm_rhs, _unsigned = self._load_binary_operands(
             node,
@@ -381,12 +366,9 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
         """
         title: Lower one left-to-right short-circuit Boolean expression.
         parameters:
-          node:
-            type: astx.BinaryOp
-          short_circuit_value:
-            type: bool
-          name:
-            type: str
+          node: Syntax node to process.
+          short_circuit_value: Whether to use short circuit value.
+          name: Name identifying the declaration or operation.
         """
         self.visit_child(node.lhs)
         llvm_lhs = safe_pop(self.result_stack)
@@ -460,14 +442,10 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
         """
         title: Reject zero and unrepresentable signed integer division.
         parameters:
-          node:
-            type: astx.AST
-          llvm_lhs:
-            type: ir.Value
-          llvm_rhs:
-            type: ir.Value
-          unsigned:
-            type: bool
+          node: Syntax node to process.
+          llvm_lhs: LLVM left operand.
+          llvm_rhs: LLVM right operand.
+          unsigned: Whether to use unsigned semantics.
         """
         if not is_int_type(llvm_lhs.type) or not is_int_type(llvm_rhs.type):
             raise_lowering_internal_error(
@@ -521,14 +499,10 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
         """
         title: Emit vector sub.
         parameters:
-          node:
-            type: SubBinOp
-          llvm_lhs:
-            type: ir.Value
-          llvm_rhs:
-            type: ir.Value
-        returns:
-          type: ir.Value | None
+          node: Syntax node to process.
+          llvm_lhs: LLVM left operand.
+          llvm_rhs: LLVM right operand.
+        returns: 'Result of this operation: emit vector sub.'
         """
         if not (is_vector(llvm_lhs) and is_vector(llvm_rhs)):
             return None
@@ -560,14 +534,10 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
         """
         title: Emit vector mul.
         parameters:
-          node:
-            type: MulBinOp
-          llvm_lhs:
-            type: ir.Value
-          llvm_rhs:
-            type: ir.Value
-        returns:
-          type: ir.Value | None
+          node: Syntax node to process.
+          llvm_lhs: LLVM left operand.
+          llvm_rhs: LLVM right operand.
+        returns: 'Result of this operation: emit vector mul.'
         """
         if not (is_vector(llvm_lhs) and is_vector(llvm_rhs)):
             return None
@@ -623,16 +593,11 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
         """
         title: Emit vector div.
         parameters:
-          node:
-            type: DivBinOp
-          llvm_lhs:
-            type: ir.Value
-          llvm_rhs:
-            type: ir.Value
-          unsigned:
-            type: bool
-        returns:
-          type: ir.Value | None
+          node: Syntax node to process.
+          llvm_lhs: LLVM left operand.
+          llvm_rhs: LLVM right operand.
+          unsigned: Whether to use unsigned semantics.
+        returns: 'Result of this operation: emit vector div.'
         """
         if not (is_vector(llvm_lhs) and is_vector(llvm_rhs)):
             return None
@@ -668,8 +633,7 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
         """
         title: Visit BinaryOp nodes.
         parameters:
-          node:
-            type: astx.BinaryOp
+          node: Syntax node to process.
         """
         if cast(NullableVisitorMixin, self).lower_column_operation(node):
             return
@@ -683,8 +647,7 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
         """
         title: Visit AssignmentBinOp nodes.
         parameters:
-          node:
-            type: AssignmentBinOp
+          node: Syntax node to process.
         """
         if cast(NullableVisitorMixin, self).lower_column_operation(node):
             return
@@ -806,8 +769,7 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
         """
         title: Visit AddBinOp nodes.
         parameters:
-          node:
-            type: AddBinOp
+          node: Syntax node to process.
         """
         if cast(NullableVisitorMixin, self).lower_column_operation(node):
             return
@@ -845,8 +807,7 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
         """
         title: Visit SubBinOp nodes.
         parameters:
-          node:
-            type: SubBinOp
+          node: Syntax node to process.
         """
         if cast(NullableVisitorMixin, self).lower_column_operation(node):
             return
@@ -874,8 +835,7 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
         """
         title: Visit MulBinOp nodes.
         parameters:
-          node:
-            type: MulBinOp
+          node: Syntax node to process.
         """
         if cast(NullableVisitorMixin, self).lower_column_operation(node):
             return
@@ -900,8 +860,7 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
         """
         title: Visit DivBinOp nodes.
         parameters:
-          node:
-            type: DivBinOp
+          node: Syntax node to process.
         """
         if cast(NullableVisitorMixin, self).lower_column_operation(node):
             return
@@ -943,8 +902,7 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
         """
         title: Visit ModBinOp nodes.
         parameters:
-          node:
-            type: ModBinOp
+          node: Syntax node to process.
         """
         llvm_lhs, llvm_rhs, unsigned = self._load_binary_operands(node)
 
@@ -976,8 +934,7 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
         """
         title: Visit LogicalAndBinOp nodes.
         parameters:
-          node:
-            type: LogicalAndBinOp
+          node: Syntax node to process.
         """
         if cast(NullableVisitorMixin, self).lower_column_operation(node):
             return
@@ -992,8 +949,7 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
         """
         title: Visit LogicalOrBinOp nodes.
         parameters:
-          node:
-            type: LogicalOrBinOp
+          node: Syntax node to process.
         """
         if cast(NullableVisitorMixin, self).lower_column_operation(node):
             return
@@ -1008,8 +964,7 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
         """
         title: Visit LtBinOp nodes.
         parameters:
-          node:
-            type: LtBinOp
+          node: Syntax node to process.
         """
         if cast(NullableVisitorMixin, self).lower_column_operation(node):
             return
@@ -1030,8 +985,7 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
         """
         title: Visit GtBinOp nodes.
         parameters:
-          node:
-            type: GtBinOp
+          node: Syntax node to process.
         """
         if cast(NullableVisitorMixin, self).lower_column_operation(node):
             return
@@ -1052,8 +1006,7 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
         """
         title: Visit LeBinOp nodes.
         parameters:
-          node:
-            type: LeBinOp
+          node: Syntax node to process.
         """
         if cast(NullableVisitorMixin, self).lower_column_operation(node):
             return
@@ -1074,8 +1027,7 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
         """
         title: Visit GeBinOp nodes.
         parameters:
-          node:
-            type: GeBinOp
+          node: Syntax node to process.
         """
         if cast(NullableVisitorMixin, self).lower_column_operation(node):
             return
@@ -1096,8 +1048,7 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
         """
         title: Visit EqBinOp nodes.
         parameters:
-          node:
-            type: EqBinOp
+          node: Syntax node to process.
         """
         if cast(NullableVisitorMixin, self).lower_column_operation(node):
             return
@@ -1128,8 +1079,7 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
         """
         title: Visit NeBinOp nodes.
         parameters:
-          node:
-            type: NeBinOp
+          node: Syntax node to process.
         """
         if cast(NullableVisitorMixin, self).lower_column_operation(node):
             return
@@ -1160,8 +1110,7 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
         """
         title: Visit BitOrBinOp nodes.
         parameters:
-          node:
-            type: BitOrBinOp
+          node: Syntax node to process.
         """
         if cast(NullableVisitorMixin, self).lower_column_operation(node):
             return
@@ -1178,8 +1127,7 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
         """
         title: Visit BitAndBinOp nodes.
         parameters:
-          node:
-            type: BitAndBinOp
+          node: Syntax node to process.
         """
         if cast(NullableVisitorMixin, self).lower_column_operation(node):
             return
@@ -1196,8 +1144,7 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
         """
         title: Visit BitXorBinOp nodes.
         parameters:
-          node:
-            type: BitXorBinOp
+          node: Syntax node to process.
         """
         llvm_lhs, llvm_rhs, _unsigned = self._load_binary_operands(
             node,

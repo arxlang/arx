@@ -43,8 +43,7 @@ def test_literal_initialization(literal_class: type[astx.Literal]) -> None:
     """
     title: Test date and time literals.
     parameters:
-      literal_class:
-        type: type[astx.Literal]
+      literal_class: Literal node class used by this case.
     """
     literal_instance = literal_class("2023-10-31")
     assert str(literal_instance) != ""
@@ -74,12 +73,9 @@ def test_binary_operations(
     """
     title: Test binary operations on date and time literals.
     parameters:
-      literal_class:
-        type: type[astx.Literal]
-      fn_bin_op:
-        type: Callable[[type[astx.Literal]], BinaryOp]
-      op_code:
-        type: str
+      literal_class: Literal node class used by this case.
+      fn_bin_op: Fn bin op.
+      op_code: Operator spelling.
     """
     bin_op = fn_bin_op(literal_class)
     assert bin_op.op_code == op_code
@@ -105,12 +101,9 @@ def test_unary_operations(
     """
     title: Test unary operations on date and time literals.
     parameters:
-      literal_class:
-        type: type[astx.Literal]
-      fn_unary_op:
-        type: Callable[[type[astx.Literal]], UnaryOp]
-      op_code:
-        type: str
+      literal_class: Literal node class used by this case.
+      fn_unary_op: Fn unary op.
+      op_code: Operator spelling.
     """
     unary_op = fn_unary_op(literal_class)
     assert unary_op.op_code == op_code

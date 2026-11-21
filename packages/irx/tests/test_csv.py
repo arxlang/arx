@@ -17,11 +17,10 @@ from irx.record_batch import (
 
 def test_csv_quotes_nulls_and_batches(tmp_path: Path) -> None:
     """
-    title: >-
-      Preserve UTF-8, multiline quotes, empty strings, nulls and all batches.
+    title: Preserve UTF-8, multiline quotes, empty strings, nulls and all
+      batches.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     schema = RecordBatchSchema()
     schema.add_field("id", IrxColumnType.INT64, False)
@@ -54,10 +53,8 @@ def test_csv_write_read_and_lifecycle(tmp_path: Path, header: bool) -> None:
     """
     title: Exact typed roundtrip supports headerless files and closed guards.
     parameters:
-      tmp_path:
-        type: Path
-      header:
-        type: bool
+      tmp_path: Temporary directory for this test.
+      header: Whether to use header.
     """
     schema = RecordBatchSchema().add_field("value", IrxColumnType.INT16, False)
     builder = RecordBatchBuilder(schema)
@@ -92,10 +89,8 @@ def test_csv_inference_failures(tmp_path: Path, contents: str) -> None:
     """
     title: Reject empty files, ambiguous names and unsupported inferred nulls.
     parameters:
-      tmp_path:
-        type: Path
-      contents:
-        type: str
+      tmp_path: Temporary directory for this test.
+      contents: Contents.
     """
     path = tmp_path / "bad.csv"
     path.write_text(contents)
@@ -110,10 +105,8 @@ def test_invalid_options_do_not_truncate(
     """
     title: Validate CSV options before opening or truncating output.
     parameters:
-      tmp_path:
-        type: Path
-      delimiter:
-        type: str
+      tmp_path: Temporary directory for this test.
+      delimiter: Delimiter.
     """
     path = tmp_path / "keep.csv"
     path.write_text("keep")
@@ -125,11 +118,10 @@ def test_invalid_options_do_not_truncate(
 
 def test_typed_header_only_and_schema_errors(tmp_path: Path) -> None:
     """
-    title: >-
-      Preserve header-only typed input but reject drift, overflow and nulls.
+    title: Preserve header-only typed input but reject drift, overflow and
+      nulls.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     schema = RecordBatchSchema().add_field("a", IrxColumnType.INT8, False)
     path = tmp_path / "in.csv"
@@ -157,8 +149,7 @@ def test_nested_writer_schema_preserves_existing_file(tmp_path: Path) -> None:
     """
     title: Reject unsupported nested CSV schemas before truncating output.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     path = tmp_path / "keep.csv"
     path.write_text("keep")
@@ -173,13 +164,11 @@ def test_csv_rejects_invalid_block_size(
     tmp_path: Path, block_size: int
 ) -> None:
     """
-    title: >-
-      Reject invalid sizes before narrowing Python integers across the ABI.
+    title: Reject invalid sizes before narrowing Python integers across the
+      ABI.
     parameters:
-      tmp_path:
-        type: Path
-      block_size:
-        type: int
+      tmp_path: Temporary directory for this test.
+      block_size: Size of block.
     """
     with pytest.raises(ValueError, match="block_size"):
         RecordBatchStreamReader.open_csv(
@@ -189,11 +178,10 @@ def test_csv_rejects_invalid_block_size(
 
 def test_late_schema_drift_and_invalid_utf8(tmp_path: Path) -> None:
     """
-    title: >-
-      Later incompatible rows and malformed UTF-8 never silently disappear.
+    title: Later incompatible rows and malformed UTF-8 never silently
+      disappear.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     path = tmp_path / "late.csv"
     path.write_text("id\n" + "1\n" * 100 + "text\n")
@@ -212,11 +200,10 @@ def test_late_schema_drift_and_invalid_utf8(tmp_path: Path) -> None:
 
 def test_released_schema_is_not_dereferenced(tmp_path: Path) -> None:
     """
-    title: >-
-      CSV factories reject released Python schema owners before native calls.
+    title: CSV factories reject released Python schema owners before native
+      calls.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     schema = RecordBatchSchema().add_field("a", IrxColumnType.INT64)
     schema.release()
@@ -228,11 +215,10 @@ def test_released_schema_is_not_dereferenced(tmp_path: Path) -> None:
 
 def test_headerless_inference_and_schema_snapshot(tmp_path: Path) -> None:
     """
-    title: >-
-      Headerless inference keeps the first row and typed readers own schemas.
+    title: Headerless inference keeps the first row and typed readers own
+      schemas.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     path = tmp_path / "in.csv"
     path.write_text("1\n2\n")
@@ -261,10 +247,8 @@ def test_unified_csv_preserves_existing_bytes(
     """
     title: The unified owner preserves quoting, nulls and headerless CSV bytes.
     parameters:
-      tmp_path:
-        type: Path
-      header:
-        type: bool
+      tmp_path: Temporary directory for this test.
+      header: Whether to use header.
     """
     from irx.record_batch import CSVStream  # noqa: PLC0415
 

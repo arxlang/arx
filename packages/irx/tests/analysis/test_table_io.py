@@ -36,9 +36,6 @@ from ..conftest import StaticImportResolver
 class DerivedReadOperation(ReadTableOperation):
     """
     title: A nominal subtype uses the existing static read overload.
-    attributes:
-      name:
-        type: TableIOOperation
     """
 
 
@@ -64,8 +61,8 @@ class UnsupportedPlan(CallPlan):
     def dependencies(self) -> tuple[astx.AST, ...]:
         """
         title: This unsupported operation has no hidden AST dependencies.
-        returns:
-          type: tuple[astx.AST, Ellipsis]
+        returns: 'Result of this operation: this unsupported operation has
+          no hidden AST dependencies.'
         """
         return ()
 
@@ -80,16 +77,12 @@ def io_module(
     """
     title: Supply actual native declarations without importing an Arx frontend.
     parameters:
-      format_:
-        type: Literal[csv, parquet]
-      keywords:
-        type: tuple[astx.KeywordArgument, Ellipsis]
-      positional:
-        type: tuple[astx.DataType, Ellipsis] | None
-      configured:
-        type: bool
-    returns:
-      type: tuple[ParsedModule, astx.FunctionCall]
+      format_: Format.
+      keywords: Keywords.
+      positional: Positional.
+      configured: Whether to use configured.
+    returns: 'Result of this operation: supply actual native declarations
+      without importing an Arx frontend.'
     """
     frame = astx.DataFrameType()
     reader = astx.FunctionPrototype(
@@ -192,13 +185,11 @@ def test_host_table_io_translate(
     configured: bool,
 ) -> None:
     """
-    title: >-
-      Explicit capabilities resolve arguments and lower verified native IR.
+    title: Explicit capabilities resolve arguments and lower verified native
+      IR.
     parameters:
-      format_:
-        type: Literal[csv, parquet]
-      configured:
-        type: bool
+      format_: Format.
+      configured: Whether to use configured.
     """
     settings: tuple[astx.KeywordArgument, ...] = (
         (
@@ -272,10 +263,8 @@ def test_host_table_io_rejects_invalid_arguments(
     """
     title: Semantic errors precede native calls and generic FFI classification.
     parameters:
-      name:
-        type: str
-      value:
-        type: astx.DataType
+      name: Name identifying the declaration or operation.
+      value: Value to process.
     """
     root, _ = io_module("csv", (astx.KeywordArgument(name, value),))
     with pytest.raises(SemanticError):
@@ -289,8 +278,7 @@ def test_host_table_io_requires_path(
     """
     title: Missing and incorrectly typed required arguments fail in analysis.
     parameters:
-      arguments:
-        type: tuple[astx.DataType, Ellipsis]
+      arguments: Arguments supplied to the call.
     """
     root, _ = io_module("csv", positional=arguments)
     with pytest.raises(SemanticError):
@@ -366,8 +354,8 @@ def test_reused_builder_does_not_retain_table_runtime_features() -> None:
 
 def test_lowering_requires_resolved_operation_plan() -> None:
     """
-    title: >-
-      Missing typed facts fail before falling back to ordinary FFI lowering.
+    title: Missing typed facts fail before falling back to ordinary
+      FFI lowering.
     """
     root, read = io_module("csv")
     resolver = StaticImportResolver({})
@@ -385,8 +373,7 @@ def test_unknown_operations_fail_in_analysis(operation: CallOperation) -> None:
     """
     title: Neither a generic operation nor a table name grants visitor support.
     parameters:
-      operation:
-        type: CallOperation
+      operation: Operation to resolve or execute.
     """
     root, _ = io_module("csv")
     with patch(
@@ -437,10 +424,9 @@ def test_static_call_visitors_accept_nominal_subtypes() -> None:
         """
         title: Supply a trusted read subtype without changing call spelling.
         parameters:
-          name:
-            type: TableIOOperation
-        returns:
-          type: TableOperation
+          name: Name identifying the declaration or operation.
+        returns: 'Result of this operation: supply a trusted read subtype
+          without changing call spelling.'
         """
         if name.startswith("read_"):
             return DerivedReadOperation(name)
@@ -499,8 +485,8 @@ def test_analysis_call_visitors_do_not_import_the_backend() -> None:
 
 def test_reanalysis_does_not_retain_privilege_by_call_spelling() -> None:
     """
-    title: >-
-      Reused calls lose table facts when a new host resolves a user function.
+    title: Reused calls lose table facts when a new host resolves a user
+      function.
     """
     root, read = io_module("csv")
     resolver = StaticImportResolver({})
@@ -548,8 +534,7 @@ def test_streaming_style_overload_accepts_static_frames(
     """
     title: Runtime-schema parameters erase safely and exact overloads win.
     parameters:
-      static_overload:
-        type: bool
+      static_overload: Whether to use static overload.
     """
     schema = astx.DataFrameType([astx.DataFrameColumn("id", astx.Int64())])
     types: list[astx.DataType] = [astx.DataFrameType(), astx.Int32()]

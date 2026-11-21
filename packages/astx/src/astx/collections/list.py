@@ -1,9 +1,8 @@
 """
 title: ASTx list helper AST nodes.
-summary: >-
-  Provide the smallest explicit list-construction and query API that host
-  frontends can target when they need to build list values incrementally or
-  reason about list metadata in lowered control-flow contexts.
+summary: Provide the smallest explicit list-construction and query API that
+  host frontends can target when they need to build list values incrementally
+  or reason about list metadata in lowered control-flow contexts.
 """
 
 from __future__ import annotations
@@ -25,15 +24,12 @@ from astx.types import AnyType
 class ListExpr(astx.base.DataType):
     """
     title: Ordered expression-valued collection construction.
-    summary: >-
-      Evaluate elements once, left to right. Semantic analysis chooses the
-      concrete list element type, or a tensor under an explicit tensor target.
-      Unlike LiteralList, elements need not be literals.
+    summary: Evaluate elements once, left to right. Semantic analysis chooses
+      the concrete list element type, or a tensor under an explicit tensor
+      target. Unlike LiteralList, elements need not be literals.
     attributes:
-      elements:
-        type: list[astx.Expr]
-      type_:
-        type: AnyType
+      elements: Elements.
+      type_: Type associated with this expression.
     """
 
     elements: list[astx.Expr]
@@ -47,10 +43,8 @@ class ListExpr(astx.base.DataType):
         """
         title: Initialize a collection expression without inferring its type.
         parameters:
-          elements:
-            type: Sequence[astx.Expr]
-          loc:
-            type: SourceLocation
+          elements: Elements.
+          loc: Source coordinates associated with the node.
         """
         super().__init__(loc=loc)
         self.elements = list(elements)
@@ -60,10 +54,8 @@ class ListExpr(astx.base.DataType):
         """
         title: Preserve each element in the structured representation.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: astx.base.ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         return self._prepare_struct(
             "ListExpr",
@@ -81,10 +73,8 @@ class ListCreate(astx.base.DataType):
     """
     title: Internal empty-list constructor node.
     attributes:
-      element_type:
-        type: astx.DataType
-      type_:
-        type: astx.ListType
+      element_type: Type of each element.
+      type_: Type associated with this expression.
     """
 
     element_type: astx.DataType
@@ -94,8 +84,7 @@ class ListCreate(astx.base.DataType):
         """
         title: Initialize one empty-list constructor.
         parameters:
-          element_type:
-            type: astx.DataType
+          element_type: Type of each element.
         """
         super().__init__()
         self.element_type = element_type
@@ -105,10 +94,8 @@ class ListCreate(astx.base.DataType):
         """
         title: Return the structured representation.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: astx.base.ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         return self._prepare_struct(
             "ListCreate",
@@ -124,15 +111,12 @@ class ListCreate(astx.base.DataType):
 class ListIndex(astx.base.DataType):
     """
     title: Internal list indexing node.
-    summary: >-
-      Read one element from a list-valued expression using one integer index.
+    summary: Read one element from a list-valued expression using one integer
+      index.
     attributes:
-      base:
-        type: astx.AST
-      index:
-        type: astx.AST
-      type_:
-        type: astx.DataType
+      base: Base value or declaration.
+      index: Index selecting the item.
+      type_: Type associated with this expression.
     """
 
     base: astx.AST
@@ -143,10 +127,8 @@ class ListIndex(astx.base.DataType):
         """
         title: Initialize one list indexing expression.
         parameters:
-          base:
-            type: astx.AST
-          index:
-            type: astx.AST
+          base: Base value or declaration.
+          index: Index selecting the item.
         """
         super().__init__()
         self.base = base
@@ -157,10 +139,8 @@ class ListIndex(astx.base.DataType):
         """
         title: Return the structured representation.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: astx.base.ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         return self._prepare_struct(
             "ListIndex",
@@ -179,17 +159,13 @@ class ListIndex(astx.base.DataType):
 class ListAppend(astx.base.DataType):
     """
     title: Internal list append node.
-    summary: >-
-      Append one value to an existing mutable list variable or field. This node
-      models incremental list growth and is not a user-facing collection API by
-      itself.
+    summary: Append one value to an existing mutable list variable
+      or field. This node models incremental list growth and is not
+      a user-facing collection API by itself.
     attributes:
-      base:
-        type: astx.AST
-      value:
-        type: astx.AST
-      type_:
-        type: astx.Int32
+      base: Base value or declaration.
+      value: Stored value.
+      type_: Type associated with this expression.
     """
 
     base: astx.AST
@@ -200,10 +176,8 @@ class ListAppend(astx.base.DataType):
         """
         title: Initialize one list append node.
         parameters:
-          base:
-            type: astx.AST
-          value:
-            type: astx.AST
+          base: Base value or declaration.
+          value: Value to process.
         """
         super().__init__()
         self.base = base
@@ -214,10 +188,8 @@ class ListAppend(astx.base.DataType):
         """
         title: Return the structured representation.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: astx.base.ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         return self._prepare_struct(
             "ListAppend",
@@ -236,14 +208,11 @@ class ListAppend(astx.base.DataType):
 class ListLength(astx.base.DataType):
     """
     title: Internal list length node.
-    summary: >-
-      Return the current logical length of one list-valued expression as an
-      int64 value. No narrowing is performed at this query boundary.
+    summary: Return the current logical length of one list-valued expression
+      as an int64 value. No narrowing is performed at this query boundary.
     attributes:
-      base:
-        type: astx.AST
-      type_:
-        type: astx.Int64
+      base: Base value or declaration.
+      type_: Type associated with this expression.
     """
 
     base: astx.AST
@@ -253,8 +222,7 @@ class ListLength(astx.base.DataType):
         """
         title: Initialize one list length query.
         parameters:
-          base:
-            type: astx.AST
+          base: Base value or declaration.
         """
         super().__init__()
         self.base = base
@@ -264,10 +232,8 @@ class ListLength(astx.base.DataType):
         """
         title: Return the structured representation.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: astx.base.ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         return self._prepare_struct(
             "ListLength",

@@ -19,12 +19,9 @@ class LiteralList(Literal):
     """
     title: Literal representation of a List.
     attributes:
-      type_:
-        type: ListType
-      loc:
-        type: SourceLocation
-      elements:
-        type: list[Literal]
+      type_: Type associated with this expression.
+      loc: Source coordinates attached to this node.
+      elements: Elements.
     """
 
     type_: ListType
@@ -38,10 +35,8 @@ class LiteralList(Literal):
         """
         title: Initialize LiteralList.
         parameters:
-          elements:
-            type: list[Literal]
-          loc:
-            type: SourceLocation
+          elements: Elements.
+          loc: Source coordinates associated with the node.
         """
         super().__init__(loc)
         self.elements = list(elements)  # Ensure correct type
@@ -56,12 +51,9 @@ class LiteralTuple(Literal):
     """
     title: Literal representation of a Tuple.
     attributes:
-      type_:
-        type: TupleType
-      loc:
-        type: SourceLocation
-      elements:
-        type: tuple[Literal, Ellipsis]
+      type_: Type associated with this expression.
+      loc: Source coordinates attached to this node.
+      elements: Elements.
     """
 
     type_: TupleType
@@ -77,10 +69,8 @@ class LiteralTuple(Literal):
         """
         title: Initialize LiteralTuple.
         parameters:
-          elements:
-            type: tuple[Literal, Ellipsis]
-          loc:
-            type: SourceLocation
+          elements: Elements.
+          loc: Source coordinates associated with the node.
         """
         super().__init__(loc)
         self.elements = elements
@@ -94,12 +84,9 @@ class LiteralSet(Literal):
     """
     title: Literal representation of a Set.
     attributes:
-      type_:
-        type: SetType
-      loc:
-        type: SourceLocation
-      elements:
-        type: set[Literal]
+      type_: Type associated with this expression.
+      loc: Source coordinates attached to this node.
+      elements: Elements.
     """
 
     type_: SetType
@@ -113,10 +100,8 @@ class LiteralSet(Literal):
         """
         title: Initialize LiteralSet.
         parameters:
-          elements:
-            type: set[Literal]
-          loc:
-            type: SourceLocation
+          elements: Elements.
+          loc: Source coordinates associated with the node.
         """
         super().__init__(loc)
         self.elements = set(elements)
@@ -133,12 +118,9 @@ class LiteralDict(Literal):
     """
     title: Literal representation of a Dictionary.
     attributes:
-      type_:
-        type: DictType
-      loc:
-        type: SourceLocation
-      elements:
-        type: dict[Literal, Literal]
+      type_: Type associated with this expression.
+      loc: Source coordinates attached to this node.
+      elements: Elements.
     """
 
     type_: DictType
@@ -154,10 +136,8 @@ class LiteralDict(Literal):
         """
         title: Initialize LiteralDict.
         parameters:
-          elements:
-            type: dict[Literal, Literal]
-          loc:
-            type: SourceLocation
+          elements: Elements.
+          loc: Source coordinates associated with the node.
         """
         super().__init__(loc)
         self.elements = dict(elements)

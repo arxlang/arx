@@ -1,16 +1,21 @@
 # mypy: disable-error-code=no-redef
 """
 title: Python-subset validation for arxjit.
-summary: >-
-  Second stage of the arxjit pipeline: walk the ast node produced by
-  arxjit.source and check it only uses the v1 supported subset of pure Python
-  (typed scalar arguments, arithmetic/comparison/boolean expressions, single-
-  target local assignments, if/else, while, for over range, return). Dispatch
-  is by node type via plum, matching the visitor convention used across the Arx
-  packages. Every rejected construct is collected into its own Diagnostic so a
-  function using several unsupported constructs reports all of them at once via
-  UnsupportedSyntaxError; lowering the accepted subset to astx is a later stage
-  and is not done here.
+summary: 'Second stage of the arxjit pipeline: walk the ast node produced
+  by arxjit.source and check it only uses the v1 supported subset of pure
+  Python (typed scalar arguments, arithmetic/comparison/boolean expressions,
+  single- target local assignments, if/else, while, for over range, return).
+  Dispatch is by node type via plum, matching the visitor convention used
+  across the Arx packages. Every rejected construct is collected into
+  its own Diagnostic so a function using several unsupported constructs
+  reports all of them at once via UnsupportedSyntaxError; lowering the
+  accepted subset to astx is a later stage and is not done here.'
+attributes:
+  _SCOPE_NODES: Scope nodes.
+  _ALLOWED_BINOPS: Allowed binops.
+  _ALLOWED_UNARYOPS: Allowed unaryops.
+  _ALLOWED_COMPAREOPS: Allowed compareops.
+  _UNSUPPORTED_MESSAGES: Unsupported messages.
 """
 
 from __future__ import annotations
@@ -106,32 +111,54 @@ _UNSUPPORTED_MESSAGES: dict[type[ast.AST], str] = {
 def _defined_in_class_body(qualname: str) -> bool:
     """
     title: Report whether a function was lexically defined in a class body.
-    summary: |-
-      The extracted ast cannot reveal this on its own: the decorated object is
-      an ordinary function and its first parameter is only conventionally named
+    summary: >-
+      The extracted ast cannot reveal this on its own: the decorated object
+      is
+
+      an ordinary function and its first parameter is only conventionally
+      named
+
       self. __qualname__ does record it, as a dotted path whose second-to-last
-      part is the owning class; a function nested inside another function is
+
+      part is the owning class; a function nested inside another function
+      is
+
       dotted too, but Python inserts the "<locals>" marker there, which
+
       distinguishes the two. An empty qualname (only reachable with a hand-
+
       built ExtractedSource) is not a class body.
+
       This is deliberately narrower than "is a method". __qualname__ records
+
       where a function was defined, not whether a class currently owns the
+
       descriptor, so three cases are outside the contract and validate cleanly:
+
       a decorator that returns a different function without preserving
+
       __qualname__ or setting __wrapped__, a function defined at module level
-      and assigned in a class body, and a function attached to a class after it
+
+      and assigned in a class body, and a function attached to a class after
+      it
+
       was created. Ownership is not knowable from source metadata. The first
+
       two are reachable from the decorator layer, where
+
       JitFunction.__set_name__ is called with the owning class for anything
+
       bound in a class body; the third is not, because __set_name__ is only
+
       called during class creation. A decorator chain that uses functools.wraps
+
       stays covered here, because it copies __qualname__ and sets __wrapped__
+
       for extraction to follow.
     parameters:
-      qualname:
-        type: str
-    returns:
-      type: bool
+      qualname: Qualname.
+    returns: 'Result of this operation: report whether a function was lexically
+      defined in a class body.'
     """
     parts = qualname.split(".")
     return len(parts) > 1 and parts[-2] != "<locals>"
@@ -140,15 +167,13 @@ def _defined_in_class_body(qualname: str) -> bool:
 def _target_names(target: ast.expr) -> set[str]:
     """
     title: Collect the names bound by an assignment or loop target.
-    summary: >-
-      Handles the tuple, list, and starred forms as well as a plain name, so a
-      target the subset rejects still registers its bindings and does not also
-      produce a spurious free-variable diagnostic for the same name.
+    summary: Handles the tuple, list, and starred forms as well as a plain
+      name, so a target the subset rejects still registers its bindings and
+      does not also produce a spurious free-variable diagnostic for the same
+      name.
     parameters:
-      target:
-        type: ast.expr
-    returns:
-      type: set[str]
+      target: Destination of the operation.
+    returns: Collected the names bound by an assignment or loop target.
     """
     if isinstance(target, ast.Name):
         return {target.id}
@@ -165,15 +190,12 @@ def _target_names(target: ast.expr) -> set[str]:
 def _parameter_names(args: ast.arguments) -> set[str]:
     """
     title: Collect the names bound by a function's parameter list.
-    summary: >-
-      Includes the parameter kinds the subset rejects (variadic and keyword-
-      only), so a rejected signature does not also report its own parameters as
-      free variables.
+    summary: Includes the parameter kinds the subset rejects (variadic and
+      keyword- only), so a rejected signature does not also report its own
+      parameters as free variables.
     parameters:
-      args:
-        type: ast.arguments
-    returns:
-      type: set[str]
+      args: Arguments supplied to the operation.
+    returns: Collected the names bound by a function's parameter list.
     """
     names = {
         arg.arg for arg in (*args.posonlyargs, *args.args, *args.kwonlyargs)
@@ -187,15 +209,12 @@ def _parameter_names(args: ast.arguments) -> set[str]:
 def _statement_bindings(node: ast.AST) -> set[str]:
     """
     title: Collect the names a single statement or expression binds.
-    summary: >-
-      Covers ordinary and loop assignment as well as the annotated, augmented,
-      and walrus forms the subset rejects, so a rejected statement does not
-      also produce a free-variable diagnostic for the name it binds.
+    summary: Covers ordinary and loop assignment as well as the annotated,
+      augmented, and walrus forms the subset rejects, so a rejected statement
+      does not also produce a free-variable diagnostic for the name it binds.
     parameters:
-      node:
-        type: ast.AST
-    returns:
-      type: set[str]
+      node: Syntax node to process.
+    returns: Collected the names a single statement or expression binds.
     """
     if isinstance(node, ast.Assign):
         names: set[str] = set()
@@ -219,22 +238,29 @@ def _statement_bindings(node: ast.AST) -> set[str]:
 def _bound_names(node: FunctionNode) -> set[str]:
     """
     title: Collect every name bound as a local of the function's own scope.
-    summary: |-
+    summary: >-
       A name is bound if it is a parameter or is assigned in the body. Any name
+
       read but not bound is a free variable (a closure capture) or a module
+
       global, both outside the pure v1 subset. Assignments in never-executed
+
       branches still bind, matching Python's rule that any assigned name is a
+
       local.
+
       Nested scopes are deliberately not descended into: a nested function,
+
       lambda, or class has its own locals, so collecting them here would both
+
       mask free-variable reads in this scope and misreport a nested binding as
+
       shadowing an outer name. The nested definition's own name does bind in
+
       this scope, so it is collected while its body is skipped.
     parameters:
-      node:
-        type: FunctionNode
-    returns:
-      type: set[str]
+      node: Syntax node to process.
+    returns: Collected every name bound as a local of the function's own scope.
     """
     names = _parameter_names(node.args)
     pending: list[ast.AST] = list(node.body)
@@ -254,32 +280,28 @@ def _bound_names(node: FunctionNode) -> set[str]:
 class _SubsetValidator:
     """
     title: Collect one diagnostic per construct outside the v1 subset.
-    summary: >-
-      Dispatches by node type via plum: each accepted construct has its own
-      visit overload, and the ast.AST overload is the fail-closed default that
-      rejects everything else, so a known-unsupported construct (with a
-      specific message) or a future Python node this pass was not updated for
-      both fail safe. A rejected node's children are not descended into, so one
-      bad subtree yields one diagnostic; independent sibling statements are
-      each validated in full.
+    summary: 'Dispatches by node type via plum: each accepted construct
+      has its own visit overload, and the ast.AST overload is the fail-closed
+      default that rejects everything else, so a known-unsupported construct
+      (with a specific message) or a future Python node this pass was not
+      updated for both fail safe. A rejected node''s children are not descended
+      into, so one bad subtree yields one diagnostic; independent sibling
+      statements are each validated in full.'
     attributes:
-      extracted:
-        description: The extracted source being validated.
-      bound:
-        description: Names bound as locals or arguments of the function.
-      diagnostics:
-        type: list[Diagnostic]
-        description: One entry per rejected construct.
+      extracted: The extracted source being validated.
+      bound: Names bound as locals or arguments of the function.
+      diagnostics: One entry per rejected construct.
     """
+
+    extracted: ExtractedSource
+    bound: set[str]
 
     def __init__(self, extracted: ExtractedSource, bound: set[str]) -> None:
         """
         title: Initialize the validator for one function's source.
         parameters:
-          extracted:
-            type: ExtractedSource
-          bound:
-            type: set[str]
+          extracted: Extracted Python source and syntax.
+          bound: Names bound in the function scope.
         """
         self.extracted = extracted
         self.bound = bound
@@ -289,28 +311,24 @@ class _SubsetValidator:
         """
         title: Record a diagnostic for an unsupported node.
         parameters:
-          node:
-            type: ast.AST
-          message:
-            type: str
+          node: Syntax node to process.
+          message: Diagnostic or output message.
         """
         self.diagnostics.append(_diagnostic(self.extracted, node, message))
 
     def _range_shadow(self) -> str | None:
         """
         title: Return what shadows range, or None when it is the builtin.
-        summary: >-
-          A for loop's range must resolve to builtins.range, and it can be
-          shadowed in three places: this function's own locals and arguments,
-          an enclosing function's scope (a closure capture), and the defining
-          module's namespace. Only the first is visible in the AST, so the
-          other two are read from the context extraction carries alongside the
-          source. When that namespace is unavailable (only for a hand-built
-          ExtractedSource; extract_source always provides it for a real
-          function) module-level shadowing cannot be observed and the name is
-          taken to be the builtin.
-        returns:
-          type: str | None
+        summary: 'A for loop''s range must resolve to builtins.range, and
+          it can be shadowed in three places: this function''s own locals
+          and arguments, an enclosing function''s scope (a closure capture),
+          and the defining module''s namespace. Only the first is visible
+          in the AST, so the other two are read from the context extraction
+          carries alongside the source. When that namespace is unavailable
+          (only for a hand-built ExtractedSource; extract_source always
+          provides it for a real function) module-level shadowing cannot
+          be observed and the name is taken to be the builtin.'
+        returns: What shadows range, or None when it is the builtin.
         """
         if "range" in self.bound:
             return "a local variable or argument"
@@ -328,8 +346,7 @@ class _SubsetValidator:
         """
         title: Visit each statement in a block in order.
         parameters:
-          statements:
-            type: list[ast.stmt]
+          statements: Statements in source order.
         """
         for statement in statements:
             self.visit(statement)
@@ -338,14 +355,12 @@ class _SubsetValidator:
     def visit(self, node: ast.AST) -> None:
         """
         title: Reject any node with no accepting overload (fail closed).
-        summary: >-
-          Reaching this default means the node is a known-unsupported construct
-          (looked up for a specific message) or one this validator does not
-          recognize at all; both are rejected so new or unhandled syntax fails
-          closed instead of silently passing.
+        summary: Reaching this default means the node is a known-unsupported
+          construct (looked up for a specific message) or one this validator
+          does not recognize at all; both are rejected so new or unhandled
+          syntax fails closed instead of silently passing.
         parameters:
-          node:
-            type: ast.AST
+          node: Syntax node to process.
         """
         message = _UNSUPPORTED_MESSAGES.get(
             type(node), f"{type(node).__name__} is not supported"
@@ -357,8 +372,7 @@ class _SubsetValidator:
         """
         title: Validate a return statement's value, if any.
         parameters:
-          node:
-            type: ast.Return
+          node: Syntax node to process.
         """
         if node.value is not None:
             self.visit(node.value)
@@ -368,8 +382,7 @@ class _SubsetValidator:
         """
         title: Validate a single-target local variable assignment.
         parameters:
-          node:
-            type: ast.Assign
+          node: Syntax node to process.
         """
         if len(node.targets) != 1 or not isinstance(node.targets[0], ast.Name):
             self._reject(
@@ -383,8 +396,7 @@ class _SubsetValidator:
         """
         title: Validate an if/else statement and both branches.
         parameters:
-          node:
-            type: ast.If
+          node: Syntax node to process.
         """
         self.visit(node.test)
         self.visit_all(node.body)
@@ -394,13 +406,11 @@ class _SubsetValidator:
     def visit(self, node: ast.While) -> None:
         """
         title: Validate a while loop and its body.
-        summary: >-
-          The loop's else clause is rejected: it only runs when the loop exits
-          without break, and break is itself outside the subset, so a while-
-          else is dead and needlessly complicates lowering.
+        summary: 'The loop''s else clause is rejected: it only runs when
+          the loop exits without break, and break is itself outside the subset,
+          so a while- else is dead and needlessly complicates lowering.'
         parameters:
-          node:
-            type: ast.While
+          node: Syntax node to process.
         """
         self.visit(node.test)
         if node.orelse:
@@ -413,13 +423,11 @@ class _SubsetValidator:
     def visit(self, node: ast.For) -> None:
         """
         title: Validate a for loop, restricted to iterating over range().
-        summary: >-
-          The iterable must be a call to the builtin range with one to three
-          positional arguments and no keywords; a range shadowed by a local or
-          argument is rejected, as is a loop else clause.
+        summary: The iterable must be a call to the builtin range with one
+          to three positional arguments and no keywords; a range shadowed
+          by a local or argument is rejected, as is a loop else clause.
         parameters:
-          node:
-            type: ast.For
+          node: Syntax node to process.
         """
         if not isinstance(node.target, ast.Name):
             self._reject(
@@ -434,15 +442,13 @@ class _SubsetValidator:
     def _visit_for_iter(self, iterable: ast.expr) -> None:
         """
         title: Validate a for loop's iterable as a builtin range() call.
-        summary: >-
-          The callee must resolve to builtins.range, so it is rejected whenever
-          the name is shadowed, whether by a local or argument, an enclosing
-          function's variable, or a module-level name. Compiling a shadowed
-          range as the range intrinsic would silently disagree with the Python
-          fallback, which raises TypeError.
+        summary: The callee must resolve to builtins.range, so it is rejected
+          whenever the name is shadowed, whether by a local or argument,
+          an enclosing function's variable, or a module-level name. Compiling
+          a shadowed range as the range intrinsic would silently disagree
+          with the Python fallback, which raises TypeError.
         parameters:
-          iterable:
-            type: ast.expr
+          iterable: Iterable.
         """
         if not (
             isinstance(iterable, ast.Call)
@@ -478,15 +484,13 @@ class _SubsetValidator:
     def visit(self, node: ast.Expr) -> None:
         """
         title: Accept a standalone string literal, reject anything else.
-        summary: >-
-          A bare string statement (a docstring, or a no-op string) has no
-          compilable effect and is allowed. A bare yield is delegated to the
-          default so it gets the specific generators message; any other
-          standalone expression computes a value that is discarded and is
-          rejected directly.
+        summary: A bare string statement (a docstring, or a no-op string)
+          has no compilable effect and is allowed. A bare yield is delegated
+          to the default so it gets the specific generators message; any
+          other standalone expression computes a value that is discarded
+          and is rejected directly.
         parameters:
-          node:
-            type: ast.Expr
+          node: Syntax node to process.
         """
         if isinstance(node.value, ast.Constant) and isinstance(
             node.value.value, str
@@ -504,22 +508,20 @@ class _SubsetValidator:
         """
         title: Accept a pass statement; it has no effect.
         parameters:
-          node:
-            type: ast.Pass
+          node: Syntax node to process.
         """
 
     @dispatch
     def visit(self, node: ast.Name) -> None:
         """
         title: Accept a bound variable reference, reject a free one.
-        summary: >-
-          Only names read in an expression reach this overload (assignment and
-          loop targets are checked without being visited). A name that is not
-          bound as a local or argument is a closure capture or a module global,
-          both outside the pure subset.
+        summary: Only names read in an expression reach this overload
+          (assignment and loop targets are checked without being
+          visited). A name that is not bound as a local or argument
+          is a closure capture or a module global, both outside the
+          pure subset.
         parameters:
-          node:
-            type: ast.Name
+          node: Syntax node to process.
         """
         if isinstance(node.ctx, ast.Load) and node.id not in self.bound:
             self._reject(
@@ -533,8 +535,7 @@ class _SubsetValidator:
         """
         title: Accept only int, float, and bool literals.
         parameters:
-          node:
-            type: ast.Constant
+          node: Syntax node to process.
         """
         if isinstance(node.value, (bool, int, float)):
             return
@@ -546,8 +547,7 @@ class _SubsetValidator:
         """
         title: Validate an arithmetic binary expression.
         parameters:
-          node:
-            type: ast.BinOp
+          node: Syntax node to process.
         """
         if not isinstance(node.op, _ALLOWED_BINOPS):
             self._reject(
@@ -562,8 +562,7 @@ class _SubsetValidator:
         """
         title: Validate a unary expression.
         parameters:
-          node:
-            type: ast.UnaryOp
+          node: Syntax node to process.
         """
         if not isinstance(node.op, _ALLOWED_UNARYOPS):
             self._reject(
@@ -576,12 +575,10 @@ class _SubsetValidator:
     def visit(self, node: ast.BoolOp) -> None:
         """
         title: Validate a boolean and/or expression's operands.
-        summary: >-
-          Python has only ``and`` and ``or`` as boolean operators, both
-          supported, so only the operands need validation.
+        summary: Python has only ``and`` and ``or`` as boolean operators,
+          both supported, so only the operands need validation.
         parameters:
-          node:
-            type: ast.BoolOp
+          node: Syntax node to process.
         """
         for value in node.values:
             self.visit(value)
@@ -591,8 +588,7 @@ class _SubsetValidator:
         """
         title: Validate a (possibly chained) comparison expression.
         parameters:
-          node:
-            type: ast.Compare
+          node: Syntax node to process.
         """
         for operator in node.ops:
             if not isinstance(operator, _ALLOWED_COMPAREOPS):
@@ -609,13 +605,11 @@ class _SubsetValidator:
     def visit(self, node: ast.Call) -> None:
         """
         title: Reject a function call.
-        summary: >-
-          Only reachable for calls that are not a for loop's range(...)
+        summary: Only reachable for calls that are not a for loop's range(...)
           iterator, which _visit_for_iter special-cases before it ever reaches
           the generic expression walk.
         parameters:
-          node:
-            type: ast.Call
+          node: Syntax node to process.
         """
         self._reject(
             node,
@@ -629,17 +623,14 @@ def _validate_arguments(
 ) -> list[Diagnostic]:
     """
     title: Reject argument shapes outside the v1 subset.
-    summary: >-
-      Rejects *args, **kwargs, keyword-only arguments, and default values; does
-      not check argument or return annotations, which is the reconciliation
-      stage's job once a function has already passed validation.
+    summary: Rejects *args, **kwargs, keyword-only arguments, and default
+      values; does not check argument or return annotations, which is the
+      reconciliation stage's job once a function has already passed validation.
     parameters:
-      extracted:
-        type: ExtractedSource
-      args:
-        type: ast.arguments
-    returns:
-      type: list[Diagnostic]
+      extracted: Extracted Python source and syntax.
+      args: Arguments supplied to the operation.
+    returns: 'Result of this operation: reject argument shapes outside the
+      v1 subset.'
     """
     diagnostics: list[Diagnostic] = []
     if args.vararg is not None:
@@ -683,24 +674,24 @@ def _validate_arguments(
 
 def validate(extracted: ExtractedSource) -> None:
     """
-    title: Validate that a function uses only the supported Python subset.
-    summary: >-
-      Rejects functions defined in a class body, async definitions and generic
-      (PEP 695) type parameters, checks the argument shape, then walks the body
-      collecting one diagnostic per rejected construct, including free-variable
+    title: Validate that a function uses only the supported Python
+      subset.
+    summary: Rejects functions defined in a class body, async
+      definitions and generic (PEP 695) type parameters, checks
+      the argument shape, then walks the body collecting one
+      diagnostic per rejected construct, including free-variable
       reads (closures and globals). A function with several unsupported
-      constructs is reported in a single UnsupportedSyntaxError carrying all of
-      them, so a user fixes everything in one pass. See _defined_in_class_body
-      for the method forms this cannot detect from source metadata alone.
+      constructs is reported in a single UnsupportedSyntaxError
+      carrying all of them, so a user fixes everything in one
+      pass. See _defined_in_class_body for the method forms this
+      cannot detect from source metadata alone.
     parameters:
-      extracted:
-        type: ExtractedSource
-        description: The result of arxjit.source.extract_source.
+      extracted: The result of arxjit.source.extract_source.
     raises:
-      UnsupportedSyntaxError: >-
-        If the function is defined in a class body, is async or generic, has an
-        unsupported argument shape, reads a free variable, or its body uses any
-        construct outside the v1 subset.
+      UnsupportedSyntaxError: If the function is defined in a
+        class body, is async or generic, has an unsupported argument
+        shape, reads a free variable, or its body uses any construct
+        outside the v1 subset.
     """
     node = extracted.node
     diagnostics: list[Diagnostic] = []

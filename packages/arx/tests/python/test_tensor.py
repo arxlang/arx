@@ -32,10 +32,8 @@ def _binding_for(data_type: astx.DataType) -> TensorBinding:
     """
     title: Return a non-null binding for one declared tensor type.
     parameters:
-      data_type:
-        type: astx.DataType
-    returns:
-      type: TensorBinding
+      data_type: Declared data type.
+    returns: A non-null binding for one declared tensor type.
     """
     binding = binding_from_type(data_type)
     assert binding is not None
@@ -62,14 +60,10 @@ def test_tensor_scalar_helpers_cover_supported_types(
     """
     title: Scalar helper tables cover each supported tensor element type.
     parameters:
-      element_type:
-        type: astx.DataType
-      expected_size:
-        type: int
-      dtype_name:
-        type: str
-      expected_literal:
-        type: astx.Literal
+      element_type: Type of each element.
+      expected_size: Size of expected.
+      dtype_name: Name of dtype.
+      expected_literal: Expected literal.
     """
     assert tensor_module._element_size_bytes(element_type) == expected_size
     assert (
@@ -94,8 +88,7 @@ def test_tensor_scalar_helpers_reject_unsupported_types(
     """
     title: Scalar helper utilities reject unsupported element kinds.
     parameters:
-      element_type:
-        type: astx.DataType
+      element_type: Type of each element.
     """
     with pytest.raises(ValueError, match=r"support only|unsupported"):
         tensor_module._element_size_bytes(element_type)
@@ -136,8 +129,8 @@ def test_tensor_surface_type_and_binding_round_trip() -> None:
 
 def test_tensor_type_rejects_invalid_shapes_and_elements() -> None:
     """
-    title: >-
-      Tensor types reject empty shapes, negative shapes, and bool elements.
+    title: Tensor types reject empty shapes, negative shapes, and
+      bool elements.
     """
     with pytest.raises(ValueError, match="at least one dimension"):
         tensor_type(astx.Int32(), ())

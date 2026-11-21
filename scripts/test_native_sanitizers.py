@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 """
 title: Exercise registered Arrow and Parquet native code under ASan and UBSan.
-summary: >-
-  Compile the runtime feature artifacts, not a separately maintained source
-  list. Third-party Arrow libraries are not rebuilt or instrumented.
+summary: Compile the runtime feature artifacts, not a separately maintained
+  source list. Third-party Arrow libraries are not rebuilt or instrumented.
 """
 
 from __future__ import annotations

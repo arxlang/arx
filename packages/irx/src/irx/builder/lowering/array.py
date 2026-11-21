@@ -28,8 +28,7 @@ class ArrayVisitorMixin(VisitorMixinBase):
         """
         title: Visit ArrayInt32ArrayLength nodes.
         parameters:
-          node:
-            type: astx.ArrayInt32ArrayLength
+          node: Syntax node to process.
         """
         builder_new = self.require_runtime_symbol(
             "array", "irx_arrow_array_builder_int32_new"

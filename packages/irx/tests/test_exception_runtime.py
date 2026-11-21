@@ -21,10 +21,9 @@ def runtime(tmp_path: Path) -> Iterator[ctypes.CDLL]:
     """
     title: Build an instrumented class and exception runtime without Arrow.
     parameters:
-      tmp_path:
-        type: Path
-    returns:
-      type: Iterator[ctypes.CDLL]
+      tmp_path: Temporary directory for this test.
+    returns: Constructed an instrumented class and exception runtime without
+      Arrow.
     """
     compiler = shutil.which("clang")
     if compiler is None:
@@ -170,10 +169,9 @@ def context(runtime: ctypes.CDLL) -> ctypes.c_void_p:
     """
     title: Allocate one explicit execution context.
     parameters:
-      runtime:
-        type: ctypes.CDLL
-    returns:
-      type: ctypes.c_void_p
+      runtime: Runtime.
+    returns: 'Result of this operation: allocate one explicit execution
+      context.'
     """
     result = ctypes.c_void_p()
     assert runtime.irx_exception_context_create(ctypes.byref(result)) == 0
@@ -186,10 +184,8 @@ def test_copied_message_nominal_match_and_dynamic_reraise(
     """
     title: Pending and handled values retain classes and immutable diagnostics.
     parameters:
-      runtime:
-        type: ctypes.CDLL
-      capfd:
-        type: pytest.CaptureFixture[str]
+      runtime: Runtime.
+      capfd: Fixture capturing native and Python output streams.
     """
     ctx = context(runtime)
     text = ctypes.create_string_buffer(b"original|message\nline")
@@ -228,14 +224,10 @@ def test_chaining_and_suppression(
     """
     title: Causes and contexts are snapshots and suppression hides both.
     parameters:
-      runtime:
-        type: ctypes.CDLL
-      capfd:
-        type: pytest.CaptureFixture[str]
-      mode:
-        type: int
-      role:
-        type: str | None
+      runtime: Runtime.
+      capfd: Fixture capturing native and Python output streams.
+      mode: Selected processing mode.
+      role: Role.
     """
     ctx = context(runtime)
     first = runtime.test_object(b"First", b"one")
@@ -266,12 +258,9 @@ def test_finally_replacement_and_cleanup_priority(
     """
     title: Finally overrides errors; implicit cleanup preserves the primary.
     parameters:
-      runtime:
-        type: ctypes.CDLL
-      capfd:
-        type: pytest.CaptureFixture[str]
-      cleanup:
-        type: bool
+      runtime: Runtime.
+      capfd: Fixture capturing native and Python output streams.
+      cleanup: Whether to use cleanup.
     """
     ctx = context(runtime)
     first = runtime.test_object(b"First", b"one")
@@ -324,10 +313,8 @@ def test_allocation_faults_publish_nothing(
     """
     title: Every partial constructor fault balances ownership and output slots.
     parameters:
-      runtime:
-        type: ctypes.CDLL
-      nth:
-        type: int
+      runtime: Runtime.
+      nth: Nth.
     """
     runtime.test_fault(nth)
     result = runtime.test_object(b"Failure", b"message")
@@ -340,8 +327,7 @@ def test_repeated_same_object_scopes_are_bounded(runtime: ctypes.CDLL) -> None:
     """
     title: Repeated raise and catch creates neither cycles nor leaked refs.
     parameters:
-      runtime:
-        type: ctypes.CDLL
+      runtime: Runtime.
     """
     ctx = context(runtime)
     value = runtime.test_object(b"Failure", b"message")
@@ -362,10 +348,8 @@ def test_failed_raise_keeps_original_record_and_references(
     """
     title: Failed raises publish neither pending values nor partial snapshots.
     parameters:
-      runtime:
-        type: ctypes.CDLL
-      nth:
-        type: int
+      runtime: Runtime.
+      nth: Nth.
     """
     ctx = context(runtime)
     value = runtime.test_object(b"Failure", b"message")
@@ -390,10 +374,8 @@ def test_failed_consuming_drop_preserves_primary(
     """
     title: A failing real class drop consumes its owner and stays secondary.
     parameters:
-      runtime:
-        type: ctypes.CDLL
-      capfd:
-        type: pytest.CaptureFixture[str]
+      runtime: Runtime.
+      capfd: Fixture capturing native and Python output streams.
     """
     ctx = context(runtime)
     primary = runtime.test_object(b"Primary", b"original")

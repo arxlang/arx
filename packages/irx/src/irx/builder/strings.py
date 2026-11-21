@@ -1,10 +1,11 @@
 """
 title: Byte-oriented LLVM string loop emission.
-summary: >-
-  The compiler core owns and initializes LLVM state. Functions are cached in
-  that state's module; copy loops emit into the caller-provided builder. These
-  helpers never replace the core's active builder. Byte length is distinct from
-  the language's Unicode string length operation.
+summary: The compiler core owns and initializes LLVM state. Functions are
+  cached in that state's module; copy loops emit into the caller-provided
+  builder. These helpers never replace the core's active builder. Byte length
+  is distinct from the language's Unicode string length operation.
+attributes:
+  __all__: Names exported from this module.
 """
 
 from typing import cast
@@ -25,8 +26,7 @@ class StringIRMixin:
     title: Emit string byte loops using existing compiler-owned LLVM state.
     summary: No constructor, callbacks, dispatch registrations, or new state.
     attributes:
-      _llvm:
-        type: VariablesLLVM
+      _llvm: LLVM.
     """
 
     _llvm: VariablesLLVM
@@ -40,12 +40,9 @@ class StringIRMixin:
         """
         title: Generate strcpy.
         parameters:
-          builder:
-            type: ir.IRBuilder
-          dest:
-            type: ir.Value
-          src:
-            type: ir.Value
+          builder: Builder generating the intermediate representation.
+          dest: Dest.
+          src: Src.
         """
         loop_bb = builder.function.append_basic_block("strcpy_loop")
         end_bb = builder.function.append_basic_block("strcpy_end")
@@ -72,8 +69,7 @@ class StringIRMixin:
     def _create_strcmp_inline(self) -> ir.Function:
         """
         title: Create strcmp inline.
-        returns:
-          type: ir.Function
+        returns: Created strcmp inline.
         """
         func_name = "strcmp_inline"
         if func_name in self._llvm.module.globals:
@@ -136,8 +132,7 @@ class StringIRMixin:
     def _create_strlen_inline(self) -> ir.Function:
         """
         title: Create strlen inline.
-        returns:
-          type: ir.Function
+        returns: Created strlen inline.
         """
         func_name = "strlen_inline"
         if func_name in self._llvm.module.globals:

@@ -1,6 +1,6 @@
 """
-title: >-
-  Typed semantic attachments, generation replacement, and dependency edges.
+title: Typed semantic attachments, generation replacement, and dependency
+  edges.
 """
 
 import copy
@@ -42,8 +42,7 @@ def test_static_fact_contracts_reject_record_mismatches(
     """
     title: Strict mypy preserves typed fact insertion and retrieval boundaries.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     source = """
 from irx.analysis.facts import FactKey, SemanticFact, SemanticFacts
@@ -93,8 +92,7 @@ class DeclarationFact(SemanticFact):
     """
     title: Keep a declaration reachable only through a feature attachment.
     attributes:
-      declaration:
-        type: astx.AST
+      declaration: Declaration being processed.
     """
 
     declaration: astx.AST
@@ -109,8 +107,8 @@ class DeclarationFact(SemanticFact):
     def dependencies(self) -> tuple[astx.AST, ...]:
         """
         title: Expose the declaration dependency without exposing its storage.
-        returns:
-          type: tuple[astx.AST, Ellipsis]
+        returns: 'Result of this operation: expose the declaration dependency
+          without exposing its storage.'
         """
         return (self.declaration,)
 
@@ -210,8 +208,7 @@ def test_attachment_edges_participate_in_declaration_reachability(
     """
     title: A lazy declaration reachable only through a record is retained.
     parameters:
-      module_attachment:
-        type: bool
+      module_attachment: Whether to use module attachment.
     """
     body = astx.Block()
     body.append(astx.FunctionReturn(astx.LiteralInt32(7)))
@@ -245,8 +242,7 @@ def test_table_dependencies_expose_source_order_ast_nodes(
     """
     title: Operand wrappers and absent constructions are not dependency edges.
     parameters:
-      with_construction:
-        type: bool
+      with_construction: Whether to use with construction.
     """
     path = astx.LiteralString("input.csv")
     columns = astx.LiteralList([astx.LiteralString("id")])
@@ -273,18 +269,17 @@ def test_dependency_boundary_rejects_non_ast_edges(
     """
     title: An unchecked provider cannot hide invalid edges after valid nodes.
     parameters:
-      monkeypatch:
-        type: pytest.MonkeyPatch
+      monkeypatch: Fixture for temporarily replacing dependencies and settings.
     """
 
     def invalid_dependencies(self: DeclarationFact) -> tuple[object, ...]:
         """
-        title: Simulate an unchecked provider returning an invalid second edge.
+        title: Simulate an unchecked provider returning an invalid second
+          edge.
         parameters:
-          self:
-            type: DeclarationFact
-        returns:
-          type: tuple[object, Ellipsis]
+          self: Self.
+        returns: 'Result of this operation: simulate an unchecked provider
+          returning an invalid second edge.'
         """
         return (self.declaration, object())
 
@@ -311,8 +306,8 @@ def test_reachability_rejects_non_ast_roots() -> None:
 
 def test_table_fact_copy_and_reanalysis_release_old_generation() -> None:
     """
-    title: >-
-      Copied operands follow AST memoization and old plans are not retained.
+    title: Copied operands follow AST memoization and old plans are
+      not retained.
     """
     root, read = io_module("csv")
     resolver = StaticImportResolver({})

@@ -101,10 +101,9 @@ def pipeline(tmp_path_factory: pytest.TempPathFactory) -> Path:
     """
     title: Compile and LLVM-verify the unified APIs once for all data cases.
     parameters:
-      tmp_path_factory:
-        type: pytest.TempPathFactory
-    returns:
-      type: Path
+      tmp_path_factory: Factory for shared temporary test directories.
+    returns: 'Result of this operation: compile and LLVM-verify the unified
+      APIs once for all data cases.'
     """
     binary = tmp_path_factory.mktemp("parquet-pipeline") / "parquet"
     compile_program(PIPELINE, binary)
@@ -117,14 +116,11 @@ def run_pipeline(
     """
     title: Execute a compiled pipeline against multiple Parquet row groups.
     parameters:
-      pipeline:
-        type: Path
-      tmp_path:
-        type: Path
-      table:
-        type: pa.Table
-    returns:
-      type: subprocess.CompletedProcess[str]
+      pipeline: Pipeline.
+      tmp_path: Temporary directory for this test.
+      table: Table.
+    returns: 'Result of this operation: execute a compiled pipeline against
+      multiple Parquet row groups.'
     """
     pq.write_table(table, tmp_path / "input.parquet", row_group_size=13)
     return subprocess.run(
@@ -141,12 +137,9 @@ def test_compiled_roundtrip(pipeline: Path, tmp_path: Path, rows: int) -> None:
     """
     title: Convert every batch with scoped ownership and both unified formats.
     parameters:
-      pipeline:
-        type: Path
-      tmp_path:
-        type: Path
-      rows:
-        type: int
+      pipeline: Pipeline.
+      tmp_path: Temporary directory for this test.
+      rows: Rows.
     """
     expected = pa.table({"id": pa.array(range(rows), type=pa.int64())})
     result = run_pipeline(pipeline, tmp_path, expected)
@@ -171,17 +164,13 @@ def test_compiled_failures(
     pipeline: Path, tmp_path: Path, values: list[int | None], message: str
 ) -> None:
     """
-    title: >-
-      Wrong-mode and conversion failures use structured runtime diagnostics.
+    title: Wrong-mode and conversion failures use structured runtime
+      diagnostics.
     parameters:
-      pipeline:
-        type: Path
-      tmp_path:
-        type: Path
-      values:
-        type: list[int | None]
-      message:
-        type: str
+      pipeline: Pipeline.
+      tmp_path: Temporary directory for this test.
+      values: Values to process, in order.
+      message: Diagnostic or output message.
     """
     sentinel = tmp_path / "sentinel"
     sentinel.write_bytes(b"untouched")

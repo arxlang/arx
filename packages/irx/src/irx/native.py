@@ -54,16 +54,11 @@ class ComputeCapability:
     """
     title: One closed shared semantic/native compute contract.
     attributes:
-      operation_id:
-        type: int
-      arity:
-        type: int
-      domain:
-        type: str
-      result:
-        type: str
-      max_ulps:
-        type: int
+      operation_id: Approved operation identifier.
+      arity: Number of explicit operands.
+      domain: Domain.
+      result: Result of the operation.
+      max_ulps: Max ulps.
     """
 
     operation_id: int
@@ -78,8 +73,7 @@ class ComputeCapability:
 def read_compute_catalog() -> Mapping[str, ComputeCapability]:
     """
     title: Read and validate the native operation table without loading LLVM.
-    returns:
-      type: Mapping[str, ComputeCapability]
+    returns: Read and validate the native operation table without loading LLVM.
     """
     path = (
         Path(__file__).parent
@@ -123,8 +117,7 @@ def validate_compute_kernel(kernel: ComputeKernel) -> None:
     """
     title: Enforce the closed catalog even without developer type checking.
     parameters:
-      kernel:
-        type: ComputeKernel
+      kernel: Kernel.
     """
     if kernel not in get_args(ComputeKernel):
         raise ValueError("unsupported compute kernel")
@@ -150,16 +143,11 @@ class NativeArtifact:
     """
     title: Describe one native artifact required by a runtime feature.
     attributes:
-      kind:
-        type: NativeArtifactKind
-      path:
-        type: Path
-      include_dirs:
-        type: tuple[Path, Ellipsis]
-      compile_flags:
-        type: tuple[str, Ellipsis]
-      link_flags:
-        type: tuple[str, Ellipsis]
+      kind: Kind of value or operation.
+      path: Path to the input or output resource.
+      include_dirs: Include dirs.
+      compile_flags: Compile flags.
+      link_flags: Link flags.
     """
 
     kind: NativeArtifactKind
@@ -179,16 +167,11 @@ class NativeArtifact:
         """
         title: Validate an artifact and all collection items.
         parameters:
-          kind:
-            type: NativeArtifactKind
-          path:
-            type: Path
-          include_dirs:
-            type: tuple[Path, Ellipsis]
-          compile_flags:
-            type: tuple[str, Ellipsis]
-          link_flags:
-            type: tuple[str, Ellipsis]
+          kind: Kind of value or operation.
+          path: Path to the input or output resource.
+          include_dirs: Include dirs.
+          compile_flags: Compile flags.
+          link_flags: Link flags.
         """
         object.__setattr__(self, "kind", kind)
         object.__setattr__(self, "path", path)
@@ -204,12 +187,9 @@ class NativeFeature:
     """
     title: Immutable native dependency without executable symbol factories.
     attributes:
-      name:
-        type: str
-      artifacts:
-        type: tuple[NativeArtifact, Ellipsis]
-      linker_flags:
-        type: tuple[str, Ellipsis]
+      name: Name identifying this declaration.
+      artifacts: Artifacts.
+      linker_flags: Linker flags.
     """
 
     name: str
@@ -225,12 +205,9 @@ class NativeFeature:
         """
         title: Validate one explicitly supplied native feature.
         parameters:
-          name:
-            type: str
-          artifacts:
-            type: tuple[NativeArtifact, Ellipsis]
-          linker_flags:
-            type: tuple[str, Ellipsis]
+          name: Name identifying the declaration or operation.
+          artifacts: Artifacts.
+          linker_flags: Linker flags.
         """
         if not name or name.strip() != name:
             raise ValueError("native feature names must be nonempty")
@@ -246,14 +223,10 @@ class NativeBinding:
     """
     title: Associate native requirements with one actual extern declaration.
     attributes:
-      declaration:
-        type: astx.FunctionPrototype
-      features:
-        type: tuple[str, Ellipsis]
-      table_io:
-        type: TableIOOperation | None
-      compute:
-        type: ComputeKernel | None
+      declaration: Declaration being processed.
+      features: Features.
+      table_io: Table I/O.
+      compute: Compute.
     """
 
     declaration: astx.FunctionPrototype
@@ -271,14 +244,10 @@ class NativeBinding:
         """
         title: Validate a declaration identity and its feature names.
         parameters:
-          declaration:
-            type: astx.FunctionPrototype
-          features:
-            type: tuple[str, Ellipsis]
-          table_io:
-            type: TableIOOperation | None
-          compute:
-            type: ComputeKernel | None
+          declaration: Declaration being processed.
+          features: Features.
+          table_io: Table I/O.
+          compute: Compute.
         """
         if not features or any(not name.strip() for name in features):
             raise ValueError("native bindings require nonempty feature names")

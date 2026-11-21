@@ -1,9 +1,12 @@
 """
-title: Single-rounding conversion of exact values to supported binary formats.
-summary: >-
-  Resolve decimal and integer literals with exact integer arithmetic before
-  constructing a host float. No intermediate binary64 rounding, ambient Decimal
-  precision, or LLVM behavior determines the selected target value.
+title: Single-rounding conversion of exact values to supported binary
+  formats.
+summary: Resolve decimal and integer literals with exact integer arithmetic
+  before constructing a host float. No intermediate binary64 rounding,
+  ambient Decimal precision, or LLVM behavior determines the selected
+  target value.
+attributes:
+  FLOAT_EXPONENTS: Float exponents.
 """
 
 from __future__ import annotations
@@ -33,18 +36,17 @@ def rounded_float(
     value: int | float | Decimal, target: astx.DataType
 ) -> float:
     """
-    title: Round once to the target binary format, nearest with ties to even.
-    summary: >-
-      Include subnormals, signed zero, and overflow to infinity. Callers decide
-      whether a nonfinite result is legal. Existing floating NaN/infinity are
-      preserved; finite decimals are never converted through binary64 first.
+    title: Round once to the target binary format, nearest with ties to
+      even.
+    summary: Include subnormals, signed zero, and overflow to infinity.
+      Callers decide whether a nonfinite result is legal. Existing floating
+      NaN/infinity are preserved; finite decimals are never converted through
+      binary64 first.
     parameters:
-      value:
-        type: int | float | Decimal
-      target:
-        type: astx.DataType
-    returns:
-      type: float
+      value: Value to process.
+      target: Destination of the operation.
+    returns: 'Result of this operation: round once to the target binary
+      format, nearest with ties to even.'
     raises:
       TypeError: If the target is not a supported floating format.
       ValueError: If a Decimal payload is nonfinite.

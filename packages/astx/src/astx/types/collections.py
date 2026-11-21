@@ -16,10 +16,8 @@ def _format_type_name(type_: ExprType) -> str:
     """
     title: Return one stable collection element type name.
     parameters:
-      type_:
-        type: ExprType
-    returns:
-      type: str
+      type_: Type expression to process.
+    returns: One stable collection element type name.
     """
     pointee_type = getattr(type_, "pointee_type", None)
     if isinstance(pointee_type, ExprType):
@@ -44,18 +42,18 @@ class CollectionType(AnyType):
 @typechecked
 class RangeType(CollectionType):
     """
-    title: Immutable, independently iterable integer progression value.
-    summary: >-
-      Represent a compact arithmetic progression, not contiguous list storage
-      or a stateful generator. Supported numeric domains, representation,
-      construction, access, and iteration validity belong to semantic hosts.
+    title: Immutable, independently iterable integer progression
+      value.
+    summary: Represent a compact arithmetic progression, not contiguous
+      list storage or a stateful generator. Supported numeric domains,
+      representation, construction, access, and iteration validity
+      belong to semantic hosts.
     """
 
     def __str__(self) -> str:
         """
         title: Render the range type name.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         return "RangeType"
 
@@ -65,13 +63,12 @@ class RangeType(CollectionType):
 class SequenceType(CollectionType):
     """
     title: Read-only ordered, sized, indexable sequence parameter contract.
-    summary: >-
-      The element type preserves width and nullability. Frontends may express
-      generic elements; the semantic host validates concrete adapters, borrow
-      lifetimes and supported storage. This type does not own its elements.
+    summary: The element type preserves width and nullability. Frontends
+      may express generic elements; the semantic host validates concrete
+      adapters, borrow lifetimes and supported storage. This type does not
+      own its elements.
     attributes:
-      element_type:
-        type: DataType
+      element_type: Type of each element.
     """
 
     element_type: DataType
@@ -80,8 +77,7 @@ class SequenceType(CollectionType):
         """
         title: Declare the exact element contract of a borrowed sequence.
         parameters:
-          element_type:
-            type: DataType
+          element_type: Type of each element.
         """
         super().__init__()
         self.element_type = element_type
@@ -89,8 +85,7 @@ class SequenceType(CollectionType):
     def __str__(self) -> str:
         """
         title: Render the sequence element contract.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         return f"SequenceType[{_format_type_name(self.element_type)}]"
 
@@ -101,10 +96,8 @@ class ListType(CollectionType):
     """
     title: List data type expression.
     attributes:
-      element_types:
-        type: list[ExprType]
-      size:
-        type: int | None
+      element_types: Types of element.
+      size: Requested or declared size.
     """
 
     element_types: list[ExprType]
@@ -119,10 +112,8 @@ class ListType(CollectionType):
         """
         title: Initialize ListType with an element type.
         parameters:
-          element_types:
-            type: list[ExprType]
-          size:
-            type: int | None
+          element_types: Types of element.
+          size: Requested or declared size.
         """
         if size is not None and size < 0:
             raise ValueError("list size must be non-negative")
@@ -132,8 +123,7 @@ class ListType(CollectionType):
     def __str__(self) -> str:
         """
         title: Return string representation of ListType.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         parts = [_format_type_name(type_) for type_ in self.element_types]
         if self.size is not None:
@@ -148,8 +138,7 @@ class SetType(CollectionType):
     """
     title: Set data type expression.
     attributes:
-      element_type:
-        type: ExprType
+      element_type: Type of each element.
     """
 
     element_type: ExprType
@@ -158,16 +147,14 @@ class SetType(CollectionType):
         """
         title: Initialize SetType with an element type.
         parameters:
-          element_type:
-            type: ExprType
+          element_type: Type of each element.
         """
         self.element_type = element_type
 
     def __str__(self) -> str:
         """
         title: Return string representation of SetType.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         return f"SetType[{self.element_type}]"
 
@@ -178,10 +165,8 @@ class DictType(CollectionType):
     """
     title: Dictionary data type expression.
     attributes:
-      key_type:
-        type: ExprType
-      value_type:
-        type: ExprType
+      key_type: Type of key.
+      value_type: Type of the stored value.
     """
 
     key_type: ExprType
@@ -191,10 +176,8 @@ class DictType(CollectionType):
         """
         title: Initialize DictType with key-value types.
         parameters:
-          key_type:
-            type: ExprType
-          value_type:
-            type: ExprType
+          key_type: Type of key.
+          value_type: Type of the stored value.
         """
         self.key_type = key_type
         self.value_type = value_type
@@ -202,8 +185,7 @@ class DictType(CollectionType):
     def __str__(self) -> str:
         """
         title: Return string representation of DictType.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         return f"DictType[{self.key_type}, {self.value_type}]"
 
@@ -214,8 +196,7 @@ class TupleType(CollectionType):
     """
     title: Tuple data type expression.
     attributes:
-      element_types:
-        type: list[ExprType]
+      element_types: Types of element.
     """
 
     element_types: list[ExprType]
@@ -224,16 +205,14 @@ class TupleType(CollectionType):
         """
         title: Initialize TupleType with multiple element types.
         parameters:
-          element_types:
-            type: list[ExprType]
+          element_types: Types of element.
         """
         self.element_types = element_types
 
     def __str__(self) -> str:
         """
         title: Return string representation of TupleType.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         types_str = ", ".join(str(t) for t in self.element_types)
         return f"TupleType[{types_str}]"

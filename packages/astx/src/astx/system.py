@@ -16,15 +16,12 @@ from astx.tools.typing import typechecked
 class AssertStmt(astx.StatementType):
     """
     title: AssertStmt AST class.
-    summary: >-
-      Represent one fatal assertion statement with an optional failure message.
+    summary: Represent one fatal assertion statement with an optional failure
+      message.
     attributes:
-      condition:
-        type: astx.Expr
-      message:
-        type: astx.Expr | None
-      loc:
-        type: astx.SourceLocation
+      condition: Condition controlling the operation.
+      message: Diagnostic message.
+      loc: Source coordinates attached to this node.
     """
 
     condition: astx.Expr
@@ -41,14 +38,10 @@ class AssertStmt(astx.StatementType):
         """
         title: Initialize AssertStmt.
         parameters:
-          condition:
-            type: astx.Expr
-          message:
-            type: astx.Expr | None
-          loc:
-            type: astx.SourceLocation
-          parent:
-            type: astx.ASTNodes[astx.AST] | None
+          condition: Condition controlling the operation.
+          message: Diagnostic or output message.
+          loc: Source coordinates associated with the node.
+          parent: Parent node or enclosing scope.
         """
         super().__init__(loc=loc, parent=parent)
         self.loc: astx.SourceLocation = loc
@@ -58,8 +51,7 @@ class AssertStmt(astx.StatementType):
     def __str__(self) -> str:
         """
         title: Render one assertion statement as text.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         if self.message is None:
             return f"Assert[{self.condition}]"
@@ -69,10 +61,8 @@ class AssertStmt(astx.StatementType):
         """
         title: Return the AST structure of the assertion statement.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: astx.base.ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         key = f"ASSERT[{id(self)}]" if simplified else "ASSERT"
         value: astx.base.DictDataTypesStruct = {
@@ -88,13 +78,10 @@ class PrintExpr(astx.Expr):
     """
     title: PrintExpr AST class.
     attributes:
-      message:
-        type: astx.Expr
-      _name:
-        type: str
-    notes: >-
-      It would be nice to support more arguments similar to the ones supported
-      by Python (*args, sep=' ', end='', file=None, flush=False).
+      message: Diagnostic message.
+      _name: Name of .
+    notes: It would be nice to support more arguments similar to the ones
+      supported by Python (*args, sep=' ', end='', file=None, flush=False).
     """
 
     message: astx.Expr
@@ -105,8 +92,7 @@ class PrintExpr(astx.Expr):
         """
         title: Initialize the PrintExpr.
         parameters:
-          message:
-            type: astx.Expr
+          message: Diagnostic or output message.
         """
         super().__init__()
         self.message = message
@@ -116,10 +102,8 @@ class PrintExpr(astx.Expr):
         """
         title: Return the AST structure of the object.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: astx.base.ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         key = f"FunctionCall[{self}]"
         value = self.message.get_struct(simplified)
@@ -132,14 +116,10 @@ class Cast(astx.DataType):
     title: Cast AST node for type conversions.
     summary: Represents a cast of `value` to a specified `target_type`.
     attributes:
-      value:
-        type: astx.DataType
-      target_type:
-        type: astx.DataType
-      mode:
-        type: NumericMode
-      type_:
-        type: astx.DataType
+      value: Stored value.
+      target_type: Destination type for the conversion.
+      mode: Selected processing mode.
+      type_: Type associated with this expression.
     """
 
     value: astx.DataType = astx.LiteralNone()
@@ -157,12 +137,9 @@ class Cast(astx.DataType):
         """
         title: Initialize Cast.
         parameters:
-          value:
-            type: astx.DataType
-          target_type:
-            type: astx.DataType
-          mode:
-            type: NumericMode
+          value: Value to process.
+          target_type: Destination type for the conversion.
+          mode: Selected processing mode.
         """
         super().__init__()
         self.mode = mode
@@ -174,10 +151,8 @@ class Cast(astx.DataType):
         """
         title: Return the structured representation of the cast expression.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: astx.base.ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         prefix = (
             "WrappingCast" if self.mode is NumericMode.WRAPPING else "Cast"
@@ -193,12 +168,9 @@ class IsInstanceExpr(astx.DataType):
     title: IsInstanceExpr AST class.
     summary: Represent a type-membership check against one target type.
     attributes:
-      value:
-        type: astx.Expr
-      target_type:
-        type: astx.DataType
-      type_:
-        type: astx.Boolean
+      value: Stored value.
+      target_type: Destination type for the conversion.
+      type_: Type associated with this expression.
     """
 
     value: astx.Expr
@@ -213,10 +185,8 @@ class IsInstanceExpr(astx.DataType):
         """
         title: Initialize IsInstanceExpr.
         parameters:
-          value:
-            type: astx.Expr
-          target_type:
-            type: astx.DataType
+          value: Value to process.
+          target_type: Destination type for the conversion.
         """
         super().__init__()
         self.value = value
@@ -227,10 +197,8 @@ class IsInstanceExpr(astx.DataType):
         """
         title: Return the AST structure of the isinstance expression.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: astx.base.ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         value: astx.base.DictDataTypesStruct = {
             "value": self.value.get_struct(simplified),
@@ -245,10 +213,8 @@ class TypeOfExpr(astx.DataType):
     title: TypeOfExpr AST class.
     summary: Represent an expression that produces a value's type name.
     attributes:
-      value:
-        type: astx.Expr
-      type_:
-        type: astx.String
+      value: Stored value.
+      type_: Type associated with this expression.
     """
 
     value: astx.Expr
@@ -258,8 +224,7 @@ class TypeOfExpr(astx.DataType):
         """
         title: Initialize TypeOfExpr.
         parameters:
-          value:
-            type: astx.Expr
+          value: Value to process.
         """
         super().__init__()
         self.value = value
@@ -269,10 +234,8 @@ class TypeOfExpr(astx.DataType):
         """
         title: Return the AST structure of the type-of expression.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: astx.base.ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         return self._prepare_struct(
             "TypeOfExpr",

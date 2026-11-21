@@ -30,10 +30,9 @@ def native(tmp_path: Path) -> Iterator[ctypes.CDLL]:
     """
     title: Compile lifetime code with counted, faultable allocation.
     parameters:
-      tmp_path:
-        type: Path
-    returns:
-      type: Iterator[ctypes.CDLL]
+      tmp_path: Temporary directory for this test.
+    returns: 'Result of this operation: compile lifetime code with counted,
+      faultable allocation.'
     """
     clang = shutil.which("clang")
     if clang is None:
@@ -109,10 +108,8 @@ def test_failed_creation_initializes_output(
     """
     title: Failed owner/payload allocation never publishes an object.
     parameters:
-      native:
-        type: ctypes.CDLL
-      nth:
-        type: int
+      native: Loaded native runtime used by the ABI test.
+      nth: Nth.
     """
 
     @DROP
@@ -120,14 +117,11 @@ def test_failed_creation_initializes_output(
         """
         title: Reject destructor calls without a constructed payload.
         parameters:
-          context:
-            type: int | None
-          value:
-            type: int
-          error:
-            type: int
-        returns:
-          type: int
+          context: Context for the operation.
+          value: Value to process.
+          error: Error being reported or inspected.
+        returns: 'Result of this operation: reject destructor calls without
+          a constructed payload.'
         """
         pytest.fail("drop called without a payload")
 
@@ -143,8 +137,7 @@ def test_last_release_and_drop_failure(native: ctypes.CDLL) -> None:
     """
     title: Final release consumes all storage even on a callback failure.
     parameters:
-      native:
-        type: ctypes.CDLL
+      native: Loaded native runtime used by the ABI test.
     """
     calls: list[int] = []
     error = ctypes.create_string_buffer(ERROR_CAPACITY)
@@ -154,14 +147,11 @@ def test_last_release_and_drop_failure(native: ctypes.CDLL) -> None:
         """
         title: Forbid resurrection and preserve the destructor error.
         parameters:
-          context:
-            type: int | None
-          value:
-            type: int
-          details:
-            type: int
-        returns:
-          type: int
+          context: Context for the operation.
+          value: Value to process.
+          details: Details.
+        returns: 'Result of this operation: forbid resurrection and preserve
+          the destructor error.'
         """
         calls.append(value)
         assert native.irx_class_retain(value, error) != 0
@@ -185,8 +175,7 @@ def test_empty_overflow_and_repeated_lifetimes(native: ctypes.CDLL) -> None:
     """
     title: Empty slots, checked counts, and repeated lifetimes stay balanced.
     parameters:
-      native:
-        type: ctypes.CDLL
+      native: Loaded native runtime used by the ABI test.
     """
 
     @DROP
@@ -194,14 +183,11 @@ def test_empty_overflow_and_repeated_lifetimes(native: ctypes.CDLL) -> None:
         """
         title: Drop a payload without owned fields.
         parameters:
-          context:
-            type: int | None
-          value:
-            type: int
-          error:
-            type: int
-        returns:
-          type: int
+          context: Context for the operation.
+          value: Value to process.
+          error: Error being reported or inspected.
+        returns: 'Result of this operation: drop a payload without owned
+          fields.'
         """
         return 0
 
@@ -252,8 +238,8 @@ def test_constructor_model_runtime_checks() -> None:
 
 def test_reanalysis_clears_class_parameter_ownership() -> None:
     """
-    title: >-
-      Reanalyzing an edited parameter never retains obsolete class metadata.
+    title: Reanalyzing an edited parameter never retains obsolete
+      class metadata.
     """
     argument = astx.Argument("value", astx.ClassType("Counter"))
     body = astx.Block()
@@ -280,8 +266,7 @@ def test_class_cleanup_on_loop_transfer(continue_loop: bool) -> None:
     """
     title: Direct ASTx break and continue release each active iteration owner.
     parameters:
-      continue_loop:
-        type: bool
+      continue_loop: Whether to use continue loop.
     """
     from .conftest import jit_int_main  # noqa: PLC0415
 
@@ -471,8 +456,7 @@ def test_repeated_string_field_initializer(encoding: str) -> None:
     """
     title: Reused initializer nodes cannot duplicate LLVM literal global names.
     parameters:
-      encoding:
-        type: str
+      encoding: Encoding.
     """
     literal = (
         astx.LiteralString("same")

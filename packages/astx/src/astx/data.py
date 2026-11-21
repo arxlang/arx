@@ -33,20 +33,13 @@ class VariableDeclaration(StatementType):
     """
     title: AST class for variable declaration.
     attributes:
-      kind:
-        type: ASTKind
-      mutability:
-        type: MutabilityKind
-      visibility:
-        type: VisibilityKind
-      scope:
-        type: ScopeKind
-      name:
-        type: str
-      type_:
-        type: DataType
-      value:
-        type: Expr
+      kind: Kind of value or operation.
+      mutability: Mutability.
+      visibility: Visibility.
+      scope: Scope used to resolve names.
+      name: Name identifying this declaration.
+      type_: Type associated with this expression.
+      value: Stored value.
     """
 
     kind: ASTKind
@@ -72,22 +65,14 @@ class VariableDeclaration(StatementType):
         """
         title: Initialize the VarExprAST instance.
         parameters:
-          name:
-            type: str
-          type_:
-            type: DataType
-          mutability:
-            type: MutabilityKind
-          visibility:
-            type: VisibilityKind
-          scope:
-            type: ScopeKind
-          value:
-            type: Expr
-          parent:
-            type: Optional[ASTNodes]
-          loc:
-            type: SourceLocation
+          name: Name identifying the declaration or operation.
+          type_: Type expression to process.
+          mutability: Mutability.
+          visibility: Visibility.
+          scope: Scope used to resolve names.
+          value: Value to process.
+          parent: Parent node or enclosing scope.
+          loc: Source coordinates associated with the node.
         """
         super().__init__(loc=loc, parent=parent)
         self.mutability = mutability
@@ -101,8 +86,7 @@ class VariableDeclaration(StatementType):
     def __str__(self) -> str:
         """
         title: Return a string that represents the object.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         type_ = self.type_.__class__.__name__
         return f"VariableDeclaration[{self.name}, {type_}]"
@@ -111,10 +95,8 @@ class VariableDeclaration(StatementType):
         """
         title: Return the AST structure of the object.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         key = str(self)
         value = self.value.get_struct(simplified)
@@ -126,24 +108,17 @@ class VariableDeclaration(StatementType):
 class InlineVariableDeclaration(Expr):
     """
     title: AST class for inline variable declaration expression.
-    summary: |-
+    summary: >2-
 
       Can be used in expressions like for loops.
     attributes:
-      scope:
-        type: ScopeKind
-      visibility:
-        type: VisibilityKind
-      kind:
-        type: ASTKind
-      mutability:
-        type: MutabilityKind
-      name:
-        type: str
-      type_:
-        type: DataType
-      value:
-        type: Expr
+      scope: Scope used to resolve names.
+      visibility: Visibility.
+      kind: Kind of value or operation.
+      mutability: Mutability.
+      name: Name identifying this declaration.
+      type_: Type associated with this expression.
+      value: Stored value.
     """
 
     scope: ScopeKind
@@ -169,22 +144,14 @@ class InlineVariableDeclaration(Expr):
         """
         title: Initialize the VarExprAST instance.
         parameters:
-          name:
-            type: str
-          type_:
-            type: DataType
-          mutability:
-            type: MutabilityKind
-          visibility:
-            type: VisibilityKind
-          scope:
-            type: ScopeKind
-          value:
-            type: Expr
-          loc:
-            type: SourceLocation
-          parent:
-            type: Optional[ASTNodes]
+          name: Name identifying the declaration or operation.
+          type_: Type expression to process.
+          mutability: Mutability.
+          visibility: Visibility.
+          scope: Scope used to resolve names.
+          value: Value to process.
+          loc: Source coordinates associated with the node.
+          parent: Parent node or enclosing scope.
         """
         super().__init__(loc=loc, parent=parent)
         self.mutability = mutability
@@ -198,8 +165,7 @@ class InlineVariableDeclaration(Expr):
     def __str__(self) -> str:
         """
         title: Return a string that represents the object.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         type_ = self.type_.__class__.__name__
         return f"InlineVariableDeclaration[{self.name}, {type_}]"
@@ -208,10 +174,8 @@ class InlineVariableDeclaration(Expr):
         """
         title: Return the AST structure of the object.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         key = str(self)
         value = self.value.get_struct(simplified)
@@ -224,10 +188,8 @@ class Identifier(DataTypeOps):
     """
     title: AST class for identifiers.
     attributes:
-      name:
-        type: str
-      type_:
-        type: DataType
+      name: Name identifying this declaration.
+      type_: Type associated with this expression.
     """
 
     name: str
@@ -242,12 +204,9 @@ class Identifier(DataTypeOps):
         """
         title: Initialize the Identifier instance.
         parameters:
-          name:
-            type: str
-          loc:
-            type: SourceLocation
-          parent:
-            type: Optional[ASTNodes]
+          name: Name identifying the declaration or operation.
+          loc: Source coordinates associated with the node.
+          parent: Parent node or enclosing scope.
         """
         super().__init__(loc=loc, parent=parent)
         self.name = name
@@ -257,8 +216,7 @@ class Identifier(DataTypeOps):
     def __str__(self) -> str:
         """
         title: Return a string that represents the object.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         return f"{self.__class__.__name__}[{self.name}]"
 
@@ -266,10 +224,8 @@ class Identifier(DataTypeOps):
         """
         title: Return a structure that represents the Identifier object.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         key = f"{self.__class__.__name__.upper()}[{self.name}]"
         return self._prepare_struct(key, self.name, simplified)
@@ -281,10 +237,8 @@ class Variable(Identifier):
     """
     title: AST class for the variable usage.
     attributes:
-      name:
-        type: str
-      type_:
-        type: DataType
+      name: Name identifying this declaration.
+      type_: Type associated with this expression.
     """
 
     type_: DataType
@@ -299,14 +253,10 @@ class Variable(Identifier):
         """
         title: Initialize the Variable instance.
         parameters:
-          name:
-            type: str
-          type_:
-            type: DataType
-          loc:
-            type: SourceLocation
-          parent:
-            type: Optional[ASTNodes]
+          name: Name identifying the declaration or operation.
+          type_: Type expression to process.
+          loc: Source coordinates associated with the node.
+          parent: Parent node or enclosing scope.
         """
         super().__init__(name=name, loc=loc, parent=parent)
         self.type_ = type_
@@ -316,10 +266,8 @@ class DeleteStmt(StatementType):
     """
     title: AST class for 'del' statements.
     attributes:
-      kind:
-        type: ASTKind
-      value:
-        type: Iterable[Identifier]
+      kind: Kind of value or operation.
+      value: Stored value.
     """
 
     kind: ASTKind
@@ -335,12 +283,9 @@ class DeleteStmt(StatementType):
         """
         title: Initialize the DeleteStmt instance.
         parameters:
-          value:
-            type: Iterable[Identifier]
-          loc:
-            type: SourceLocation
-          parent:
-            type: Optional[ASTNodes]
+          value: Value to process.
+          loc: Source coordinates associated with the node.
+          parent: Parent node or enclosing scope.
         """
         super().__init__(loc=loc, parent=parent)
         self.value = value
@@ -349,8 +294,7 @@ class DeleteStmt(StatementType):
     def __str__(self) -> str:
         """
         title: Return a string representation of the object.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         value_str = ", ".join(str(value) for value in self.value)
         return f"DeleteStmt[{value_str}]"
@@ -359,10 +303,8 @@ class DeleteStmt(StatementType):
         """
         title: Return the AST structure of the object.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         key = "DELETE"
 

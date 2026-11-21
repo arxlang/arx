@@ -1,8 +1,7 @@
 """
 title: Sidecar semantic dataclasses attached to AST nodes.
-summary: >-
-  Define the semantic sidecar objects that analysis attaches to AST nodes and
-  reuses during lowering.
+summary: Define the semantic sidecar objects that analysis attaches to AST
+  nodes and reuses during lowering.
 """
 
 from __future__ import annotations
@@ -32,26 +31,17 @@ from irx.typecheck import typechecked
 class SemanticSymbol:
     """
     title: Resolved symbol information.
-    summary: >-
-      Describe one resolved variable-like symbol, including its stable semantic
-      id and declared type.
+    summary: Describe one resolved variable-like symbol, including its stable
+      semantic id and declared type.
     attributes:
-      symbol_id:
-        type: str
-      name:
-        type: str
-      type_:
-        type: astx.DataType
-      is_mutable:
-        type: bool
-      kind:
-        type: str
-      declaration:
-        type: astx.AST | None
-      module_key:
-        type: ModuleKey
-      qualified_name:
-        type: str
+      symbol_id: Identifier for symbol.
+      name: Name identifying this declaration.
+      type_: Type associated with this expression.
+      is_mutable: Whether is mutable.
+      kind: Kind of value or operation.
+      declaration: Declaration being processed.
+      module_key: Canonical module identity.
+      qualified_name: Name of qualified.
     """
 
     symbol_id: str
@@ -70,16 +60,13 @@ class SemanticSymbol:
 class ResolvedModuleStorage:
     """
     title: Validated static storage for one module scalar binding.
-    summary: >-
-      The symbol supplies identity, declared type and mutability. Initializers
-      are already converted scalar constants; None denotes an invalid nullable
-      payload, never an uninitialized ordinary scalar. No runtime init or owned
-      module lifecycle is authorized by this plan.
+    summary: The symbol supplies identity, declared type and mutability.
+      Initializers are already converted scalar constants; None denotes an
+      invalid nullable payload, never an uninitialized ordinary scalar. No
+      runtime init or owned module lifecycle is authorized by this plan.
     attributes:
-      symbol:
-        type: SemanticSymbol
-      initializer:
-        type: int | float | bool | None
+      symbol: Resolved symbol for the operation.
+      initializer: Expression providing the initial value.
     """
 
     symbol: SemanticSymbol
@@ -93,10 +80,8 @@ class ResolvedModuleStorage:
         """
         title: Validate runtime argument types for module storage metadata.
         parameters:
-          symbol:
-            type: SemanticSymbol
-          initializer:
-            type: int | float | bool | None
+          symbol: Resolved symbol for the operation.
+          initializer: Expression providing the initial value.
         """
         object.__setattr__(self, "symbol", symbol)
         object.__setattr__(self, "initializer", initializer)
@@ -107,9 +92,8 @@ class ResolvedModuleStorage:
 class ResourceKind(str, Enum):
     """
     title: Runtime-managed resource categories.
-    summary: >-
-      Identify the concrete runtime resource whose lifetime is described by an
-      ownership sidecar.
+    summary: Identify the concrete runtime resource whose lifetime is described
+      by an ownership sidecar.
     """
 
     GENERATOR = "generator"
@@ -126,9 +110,9 @@ class ResourceKind(str, Enum):
 class OwnershipKind(str, Enum):
     """
     title: Semantic resource ownership classes.
-    summary: >-
-      Distinguish values responsible for cleanup from borrowed and static
-      values that must not be released by the current expression or binding.
+    summary: Distinguish values responsible for cleanup from borrowed and
+      static values that must not be released by the current expression or
+      binding.
     """
 
     OWNED = "owned"
@@ -168,18 +152,12 @@ class ResourceOwnership:
     """
     title: Resolved ownership and escape metadata for one resource value.
     attributes:
-      resource_kind:
-        type: ResourceKind
-      kind:
-        type: OwnershipKind
-      owner_symbol_id:
-        type: str | None
-      source_symbol_id:
-        type: str | None
-      transfer_kind:
-        type: OwnershipTransferKind
-      escape_kind:
-        type: OwnershipEscapeKind
+      resource_kind: Resource kind.
+      kind: Kind of value or operation.
+      owner_symbol_id: Identifier for owner symbol.
+      source_symbol_id: Identifier for source symbol.
+      transfer_kind: Transfer kind.
+      escape_kind: Escape kind.
     """
 
     resource_kind: ResourceKind
@@ -196,23 +174,16 @@ class ResourceOwnership:
 class SemanticStruct:
     """
     title: Resolved struct information.
-    summary: >-
-      Describe one top-level struct declaration with module-aware identity.
+    summary: Describe one top-level struct declaration with module-aware
+      identity.
     attributes:
-      symbol_id:
-        type: str
-      name:
-        type: str
-      module_key:
-        type: ModuleKey
-      qualified_name:
-        type: str
-      declaration:
-        type: astx.StructDefStmt
-      fields:
-        type: tuple[SemanticStructField, Ellipsis]
-      field_indices:
-        type: dict[str, int]
+      symbol_id: Identifier for symbol.
+      name: Name identifying this declaration.
+      module_key: Canonical module identity.
+      qualified_name: Name of qualified.
+      declaration: Declaration being processed.
+      fields: Declared fields.
+      field_indices: Field indices.
     """
 
     symbol_id: str
@@ -230,18 +201,13 @@ class SemanticStruct:
 class SemanticStructField:
     """
     title: Resolved struct field information.
-    summary: >-
-      Describe one ordered field within a semantic struct, including its stable
-      index and resolved field type.
+    summary: Describe one ordered field within a semantic struct, including
+      its stable index and resolved field type.
     attributes:
-      name:
-        type: str
-      index:
-        type: int
-      type_:
-        type: astx.DataType
-      declaration:
-        type: astx.VariableDeclaration
+      name: Name identifying this declaration.
+      index: Index selecting the item.
+      type_: Type associated with this expression.
+      declaration: Declaration being processed.
     """
 
     name: str
@@ -255,8 +221,7 @@ class SemanticStructField:
 class ParameterPassingKind(str, Enum):
     """
     title: Stable semantic parameter-passing modes.
-    summary: >-
-      Classify how one semantic parameter is passed across the callable
+    summary: Classify how one semantic parameter is passed across the callable
       boundary.
     """
 
@@ -268,9 +233,9 @@ class ParameterPassingKind(str, Enum):
 class CallingConvention(str, Enum):
     """
     title: Stable semantic calling-convention classes.
-    summary: >-
-      Distinguish IRx-native callable semantics from C/native interop callables
-      even when lowering currently emits the same LLVM calling convention.
+    summary: Distinguish IRx-native callable semantics from C/native interop
+      callables even when lowering currently emits the same LLVM calling
+      convention.
     """
 
     IRX_DEFAULT = "irx_default"
@@ -282,9 +247,8 @@ class CallingConvention(str, Enum):
 class FFIAdmissibility(str, Enum):
     """
     title: Stable semantic FFI admissibility classes.
-    summary: >-
-      Distinguish regular IRx callables from callables that satisfy the public
-      FFI contract.
+    summary: Distinguish regular IRx callables from callables that satisfy
+      the public FFI contract.
     """
 
     INTERNAL_ONLY = "internal_only"
@@ -296,9 +260,8 @@ class FFIAdmissibility(str, Enum):
 class FFILinkStrategy(str, Enum):
     """
     title: Stable semantic native symbol-resolution strategies.
-    summary: >-
-      Describe whether an extern symbol relies only on the system linker or on
-      one or more explicit runtime features.
+    summary: Describe whether an extern symbol relies only on the system
+      linker or on one or more explicit runtime features.
     """
 
     SYSTEM_LINKER = "system_linker"
@@ -310,9 +273,8 @@ class FFILinkStrategy(str, Enum):
 class FFITypeClass(str, Enum):
     """
     title: Stable semantic FFI type classes.
-    summary: >-
-      Classify the narrow set of public ABI-safe value categories supported by
-      IRx's current FFI contract.
+    summary: Classify the narrow set of public ABI-safe value categories
+      supported by IRx's current FFI contract.
     """
 
     BOOLEAN = "boolean"
@@ -331,16 +293,12 @@ class FFITypeClass(str, Enum):
 class FFITypeInfo:
     """
     title: One canonical semantic FFI type description.
-    summary: >-
-      Describe how one semantically validated public FFI type participates in
-      the stable ABI contract.
+    summary: Describe how one semantically validated public FFI type
+      participates in the stable ABI contract.
     attributes:
-      classification:
-        type: FFITypeClass
-      display_name:
-        type: str
-      metadata:
-        type: dict[str, Any]
+      classification: Classification.
+      display_name: Name of display.
+      metadata: Metadata associated with the operation.
     """
 
     classification: FFITypeClass
@@ -354,21 +312,15 @@ class FFITypeInfo:
 class FFICallableInfo:
     """
     title: Canonical public FFI callable metadata.
-    summary: >-
-      Record the validated FFI classification, type categories, symbol
+    summary: Record the validated FFI classification, type categories, symbol
       resolution strategy, and runtime-feature dependencies for one extern
       callable.
     attributes:
-      admissibility:
-        type: FFIAdmissibility
-      parameters:
-        type: tuple[FFITypeInfo, Ellipsis]
-      return_type:
-        type: FFITypeInfo
-      required_runtime_features:
-        type: tuple[str, Ellipsis]
-      link_strategy:
-        type: FFILinkStrategy
+      admissibility: Admissibility.
+      parameters: Declared callable parameters.
+      return_type: Declared result type.
+      required_runtime_features: Required runtime features.
+      link_strategy: Link strategy.
     """
 
     admissibility: FFIAdmissibility
@@ -384,18 +336,14 @@ class FFICallableInfo:
 class ParameterSpec:
     """
     title: One canonical semantic parameter specification.
-    summary: >-
-      Describe one ordered callable parameter together with its declared type
-      and passing policy, plus stable metadata such as default fingerprints.
+    summary: Describe one ordered callable parameter together with
+      its declared type and passing policy, plus stable metadata
+      such as default fingerprints.
     attributes:
-      name:
-        type: str
-      type_:
-        type: astx.DataType
-      passing_kind:
-        type: ParameterPassingKind
-      metadata:
-        type: dict[str, Any]
+      name: Name identifying this declaration.
+      type_: Type associated with this expression.
+      passing_kind: Passing kind.
+      metadata: Metadata associated with the operation.
     """
 
     name: str
@@ -410,37 +358,23 @@ class ParameterSpec:
 class FunctionSignature:
     """
     title: Canonical semantic callable signature.
-    summary: >-
-      Normalize the stable callable contract that semantic analysis resolves
-      and lowering consumes.
+    summary: Normalize the stable callable contract that semantic analysis
+      resolves and lowering consumes.
     attributes:
-      name:
-        type: str
-      parameters:
-        type: tuple[ParameterSpec, Ellipsis]
-      return_type:
-        type: astx.DataType
-      calling_convention:
-        type: CallingConvention
-      is_variadic:
-        type: bool
-      is_extern:
-        type: bool
-      exception_abi:
-        type: bool
-        description: >-
-          Generated functions return status and receive context plus a typed
-          output slot for non-none results. Externs retain their declared ABI.
-      symbol_name:
-        type: str
-      required_runtime_features:
-        type: tuple[str, Ellipsis]
-      ffi:
-        type: FFICallableInfo | None
-      metadata:
-        type: dict[str, Any]
-      operation:
-        type: CallOperation | None
+      name: Name identifying this declaration.
+      parameters: Declared callable parameters.
+      return_type: Declared result type.
+      calling_convention: Calling convention.
+      is_variadic: Whether is variadic.
+      is_extern: Whether is extern.
+      exception_abi: Generated functions return status and receive context
+        plus a typed output slot for non-none results. Externs retain their
+        declared ABI.
+      symbol_name: Name of symbol.
+      required_runtime_features: Required runtime features.
+      ffi: FFI.
+      metadata: Metadata associated with the operation.
+      operation: Operation to resolve or execute.
     """
 
     name: str
@@ -474,9 +408,9 @@ class ClassMemberKind(str, Enum):
 class ClassMemberResolutionKind(str, Enum):
     """
     title: Stable class-member resolution categories.
-    summary: >-
-      Distinguish members declared locally, members that override inherited
-      declarations, and members inherited directly from the resolved MRO.
+    summary: Distinguish members declared locally, members that override
+      inherited declarations, and members inherited directly from the resolved
+      MRO.
     """
 
     DECLARED = "declared"
@@ -490,47 +424,29 @@ class ClassMemberResolutionKind(str, Enum):
 class SemanticClassMember:
     """
     title: Canonical semantic class-member record.
-    summary: >-
-      Normalize one declared class member so later phases can reason about
-      visibility, storage, mutability, and overrides without re-reading raw AST
-      modifier fields.
+    summary: Normalize one declared class member so later phases can reason
+      about visibility, storage, mutability, and overrides without re-reading
+      raw AST modifier fields.
     attributes:
-      symbol_id:
-        type: str
-      name:
-        type: str
-      qualified_name:
-        type: str
-      owner_name:
-        type: str
-      owner_qualified_name:
-        type: str
-      kind:
-        type: ClassMemberKind
-      visibility:
-        type: astx.VisibilityKind
-      is_static:
-        type: bool
-      is_abstract:
-        type: bool
-      is_constant:
-        type: bool
-      is_mutable:
-        type: bool
-      declaration:
-        type: astx.AST
-      type_:
-        type: astx.DataType | None
-      signature:
-        type: FunctionSignature | None
-      signature_key:
-        type: str | None
-      overrides:
-        type: str | None
-      dispatch_slot:
-        type: int | None
-      lowered_function:
-        type: SemanticFunction | None
+      symbol_id: Identifier for symbol.
+      name: Name identifying this declaration.
+      qualified_name: Name of qualified.
+      owner_name: Name of owner.
+      owner_qualified_name: Name of owner qualified.
+      kind: Kind of value or operation.
+      visibility: Visibility.
+      is_static: Whether the member belongs to the class rather than an
+        instance.
+      is_abstract: Whether is abstract.
+      is_constant: Whether is constant.
+      is_mutable: Whether is mutable.
+      declaration: Declaration being processed.
+      type_: Type associated with this expression.
+      signature: Resolved callable signature.
+      signature_key: Signature key.
+      overrides: Overrides.
+      dispatch_slot: Dispatch slot.
+      lowered_function: Lowered function.
     """
 
     symbol_id: str
@@ -559,20 +475,15 @@ class SemanticClassMember:
 class SemanticClassMemberResolution:
     """
     title: Canonical class-member lookup resolution.
-    summary: >-
-      Record the ordered candidate set that one class member name considered
-      and the member that won after deterministic inheritance resolution.
+    summary: Record the ordered candidate set that one class member name
+      considered and the member that won after deterministic inheritance
+      resolution.
     attributes:
-      name:
-        type: str
-      kind:
-        type: ClassMemberResolutionKind
-      selected:
-        type: SemanticClassMember
-      candidates:
-        type: tuple[SemanticClassMember, Ellipsis]
-      signature_key:
-        type: str | None
+      name: Name identifying this declaration.
+      kind: Kind of value or operation.
+      selected: Selected.
+      candidates: Candidates.
+      signature_key: Signature key.
     """
 
     name: str
@@ -587,8 +498,8 @@ class SemanticClassMemberResolution:
 class ClassObjectRepresentationKind(str, Enum):
     """
     title: Stable class object-representation categories.
-    summary: >-
-      Distinguish whether class values are modeled as pointers or values.
+    summary: Distinguish whether class values are modeled as pointers or
+      values.
     """
 
     POINTER = "pointer"
@@ -599,9 +510,8 @@ class ClassObjectRepresentationKind(str, Enum):
 class MethodDispatchKind(str, Enum):
     """
     title: Stable method-dispatch categories.
-    summary: >-
-      Distinguish direct method calls from dispatch-table-driven instance
-      calls.
+    summary: Distinguish direct method calls from dispatch-table-driven
+      instance calls.
     """
 
     DIRECT = "direct"
@@ -613,9 +523,8 @@ class MethodDispatchKind(str, Enum):
 class ClassHeaderFieldKind(str, Enum):
     """
     title: Stable class-header field categories.
-    summary: >-
-      Name the reserved object-header slots that later lowering and dispatch
-      phases can populate without changing the class object layout.
+    summary: Name the reserved object-header slots that later lowering and
+      dispatch phases can populate without changing the class object layout.
     """
 
     TYPE_DESCRIPTOR = "type_descriptor"
@@ -629,16 +538,12 @@ class ClassHeaderFieldKind(str, Enum):
 class SemanticClassHeaderField:
     """
     title: One reserved class-object header slot.
-    summary: >-
-      Describe one hidden header entry that occupies a stable index in every
-      class object representation.
+    summary: Describe one hidden header entry that occupies a stable index
+      in every class object representation.
     attributes:
-      name:
-        type: str
-      kind:
-        type: ClassHeaderFieldKind
-      storage_index:
-        type: int
+      name: Name identifying this declaration.
+      kind: Kind of value or operation.
+      storage_index: Index selecting storage.
     """
 
     name: str
@@ -652,24 +557,16 @@ class SemanticClassHeaderField:
 class SemanticClassLayoutField:
     """
     title: One resolved instance-field storage slot.
-    summary: >-
-      Record the stable storage position for one declared instance attribute in
-      the flattened class-object layout.
+    summary: Record the stable storage position for one declared instance
+      attribute in the flattened class-object layout.
     attributes:
-      member:
-        type: SemanticClassMember
-      logical_index:
-        type: int
-      storage_index:
-        type: int
-      owner_name:
-        type: str
-      owner_qualified_name:
-        type: str
-      resource_kind:
-        type: ResourceKind | None
-      access_index:
-        type: int
+      member: Member.
+      logical_index: Index selecting logical.
+      storage_index: Index selecting storage.
+      owner_name: Name of owner.
+      owner_qualified_name: Name of owner qualified.
+      resource_kind: Resource kind.
+      access_index: Index selecting access.
     """
 
     member: SemanticClassMember
@@ -687,18 +584,13 @@ class SemanticClassLayoutField:
 class SemanticClassStaticStorage:
     """
     title: One resolved static-member storage record.
-    summary: >-
-      Describe the module-global storage backing one declared static class
-      attribute.
+    summary: Describe the module-global storage backing one declared static
+      class attribute.
     attributes:
-      member:
-        type: SemanticClassMember
-      global_name:
-        type: str
-      owner_name:
-        type: str
-      owner_qualified_name:
-        type: str
+      member: Member.
+      global_name: Name of global.
+      owner_name: Name of owner.
+      owner_qualified_name: Name of owner qualified.
     """
 
     member: SemanticClassMember
@@ -713,20 +605,14 @@ class SemanticClassStaticStorage:
 class SemanticClassMethodDispatch:
     """
     title: One resolved class-method dispatch entry.
-    summary: >-
-      Record the stable dispatch slot and lowered function implementation for
-      one visible instance method.
+    summary: Record the stable dispatch slot and lowered function
+      implementation for one visible instance method.
     attributes:
-      member:
-        type: SemanticClassMember
-      function:
-        type: SemanticFunction
-      slot_index:
-        type: int
-      owner_name:
-        type: str
-      owner_qualified_name:
-        type: str
+      member: Member.
+      function: Function to process.
+      slot_index: Index selecting slot.
+      owner_name: Name of owner.
+      owner_qualified_name: Name of owner qualified.
     """
 
     member: SemanticClassMember
@@ -741,9 +627,8 @@ class SemanticClassMethodDispatch:
 class ClassInitializationSourceKind(str, Enum):
     """
     title: Stable class-initialization source categories.
-    summary: >-
-      Distinguish declaration-provided field initializers from implicit default
-      construction values.
+    summary: Distinguish declaration-provided field initializers from implicit
+      default construction values.
     """
 
     DECLARATION = "declaration"
@@ -756,20 +641,14 @@ class ClassInitializationSourceKind(str, Enum):
 class SemanticClassFieldInitializer:
     """
     title: One resolved instance-field initialization step.
-    summary: >-
-      Record the ordered value source for one instance field during default
-      class construction.
+    summary: Record the ordered value source for one instance field during
+      default class construction.
     attributes:
-      field:
-        type: SemanticClassLayoutField
-      source_kind:
-        type: ClassInitializationSourceKind
-      value:
-        type: astx.AST | None
-      owner_name:
-        type: str
-      owner_qualified_name:
-        type: str
+      field: Field to process.
+      source_kind: Source kind.
+      value: Stored value.
+      owner_name: Name of owner.
+      owner_qualified_name: Name of owner qualified.
     """
 
     field: SemanticClassLayoutField
@@ -785,20 +664,14 @@ class SemanticClassFieldInitializer:
 class SemanticClassStaticInitializer:
     """
     title: One resolved static-field initialization step.
-    summary: >-
-      Record the deterministic module-global initializer source for one static
-      class attribute.
+    summary: Record the deterministic module-global initializer source for
+      one static class attribute.
     attributes:
-      storage:
-        type: SemanticClassStaticStorage
-      source_kind:
-        type: ClassInitializationSourceKind
-      value:
-        type: astx.AST | None
-      owner_name:
-        type: str
-      owner_qualified_name:
-        type: str
+      storage: Storage.
+      source_kind: Source kind.
+      value: Stored value.
+      owner_name: Name of owner.
+      owner_qualified_name: Name of owner qualified.
     """
 
     storage: SemanticClassStaticStorage
@@ -814,16 +687,13 @@ class SemanticClassStaticInitializer:
 class SemanticClassInitialization:
     """
     title: Canonical class construction and initialization plan.
-    summary: >-
-      Normalize the ordered instance-field and static-field initialization plan
-      that semantic analysis resolves for one class.
+    summary: Normalize the ordered instance-field and static-field
+      initialization plan that semantic analysis resolves for one
+      class.
     attributes:
-      instance_initializers:
-        type: tuple[SemanticClassFieldInitializer, Ellipsis]
-      static_initializers:
-        type: tuple[SemanticClassStaticInitializer, Ellipsis]
-      phases:
-        type: tuple[ClassLifecyclePhase, Ellipsis]
+      instance_initializers: Instance initializers.
+      static_initializers: Static initializers.
+      phases: Phases.
     """
 
     instance_initializers: tuple[SemanticClassFieldInitializer, ...] = ()
@@ -838,14 +708,10 @@ class ClassLifecyclePhase:
     """
     title: One canonical initialization and destruction phase.
     attributes:
-      owner:
-        type: str
-      fields:
-        type: tuple[SemanticClassFieldInitializer, Ellipsis]
-      initializer:
-        type: SemanticFunction | None
-      destructor:
-        type: SemanticFunction | None
+      owner: Owner keeping the resource alive.
+      fields: Declared fields.
+      initializer: Expression providing the initial value.
+      destructor: Destructor.
     """
 
     owner: str
@@ -860,41 +726,25 @@ class ClassLifecyclePhase:
 class SemanticClassLayout:
     """
     title: Canonical class-object layout metadata.
-    summary: >-
-      Normalize the low-level object representation, hidden header slots,
-      flattened instance-field storage, and static-global storage names for one
-      class.
+    summary: Normalize the low-level object representation, hidden header
+      slots, flattened instance-field storage, and static-global storage
+      names for one class.
     attributes:
-      llvm_name:
-        type: str
-      object_representation:
-        type: ClassObjectRepresentationKind
-      descriptor_global_name:
-        type: str
-      dispatch_global_name:
-        type: str
-      header_fields:
-        type: tuple[SemanticClassHeaderField, Ellipsis]
-      instance_fields:
-        type: tuple[SemanticClassLayoutField, Ellipsis]
-      field_slots:
-        type: dict[str, SemanticClassLayoutField]
-      visible_field_slots:
-        type: dict[str, SemanticClassLayoutField]
-      dispatch_entries:
-        type: tuple[SemanticClassMethodDispatch, Ellipsis]
-      dispatch_slots:
-        type: dict[int, SemanticClassMethodDispatch]
-      visible_method_slots:
-        type: dict[str, SemanticClassMethodDispatch]
-      dispatch_table_size:
-        type: int
-      static_fields:
-        type: tuple[SemanticClassStaticStorage, Ellipsis]
-      static_storage:
-        type: dict[str, SemanticClassStaticStorage]
-      visible_static_storage:
-        type: dict[str, SemanticClassStaticStorage]
+      llvm_name: Name of LLVM.
+      object_representation: Object representation.
+      descriptor_global_name: Name of descriptor global.
+      dispatch_global_name: Name of dispatch global.
+      header_fields: Header fields.
+      instance_fields: Instance fields.
+      field_slots: Field slots.
+      visible_field_slots: Visible field slots.
+      dispatch_entries: Dispatch entries.
+      dispatch_slots: Dispatch slots.
+      visible_method_slots: Visible method slots.
+      dispatch_table_size: Size of dispatch table.
+      static_fields: Static fields.
+      static_storage: Static storage.
+      visible_static_storage: Visible static storage.
     """
 
     llvm_name: str
@@ -932,64 +782,36 @@ class SemanticClassLayout:
 class SemanticClass:
     """
     title: Resolved class information.
-    summary: >-
-      Describe one top-level class declaration together with normalized bases,
-      member tables, and deterministic inheritance metadata.
+    summary: Describe one top-level class declaration together with normalized
+      bases, member tables, and deterministic inheritance metadata.
     attributes:
-      symbol_id:
-        type: str
-      name:
-        type: str
-      module_key:
-        type: ModuleKey
-      qualified_name:
-        type: str
-      declaration:
-        type: astx.ClassDefStmt
-      bases:
-        type: tuple[SemanticClass, Ellipsis]
-      declared_members:
-        type: tuple[SemanticClassMember, Ellipsis]
-      declared_member_table:
-        type: dict[str, SemanticClassMember]
-      declared_method_groups:
-        type: dict[str, tuple[SemanticClassMember, Ellipsis]]
-      member_table:
-        type: dict[str, SemanticClassMember]
-      method_groups:
-        type: dict[str, tuple[SemanticClassMember, Ellipsis]]
-      member_resolution:
-        type: dict[str, SemanticClassMemberResolution]
-      method_resolution:
-        type: dict[str, tuple[SemanticClassMemberResolution, Ellipsis]]
-      instance_attributes:
-        type: tuple[SemanticClassMember, Ellipsis]
-      static_attributes:
-        type: tuple[SemanticClassMember, Ellipsis]
-      instance_methods:
-        type: tuple[SemanticClassMember, Ellipsis]
-      static_methods:
-        type: tuple[SemanticClassMember, Ellipsis]
-      abstract_methods:
-        type: tuple[SemanticClassMember, Ellipsis]
-      inheritance_graph:
-        type: tuple[str, Ellipsis]
-      shared_ancestors:
-        type: tuple[SemanticClass, Ellipsis]
-      layout:
-        type: SemanticClassLayout | None
-      initialization:
-        type: SemanticClassInitialization | None
-      mro:
-        type: tuple[SemanticClass, Ellipsis]
-      is_structurally_resolved:
-        type: bool
-      is_resolved:
-        type: bool
-      is_abstract:
-        type: bool
-      exception_type:
-        type: ResolvedExceptionType | None
+      symbol_id: Identifier for symbol.
+      name: Name identifying this declaration.
+      module_key: Canonical module identity.
+      qualified_name: Name of qualified.
+      declaration: Declaration being processed.
+      bases: Bases.
+      declared_members: Declared members.
+      declared_member_table: Declared member table.
+      declared_method_groups: Declared method groups.
+      member_table: Member table.
+      method_groups: Method groups.
+      member_resolution: Member resolution.
+      method_resolution: Method resolution.
+      instance_attributes: Instance attributes.
+      static_attributes: Static attributes.
+      instance_methods: Instance methods.
+      static_methods: Static methods.
+      abstract_methods: Abstract methods.
+      inheritance_graph: Inheritance graph.
+      shared_ancestors: Shared ancestors.
+      layout: Layout.
+      initialization: Initialization.
+      mro: Mro.
+      is_structurally_resolved: Whether is structurally resolved.
+      is_resolved: Whether is resolved.
+      is_abstract: Whether is abstract.
+      exception_type: Exception class being handled.
     """
 
     symbol_id: str
@@ -1037,20 +859,14 @@ class SemanticClass:
 class ImplicitConversion:
     """
     title: One semantically inserted implicit conversion.
-    summary: >-
-      Record one source-to-target type conversion that semantic analysis
-      validated and lowering should honor directly.
+    summary: Record one source-to-target type conversion that semantic
+      analysis validated and lowering should honor directly.
     attributes:
-      source_type:
-        type: astx.DataType | None
-      target_type:
-        type: astx.DataType | None
-      numeric:
-        type: NumericConversion | None
-        description: >-
-          Checked-policy classification for supported numeric domains. This
-          describes required guards; lowering must implement the conversion
-          plan.
+      source_type: Type of the source value.
+      target_type: Destination type for the conversion.
+      numeric: Checked-policy classification for supported numeric domains.
+        This describes required guards; lowering must implement the conversion
+        plan.
     """
 
     source_type: astx.DataType | None
@@ -1077,14 +893,11 @@ class ImplicitConversion:
 class TemplateArgumentBinding:
     """
     title: One concrete template argument binding.
-    summary: >-
-      Record the concrete type selected for one named template parameter in a
-      specialization.
+    summary: Record the concrete type selected for one named template parameter
+      in a specialization.
     attributes:
-      name:
-        type: str
-      type_:
-        type: astx.DataType
+      name: Name identifying this declaration.
+      type_: Type associated with this expression.
     """
 
     name: str
@@ -1097,14 +910,12 @@ class TemplateArgumentBinding:
 class TemplateSpecializationKey:
     """
     title: Stable semantic template-specialization identity.
-    summary: >-
-      Identify one concrete specialization of a template function by the
-      original semantic function name and the ordered concrete type names.
+    summary: Identify one concrete specialization of a template function
+      by the original semantic function name and the ordered concrete type
+      names.
     attributes:
-      qualified_name:
-        type: str
-      arg_type_names:
-        type: tuple[str, Ellipsis]
+      qualified_name: Name of qualified.
+      arg_type_names: Arg type names.
     """
 
     qualified_name: str
@@ -1117,40 +928,24 @@ class TemplateSpecializationKey:
 class SemanticFunction:
     """
     title: Resolved function information.
-    summary: >-
-      Describe one top-level function declaration or definition together with
-      its semantic identity, canonical signature, and argument symbols.
+    summary: Describe one top-level function declaration or definition together
+      with its semantic identity, canonical signature, and argument symbols.
     attributes:
-      symbol_id:
-        type: str
-      name:
-        type: str
-      return_type:
-        type: astx.DataType
-      args:
-        type: tuple[SemanticSymbol, Ellipsis]
-      signature:
-        type: FunctionSignature
-      prototype:
-        type: astx.FunctionPrototype
-      definition:
-        type: astx.FunctionDef | None
-      module_key:
-        type: ModuleKey
-      qualified_name:
-        type: str
-      visibility:
-        type: astx.VisibilityKind
-      template_params:
-        type: tuple[astx.TemplateParam, Ellipsis]
-      template_bindings:
-        type: tuple[TemplateArgumentBinding, Ellipsis]
-      template_definition:
-        type: SemanticFunction | None
-      specialization_key:
-        type: TemplateSpecializationKey | None
-      specializations:
-        type: dict[TemplateSpecializationKey, SemanticFunction]
+      symbol_id: Identifier for symbol.
+      name: Name identifying this declaration.
+      return_type: Declared result type.
+      args: Declared or supplied call arguments.
+      signature: Resolved callable signature.
+      prototype: Prototype.
+      definition: Definition.
+      module_key: Canonical module identity.
+      qualified_name: Name of qualified.
+      visibility: Visibility.
+      template_params: Template parameters declared by the callable.
+      template_bindings: Template bindings.
+      template_definition: Template definition.
+      specialization_key: Specialization key.
+      specializations: Specializations.
     """
 
     symbol_id: str
@@ -1178,14 +973,11 @@ class SemanticFunction:
 class CallableResolution:
     """
     title: Resolved callable identity.
-    summary: >-
-      Point from one semantic site to the canonical callable identity and
-      signature that analysis resolved.
+    summary: Point from one semantic site to the canonical callable identity
+      and signature that analysis resolved.
     attributes:
-      function:
-        type: SemanticFunction
-      signature:
-        type: FunctionSignature
+      function: Function to process.
+      signature: Resolved callable signature.
     """
 
     function: SemanticFunction
@@ -1199,12 +991,9 @@ class ResolvedDefaultArgument:
     """
     title: One declaration-resolved omitted argument and its destination.
     attributes:
-      index:
-        type: int
-      expression:
-        type: astx.DataType
-      type_:
-        type: astx.DataType
+      index: Index selecting the item.
+      expression: Expression to process.
+      type_: Type associated with this expression.
     """
 
     index: int
@@ -1217,12 +1006,9 @@ class ResolvedDefaultArgument:
         """
         title: Validate one default operand descriptor.
         parameters:
-          index:
-            type: int
-          expression:
-            type: astx.DataType
-          type_:
-            type: astx.DataType
+          index: Index selecting the item.
+          expression: Expression to process.
+          type_: Type expression to process.
         """
         object.__setattr__(self, "index", index)
         object.__setattr__(self, "expression", expression)
@@ -1236,18 +1022,12 @@ class ResolvedCallArguments:
     """
     title: Source-ordered evaluations mapped onto positional ABI slots.
     attributes:
-      evaluations:
-        type: tuple[astx.DataType, Ellipsis]
-      indices:
-        type: tuple[int, Ellipsis]
-      defaults:
-        type: tuple[ResolvedDefaultArgument, Ellipsis]
-      parameters:
-        type: tuple[SemanticSymbol, Ellipsis]
-      receiver:
-        type: SemanticSymbol | None
-      argument_count:
-        type: int
+      evaluations: Evaluations.
+      indices: Indices.
+      defaults: Defaults.
+      parameters: Declared callable parameters.
+      receiver: Receiver.
+      argument_count: Number of argument.
     """
 
     evaluations: tuple[astx.DataType, ...]
@@ -1269,18 +1049,12 @@ class ResolvedCallArguments:
         """
         title: Validate the complete bound-call descriptor.
         parameters:
-          evaluations:
-            type: tuple[astx.DataType, Ellipsis]
-          indices:
-            type: tuple[int, Ellipsis]
-          defaults:
-            type: tuple[ResolvedDefaultArgument, Ellipsis]
-          parameters:
-            type: tuple[SemanticSymbol, Ellipsis]
-          receiver:
-            type: SemanticSymbol | None
-          argument_count:
-            type: int
+          evaluations: Evaluations.
+          indices: Indices.
+          defaults: Defaults.
+          parameters: Declared callable parameters.
+          receiver: Receiver.
+          argument_count: Number of argument.
         """
         object.__setattr__(self, "evaluations", evaluations)
         object.__setattr__(self, "indices", indices)
@@ -1307,14 +1081,10 @@ class ResolvedSequenceAccess:
     """
     title: Exact borrowed numeric adapter selected by semantic analysis.
     attributes:
-      kind:
-        type: Literal[list, tensor, series, sequence]
-      element_type:
-        type: astx.DataType
-      type_id:
-        type: int
-      literal_list:
-        type: astx.LiteralList | None
+      kind: Kind of value or operation.
+      element_type: Type of each element.
+      type_id: Identifier for type.
+      literal_list: Literal list.
     """
 
     kind: Literal["list", "tensor", "series", "sequence"]
@@ -1329,24 +1099,16 @@ class ResolvedSequenceAccess:
 class CallResolution:
     """
     title: Resolved function-call semantics.
-    summary: >-
-      Capture the canonical callee, validated argument conversions, and result
-      type for one call site.
+    summary: Capture the canonical callee, validated argument conversions,
+      and result type for one call site.
     attributes:
-      callee:
-        type: CallableResolution
-      signature:
-        type: FunctionSignature
-      resolved_argument_types:
-        type: tuple[astx.DataType | None, Ellipsis]
-      result_type:
-        type: astx.DataType
-      implicit_conversions:
-        type: tuple[ImplicitConversion | None, Ellipsis]
-      arguments:
-        type: ResolvedCallArguments | None
-      sequence_arguments:
-        type: tuple[ResolvedSequenceAccess | None, Ellipsis]
+      callee: Callee.
+      signature: Resolved callable signature.
+      resolved_argument_types: Types of resolved argument.
+      result_type: Resolved result type.
+      implicit_conversions: Implicit conversions.
+      arguments: Arguments supplied to the call.
+      sequence_arguments: Sequence arguments.
     """
 
     callee: CallableResolution
@@ -1364,20 +1126,14 @@ class CallResolution:
 class ReturnResolution:
     """
     title: Resolved return-statement semantics.
-    summary: >-
-      Capture how one return statement relates to the enclosing function
-      signature and any implicit conversion that analysis inserted.
+    summary: Capture how one return statement relates to the enclosing
+      function signature and any implicit conversion that analysis inserted.
     attributes:
-      callable:
-        type: CallableResolution
-      expected_type:
-        type: astx.DataType
-      value_type:
-        type: astx.DataType | None
-      returns_void:
-        type: bool
-      implicit_conversion:
-        type: ImplicitConversion | None
+      callable: Callable.
+      expected_type: Expected semantic or storage type.
+      value_type: Type of the stored value.
+      returns_void: Whether to use returns void.
+      implicit_conversion: Implicit conversion.
     """
 
     callable: CallableResolution
@@ -1393,16 +1149,12 @@ class ReturnResolution:
 class ResolvedGeneratorFunction:
     """
     title: Resolved generator-function semantics.
-    summary: >-
-      Describe one function body that suspends at yield sites and returns a
-      first-class generator object from call sites.
+    summary: Describe one function body that suspends at yield sites and
+      returns a first-class generator object from call sites.
     attributes:
-      function:
-        type: SemanticFunction
-      yield_type:
-        type: astx.DataType
-      yield_nodes:
-        type: tuple[astx.AST, Ellipsis]
+      function: Function to process.
+      yield_type: Type of yield.
+      yield_nodes: Yield nodes.
     """
 
     function: "SemanticFunction"
@@ -1416,20 +1168,14 @@ class ResolvedGeneratorFunction:
 class ResolvedYield:
     """
     title: Resolved yield-site semantics.
-    summary: >-
-      Capture how one yield statement or expression maps to its enclosing
-      generator function and yielded element type.
+    summary: Capture how one yield statement or expression maps to
+      its enclosing generator function and yielded element type.
     attributes:
-      generator:
-        type: ResolvedGeneratorFunction
-      expected_type:
-        type: astx.DataType
-      value_type:
-        type: astx.DataType | None
-      site_index:
-        type: int
-      implicit_conversion:
-        type: ImplicitConversion | None
+      generator: Generator.
+      expected_type: Expected semantic or storage type.
+      value_type: Type of the stored value.
+      site_index: Index selecting site.
+      implicit_conversion: Implicit conversion.
     """
 
     generator: ResolvedGeneratorFunction
@@ -1445,14 +1191,11 @@ class ResolvedYield:
 class SemanticModule:
     """
     title: Semantic identity for an imported module.
-    summary: >-
-      Represent a module binding that plain imports introduce into a module
-      namespace.
+    summary: Represent a module binding that plain imports introduce into
+      a module namespace.
     attributes:
-      module_key:
-        type: ModuleKey
-      display_name:
-        type: str | None
+      module_key: Canonical module identity.
+      display_name: Name of display.
     """
 
     module_key: ModuleKey
@@ -1465,24 +1208,16 @@ class SemanticModule:
 class SemanticBinding:
     """
     title: One visible top-level binding in a module namespace.
-    summary: >-
-      Normalize imported and local top-level names into one binding shape for
-      module-visible lookup.
+    summary: Normalize imported and local top-level names into one binding
+      shape for module-visible lookup.
     attributes:
-      kind:
-        type: str
-      module_key:
-        type: ModuleKey
-      qualified_name:
-        type: str
-      function:
-        type: SemanticFunction | None
-      struct:
-        type: SemanticStruct | None
-      class_:
-        type: SemanticClass | None
-      module:
-        type: SemanticModule | None
+      kind: Kind of value or operation.
+      module_key: Canonical module identity.
+      qualified_name: Name of qualified.
+      function: Function to process.
+      struct: Struct.
+      class_: Class being processed.
+      module: Module to process.
     """
 
     kind: str
@@ -1500,18 +1235,13 @@ class SemanticBinding:
 class ResolvedImportBinding:
     """
     title: One resolved imported local binding.
-    summary: >-
-      Record how one imported local name maps back to its source-module
+    summary: Record how one imported local name maps back to its source-module
       declaration.
     attributes:
-      local_name:
-        type: str
-      requested_name:
-        type: str
-      source_module_key:
-        type: ModuleKey
-      binding:
-        type: SemanticBinding
+      local_name: Name of local.
+      requested_name: Name of requested.
+      source_module_key: Source module key.
+      binding: Resolved binding for the operation.
     """
 
     local_name: str
@@ -1526,16 +1256,12 @@ class ResolvedImportBinding:
 class ResolvedModuleMemberAccess:
     """
     title: Resolved module-namespace member access.
-    summary: >-
-      Record which imported module namespace one member access targeted and the
-      visible binding that namespace lookup selected.
+    summary: Record which imported module namespace one member access targeted
+      and the visible binding that namespace lookup selected.
     attributes:
-      module:
-        type: SemanticModule
-      member_name:
-        type: str
-      binding:
-        type: SemanticBinding
+      module: Module to process.
+      member_name: Name of member.
+      binding: Resolved binding for the operation.
     """
 
     module: SemanticModule
@@ -1549,18 +1275,13 @@ class ResolvedModuleMemberAccess:
 class SemanticFlags:
     """
     title: Normalized semantic flags.
-    summary: >-
-      Store normalized semantic modifiers such as unsigned and fast-math
+    summary: Store normalized semantic modifiers such as unsigned and fast-math
       intent.
     attributes:
-      unsigned:
-        type: bool
-      fast_math:
-        type: bool
-      fma:
-        type: bool
-      fma_rhs:
-        type: astx.AST | None
+      unsigned: Whether to use unsigned semantics.
+      fast_math: Whether to use fast math.
+      fma: Whether to use fma.
+      fma_rhs: Fma right operand.
     """
 
     unsigned: bool = False
@@ -1575,29 +1296,18 @@ class SemanticFlags:
 class ResolvedOperator:
     """
     title: Normalized operator meaning.
-    summary: >-
-      Capture the normalized operator opcode, operand types, result type, and
-      semantic flags for one expression.
+    summary: Capture the normalized operator opcode, operand types, result
+      type, and semantic flags for one expression.
     attributes:
-      op_code:
-        type: str
-      result_type:
-        type: astx.DataType | None
-      mode:
-        type: astx.NumericMode
-      lhs_type:
-        type: astx.DataType | None
-      rhs_type:
-        type: astx.DataType | None
-      flags:
-        type: SemanticFlags
-      computation_type:
-        type: astx.DataType | None
-        description: Numeric operand type, distinct from comparison results.
-      lhs_conversion:
-        type: ImplicitConversion | None
-      rhs_conversion:
-        type: ImplicitConversion | None
+      op_code: Operator spelling.
+      result_type: Resolved result type.
+      mode: Selected processing mode.
+      lhs_type: Type of left operand.
+      rhs_type: Type of right operand.
+      flags: Flags.
+      computation_type: Numeric operand type, distinct from comparison results.
+      lhs_conversion: Left operand conversion.
+      rhs_conversion: Right operand conversion.
     """
 
     op_code: str
@@ -1617,12 +1327,10 @@ class ResolvedOperator:
 class ResolvedAssignment:
     """
     title: Resolved assignment target.
-    summary: >-
-      Point from an assignment-like node back to the resolved target symbol it
-      mutates.
+    summary: Point from an assignment-like node back to the resolved target
+      symbol it mutates.
     attributes:
-      target:
-        type: SemanticSymbol
+      target: Destination of the operation.
     """
 
     target: SemanticSymbol
@@ -1633,19 +1341,17 @@ class ResolvedAssignment:
 @dataclass(frozen=True)
 class ResolvedAugAssignment:
     """
-    title: Resolved scalar compound mutation and its lossless store conversion.
-    summary: >-
-      Load target before evaluating the RHS once. Compute using operation's
-      resolved operand conversions, then convert and store only on success.
-      Yield the stored value; independent RHS side effects are not rolled back.
-      This plan supports numeric identifiers, not fields or owning resources.
+    title: Resolved scalar compound mutation and its lossless store
+      conversion.
+    summary: Load target before evaluating the RHS once. Compute
+      using operation's resolved operand conversions, then convert
+      and store only on success. Yield the stored value; independent
+      RHS side effects are not rolled back. This plan supports numeric
+      identifiers, not fields or owning resources.
     attributes:
-      target:
-        type: SemanticSymbol
-      operation:
-        type: ResolvedOperator
-      store_conversion:
-        type: ImplicitConversion
+      target: Destination of the operation.
+      operation: Operation to resolve or execute.
+      store_conversion: Store conversion.
     """
 
     target: SemanticSymbol
@@ -1659,14 +1365,11 @@ class ResolvedAugAssignment:
 class ResolvedFieldAccess:
     """
     title: Resolved field access metadata.
-    summary: >-
-      Point from a field-access node to its owning struct and stable field
-      metadata.
+    summary: Point from a field-access node to its owning struct and stable
+      field metadata.
     attributes:
-      struct:
-        type: SemanticStruct
-      field:
-        type: SemanticStructField
+      struct: Struct.
+      field: Field to process.
     """
 
     struct: SemanticStruct
@@ -1679,16 +1382,12 @@ class ResolvedFieldAccess:
 class ResolvedClassFieldAccess:
     """
     title: Resolved class-field access metadata.
-    summary: >-
-      Point from a class-attribute access node to the owning class member and
-      stable flattened layout slot.
+    summary: Point from a class-attribute access node to the owning class
+      member and stable flattened layout slot.
     attributes:
-      class_:
-        type: SemanticClass
-      member:
-        type: SemanticClassMember
-      field:
-        type: SemanticClassLayoutField
+      class_: Class being processed.
+      member: Member.
+      field: Field to process.
     """
 
     class_: SemanticClass
@@ -1702,18 +1401,14 @@ class ResolvedClassFieldAccess:
 class ResolvedBaseClassFieldAccess:
     """
     title: Resolved explicit base-class field access metadata.
-    summary: >-
-      Point from a base-qualified instance attribute read to the selected base
-      view, concrete receiver class, and stable flattened layout slot.
+    summary: Point from a base-qualified instance attribute read
+      to the selected base view, concrete receiver class, and stable
+      flattened layout slot.
     attributes:
-      receiver_class:
-        type: SemanticClass
-      base_class:
-        type: SemanticClass
-      member:
-        type: SemanticClassMember
-      field:
-        type: SemanticClassLayoutField
+      receiver_class: Receiver class.
+      base_class: Base class.
+      member: Member.
+      field: Field to process.
     """
 
     receiver_class: SemanticClass
@@ -1728,16 +1423,12 @@ class ResolvedBaseClassFieldAccess:
 class ResolvedStaticClassFieldAccess:
     """
     title: Resolved static class-field access metadata.
-    summary: >-
-      Point from a class-qualified static attribute read to the selected class
-      member and stable emitted storage metadata.
+    summary: Point from a class-qualified static attribute read to the selected
+      class member and stable emitted storage metadata.
     attributes:
-      class_:
-        type: SemanticClass
-      member:
-        type: SemanticClassMember
-      storage:
-        type: SemanticClassStaticStorage
+      class_: Class being processed.
+      member: Member.
+      storage: Storage.
     """
 
     class_: SemanticClass
@@ -1764,14 +1455,10 @@ class ResolvedExceptionType:
     """
     title: Nominal exception identity and validated base storage.
     attributes:
-      class_:
-        type: SemanticClass
-      diagnostic_field:
-        type: SemanticClassLayoutField
-      message_field:
-        type: SemanticClassLayoutField
-      ancestry:
-        type: tuple[str, Ellipsis]
+      class_: Class being processed.
+      diagnostic_field: Diagnostic field.
+      message_field: Message field.
+      ancestry: Ancestry.
     """
 
     class_: SemanticClass
@@ -1798,14 +1485,10 @@ class ResolvedNativeExceptionInitialization:
     """
     title: Native diagnostic initialization within ordinary class construction.
     attributes:
-      exception_type:
-        type: ResolvedExceptionType
-      message_index:
-        type: int | None
-        description: >-
-          Index into source-order construction evaluations. None initializes
-          the inherited message to the empty string before a custom
-          initializer.
+      exception_type: Exception class being handled.
+      message_index: Index into source-order construction evaluations. None
+        initializes the inherited message to the empty string before a custom
+        initializer.
     """
 
     exception_type: ResolvedExceptionType
@@ -1827,12 +1510,9 @@ class ResolvedRaise:
     """
     title: Validated raised value and explicit diagnostic cause.
     attributes:
-      exception_type:
-        type: ResolvedExceptionType | None
-      cause_mode:
-        type: ExceptionCauseMode
-      cause_type:
-        type: ResolvedExceptionType | None
+      exception_type: Exception class being handled.
+      cause_mode: Cause mode.
+      cause_type: Type of cause.
     """
 
     exception_type: ResolvedExceptionType | None = None
@@ -1855,12 +1535,9 @@ class ResolvedExceptionHandler:
     """
     title: Ordered nominal matches and a lexical handler binding.
     attributes:
-      types:
-        type: tuple[ResolvedExceptionType, Ellipsis]
-      symbol:
-        type: SemanticSymbol | None
-      binding_type:
-        type: astx.ClassType
+      types: Types.
+      symbol: Resolved symbol for the operation.
+      binding_type: Type of binding.
     """
 
     types: tuple[ResolvedExceptionType, ...]
@@ -1883,8 +1560,7 @@ class ResolvedTry:
     """
     title: Validated statement-only exception region.
     attributes:
-      handlers:
-        type: tuple[ResolvedExceptionHandler, Ellipsis]
+      handlers: Handlers.
     """
 
     handlers: tuple[ResolvedExceptionHandler, ...]
@@ -1902,24 +1578,16 @@ class ResolvedTry:
 class ResolvedClassConstruction:
     """
     title: Resolved class construction metadata.
-    summary: >-
-      Capture the analyzed class identity and ordered initialization plan for
-      one default class construction expression.
+    summary: Capture the analyzed class identity and ordered initialization
+      plan for one default class construction expression.
     attributes:
-      class_:
-        type: SemanticClass
-      initialization:
-        type: SemanticClassInitialization
-      evaluations:
-        type: tuple[astx.DataType, Ellipsis]
-      argument_indices:
-        type: tuple[int, Ellipsis]
-      argument_types:
-        type: tuple[astx.DataType, Ellipsis]
-      native_file:
-        type: ResolvedNativeFileInitialization | None
-      native_exception:
-        type: ResolvedNativeExceptionInitialization | None
+      class_: Class being processed.
+      initialization: Initialization.
+      evaluations: Evaluations.
+      argument_indices: Argument indices.
+      argument_types: Types of argument.
+      native_file: File containing native.
+      native_exception: Native exception.
     """
 
     class_: SemanticClass
@@ -1937,30 +1605,20 @@ class ResolvedClassConstruction:
 class ResolvedMethodCall:
     """
     title: Resolved class method call metadata.
-    summary: >-
-      Capture the resolved class member, lowered implementation, dispatch mode,
-      and validated argument conversions for one method call site.
+    summary: Capture the resolved class member, lowered implementation,
+      dispatch mode, and validated argument conversions for one method
+      call site.
     attributes:
-      class_:
-        type: SemanticClass
-      member:
-        type: SemanticClassMember
-      function:
-        type: SemanticFunction
-      overload_key:
-        type: str
-      dispatch_kind:
-        type: MethodDispatchKind
-      call:
-        type: CallResolution
-      candidates:
-        type: tuple[SemanticClassMember, Ellipsis]
-      receiver_type:
-        type: astx.DataType | None
-      receiver_class:
-        type: SemanticClass | None
-      slot_index:
-        type: int | None
+      class_: Class being processed.
+      member: Member.
+      function: Function to process.
+      overload_key: Overload key.
+      dispatch_kind: Dispatch kind.
+      call: Call being processed.
+      candidates: Candidates.
+      receiver_type: Type of receiver.
+      receiver_class: Receiver class.
+      slot_index: Index selecting slot.
     """
 
     class_: SemanticClass
@@ -1981,33 +1639,23 @@ class ResolvedMethodCall:
 class ResolvedContextManager:
     """
     title: Resolved context-manager metadata.
-    summary: >-
-      Capture analyzed bindings and calls for one resource scope. The manager
-      binding pins its identity; value_binding owns the actual enter result,
-      including when no source target is requested. Exit receives a Boolean
-      completion value and returns none. Lowering reuses ordinary declaration
-      ownership and call plans without resolving the protocol again.
+    summary: Capture analyzed bindings and calls for one resource scope.
+      The manager binding pins its identity; value_binding owns the actual
+      enter result, including when no source target is requested. Exit receives
+      a Boolean completion value and returns none. Lowering reuses ordinary
+      declaration ownership and call plans without resolving the protocol
+      again.
     attributes:
-      class_:
-        type: SemanticClass
-      manager_type:
-        type: astx.DataType
-      enter:
-        type: ResolvedMethodCall
-      exit:
-        type: ResolvedMethodCall
-      manager_binding:
-        type: astx.VariableDeclaration
-      enter_call:
-        type: astx.MethodCall
-      value_binding:
-        type: astx.VariableDeclaration | None
-      success_binding:
-        type: astx.VariableDeclaration
-      exit_call:
-        type: astx.MethodCall
-      target_symbol:
-        type: SemanticSymbol | None
+      class_: Class being processed.
+      manager_type: Type of manager.
+      enter: Enter.
+      exit: Exit.
+      manager_binding: Manager binding.
+      enter_call: Enter call.
+      value_binding: Value binding.
+      success_binding: Success binding.
+      exit_call: Exit call.
+      target_symbol: Target symbol.
     """
 
     class_: SemanticClass
@@ -2027,9 +1675,8 @@ class ResolvedContextManager:
 class IterationKind(str, Enum):
     """
     title: Stable iterable adapter kinds.
-    summary: >-
-      Classify the semantic adapter that turns one iterable expression into a
-      backend iteration plan.
+    summary: Classify the semantic adapter that turns one iterable expression
+      into a backend iteration plan.
     """
 
     LIST = "list"
@@ -2046,9 +1693,8 @@ class IterationKind(str, Enum):
 class IterationOrder(str, Enum):
     """
     title: Stable iterable ordering categories.
-    summary: >-
-      Describe the user-visible order guarantee, if any, exposed by one
-      iterable adapter.
+    summary: Describe the user-visible order guarantee, if any, exposed by
+      one iterable adapter.
     """
 
     INDEX = "index"
@@ -2062,12 +1708,12 @@ class IterationOrder(str, Enum):
 class CursorProtocol(str, Enum):
     """
     title: Closed acquisition, advancement, and finalization protocols.
-    summary: >-
-      Indexed and range values acquire independent positions. Generator
-      acquisition consumes a one-shot frame, rejecting reacquisition. Advance
-      distinguishes a produced item from exhaustion and checks failure before
-      reading output slots. Close is idempotent and runs on every cursor exit;
-      generator close prevents resumption without freeing its lexical owner.
+    summary: Indexed and range values acquire independent positions. Generator
+      acquisition consumes a one-shot frame, rejecting reacquisition.
+      Advance distinguishes a produced item from exhaustion and checks
+      failure before reading output slots. Close is idempotent and runs
+      on every cursor exit; generator close prevents resumption without
+      freeing its lexical owner.
     """
 
     INDEXED = "indexed"
@@ -2081,39 +1727,24 @@ class CursorProtocol(str, Enum):
 class ResolvedIteration:
     """
     title: Resolved iterable capability.
-    summary: >-
-      Attach the semantic iteration plan that a for-in loop or comprehension
-      should consume during backend lowering.
+    summary: Attach the semantic iteration plan that a for-in loop
+      or comprehension should consume during backend lowering.
     attributes:
-      iterable_node:
-        type: astx.AST
-      iterable_type:
-        type: astx.DataType
-      element_type:
-        type: astx.DataType
-      kind:
-        type: IterationKind
-      is_reiterable:
-        type: bool
-      order:
-        type: IterationOrder
-      target_symbol:
-        type: SemanticSymbol | None
-      sequence_access:
-        type: ResolvedSequenceAccess | None
-      borrowed_owner_symbol_id:
-        type: str | None
-        description: >-
-          Named list owner protected from replacement during iteration.
-      extras:
-        type: dict[str, Any]
-      cursor_protocol:
-        type: CursorProtocol | None
-      element_ownership:
-        type: Literal[value, borrowed]
-        description: >-
-          Scalars are copied values. String-list elements borrow their source
-          until the existing loop adapter creates an independent local owner.
+      iterable_node: Iterable node.
+      iterable_type: Type of iterable.
+      element_type: Type of each element.
+      kind: Kind of value or operation.
+      is_reiterable: Whether is reiterable.
+      order: Order.
+      target_symbol: Target symbol.
+      sequence_access: Sequence access.
+      borrowed_owner_symbol_id: Named list owner protected from replacement
+        during iteration.
+      extras: Extras.
+      cursor_protocol: Cursor protocol.
+      element_ownership: Scalars are copied values. String-list elements
+        borrow their source until the existing loop adapter creates
+        an independent local owner.
     """
 
     iterable_node: astx.AST
@@ -2149,21 +1780,19 @@ class CollectionMethodKind(str, Enum):
 @dataclass(frozen=True)
 class ResolvedMaterialization:
     """
-    title: Single-pass numeric materialization with an optional sized bound.
-    summary: >-
-      Unsized inputs require max_items. On excess, at most max_items + 1 items
-      have been consumed, and no partial list is published. Consumed input is
-      not rolled back. Fresh iterator frames transfer to this call; named
-      iterator frames are borrowed from their lexical owner. checked_bytes
-      selects immutable UInt8 output with per-item 0..255 validation before
-      narrowing, not the source element width. No invalid prefix is published.
+    title: Single-pass numeric materialization with an optional sized
+      bound.
+    summary: Unsized inputs require max_items. On excess, at most
+      max_items + 1 items have been consumed, and no partial list
+      is published. Consumed input is not rolled back. Fresh iterator
+      frames transfer to this call; named iterator frames are borrowed
+      from their lexical owner. checked_bytes selects immutable UInt8
+      output with per-item 0..255 validation before narrowing, not
+      the source element width. No invalid prefix is published.
     attributes:
-      iteration:
-        type: ResolvedIteration
-      max_items:
-        type: astx.AST | None
-      checked_bytes:
-        type: bool
+      iteration: Iteration.
+      max_items: Max items.
+      checked_bytes: Whether to use checked bytes.
     """
 
     iteration: ResolvedIteration
@@ -2177,28 +1806,18 @@ class ResolvedMaterialization:
 class ResolvedCollectionMethod:
     """
     title: Resolved collection method capability.
-    summary: >-
-      Attach the semantic collection operation that lowering should consume
-      without re-resolving receiver kind or result type.
+    summary: Attach the semantic collection operation that lowering should
+      consume without re-resolving receiver kind or result type.
     attributes:
-      receiver_node:
-        type: astx.AST
-      receiver_type:
-        type: astx.DataType
-      method:
-        type: CollectionMethodKind
-      return_type:
-        type: astx.DataType
-      argument_types:
-        type: tuple[astx.DataType, Ellipsis]
-      comparison_plans:
-        type: tuple[ResolvedOperator, Ellipsis]
-      matching_types:
-        type: tuple[astx.DataType, Ellipsis]
-      mutates:
-        type: bool
-      extras:
-        type: dict[str, Any]
+      receiver_node: Receiver node.
+      receiver_type: Type of receiver.
+      method: Method.
+      return_type: Declared result type.
+      argument_types: Types of argument.
+      comparison_plans: Comparison plans.
+      matching_types: Types of matching.
+      mutates: Whether to use mutates.
+      extras: Extras.
     """
 
     receiver_node: astx.AST
@@ -2218,18 +1837,14 @@ class ResolvedCollectionMethod:
 class ResolvedFileOpen:
     """
     title: Validated open operands in original evaluation order.
-    summary: >-
-      text_options records non-None encoding/errors/newline so dynamic binary
-      modes reject incompatible settings before creating or truncating a path.
+    summary: text_options records non-None encoding/errors/newline so dynamic
+      binary modes reject incompatible settings before creating or truncating
+      a path.
     attributes:
-      evaluations:
-        type: tuple[astx.DataType, Ellipsis]
-      path_index:
-        type: int
-      mode_index:
-        type: int | None
-      text_options:
-        type: bool
+      evaluations: Evaluations.
+      path_index: Index selecting path.
+      mode_index: Index selecting mode.
+      text_options: Whether to use text options.
     """
 
     evaluations: tuple[astx.DataType, ...]
@@ -2245,10 +1860,8 @@ class ResolvedNativeFileInitialization:
     """
     title: Caller-checked native initialization of a real File class field.
     attributes:
-      field:
-        type: SemanticClassLayoutField
-      operands:
-        type: ResolvedFileOpen
+      field: Field to process.
+      operands: Operands.
     """
 
     field: SemanticClassLayoutField
@@ -2260,10 +1873,8 @@ class ResolvedNativeFileInitialization:
         """
         title: Validate the native initializer descriptor at runtime.
         parameters:
-          field:
-            type: SemanticClassLayoutField
-          operands:
-            type: ResolvedFileOpen
+          field: Field to process.
+          operands: Operands.
         """
         object.__setattr__(self, "field", field)
         object.__setattr__(self, "operands", operands)
@@ -2276,10 +1887,8 @@ class ResolvedFileOperation:
     """
     title: A validated operation on an owned native file.
     attributes:
-      name:
-        type: str
-      receiver_field:
-        type: SemanticClassLayoutField | None
+      name: Name identifying this declaration.
+      receiver_field: Receiver field.
     """
 
     name: str
@@ -2308,17 +1917,13 @@ class TextOperationKind(Enum):
 class ResolvedTextOperation:
     """
     title: Source-ordered text operands and their normalized ABI positions.
-    summary: >-
-      Evaluate each operand once in order. Each argument index selects an
-      evaluation; None selects the operation's documented default. Inputs are
-      borrowed for the operation and owned results are independent copies.
+    summary: Evaluate each operand once in order. Each argument index selects
+      an evaluation; None selects the operation's documented default. Inputs
+      are borrowed for the operation and owned results are independent copies.
     attributes:
-      kind:
-        type: TextOperationKind
-      evaluations:
-        type: tuple[astx.AST, Ellipsis]
-      argument_indices:
-        type: tuple[int | None, Ellipsis]
+      kind: Kind of value or operation.
+      evaluations: Evaluations.
+      argument_indices: Argument indices.
     """
 
     kind: TextOperationKind
@@ -2332,129 +1937,71 @@ class ResolvedTextOperation:
 class SemanticInfo:
     """
     title: Sidecar semantic information stored on AST nodes.
-    summary: >-
-      Aggregate all semantic sidecar fields that analysis may attach to a
-      single AST node.
+    summary: Aggregate all semantic sidecar fields that analysis may attach
+      to a single AST node.
     attributes:
-      range_construction:
-        type: CallResolution | None
-      range_access:
-        type: bool
-      materialization:
-        type: ResolvedMaterialization | None
-      sequence_access:
-        type: ResolvedSequenceAccess | None
-      normalized_collection:
-        type: astx.Expr | None
-      tensor_index:
-        type: astx.TensorIndex | None
-      numeric_storage:
-        type: astx.DataType | None
-      module_storage:
-        type: ResolvedModuleStorage | None
-      literal_context:
-        type: astx.DataType | None
-        description: Expected literal or collection type, consumed on visit.
-      numeric_constant:
-        type: int | float | None
-      numeric_conversion:
-        type: NumericConversion | None
-      numeric_mode:
-        type: astx.NumericMode
-      resolved_type:
-        type: astx.DataType | None
-      resolved_symbol:
-        type: SemanticSymbol | None
-      resolved_function:
-        type: SemanticFunction | None
-      resolved_callable:
-        type: CallableResolution | None
-      resolved_struct:
-        type: SemanticStruct | None
-      resolved_class:
-        type: SemanticClass | None
-      resolved_module:
-        type: SemanticModule | None
-      resolved_imports:
-        type: tuple[ResolvedImportBinding, Ellipsis]
-      resolved_file_open:
-        type: ResolvedFileOpen | None
-      resolved_file_operation:
-        type: ResolvedFileOperation | None
-      resolved_call:
-        type: CallResolution | None
-      resolved_operator:
-        type: ResolvedOperator | None
-      resolved_assignment:
-        type: ResolvedAssignment | None
-      resolved_aug_assignment:
-        type: ResolvedAugAssignment | None
-      resolved_field_access:
-        type: ResolvedFieldAccess | None
-      resolved_module_member_access:
-        type: ResolvedModuleMemberAccess | None
-      resolved_class_field_access:
-        type: ResolvedClassFieldAccess | None
-      resolved_base_class_field_access:
-        type: ResolvedBaseClassFieldAccess | None
-      resolved_static_class_field_access:
-        type: ResolvedStaticClassFieldAccess | None
-      resolved_method_call:
-        type: ResolvedMethodCall | None
-      resolved_context_manager:
-        type: ResolvedContextManager | None
-      resolved_class_construction:
-        type: ResolvedClassConstruction | None
-      resolved_raise:
-        type: ResolvedRaise | None
-      resolved_exception_handler:
-        type: ResolvedExceptionHandler | None
-      resolved_try:
-        type: ResolvedTry | None
-      flow_outcomes:
-        type: frozenset[FlowOutcome]
-      runtime_exception_types:
-        type: dict[str, ResolvedExceptionType]
-      resolved_return:
-        type: ReturnResolution | None
-      resolved_generator_function:
-        type: ResolvedGeneratorFunction | None
-      resolved_yield:
-        type: ResolvedYield | None
-      resolved_iteration:
-        type: ResolvedIteration | None
-      resolved_collection_method:
-        type: ResolvedCollectionMethod | None
-      resource_ownership:
-        type: ResourceOwnership | None
-      tensor_temporary_owner:
-        type: bool
-        description: >-
-          This tensor expression constructs a fresh owner, possibly through
-          views. Scalar consumers release it after use; named tensors and
-          explicit retain/release operations keep their existing lifetime.
-      collection_tensor:
-        type: astx.TensorLiteral | None
-        description: An explicitly tensor-contextualized collection expression.
-      collection_length:
-        type: astx.CollectionLength | None
-      resolved_text_operation:
-        type: ResolvedTextOperation | None
-        description: Resolved unshadowed len intrinsic using shared queries.
-      lifecycle_self:
-        type: bool
-      lifecycle_field_store:
-        type: bool
-      resolved_resource_store:
-        type: ResourceOwnership | None
-      initializer_receiver:
-        type: SemanticSymbol | None
-      semantic_flags:
-        type: SemanticFlags
-      facts:
-        type: SemanticFacts
-      extras:
-        type: dict[str, Any]
+      range_construction: Range construction.
+      range_access: Whether to use range access.
+      materialization: Materialization.
+      sequence_access: Sequence access.
+      normalized_collection: Normalized collection.
+      tensor_index: Index selecting tensor.
+      numeric_storage: Numeric storage.
+      module_storage: Module storage.
+      literal_context: Expected literal or collection type, consumed on
+        visit.
+      numeric_constant: Numeric constant.
+      numeric_conversion: Numeric conversion.
+      numeric_mode: Numeric mode.
+      resolved_type: Type of resolved.
+      resolved_symbol: Resolved symbol.
+      resolved_function: Resolved function.
+      resolved_callable: Resolved callable.
+      resolved_struct: Resolved struct.
+      resolved_class: Resolved class.
+      resolved_module: Resolved module.
+      resolved_imports: Resolved imports.
+      resolved_file_open: Resolved file open.
+      resolved_file_operation: Resolved file operation.
+      resolved_call: Resolved call.
+      resolved_operator: Resolved operator.
+      resolved_assignment: Resolved assignment.
+      resolved_aug_assignment: Resolved aug assignment.
+      resolved_field_access: Resolved field access.
+      resolved_module_member_access: Resolved module member access.
+      resolved_class_field_access: Resolved class field access.
+      resolved_base_class_field_access: Resolved base class field access.
+      resolved_static_class_field_access: Resolved static class field access.
+      resolved_method_call: Resolved method call.
+      resolved_context_manager: Resolved context manager.
+      resolved_class_construction: Resolved class construction.
+      resolved_raise: Resolved raise.
+      resolved_exception_handler: Resolved exception handler.
+      resolved_try: Resolved try.
+      flow_outcomes: Flow outcomes.
+      runtime_exception_types: Types of runtime exception.
+      resolved_return: Resolved return.
+      resolved_generator_function: Resolved generator function.
+      resolved_yield: Resolved yield.
+      resolved_iteration: Resolved iteration.
+      resolved_collection_method: Resolved collection method.
+      resource_ownership: Resource ownership.
+      tensor_temporary_owner: This tensor expression constructs a fresh
+        owner, possibly through views. Scalar consumers release it after
+        use; named tensors and explicit retain/release operations keep their
+        existing lifetime.
+      collection_tensor: An explicitly tensor-contextualized collection
+        expression.
+      collection_length: Collection length.
+      resolved_text_operation: Resolved unshadowed len intrinsic using shared
+        queries.
+      lifecycle_self: Whether to use lifecycle self.
+      lifecycle_field_store: Whether to use lifecycle field store.
+      resolved_resource_store: Resolved resource store.
+      initializer_receiver: Initializer receiver.
+      semantic_flags: Semantic flags.
+      facts: Facts.
+      extras: Extras.
     """
 
     range_construction: CallResolution | None = None
@@ -2532,14 +2079,10 @@ def validate_exception_type_metadata(
     """
     title: Validate exception metadata and every collection item.
     parameters:
-      class_:
-        type: SemanticClass
-      diagnostic_field:
-        type: SemanticClassLayoutField
-      message_field:
-        type: SemanticClassLayoutField
-      ancestry:
-        type: tuple[str, Ellipsis]
+      class_: Class being processed.
+      diagnostic_field: Diagnostic field.
+      message_field: Message field.
+      ancestry: Ancestry.
     """
 
 
@@ -2551,10 +2094,8 @@ def validate_exception_initialization(
     """
     title: Validate exception metadata and every collection item.
     parameters:
-      exception_type:
-        type: ResolvedExceptionType
-      message_index:
-        type: int | None
+      exception_type: Exception class being handled.
+      message_index: Index selecting message.
     """
 
 
@@ -2568,12 +2109,9 @@ def validate_raise_metadata(
     """
     title: Validate exception metadata and every collection item.
     parameters:
-      exception_type:
-        type: ResolvedExceptionType | None
-      cause_mode:
-        type: ExceptionCauseMode
-      cause_type:
-        type: ResolvedExceptionType | None
+      exception_type: Exception class being handled.
+      cause_mode: Cause mode.
+      cause_type: Type of cause.
     """
 
 
@@ -2587,12 +2125,9 @@ def validate_exception_handler_metadata(
     """
     title: Validate exception metadata and every collection item.
     parameters:
-      types:
-        type: tuple[ResolvedExceptionType, Ellipsis]
-      symbol:
-        type: SemanticSymbol | None
-      binding_type:
-        type: astx.ClassType
+      types: Types.
+      symbol: Resolved symbol for the operation.
+      binding_type: Type of binding.
     """
 
 
@@ -2604,6 +2139,5 @@ def validate_exception_handlers(
     """
     title: Validate exception metadata and every collection item.
     parameters:
-      handlers:
-        type: tuple[ResolvedExceptionHandler, Ellipsis]
+      handlers: Handlers.
     """

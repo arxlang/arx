@@ -15,10 +15,8 @@ def build_int32_main_module(body: astx.Block) -> astx.Module:
     """
     title: Build a module with one Int32 main function.
     parameters:
-      body:
-        type: astx.Block
-    returns:
-      type: astx.Module
+      body: Statements forming the body.
+    returns: Constructed a module with one Int32 main function.
     """
     module = astx.Module()
     module.block.append(
@@ -39,10 +37,9 @@ def block_of(*nodes: astx.AST) -> astx.Block:
     title: Build one block from positional AST nodes.
     parameters:
       nodes:
-        type: astx.AST
         variadic: positional
-    returns:
-      type: astx.Block
+        description: Syntax nodes in source order.
+    returns: Constructed one block from positional AST nodes.
     """
     block = astx.Block()
     for node in nodes:
@@ -54,12 +51,9 @@ def add_assign(name: str, value: astx.AST) -> astx.VariableAssignment:
     """
     title: Build one additive variable assignment.
     parameters:
-      name:
-        type: str
-      value:
-        type: astx.AST
-    returns:
-      type: astx.VariableAssignment
+      name: Name identifying the declaration or operation.
+      value: Value to process.
+    returns: Constructed one additive variable assignment.
     """
     return astx.VariableAssignment(
         name,
@@ -83,15 +77,12 @@ def test_while_lowers_for_numeric_counters(
     literal_type: type,
 ) -> None:
     """
-    title: >-
-      While loops should lower cleanly for supported numeric counter types.
+    title: While loops should lower cleanly for supported numeric counter
+      types.
     parameters:
-      builder_class:
-        type: type[Builder]
-      int_type:
-        type: type
-      literal_type:
-        type: type
+      builder_class: Builder implementation under test.
+      int_type: Type of int.
+      literal_type: Literal type used by this case.
     """
     builder = builder_class()
     module = build_int32_main_module(
@@ -126,8 +117,7 @@ def test_while_empty_body_no_crash(
     """
     title: WhileStmt with empty body must not crash on an empty result stack.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     module = build_int32_main_module(
@@ -157,8 +147,7 @@ def test_while_body_value_does_not_break_back_edge(
     """
     title: WhileStmt must keep its back-edge even when the body leaves a value.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     module = build_int32_main_module(
@@ -194,8 +183,7 @@ def test_while_continue_uses_condition_block(
     """
     title: WhileStmt continue must branch back to the condition block.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     module = build_int32_main_module(
@@ -223,8 +211,7 @@ def test_while_continue_rechecks_condition(
     """
     title: WhileStmt continue should re-enter through the condition path.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     loop = astx.WhileStmt(
@@ -276,8 +263,7 @@ def test_while_break_allows_following_statements(
     """
     title: WhileStmt break must still allow post-loop statements to run.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     module = build_int32_main_module(
@@ -305,11 +291,10 @@ def test_while_false_condition_preserves_post_loop_state(
     builder_class: type[Builder],
 ) -> None:
     """
-    title: >-
-      A false initial while condition should leave post-loop state untouched.
+    title: A false initial while condition should leave post-loop
+      state untouched.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     module = build_int32_main_module(
@@ -340,8 +325,7 @@ def test_nested_while_inner_break_only_exits_inner_loop(
     """
     title: Nested while with inner break should keep the outer loop running.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     inner_loop = astx.WhileStmt(
@@ -403,8 +387,7 @@ def test_nested_while_inner_continue_only_rechecks_inner_condition(
     """
     title: Nested while with inner continue should not skip outer progress.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     inner_loop = astx.WhileStmt(
@@ -472,12 +455,10 @@ def test_while_conditional_assignment_and_break_leave_valid_post_loop_state(
     builder_class: type[Builder],
 ) -> None:
     """
-    title: >-
-      Conditional body assignments and early break should keep post-loop state
-      valid.
+    title: Conditional body assignments and early break should keep post-loop
+      state valid.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     loop = astx.WhileStmt(

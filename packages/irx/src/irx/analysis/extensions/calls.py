@@ -27,14 +27,16 @@ from irx.typecheck import typechecked
 class CallAnalysisServices(Protocol):
     """
     title: Expression and nominal-class services needed by the table pilot.
+    attributes:
+      registered_classes: Registered classes.
+      allowed: Whether to use allowed.
     """
 
     @property
     def registered_classes(self) -> tuple[astx.ClassDefStmt, ...]:
         """
         title: Return trusted host-provided Arrow declarations.
-        returns:
-          type: tuple[astx.ClassDefStmt, Ellipsis]
+        returns: Trusted host-provided Arrow declarations.
         """
         ...
 
@@ -42,8 +44,8 @@ class CallAnalysisServices(Protocol):
     def allowed(self) -> bool:
         """
         title: Whether the current function supports resource-bearing calls.
-        returns:
-          type: bool
+        returns: 'Result of this operation: whether the current function
+          supports resource-bearing calls.'
         """
         ...
 
@@ -51,10 +53,9 @@ class CallAnalysisServices(Protocol):
         """
         title: Analyze an operand and return its resolved type.
         parameters:
-          node:
-            type: astx.AST
-        returns:
-          type: astx.DataType | None
+          node: Syntax node to process.
+        returns: 'Result of this operation: analyze an operand and return
+          its resolved type.'
         """
         ...
 
@@ -64,12 +65,9 @@ class CallAnalysisServices(Protocol):
         """
         title: Resolve a nominal class through analysis-owned rules.
         parameters:
-          type_:
-            type: astx.ClassType
-          node:
-            type: astx.AST
-        returns:
-          type: SemanticClass | None
+          type_: Type expression to process.
+          node: Syntax node to process.
+        returns: Resolved a nominal class through analysis-owned rules.
         """
         ...
 
@@ -79,10 +77,8 @@ class CallAnalysisServices(Protocol):
         """
         title: Resolve a class construction and its lifecycle dependencies.
         parameters:
-          node:
-            type: astx.ClassConstruct
-          class_:
-            type: SemanticClass
+          node: Syntax node to process.
+          class_: Class being processed.
         """
         ...
 
@@ -94,16 +90,11 @@ class AnalysisServices:
     """
     title: Explicit per-call dependencies with compilation-local lifetime.
     attributes:
-      analyze_operand:
-        type: Callable[[astx.AST], astx.DataType | None]
-      find_class:
-        type: Callable[[astx.ClassType, astx.AST], SemanticClass | None]
-      analyze_construction:
-        type: Callable[[astx.ClassConstruct, SemanticClass], None]
-      registered_classes:
-        type: tuple[astx.ClassDefStmt, Ellipsis]
-      allowed:
-        type: bool
+      analyze_operand: Analyze operand.
+      find_class: Find class.
+      analyze_construction: Analyze construction.
+      registered_classes: Registered classes.
+      allowed: Whether to use allowed.
     """
 
     analyze_operand: Callable[[astx.AST], astx.DataType | None]
@@ -128,10 +119,9 @@ class AnalysisServices:
         """
         title: Invoke the typed expression-analysis dependency.
         parameters:
-          node:
-            type: astx.AST
-        returns:
-          type: astx.DataType | None
+          node: Syntax node to process.
+        returns: 'Result of this operation: invoke the typed
+          expression-analysis dependency.'
         """
         return self.analyze_operand(node)
 
@@ -141,12 +131,10 @@ class AnalysisServices:
         """
         title: Invoke the typed class-resolution dependency.
         parameters:
-          type_:
-            type: astx.ClassType
-          node:
-            type: astx.AST
-        returns:
-          type: SemanticClass | None
+          type_: Type expression to process.
+          node: Syntax node to process.
+        returns: 'Result of this operation: invoke the typed class-resolution
+          dependency.'
         """
         return self.find_class(type_, node)
 
@@ -156,10 +144,8 @@ class AnalysisServices:
         """
         title: Invoke the typed construction-analysis dependency.
         parameters:
-          node:
-            type: astx.ClassConstruct
-          class_:
-            type: SemanticClass
+          node: Syntax node to process.
+          class_: Class being processed.
         """
         self.analyze_construction(node, class_)
 
@@ -176,16 +162,11 @@ def validate_services(
     """
     title: Check generated service-bundle constructor fields.
     parameters:
-      evaluate:
-        type: Callable[[astx.AST], astx.DataType | None]
-      resolve_class:
-        type: Callable[[astx.ClassType, astx.AST], SemanticClass | None]
-      construct:
-        type: Callable[[astx.ClassConstruct, SemanticClass], None]
-      registered_classes:
-        type: tuple[astx.ClassDefStmt, Ellipsis]
-      allowed:
-        type: bool
+      evaluate: Evaluate.
+      resolve_class: Resolve class.
+      construct: Construct.
+      registered_classes: Registered classes.
+      allowed: Whether to use allowed.
     """
 
 
@@ -194,19 +175,14 @@ def validate_services(
 @dataclass(frozen=True)
 class AnalysisCall:
     """
-    title: >-
-      Bound callable identity and narrow services for one analysis invocation.
+    title: Bound callable identity and narrow services for one analysis
+      invocation.
     attributes:
-      node:
-        type: astx.FunctionCall | astx.MethodCall
-      function:
-        type: SemanticFunction
-      info:
-        type: SemanticInfo
-      diagnostics:
-        type: DiagnosticBag
-      services:
-        type: CallAnalysisServices
+      node: Syntax node to process.
+      function: Function to process.
+      info: Resolved metadata for the operation.
+      diagnostics: Collected structured diagnostics.
+      services: Services.
     """
 
     node: astx.FunctionCall | astx.MethodCall
@@ -240,16 +216,11 @@ def validate_call(
     """
     title: Check the nominal analysis-call envelope and service collections.
     parameters:
-      node:
-        type: astx.FunctionCall | astx.MethodCall
-      function:
-        type: SemanticFunction
-      info:
-        type: SemanticInfo
-      diagnostics:
-        type: DiagnosticBag
-      services:
-        type: CallAnalysisServices
+      node: Syntax node to process.
+      function: Function to process.
+      info: Resolved metadata for the operation.
+      diagnostics: Collected structured diagnostics.
+      services: Services.
     """
     validate_services(
         services.evaluate,
@@ -273,10 +244,8 @@ class CallAnalysisVisitor:
         """
         title: Diagnose unknown trusted operations before lowering.
         parameters:
-          operation:
-            type: CallOperation
-          call:
-            type: AnalysisCall
+          operation: Operation to resolve or execute.
+          call: Call being processed.
         """
         call.diagnostics.add(
             f"unsupported call operation: {type(operation).__name__}",

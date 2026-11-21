@@ -32,19 +32,16 @@ def lower_materialization(
     plan: ResolvedMaterialization,
 ) -> None:
     """
-    title: >-
-      Consume once, detect excess before append, and never publish a prefix.
-    summary: >-
-      Sized sources use a borrowed snapshot. Unsized sources probe once beyond
-      the bound; the counter cannot overflow, even at INT64_MAX. Cleanup is
-      registered before limit evaluation, resumption, or allocation can fail.
+    title: Consume once, detect excess before append, and never publish a
+      prefix.
+    summary: Sized sources use a borrowed snapshot. Unsized sources probe
+      once beyond the bound; the counter cannot overflow, even at INT64_MAX.
+      Cleanup is registered before limit evaluation, resumption, or allocation
+      can fail.
     parameters:
-      visitor:
-        type: VisitorCore
-      node:
-        type: astx.FunctionCall
-      plan:
-        type: ResolvedMaterialization
+      visitor: Visitor performing the traversal or lowering.
+      node: Syntax node to process.
+      plan: Resolved semantic execution plan.
     """
     lists: ListVisitorMixin = cast("ListVisitorMixin", visitor)
     builder = visitor._llvm.ir_builder

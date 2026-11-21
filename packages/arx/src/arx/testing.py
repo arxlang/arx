@@ -1,5 +1,7 @@
 """
 title: Arx compiled test runner helpers.
+attributes:
+  DEFAULT_TEST_PATHS: Default test paths.
 """
 
 from __future__ import annotations
@@ -54,14 +56,10 @@ class AssertionFailureReport:
     """
     title: Parsed machine-readable assertion failure report.
     attributes:
-      source:
-        type: str
-      line:
-        type: int
-      col:
-        type: int
-      message:
-        type: str
+      source: Source input to process.
+      line: Source line coordinate.
+      col: Source column coordinate.
+      message: Diagnostic message.
     """
 
     source: str
@@ -75,12 +73,9 @@ class DiscoveredTestCase:
     """
     title: One discovered compiled test case.
     attributes:
-      name:
-        type: str
-      function_name:
-        type: str
-      file:
-        type: Path
+      name: Name identifying this declaration.
+      function_name: Name of function.
+      file: File.
     """
 
     name: str
@@ -93,22 +88,14 @@ class TestExecutionResult:
     """
     title: Result from running one compiled test case.
     attributes:
-      name:
-        type: str
-      passed:
-        type: bool
-      returncode:
-        type: int
-      stdout:
-        type: str
-      stderr:
-        type: str
-      assertion_failure:
-        type: AssertionFailureReport | None
-      artifact_dir:
-        type: Path | None
-      exception:
-        type: ExceptionReport | None
+      name: Name identifying this declaration.
+      passed: Whether to use passed.
+      returncode: Returncode.
+      stdout: Stdout.
+      stderr: Stderr.
+      assertion_failure: Assertion failure.
+      artifact_dir: Artifact dir.
+      exception: Exception being handled.
     """
 
     name: str
@@ -126,18 +113,12 @@ class TestRunSummary:
     """
     title: Summary for one `arx test` session.
     attributes:
-      selected:
-        type: int
-      executed:
-        type: int
-      passed:
-        type: int
-      failed:
-        type: int
-      exit_code:
-        type: int
-      results:
-        type: tuple[TestExecutionResult, Ellipsis]
+      selected: Selected.
+      executed: Executed.
+      passed: Passed.
+      failed: Failed.
+      exit_code: Exit code.
+      results: Results.
     """
 
     selected: int
@@ -152,8 +133,7 @@ class TestRunError(RuntimeError):
     """
     title: Internal error raised while collecting or running compiled tests.
     attributes:
-      artifact_dir:
-        type: Path | None
+      artifact_dir: Artifact dir.
     """
 
     artifact_dir: Path | None
@@ -166,10 +146,8 @@ class TestRunError(RuntimeError):
         """
         title: Initialize TestRunError.
         parameters:
-          message:
-            type: str
-          artifact_dir:
-            type: Path | None
+          message: Diagnostic or output message.
+          artifact_dir: Artifact dir.
         """
         super().__init__(message)
         self.artifact_dir: Path | None = artifact_dir
@@ -179,10 +157,8 @@ def _sanitize_name(text: str) -> str:
     """
     title: Convert one free-form test name into a file-safe identifier.
     parameters:
-      text:
-        type: str
-    returns:
-      type: str
+      text: Text to process.
+    returns: Converted one free-form test name into a file-safe identifier.
     """
     sanitized = "".join(
         char if char.isalnum() else "_" for char in text
@@ -195,24 +171,15 @@ class ArxTestRunner:
     """
     title: Python-side compiled test runner for Arx.
     attributes:
-      paths:
-        type: tuple[str, Ellipsis]
-      exclude:
-        type: tuple[str, Ellipsis]
-      file_pattern:
-        type: str
-      function_pattern:
-        type: str
-      name_filter:
-        type: str
-      fail_fast:
-        type: bool
-      keep_artifacts:
-        type: bool
-      list_only:
-        type: bool
-      link_mode:
-        type: LinkMode
+      paths: Paths to the input or output resources.
+      exclude: Exclude.
+      file_pattern: File pattern.
+      function_pattern: Function pattern.
+      name_filter: Name filter.
+      fail_fast: Whether to use fail fast.
+      keep_artifacts: Whether to use keep artifacts.
+      list_only: Whether to use list only.
+      link_mode: Link mode.
     """
 
     paths: tuple[str, ...] = DEFAULT_TEST_PATHS
@@ -229,10 +196,8 @@ class ArxTestRunner:
         """
         title: Parse one test source file into an IRx-backed module.
         parameters:
-          file:
-            type: Path
-        returns:
-          type: astx.Module
+          file: File.
+        returns: Parsed one test source file into an IRx-backed module.
         """
         if not file.is_file():
             raise TestRunError(f"test entry file not found: {file}")
@@ -251,10 +216,8 @@ class ArxTestRunner:
         """
         title: Build a path-qualified display prefix for one test file.
         parameters:
-          file:
-            type: Path
-        returns:
-          type: str
+          file: File.
+        returns: Constructed a path-qualified display prefix for one test file.
         """
         try:
             rel = file.resolve().relative_to(Path.cwd().resolve())
@@ -268,10 +231,8 @@ class ArxTestRunner:
         """
         title: Return whether one candidate file matches an exclude glob.
         parameters:
-          candidate:
-            type: Path
-        returns:
-          type: bool
+          candidate: Candidate.
+        returns: Whether one candidate file matches an exclude glob.
         """
         if not self.exclude:
             return False
@@ -292,9 +253,10 @@ class ArxTestRunner:
 
     def _discover_test_files(self) -> tuple[Path, ...]:
         """
-        title: Discover the ordered set of candidate test source files.
-        returns:
-          type: tuple[Path, Ellipsis]
+        title: Discover the ordered set of candidate test source
+          files.
+        returns: 'Result of this operation: discover the ordered
+          set of candidate test source files.'
         """
         discovered: list[Path] = []
         seen: set[Path] = set()
@@ -323,8 +285,7 @@ class ArxTestRunner:
         """
         title: Validate the test-function signature contract.
         parameters:
-          node:
-            type: astx.FunctionDef
+          node: Syntax node to process.
         """
         name = str(node.prototype.name)
         arg_count = len(node.prototype.args.nodes)
@@ -344,10 +305,9 @@ class ArxTestRunner:
         """
         title: Build one runner error for an unsupported top-level node.
         parameters:
-          node:
-            type: astx.AST
-        returns:
-          type: str
+          node: Syntax node to process.
+        returns: Constructed one runner error for an unsupported top-level
+          node.
         """
         if isinstance(node, astx.VariableDeclaration):
             return (
@@ -366,12 +326,10 @@ class ArxTestRunner:
         """
         title: Discover valid test functions from one parsed module.
         parameters:
-          module:
-            type: astx.Module
-          file:
-            type: Path
-        returns:
-          type: tuple[DiscoveredTestCase, Ellipsis]
+          module: Module to process.
+          file: File.
+        returns: 'Result of this operation: discover valid test functions
+          from one parsed module.'
         """
         discovered: list[DiscoveredTestCase] = []
         seen_names: set[str] = set()
@@ -411,8 +369,7 @@ class ArxTestRunner:
     def collect_tests(self) -> tuple[DiscoveredTestCase, ...]:
         """
         title: Collect and filter discovered tests across configured paths.
-        returns:
-          type: tuple[DiscoveredTestCase, Ellipsis]
+        returns: Collected and filter discovered tests across configured paths.
         """
         files = self._discover_test_files()
         discovered: list[DiscoveredTestCase] = []
@@ -454,10 +411,9 @@ class ArxTestRunner:
         """
         title: Build the generated wrapper `main()` for one selected test.
         parameters:
-          test_name:
-            type: str
-        returns:
-          type: astx.FunctionDef
+          test_name: Name of test.
+        returns: Constructed the generated wrapper `main()` for one selected
+          test.
         """
         prototype = astx.FunctionPrototype(
             "main",
@@ -475,14 +431,13 @@ class ArxTestRunner:
         function_name: str,
     ) -> astx.Module:
         """
-        title: Build one synthetic module that runs exactly one selected test.
+        title: Build one synthetic module that runs exactly one selected
+          test.
         parameters:
-          file:
-            type: Path
-          function_name:
-            type: str
-        returns:
-          type: astx.Module
+          file: File.
+          function_name: Name of function.
+        returns: Constructed one synthetic module that runs exactly
+          one selected test.
         """
         module = self._parse_module(file)
         wrapper_name = (
@@ -526,10 +481,8 @@ class ArxTestRunner:
         """
         title: Write a readable wrapper-module artifact for debugging.
         parameters:
-          module:
-            type: astx.Module
-          artifact_dir:
-            type: Path
+          module: Module to process.
+          artifact_dir: Artifact dir.
         """
         text: str
         try:
@@ -551,10 +504,9 @@ class ArxTestRunner:
         """
         title: Compile and execute one selected test case in isolation.
         parameters:
-          test_case:
-            type: DiscoveredTestCase
-        returns:
-          type: TestExecutionResult
+          test_case: Test case.
+        returns: 'Result of this operation: compile and execute one selected
+          test case in isolation.'
         """
         temp_dir: tempfile.TemporaryDirectory[str] | None = None
         sanitized_name = _sanitize_name(test_case.name)
@@ -623,14 +575,10 @@ class ArxTestRunner:
         """
         title: Convert one command result into a stable test result object.
         parameters:
-          test_case:
-            type: DiscoveredTestCase
-          command_result:
-            type: CommandResult
-          artifact_dir:
-            type: Path | None
-        returns:
-          type: TestExecutionResult
+          test_case: Test case.
+          command_result: Command result.
+          artifact_dir: Artifact dir.
+        returns: Converted one command result into a stable test result object.
         """
         exception = parse_exception_output(command_result.stderr)
         assertion_failure: AssertionFailureReport | None = None
@@ -660,8 +608,7 @@ class ArxTestRunner:
         """
         title: Print one human-readable test result line.
         parameters:
-          result:
-            type: TestExecutionResult
+          result: Result of the operation.
         """
         if result.passed:
             print(f"PASS {result.name}")
@@ -709,8 +656,7 @@ class ArxTestRunner:
         """
         title: Print a concise human-readable session summary.
         parameters:
-          summary:
-            type: TestRunSummary
+          summary: Summary.
         """
         skipped = summary.selected - summary.executed
         parts = [
@@ -724,8 +670,8 @@ class ArxTestRunner:
     def run(self) -> TestRunSummary:
         """
         title: Collect, compile, and execute the configured test selection.
-        returns:
-          type: TestRunSummary
+        returns: 'Result of this operation: collect, compile, and execute
+          the configured test selection.'
         """
         try:
             selected_tests = self.collect_tests()

@@ -32,14 +32,11 @@ def compound_module(
     """
     title: Construct a numeric declaration and compound operation for analysis.
     parameters:
-      operator:
-        type: OpCodeAugAssign
-      target_type:
-        type: astx.DataType | None
-      value:
-        type: astx.DataType | None
-    returns:
-      type: tuple[astx.Module, astx.AugAssign]
+      operator: Operator to apply.
+      target_type: Destination type for the conversion.
+      value: Value to process.
+    returns: Constructed a numeric declaration and compound operation for
+      analysis.
     """
     node = astx.AugAssign(
         astx.Identifier("x"),
@@ -62,8 +59,7 @@ def test_compound_plans_and_value_lowering(operator: OpCodeAugAssign) -> None:
     """
     title: Direct AST compounds resolve numeric plans and yield stored values.
     parameters:
-      operator:
-        type: OpCodeAugAssign
+      operator: Operator to apply.
     """
     module, node = compound_module(operator)
     function = module.nodes[0]
@@ -99,10 +95,8 @@ def test_compound_lossless_promotions(
     """
     title: Compound operand and store conversions preserve complete domains.
     parameters:
-      target:
-        type: astx.DataType
-      value:
-        type: astx.DataType
+      target: Destination of the operation.
+      value: Value to process.
     """
     module, node = compound_module(target_type=target, value=value)
     analyze(module)
@@ -133,12 +127,9 @@ def test_compound_rejects_lossy_or_non_numeric_operands(
     """
     title: Direct AST compounds cannot introduce narrowing or Boolean coercion.
     parameters:
-      target:
-        type: astx.DataType
-      value:
-        type: astx.DataType
-      message:
-        type: str
+      target: Destination of the operation.
+      value: Value to process.
+      message: Diagnostic or output message.
     """
     module, _ = compound_module(target_type=target, value=value)
     with pytest.raises(SemanticError, match=message):
@@ -154,8 +145,7 @@ def test_compound_rejects_unimplemented_ast_opcodes(
     """
     title: ASTx modeling does not silently enable unsupported IRx operations.
     parameters:
-      operator:
-        type: OpCodeAugAssign
+      operator: Operator to apply.
     """
     module, _ = compound_module(operator)
     with pytest.raises(SemanticError, match="unsupported compound assignment"):
@@ -176,8 +166,7 @@ def test_compound_missing_metadata_fails_closed(field: str) -> None:
     """
     title: Compound lowering requires its resolved target and operand plan.
     parameters:
-      field:
-        type: str
+      field: Field to process.
     """
     module, node = compound_module()
     analyze(module)
@@ -201,8 +190,7 @@ def test_compound_rejects_invalid_bindings(invalid: str) -> None:
     """
     title: Direct AST mutation validates binding identity and mutability.
     parameters:
-      invalid:
-        type: str
+      invalid: Invalid.
     """
     module, node = compound_module()
     function = module.nodes[0]
@@ -231,8 +219,7 @@ def test_compound_store_conversion_fails_before_publication(
     """
     title: Missing or lossy store plans never fall back to unchecked narrowing.
     parameters:
-      missing:
-        type: bool
+      missing: Whether to use missing.
     """
     module, node = compound_module(
         target_type=astx.Float64(), value=astx.LiteralFloat64(2)
@@ -299,9 +286,10 @@ def test_compound_lowering_uses_resolved_target_and_opcode() -> None:
 @private
 def numeric_visitor() -> Visitor:
     """
-    title: Create a live instruction block for an already-analyzed expression.
-    returns:
-      type: Visitor
+    title: Create a live instruction block for an already-analyzed
+      expression.
+    returns: Created a live instruction block for an already-analyzed
+      expression.
     """
     visitor = Builder().translator
     function = ir.Function(
@@ -318,8 +306,7 @@ def test_operand_conversions_are_recorded(operator: str) -> None:
     """
     title: Comparison result types do not erase the arithmetic operand domain.
     parameters:
-      operator:
-        type: str
+      operator: Operator to apply.
     """
     expression = astx.BinaryOp(
         operator, astx.LiteralInt8(1), astx.LiteralInt16(2)
@@ -374,8 +361,8 @@ def test_lowering_obeys_resolved_conversions_and_signedness() -> None:
 
 def test_union_comparison_plan_describes_numeric_storage() -> None:
     """
-    title: >-
-      Comparison conversion sources describe untagged numeric union storage.
+    title: Comparison conversion sources describe untagged numeric union
+      storage.
     """
     lhs = astx.UnionType([astx.UInt8(), astx.UInt16()])
     rhs = astx.UInt32()
@@ -415,8 +402,7 @@ def test_missing_numeric_plans_fail_closed(field: str) -> None:
     """
     title: Missing plans cause a lowering diagnostic, never LLVM type guessing.
     parameters:
-      field:
-        type: str
+      field: Field to process.
     """
     expression = astx.BinaryOp("+", astx.LiteralInt32(1), astx.LiteralInt32(2))
     analyze(expression)
@@ -448,8 +434,8 @@ def test_missing_numeric_plans_fail_closed(field: str) -> None:
 
 def test_unanalyzed_numeric_operation_fails_closed() -> None:
     """
-    title: >-
-      The source-language numeric visitor no longer provides a raw fallback.
+    title: The source-language numeric visitor no longer provides
+      a raw fallback.
     """
     visitor = numeric_visitor()
     expression = astx.BinaryOp("+", astx.LiteralInt32(1), astx.LiteralInt32(2))
@@ -475,8 +461,8 @@ def test_boolean_equality_keeps_identity_operand_conversions() -> None:
 
 def test_numeric_cast_requires_conversion_plan() -> None:
     """
-    title: >-
-      Missing explicit numeric conversion plans cannot reach unchecked casts.
+    title: Missing explicit numeric conversion plans cannot reach unchecked
+      casts.
     """
     expression = astx.Cast(astx.LiteralInt32(7), astx.Int8())
     analyze(expression)
@@ -495,8 +481,7 @@ def test_contextual_literal_lowering_requires_resolved_value(
     """
     title: Lowering must not reconstruct an exact literal's converted value.
     parameters:
-      value:
-        type: astx.Literal
+      value: Value to process.
     """
     analyze(value)
     semantic = cast(SemanticInfo, getattr(value, "semantic"))
@@ -508,8 +493,8 @@ def test_contextual_literal_lowering_requires_resolved_value(
 
 def test_contextual_literal_lowering_uses_the_semantic_constant() -> None:
     """
-    title: >-
-      The backend consumes the resolved value rather than the original decimal.
+    title: The backend consumes the resolved value rather than the original
+      decimal.
     """
     value = astx.LiteralFloat("1.25")
     analyze(value)

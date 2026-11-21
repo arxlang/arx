@@ -13,10 +13,8 @@ class AixBuffer:
     """
     title: Shared source buffer used by lexer and CLI flows.
     attributes:
-      buffer:
-        type: str
-      position:
-        type: int
+      buffer: Buffer holding the data.
+      position: Position.
     """
 
     buffer: str
@@ -39,8 +37,7 @@ class AixBuffer:
         """
         title: Replace buffer content.
         parameters:
-          text:
-            type: str
+          text: Text to process.
         """
         self.buffer = text
         self.position = 0
@@ -48,8 +45,7 @@ class AixBuffer:
     def read(self) -> str:
         """
         title: Return the next buffered character or EOF marker.
-        returns:
-          type: str
+        returns: The next buffered character or EOF marker.
         """
         if self.position >= len(self.buffer):
             return ""
@@ -62,14 +58,10 @@ class AixIO:
     """
     title: AIX input loading facade.
     attributes:
-      INPUT_FROM_STDIN:
-        type: bool
-      INPUT_FILE:
-        type: str
-      EOF:
-        type: int
-      buffer:
-        type: AixBuffer
+      INPUT_FROM_STDIN: Whether to use input from stdin.
+      INPUT_FILE: Input file.
+      EOF: Eof.
+      buffer: Buffer holding the data.
     """
 
     INPUT_FROM_STDIN: bool = False
@@ -81,8 +73,7 @@ class AixIO:
     def get_char(cls) -> str:
         """
         title: Return one character from stdin or the shared buffer.
-        returns:
-          type: str
+        returns: One character from stdin or the shared buffer.
         """
         if cls.INPUT_FROM_STDIN:
             return sys.stdin.read(1)
@@ -93,8 +84,7 @@ class AixIO:
         """
         title: Load one source file into the shared buffer.
         parameters:
-          filename:
-            type: str
+          filename: Source or resource filename.
         """
         with open(filename, encoding="utf-8") as aix_file:
             cls.buffer.clean()
@@ -105,8 +95,7 @@ class AixIO:
         """
         title: Load one source string into the shared buffer.
         parameters:
-          value:
-            type: str
+          value: Value to process.
         """
         cls.buffer.clean()
         cls.buffer.write(value)
@@ -136,10 +125,8 @@ class AixFile:
         """
         title: Create a temporary C++ file with given content.
         parameters:
-          content:
-            type: str
-        returns:
-          type: str
+          content: Content to process.
+        returns: Created a temporary C++ file with given content.
         """
         with tempfile.NamedTemporaryFile(delete=False) as tmpfile:
             tmpfile.write(content.encode())
@@ -154,10 +141,8 @@ class AixFile:
         """
         title: Delete one file if present.
         parameters:
-          filename:
-            type: str
-        returns:
-          type: int
+          filename: Source or resource filename.
+        returns: 'Result of this operation: delete one file if present.'
         """
         try:
             os.remove(filename)

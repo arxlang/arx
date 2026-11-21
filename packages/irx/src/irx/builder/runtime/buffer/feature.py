@@ -28,8 +28,7 @@ if TYPE_CHECKING:
 def build_buffer_runtime_feature() -> RuntimeFeature:
     """
     title: Build the buffer runtime feature specification.
-    returns:
-      type: RuntimeFeature
+    returns: Constructed the buffer runtime feature specification.
     """
     runtime_root = Path(__file__).resolve().parent
     native_root = runtime_root / "native"
@@ -91,10 +90,9 @@ def declare_checked_offset(visitor: VisitorProtocol) -> ir.Function:
     """
     title: Declare rank, bounds and byte-offset validation.
     parameters:
-      visitor:
-        type: VisitorProtocol
-    returns:
-      type: ir.Function
+      visitor: Visitor performing the traversal or lowering.
+    returns: 'Result of this operation: declare rank, bounds and byte-offset
+      validation.'
     """
     integer = visitor._llvm.INT64_TYPE
     return declare_external_function(
@@ -120,10 +118,8 @@ def _declare_owner_external_new(
     """
     title: Declare owner external new.
     parameters:
-      visitor:
-        type: VisitorProtocol
-    returns:
-      type: ir.Function
+      visitor: Visitor performing the traversal or lowering.
+    returns: 'Result of this operation: declare owner external new.'
     """
     fn_type = ir.FunctionType(
         visitor._llvm.INT32_TYPE,
@@ -145,10 +141,8 @@ def _declare_owner_retain(visitor: VisitorProtocol) -> ir.Function:
     """
     title: Declare owner retain.
     parameters:
-      visitor:
-        type: VisitorProtocol
-    returns:
-      type: ir.Function
+      visitor: Visitor performing the traversal or lowering.
+    returns: 'Result of this operation: declare owner retain.'
     """
     fn_type = ir.FunctionType(
         visitor._llvm.INT32_TYPE,
@@ -166,10 +160,8 @@ def _declare_owner_release(visitor: VisitorProtocol) -> ir.Function:
     """
     title: Declare owner release.
     parameters:
-      visitor:
-        type: VisitorProtocol
-    returns:
-      type: ir.Function
+      visitor: Visitor performing the traversal or lowering.
+    returns: 'Result of this operation: declare owner release.'
     """
     fn_type = ir.FunctionType(
         visitor._llvm.INT32_TYPE,
@@ -187,10 +179,8 @@ def _declare_view_retain(visitor: VisitorProtocol) -> ir.Function:
     """
     title: Declare view retain.
     parameters:
-      visitor:
-        type: VisitorProtocol
-    returns:
-      type: ir.Function
+      visitor: Visitor performing the traversal or lowering.
+    returns: 'Result of this operation: declare view retain.'
     """
     fn_type = ir.FunctionType(
         visitor._llvm.INT32_TYPE,
@@ -208,10 +198,8 @@ def _declare_view_release(visitor: VisitorProtocol) -> ir.Function:
     """
     title: Declare view release.
     parameters:
-      visitor:
-        type: VisitorProtocol
-    returns:
-      type: ir.Function
+      visitor: Visitor performing the traversal or lowering.
+    returns: 'Result of this operation: declare view release.'
     """
     fn_type = ir.FunctionType(
         visitor._llvm.INT32_TYPE,
@@ -229,10 +217,8 @@ def _declare_last_error(visitor: VisitorProtocol) -> ir.Function:
     """
     title: Declare last error.
     parameters:
-      visitor:
-        type: VisitorProtocol
-    returns:
-      type: ir.Function
+      visitor: Visitor performing the traversal or lowering.
+    returns: 'Result of this operation: declare last error.'
     """
     fn_type = ir.FunctionType(
         visitor._llvm.OPAQUE_POINTER_TYPE,

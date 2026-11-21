@@ -1,6 +1,6 @@
 """
-title: >-
-  Validate constant rich DataFrame cells and serialize their Arrow storage.
+title: Validate constant rich DataFrame cells and serialize their
+  Arrow storage.
 """
 
 from __future__ import annotations
@@ -39,17 +39,14 @@ def numeric_literal_cell(
     node: astx.AST, type_: pa.DataType, path: str
 ) -> object:
     """
-    title: >-
-      Apply scalar representability rules to nested Arrow numeric constants.
+    title: Apply scalar representability rules to nested Arrow numeric
+      constants.
     parameters:
-      node:
-        type: astx.AST
-      type_:
-        type: pa.DataType
-      path:
-        type: str
-    returns:
-      type: object
+      node: Syntax node to process.
+      type_: Type expression to process.
+      path: Path to the input or output resource.
+    returns: 'Result of this operation: apply scalar representability
+      rules to nested Arrow numeric constants.'
     """
     value = getattr(node, "value", None)
     if pa.types.is_integer(type_) and type(value) is not int:
@@ -93,14 +90,11 @@ def literal_cell(node: astx.AST, field: pa.Field, path: str) -> object:
     """
     title: Interpret a literal with exact storage parameters and nullability.
     parameters:
-      node:
-        type: astx.AST
-      field:
-        type: pa.Field
-      path:
-        type: str
-    returns:
-      type: object
+      node: Syntax node to process.
+      field: Field to process.
+      path: Path to the input or output resource.
+    returns: 'Result of this operation: interpret a literal with exact
+      storage parameters and nullability.'
     """
     if isinstance(node, astx.LiteralNone):
         if not field.nullable:
@@ -220,13 +214,12 @@ def literal_cell(node: astx.AST, field: pa.Field, path: str) -> object:
 @typechecked
 def dataframe_literal_ipc(node: astx.DataFrameLiteral) -> bytes:
     """
-    title: >-
-      Produce one schema-bearing batch after validating every reachable cell.
+    title: Produce one schema-bearing batch after validating every reachable
+      cell.
     parameters:
-      node:
-        type: astx.DataFrameLiteral
-    returns:
-      type: bytes
+      node: Syntax node to process.
+    returns: 'Result of this operation: produce one schema-bearing batch
+      after validating every reachable cell.'
     """
     schema = pa.ipc.read_schema(
         pa.BufferReader(dataframe_schema_ipc(node.type_))

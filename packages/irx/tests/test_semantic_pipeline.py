@@ -36,10 +36,9 @@ def _main_module(*nodes: astx.AST) -> astx.Module:
     title: Main module.
     parameters:
       nodes:
-        type: astx.AST
         variadic: positional
-    returns:
-      type: astx.Module
+        description: Syntax nodes in source order.
+    returns: 'Result of this operation: main module.'
     """
     module = astx.Module()
     proto = astx.FunctionPrototype(
@@ -116,8 +115,7 @@ def test_semantic_failures_stop_before_lowering_dispatch(
     """
     title: Semantic failures do not enter lowering dispatch.
     parameters:
-      monkeypatch:
-        type: pytest.MonkeyPatch
+      monkeypatch: Fixture for temporarily replacing dependencies and settings.
     """
     visitor = Visitor()
 
@@ -125,8 +123,7 @@ def test_semantic_failures_stop_before_lowering_dispatch(
         """
         title: Fail if lowering dispatch is reached.
         parameters:
-          node:
-            type: astx.AST
+          node: Syntax node to process.
         """
         raise AssertionError(f"Lowering should not run for {node!r}")
 
@@ -156,10 +153,8 @@ def test_build_surfaces_linking_failures_after_semantic_analysis(
     """
     title: Linking failures remain outside semantic analysis.
     parameters:
-      monkeypatch:
-        type: pytest.MonkeyPatch
-      tmp_path:
-        type: Path
+      monkeypatch: Fixture for temporarily replacing dependencies and settings.
+      tmp_path: Temporary directory for this test.
     """
     builder = Builder()
     module = _main_module(astx.FunctionReturn(astx.LiteralInt32(0)))
@@ -169,11 +164,11 @@ def test_build_surfaces_linking_failures_after_semantic_analysis(
         title: Fail the linking step with a runtime-style error.
         parameters:
           args:
-            type: object
             variadic: positional
+            description: Positional arguments.
           kwargs:
-            type: object
             variadic: keyword
+            description: Keyword arguments.
         """
         _ = args
         _ = kwargs

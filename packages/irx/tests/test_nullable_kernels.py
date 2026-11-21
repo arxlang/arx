@@ -37,8 +37,7 @@ def bind_kernels(native: ctypes.CDLL) -> None:
     """
     title: Declare the exact scalar/column ABI for ctypes callers.
     parameters:
-      native:
-        type: ctypes.CDLL
+      native: Loaded native runtime used by the ABI test.
     """
     pointer = ctypes.c_void_p
     types = {
@@ -80,10 +79,8 @@ def test_versioned_math_abi(
     """
     title: Reuse independent scalar oracles through the two-kernel native ABI.
     parameters:
-      native:
-        type: ctypes.CDLL
-      kernel:
-        type: ComputeKernel
+      native: Loaded native runtime used by the ABI test.
+      kernel: Kernel.
     """
     bind_kernels(native)
     assert native.irx_arrow_compute_abi_version() == COMPUTE_ABI_VERSION
@@ -145,12 +142,9 @@ def test_math_series_ownership(
     """
     title: Owned compute results survive release of borrowed input and parents.
     parameters:
-      native:
-        type: ctypes.CDLL
-      kernel:
-        type: ComputeKernel
-      rows:
-        type: list[float | None]
+      native: Loaded native runtime used by the ABI test.
+      kernel: Kernel.
+      rows: Rows.
     """
     bind_kernels(native)
     values = pa.array([99.0, *rows], type=pa.float64()).slice(1)
@@ -249,28 +243,17 @@ def test_math_abi_fail_closed(
     """
     title: Reject unsupported descriptors and clear poison outputs.
     parameters:
-      native:
-        type: ctypes.CDLL
-      abi:
-        type: int
-      operation:
-        type: int
-      arity:
-        type: int
-      options:
-        type: int
-      dtype:
-        type: int
-      shape:
-        type: int
-      column:
-        type: int | None
-      bits:
-        type: int
-      valid:
-        type: int
-      status:
-        type: int
+      native: Loaded native runtime used by the ABI test.
+      abi: ABI.
+      operation: Operation to resolve or execute.
+      arity: Number of explicit operands.
+      options: Validated operation options.
+      dtype: Element data type.
+      shape: Declared dimensions or result shape.
+      column: Column to process.
+      bits: Exact scalar payload bits.
+      valid: Whether the scalar payload is valid.
+      status: Native operation status.
     """
     bind_kernels(native)
     output = ctypes.c_void_p(123)
@@ -318,32 +301,20 @@ def invoke_compute(
     """
     title: Run existing storage/index vectors through the typed compute ABI.
     parameters:
-      native:
-        type: ctypes.CDLL
-      kernel:
-        type: bytes
-      storage_id:
-        type: int
-      lhs:
-        type: ctypes.c_void_p | None
-      lhs_bits:
-        type: int
-      lhs_valid:
-        type: int
-      rhs:
-        type: ctypes.c_void_p | None
-      rhs_bits:
-        type: int
-      rhs_valid:
-        type: int
-      output:
-        type: object
-      bits:
-        type: object
-      valid:
-        type: object
-    returns:
-      type: int
+      native: Loaded native runtime used by the ABI test.
+      kernel: Kernel.
+      storage_id: Identifier for storage.
+      lhs: Left operand.
+      lhs_bits: Left operand bits.
+      lhs_valid: Left operand valid.
+      rhs: Right operand.
+      rhs_bits: Right operand bits.
+      rhs_valid: Right operand valid.
+      output: Output destination or generated result.
+      bits: Exact scalar payload bits.
+      valid: Whether the scalar payload is valid.
+    returns: 'Result of this operation: run existing storage/index vectors
+      through the typed compute ABI.'
     """
     capability = COMPUTE_CATALOG.get(kernel.decode())
     primitive = next(
@@ -417,22 +388,15 @@ def compute(
     """
     title: Invoke a scalar kernel and return status plus defined output slots.
     parameters:
-      native:
-        type: ctypes.CDLL
-      kernel:
-        type: bytes
-      type_id:
-        type: int
-      left:
-        type: int
-      right:
-        type: int
-      left_valid:
-        type: bool
-      right_valid:
-        type: bool
-    returns:
-      type: tuple[int, int, int]
+      native: Loaded native runtime used by the ABI test.
+      kernel: Kernel.
+      type_id: Identifier for type.
+      left: Left operand.
+      right: Right operand.
+      left_valid: Whether to use left valid.
+      right_valid: Whether to use right valid.
+    returns: 'Result of this operation: invoke a scalar kernel and return
+      status plus defined output slots.'
     """
     bind_kernels(native)
     output = ctypes.c_void_p(123)
@@ -474,14 +438,10 @@ def test_integer_kernels(
     """
     title: Checked arithmetic preserves every signed and unsigned width.
     parameters:
-      native:
-        type: ctypes.CDLL
-      type_id:
-        type: int
-      width:
-        type: int
-      signed:
-        type: bool
+      native: Loaded native runtime used by the ABI test.
+      type_id: Identifier for type.
+      width: Bit width or display width.
+      signed: Whether to use signed.
     """
     assert compute(native, b"add_checked", type_id, 2, 3) == (0, 5, 1)
     maximum = 2 ** (width - int(signed)) - 1
@@ -534,12 +494,9 @@ def test_float_kernels(
     """
     title: Floating bit transport does not numerically convert or truncate.
     parameters:
-      native:
-        type: ctypes.CDLL
-      type_id:
-        type: int
-      format_:
-        type: str
+      native: Loaded native runtime used by the ABI test.
+      type_id: Identifier for type.
+      format_: Format.
     """
     left = int.from_bytes(struct.pack("<" + format_, 1.5), "little")
     right = int.from_bytes(struct.pack("<" + format_, 2.0), "little")
@@ -557,11 +514,10 @@ def test_float_kernels(
 
 def test_boolean_masks_and_fail_closed(native: ctypes.CDLL) -> None:
     """
-    title: >-
-      Strict boolean null propagation and invalid kernels fail predictably.
+    title: Strict boolean null propagation and invalid kernels fail
+      predictably.
     parameters:
-      native:
-        type: ctypes.CDLL
+      native: Loaded native runtime used by the ABI test.
     """
     assert compute(native, b"and", 11, 0, 1, right_valid=False) == (0, 0, 0)
     assert compute(native, b"is_null", 11, 0, 0, False) == (0, 1, 1)
@@ -574,10 +530,8 @@ def test_missing_compute_outputs(native: ctypes.CDLL, missing: str) -> None:
     """
     title: Clear all provided outputs even when a required output is absent.
     parameters:
-      native:
-        type: ctypes.CDLL
-      missing:
-        type: str
+      native: Loaded native runtime used by the ABI test.
+      missing: Missing.
     """
     bind_kernels(native)
     column = ctypes.c_void_p(123)
@@ -610,10 +564,8 @@ def test_missing_index_outputs(native: ctypes.CDLL, missing: str) -> None:
     """
     title: Invalid output arguments cannot leave stale scalar payloads.
     parameters:
-      native:
-        type: ctypes.CDLL
-      missing:
-        type: str
+      native: Loaded native runtime used by the ABI test.
+      missing: Missing.
     """
     bind_kernels(native)
     bits, valid = ctypes.c_uint64(123), ctypes.c_int32(123)
@@ -638,10 +590,8 @@ def test_series_index_lifetime(
     """
     title: Column references outlive sources; invalid indices clear outputs.
     parameters:
-      native:
-        type: ctypes.CDLL
-      rows:
-        type: list[int | None]
+      native: Loaded native runtime used by the ABI test.
+      rows: Rows.
     """
     bind_kernels(native)
     batch = pa.record_batch([pa.array(rows, type=pa.int32())], names=["x"])
@@ -727,8 +677,7 @@ def test_schema_ipc_contract(native: ctypes.CDLL) -> None:
     """
     title: IPC schema imports own descriptors and reject malformed input.
     parameters:
-      native:
-        type: ctypes.CDLL
+      native: Loaded native runtime used by the ABI test.
     """
     native.irx_rb_schema_from_ipc.argtypes = [
         ctypes.c_void_p,
@@ -762,10 +711,8 @@ def test_nested_required_fields(
     """
     title: Required nested values reject nulls unless a null parent masks them.
     parameters:
-      native:
-        type: ctypes.CDLL
-      parent_null:
-        type: bool
+      native: Loaded native runtime used by the ABI test.
+      parent_null: Whether to use parent null.
     """
     type_ = pa.list_(pa.field("item", pa.int32(), nullable=False))
     values = [None] if parent_null else [[None]]
@@ -795,18 +742,15 @@ def test_sequence_snapshot_chunked_nulls_and_replacement(
     native: ctypes.CDLL, floating: bool, empty: bool
 ) -> None:
     """
-    title: >-
-      Snapshots retain chunk buffers and validity across source replacement.
-    summary: >-
-      IPC batches deliberately preserve multiple chunks. NaN/Inf are values,
-      not nulls; large integer bits survive without an intermediate float.
+    title: Snapshots retain chunk buffers and validity across source
+      replacement.
+    summary: IPC batches deliberately preserve multiple chunks. NaN/Inf
+      are values, not nulls; large integer bits survive without an
+      intermediate float.
     parameters:
-      native:
-        type: ctypes.CDLL
-      floating:
-        type: bool
-      empty:
-        type: bool
+      native: Loaded native runtime used by the ABI test.
+      floating: Whether to use floating.
+      empty: Whether to use empty.
     """
     bind_kernels(native)
     pointer = ctypes.c_void_p

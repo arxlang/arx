@@ -33,24 +33,15 @@ class ClassDeclStmt(StatementType):
     """
     title: AST class for class declaration.
     attributes:
-      kind:
-        type: ASTKind
-      name:
-        type: str
-      bases:
-        type: ASTNodes[Expr]
-      decorators:
-        type: ASTNodes[Expr]
-      visibility:
-        type: VisibilityKind
-      is_abstract:
-        type: bool
-      metaclass:
-        type: Optional[Expr]
-      attributes:
-        type: ASTNodes[VariableDeclaration]
-      methods:
-        type: ASTNodes[FunctionDef]
+      kind: Kind of value or operation.
+      name: Name identifying this declaration.
+      bases: Bases.
+      decorators: Decorators.
+      visibility: Visibility.
+      is_abstract: Whether is abstract.
+      metaclass: Metaclass.
+      attributes: Attributes.
+      methods: Methods.
     """
 
     kind: ASTKind
@@ -81,26 +72,16 @@ class ClassDeclStmt(StatementType):
         """
         title: Initialize ClassDeclStmt instance.
         parameters:
-          name:
-            type: str
-          bases:
-            type: Iterable[Expr] | ASTNodes[Expr]
-          decorators:
-            type: Iterable[Expr] | ASTNodes[Expr]
-          visibility:
-            type: VisibilityKind
-          is_abstract:
-            type: bool
-          metaclass:
-            type: Optional[Expr]
-          attributes:
-            type: Iterable[VariableDeclaration] | ASTNodes[VariableDeclaration]
-          methods:
-            type: Iterable[FunctionDef] | ASTNodes[FunctionDef]
-          loc:
-            type: SourceLocation
-          parent:
-            type: Optional[ASTNodes]
+          name: Name identifying the declaration or operation.
+          bases: Bases.
+          decorators: Decorators.
+          visibility: Visibility.
+          is_abstract: Whether is abstract.
+          metaclass: Metaclass.
+          attributes: Attributes.
+          methods: Methods.
+          loc: Source coordinates associated with the node.
+          parent: Parent node or enclosing scope.
         """
         super().__init__(loc=loc, parent=parent)
         self.name = name
@@ -141,8 +122,7 @@ class ClassDeclStmt(StatementType):
     def __str__(self) -> str:
         """
         title: Return a string that represents the object.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         modifiers = []
         if self.visibility != VisibilityKind.public:
@@ -169,10 +149,8 @@ class ClassDeclStmt(StatementType):
         """
         title: Return the AST structure of the object.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: DictDataTypesStruct
+          simplified: Whether to request the compact representation.
+        returns: The AST structure of the object.
         """
         bases_dict: ReprStruct = {}
         decors_dict: ReprStruct = {}
@@ -212,10 +190,8 @@ class ClassDeclStmt(StatementType):
         """
         title: Return the AST structure of the object.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         vis = dict(zip(("public", "private", "protected"), ("+", "-", "#")))
         abstract = ", abstract" if self.is_abstract else ""
@@ -235,26 +211,16 @@ class ClassDefStmt(ClassDeclStmt):
     """
     title: AST class for class definition, including attributes and methods.
     attributes:
-      name:
-        type: str
-      bases:
-        type: ASTNodes[Expr]
-      decorators:
-        type: ASTNodes[Expr]
-      visibility:
-        type: VisibilityKind
-      is_abstract:
-        type: bool
-      metaclass:
-        type: Optional[Expr]
-      attributes:
-        type: ASTNodes[VariableDeclaration]
-      methods:
-        type: ASTNodes[FunctionDef]
-      kind:
-        type: ASTKind
-      body:
-        type: Block
+      name: Name identifying this declaration.
+      bases: Bases.
+      decorators: Decorators.
+      visibility: Visibility.
+      is_abstract: Whether is abstract.
+      metaclass: Metaclass.
+      attributes: Attributes.
+      methods: Methods.
+      kind: Kind of value or operation.
+      body: Statements forming the body.
     """
 
     kind: ASTKind
@@ -279,28 +245,17 @@ class ClassDefStmt(ClassDeclStmt):
         """
         title: Initialize ClassDefStmt instance.
         parameters:
-          name:
-            type: str
-          bases:
-            type: Iterable[Expr] | ASTNodes[Expr]
-          decorators:
-            type: Iterable[Expr] | ASTNodes[Expr]
-          body:
-            type: Block
-          visibility:
-            type: VisibilityKind
-          is_abstract:
-            type: bool
-          metaclass:
-            type: Optional[Expr]
-          attributes:
-            type: Iterable[VariableDeclaration] | ASTNodes[VariableDeclaration]
-          methods:
-            type: Iterable[FunctionDef] | ASTNodes[FunctionDef]
-          loc:
-            type: SourceLocation
-          parent:
-            type: Optional[ASTNodes]
+          name: Name identifying the declaration or operation.
+          bases: Bases.
+          decorators: Decorators.
+          body: Statements forming the body.
+          visibility: Visibility.
+          is_abstract: Whether is abstract.
+          metaclass: Metaclass.
+          attributes: Attributes.
+          methods: Methods.
+          loc: Source coordinates associated with the node.
+          parent: Parent node or enclosing scope.
         """
         super().__init__(
             name=name,
@@ -325,8 +280,7 @@ class ClassDefStmt(ClassDeclStmt):
     def __str__(self) -> str:
         """
         title: Return a string that represents the object.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         class_decl_str = super().__str__()
         if not self.body.nodes:
@@ -339,10 +293,8 @@ class ClassDefStmt(ClassDeclStmt):
         """
         title: Return the AST structure of the object.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         vis = dict(zip(("public", "private", "protected"), ("+", "-", "#")))
         abstract = ", abstract" if self.is_abstract else ""
@@ -362,14 +314,10 @@ class EnumDeclStmt(StatementType):
     """
     title: AST class for enum declaration.
     attributes:
-      kind:
-        type: ASTKind
-      name:
-        type: str
-      attributes:
-        type: ASTNodes[VariableDeclaration]
-      visibility:
-        type: VisibilityKind
+      kind: Kind of value or operation.
+      name: Name identifying this declaration.
+      attributes: Attributes.
+      visibility: Visibility.
     """
 
     kind: ASTKind
@@ -390,16 +338,11 @@ class EnumDeclStmt(StatementType):
         """
         title: Initialize EnumDeclStmt instance.
         parameters:
-          name:
-            type: str
-          attributes:
-            type: Iterable[VariableDeclaration] | ASTNodes[VariableDeclaration]
-          visibility:
-            type: VisibilityKind
-          loc:
-            type: SourceLocation
-          parent:
-            type: Optional[ASTNodes]
+          name: Name identifying the declaration or operation.
+          attributes: Attributes.
+          visibility: Visibility.
+          loc: Source coordinates associated with the node.
+          parent: Parent node or enclosing scope.
         """
         super().__init__(loc=loc, parent=parent)
         self.name = name
@@ -417,8 +360,7 @@ class EnumDeclStmt(StatementType):
     def __str__(self) -> str:
         """
         title: Return a string that represents the object.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         visibility_str = (
             self.visibility.name.lower()
@@ -434,10 +376,8 @@ class EnumDeclStmt(StatementType):
         """
         title: Return the AST structure of the object.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         vis = dict(zip(("public", "private", "protected"), ("+", "-", "#")))
         key = f"ENUM-DECL[{vis[self.visibility.name]}{self.name}]"
@@ -458,18 +398,12 @@ class StructDeclStmt(StatementType):
     """
     title: AST class for struct declaration.
     attributes:
-      kind:
-        type: ASTKind
-      name:
-        type: str
-      attributes:
-        type: ASTNodes[VariableDeclaration]
-      visibility:
-        type: VisibilityKind
-      decorators:
-        type: ASTNodes[Expr]
-      methods:
-        type: ASTNodes[FunctionDef]
+      kind: Kind of value or operation.
+      name: Name identifying this declaration.
+      attributes: Attributes.
+      visibility: Visibility.
+      decorators: Decorators.
+      methods: Methods.
     """
 
     kind: ASTKind
@@ -494,20 +428,13 @@ class StructDeclStmt(StatementType):
         """
         title: Initialize StructDeclStmt instance.
         parameters:
-          name:
-            type: str
-          attributes:
-            type: Iterable[VariableDeclaration] | ASTNodes[VariableDeclaration]
-          decorators:
-            type: Iterable[Expr] | ASTNodes[Expr]
-          methods:
-            type: Iterable[FunctionDef] | ASTNodes[FunctionDef]
-          visibility:
-            type: VisibilityKind
-          loc:
-            type: SourceLocation
-          parent:
-            type: Optional[ASTNodes]
+          name: Name identifying the declaration or operation.
+          attributes: Attributes.
+          decorators: Decorators.
+          methods: Methods.
+          visibility: Visibility.
+          loc: Source coordinates associated with the node.
+          parent: Parent node or enclosing scope.
         """
         super().__init__(loc=loc, parent=parent)
         self.name = name
@@ -539,8 +466,7 @@ class StructDeclStmt(StatementType):
     def __str__(self) -> str:
         """
         title: Return a string that represents the object.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         decorators_str = "".join(
             f"@{decorator}\n" for decorator in self.decorators
@@ -558,10 +484,8 @@ class StructDeclStmt(StatementType):
         """
         title: Return the AST structure of the object.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         vis = dict(zip(("public", "private", "protected"), ("+", "-", "#")))
         key = f"STRUCT-DECL[{vis[self.visibility.name]}{self.name}]"
@@ -595,18 +519,12 @@ class StructDefStmt(StructDeclStmt):
     """
     title: AST class for struct definition.
     attributes:
-      name:
-        type: str
-      attributes:
-        type: ASTNodes[VariableDeclaration]
-      visibility:
-        type: VisibilityKind
-      decorators:
-        type: ASTNodes[Expr]
-      methods:
-        type: ASTNodes[FunctionDef]
-      kind:
-        type: ASTKind
+      name: Name identifying this declaration.
+      attributes: Attributes.
+      visibility: Visibility.
+      decorators: Decorators.
+      methods: Methods.
+      kind: Kind of value or operation.
     """
 
     kind: ASTKind
@@ -625,20 +543,13 @@ class StructDefStmt(StructDeclStmt):
         """
         title: Initialize StructDefStmt instance.
         parameters:
-          name:
-            type: str
-          attributes:
-            type: Iterable[VariableDeclaration] | ASTNodes[VariableDeclaration]
-          decorators:
-            type: Iterable[Expr] | ASTNodes[Expr]
-          methods:
-            type: Iterable[FunctionDef] | ASTNodes[FunctionDef]
-          visibility:
-            type: VisibilityKind
-          loc:
-            type: SourceLocation
-          parent:
-            type: Optional[ASTNodes]
+          name: Name identifying the declaration or operation.
+          attributes: Attributes.
+          decorators: Decorators.
+          methods: Methods.
+          visibility: Visibility.
+          loc: Source coordinates associated with the node.
+          parent: Parent node or enclosing scope.
         """
         super().__init__(
             name=name,
@@ -654,8 +565,7 @@ class StructDefStmt(StructDeclStmt):
     def __str__(self) -> str:
         """
         title: Return a string that represents the object.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         decorators_str = "".join(
             f"@{decorator}\n" for decorator in self.decorators
@@ -673,10 +583,8 @@ class StructDefStmt(StructDeclStmt):
         """
         title: Return the AST structure of the object.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         vis = dict(zip(("public", "private", "protected"), ("+", "-", "#")))
         key = f"STRUCT-DEF[{vis[self.visibility.name]}{self.name}]"

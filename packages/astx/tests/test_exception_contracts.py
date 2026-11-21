@@ -17,8 +17,7 @@ def test_raise_cause_is_distinct_from_absence(simplified: bool) -> None:
     """
     title: An explicit null cause survives representation and traversal.
     parameters:
-      simplified:
-        type: bool
+      simplified: Whether to request the compact representation.
     """
     exception = astx.Identifier("problem")
     implicit = astx.ThrowStmt(exception)
@@ -47,8 +46,7 @@ def test_try_preserves_all_clauses(simplified: bool) -> None:
     """
     title: Qualified handlers, else, and finalization remain separate children.
     parameters:
-      simplified:
-        type: bool
+      simplified: Whether to request the compact representation.
     """
     reference = astx.FieldAccess(astx.Identifier("package"), "Problem")
     handler = astx.CatchHandlerStmt(astx.Block(), types=[reference])
@@ -117,8 +115,7 @@ def test_lazy_and_astnodes_handler_types_are_checked(container: bool) -> None:
     """
     title: Validate collection items beyond Typeguard's builtin containers.
     parameters:
-      container:
-        type: bool
+      container: Whether to use container.
     """
     values = [astx.Identifier("Problem"), astx.ThrowStmt()]
     types: Iterable[astx.Expr]
@@ -137,8 +134,7 @@ def test_lazy_and_astnodes_handlers_are_checked(container: bool) -> None:
     """
     title: Invalid nested handler lists cannot reach structure generation.
     parameters:
-      container:
-        type: bool
+      container: Whether to use container.
     """
     values = [astx.CatchHandlerStmt(astx.Block()), astx.ThrowStmt()]
     handlers: Iterable[astx.CatchHandlerStmt]

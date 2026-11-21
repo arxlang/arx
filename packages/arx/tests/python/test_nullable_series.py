@@ -23,8 +23,7 @@ def test_nullable_series(tmp_path: Path) -> None:
     """
     title: Preserve nulls through scalar and Series kernels.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     source = """
 class Sample:
@@ -103,8 +102,7 @@ def test_rich_static_schema(tmp_path: Path) -> None:
     """
     title: Preserve parameterized schemas and metadata across compiled casts.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
 
     frame = (
@@ -190,12 +188,9 @@ def test_compiled_kernel_failures(
     """
     title: Native failures report errors rather than reading invalid outputs.
     parameters:
-      tmp_path:
-        type: Path
-      expression:
-        type: str
-      message:
-        type: str
+      tmp_path: Temporary directory for this test.
+      expression: Expression to process.
+      message: Diagnostic or output message.
     """
     source = f"""
 fn main() -> i32:

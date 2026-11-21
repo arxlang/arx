@@ -12,12 +12,9 @@ def _add(a: int, b: int) -> int:
     """
     title: Add two integers (test helper).
     parameters:
-      a:
-        type: int
-      b:
-        type: int
-    returns:
-      type: int
+      a: First operand.
+      b: Second operand.
+    returns: 'Result of this operation: add two integers (test helper).'
     """
     return a + b
 

@@ -24,10 +24,8 @@ def _timestamp_values(const: ir.Constant) -> list[int]:
     """
     title: Extract i32 values from the literal struct constant.
     parameters:
-      const:
-        type: ir.Constant
-    returns:
-      type: list[int]
+      const: Const.
+    returns: Extracted i32 values from the literal struct constant.
     """
     return [int(v) for v in re.findall(r"i32\s+(-?\d+)", str(const))]
 
@@ -40,8 +38,7 @@ def test_literal_timestamp_basic(builder_class: type[Builder]) -> None:
     """
     title: LiteralTimestamp with fractional seconds via 'T' separator.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     visitor = cast(LLVMVisitor, builder.translator)
@@ -67,8 +64,7 @@ def test_literal_timestamp_fraction_truncated(
     """
     title: Fractions longer than 9 digits are truncated to nanoseconds.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     visitor = cast(LLVMVisitor, builder.translator)
@@ -88,8 +84,7 @@ def test_literal_timestamp_invalid_date(builder_class: type[Builder]) -> None:
     """
     title: Reject impossible calendar dates (e.g., February 30).
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     visitor = cast(LLVMVisitor, builder.translator)
@@ -108,8 +103,7 @@ def test_literal_timestamp_timezone_rejected(
     """
     title: Reject timestamps that include timezone markers.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     visitor = cast(LLVMVisitor, builder.translator)

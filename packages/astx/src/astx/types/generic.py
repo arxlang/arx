@@ -1,8 +1,7 @@
 """
 title: ASTx AST type helpers.
-summary: >-
-  Provide semantic-facing type nodes that extend the upstream ASTx type model
-  without coupling them to template metadata helpers.
+summary: Provide semantic-facing type nodes that extend the upstream ASTx
+  type model without coupling them to template metadata helpers.
 """
 
 from __future__ import annotations
@@ -19,14 +18,11 @@ from astx.types import AnyType
 class UnionType(AnyType):
     """
     title: Finite compile-time union type domain.
-    summary: >-
-      Represent one union of concrete type references that semantic analysis
-      may enumerate as a finite type domain.
+    summary: Represent one union of concrete type references that semantic
+      analysis may enumerate as a finite type domain.
     attributes:
-      members:
-        type: tuple[astx.DataType, Ellipsis]
-      alias_name:
-        type: str | None
+      members: Members.
+      alias_name: Name of alias.
     """
 
     members: tuple[astx.DataType, ...]
@@ -41,10 +37,8 @@ class UnionType(AnyType):
         """
         title: Initialize one finite union type.
         parameters:
-          members:
-            type: Iterable[astx.DataType]
-          alias_name:
-            type: str | None
+          members: Members.
+          alias_name: Name of alias.
         """
         super().__init__()
         self.members = tuple(members)
@@ -53,8 +47,7 @@ class UnionType(AnyType):
     def __str__(self) -> str:
         """
         title: Render one finite union type as text.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         if self.alias_name is not None:
             return self.alias_name
@@ -64,10 +57,8 @@ class UnionType(AnyType):
         """
         title: Build one repr structure for a finite union type.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: astx.base.ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         key = f"UNION[{self.alias_name or id(self)}]"
         value = cast(
@@ -81,14 +72,11 @@ class UnionType(AnyType):
 class TemplateTypeVar(AnyType):
     """
     title: Semantic-only template type variable.
-    summary: >-
-      Represent one unresolved template type parameter inside function
+    summary: Represent one unresolved template type parameter inside function
       signatures or local declared types before specialization.
     attributes:
-      name:
-        type: str
-      bound:
-        type: astx.DataType
+      name: Name identifying this declaration.
+      bound: Names bound in the function scope.
     """
 
     name: str
@@ -98,10 +86,8 @@ class TemplateTypeVar(AnyType):
         """
         title: Initialize one template type variable.
         parameters:
-          name:
-            type: str
-          bound:
-            type: astx.DataType
+          name: Name identifying the declaration or operation.
+          bound: Names bound in the function scope.
         """
         super().__init__()
         self.name = name
@@ -110,8 +96,7 @@ class TemplateTypeVar(AnyType):
     def __str__(self) -> str:
         """
         title: Render one template type variable as text.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         return self.name
 
@@ -119,10 +104,8 @@ class TemplateTypeVar(AnyType):
         """
         title: Build one repr structure for a template type variable.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: astx.base.ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         key = f"TEMPLATE_TYPE_VAR[{self.name}]"
         value = cast(
@@ -139,12 +122,10 @@ class TemplateTypeVar(AnyType):
 class GeneratorType(AnyType):
     """
     title: First-class generator object type.
-    summary: >-
-      Represent one stateful generator value that yields values of one
-      statically known element type when iterated.
+    summary: Represent one stateful generator value that yields values of
+      one statically known element type when iterated.
     attributes:
-      yield_type:
-        type: astx.DataType
+      yield_type: Type of yield.
     """
 
     yield_type: astx.DataType
@@ -153,8 +134,7 @@ class GeneratorType(AnyType):
         """
         title: Initialize one generator type.
         parameters:
-          yield_type:
-            type: astx.DataType
+          yield_type: Type of yield.
         """
         super().__init__()
         self.yield_type = yield_type
@@ -162,8 +142,7 @@ class GeneratorType(AnyType):
     def __str__(self) -> str:
         """
         title: Render one generator type as text.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         return f"GeneratorType[{self.yield_type}]"
 
@@ -171,10 +150,8 @@ class GeneratorType(AnyType):
         """
         title: Build one repr structure for a generator type.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: astx.base.ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         return self._prepare_struct(
             "GENERATOR-TYPE",

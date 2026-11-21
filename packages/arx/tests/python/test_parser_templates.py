@@ -34,10 +34,8 @@ def _parse(code: str) -> astx.Module:
     """
     title: Parse one source snippet into a module.
     parameters:
-      code:
-        type: str
-    returns:
-      type: astx.Module
+      code: Source code or diagnostic identifier.
+    returns: Parsed one source snippet into a module.
     """
     ArxIO.string_to_buffer(code)
     tree = Parser().parse(Lexer().lex())
@@ -244,10 +242,8 @@ def test_parse_template_error_paths(code: str, expected: str) -> None:
     """
     title: Reject unsupported template syntax placements and forms.
     parameters:
-      code:
-        type: str
-      expected:
-        type: str
+      code: Source code or diagnostic identifier.
+      expected: Expected result for this case.
     """
     with pytest.raises(ParserException, match=expected):
         _parse(code)

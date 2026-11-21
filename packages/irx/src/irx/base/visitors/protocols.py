@@ -18,8 +18,7 @@ class BaseVisitorProtocol(Protocol):
         """
         title: Visit AST nodes.
         parameters:
-          _node:
-            type: astx.AST
+          _node: Syntax node to process.
         """
         ...
 
@@ -27,7 +26,6 @@ class BaseVisitorProtocol(Protocol):
         """
         title: Visit one child AST node.
         parameters:
-          _node:
-            type: astx.AST
+          _node: Syntax node to process.
         """
         ...

@@ -22,9 +22,10 @@ from ..conftest import StaticImportResolver, make_module
 
 def file_declaration() -> astx.ClassDefStmt:
     """
-    title: Supply an ASTx native class independently of Arx or its filesystem.
-    returns:
-      type: astx.ClassDefStmt
+    title: Supply an ASTx native class independently of Arx or its
+      filesystem.
+    returns: 'Result of this operation: supply an ASTx native class
+      independently of Arx or its filesystem.'
     """
     methods = []
     for name in (
@@ -119,8 +120,7 @@ def test_native_class_requires_explicit_host_registration(
     """
     title: A host capability, not the class/module spelling, selects native IO.
     parameters:
-      factory:
-        type: str
+      factory: Factory.
     """
     declaration = file_declaration()
     builtin = ParsedModule(
@@ -173,10 +173,8 @@ def test_native_file_casts_are_rejected(
     """
     title: Cast restrictions follow the registered class, not its spelling.
     parameters:
-      native_source:
-        type: bool
-      native_target:
-        type: bool
+      native_source: Whether to use native source.
+      native_target: Whether to use native target.
     """
     declaration = file_declaration()
     builtin = ParsedModule(
@@ -227,8 +225,7 @@ def test_invalid_native_abi_is_rejected(invalid: str) -> None:
     """
     title: A malformed native registration fails semantically before lowering.
     parameters:
-      invalid:
-        type: str
+      invalid: Invalid.
     """
     declaration = file_declaration()
     if invalid == "field":

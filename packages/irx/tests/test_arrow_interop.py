@@ -23,8 +23,7 @@ IRX_ERR_TYPE = -4
 def native() -> ctypes.CDLL:
     """
     title: Load current native code and bind its registered ABI signatures.
-    returns:
-      type: ctypes.CDLL
+    returns: Loaded current native code and bind its registered ABI signatures.
     """
     library = ctypes.CDLL(str(ensure_parquet_shared_library()))
     types = {
@@ -49,10 +48,8 @@ def address(value: object) -> int:
     """
     title: Return a CFFI-owned struct address for ctypes and PyArrow.
     parameters:
-      value:
-        type: object
-    returns:
-      type: int
+      value: Value to process.
+    returns: A CFFI-owned struct address for ctypes and PyArrow.
     """
     return int(ffi.cast("uintptr_t", value))
 
@@ -63,12 +60,10 @@ def import_batch(
     """
     title: Move one PyArrow batch into the native ABI.
     parameters:
-      native:
-        type: ctypes.CDLL
-      batch:
-        type: pa.RecordBatch
-    returns:
-      type: ctypes.c_void_p
+      native: Loaded native runtime used by the ABI test.
+      batch: Batch.
+    returns: 'Result of this operation: move one PyArrow batch into the native
+      ABI.'
     """
     array = ffi.new("struct ArrowArray *")
     schema = ffi.new("struct ArrowSchema *")
@@ -88,8 +83,8 @@ def import_batch(
 def sample_batch() -> pa.RecordBatch:
     """
     title: Exercise slicing, nulls, UTF-8, timezone and binary metadata.
-    returns:
-      type: pa.RecordBatch
+    returns: 'Result of this operation: exercise slicing, nulls,
+      UTF-8, timezone and binary metadata.'
     """
     schema = pa.schema(
         [
@@ -113,8 +108,7 @@ def test_c_data_lifetime_and_repeated_release(native: ctypes.CDLL) -> None:
     """
     title: Exported buffers survive original handles and guarded releases.
     parameters:
-      native:
-        type: ctypes.CDLL
+      native: Loaded native runtime used by the ABI test.
     """
     expected = sample_batch()
     handle = import_batch(native, expected)
@@ -138,8 +132,7 @@ def test_c_stream_callbacks_and_eos(native: ctypes.CDLL) -> None:
     """
     title: Schema and batch outputs outlive the stream and EOS is released.
     parameters:
-      native:
-        type: ctypes.CDLL
+      native: Loaded native runtime used by the ABI test.
     """
     handle = import_batch(native, sample_batch())
     stream = ffi.new("struct ArrowArrayStream *")
@@ -165,8 +158,7 @@ def test_c_stream_import_move(native: ctypes.CDLL) -> None:
     """
     title: Imported streams own their producer and yield independent batches.
     parameters:
-      native:
-        type: ctypes.CDLL
+      native: Loaded native runtime used by the ABI test.
     """
     expected = sample_batch()
     producer = pa.RecordBatchReader.from_batches(
@@ -206,12 +198,9 @@ def test_ipc_reader_export_preserves_metadata(
     """
     title: Transfer IPC iteration to PyArrow without losing schema or buffers.
     parameters:
-      native:
-        type: ctypes.CDLL
-      tmp_path:
-        type: Path
-      file_format:
-        type: bool
+      native: Loaded native runtime used by the ABI test.
+      tmp_path: Temporary directory for this test.
+      file_format: Whether to use file format.
     """
     path = tmp_path / "input.arrow"
     expected = sample_batch()
@@ -244,12 +233,9 @@ def test_truncated_stream_is_not_eof(
     """
     title: Missing EOS and interrupted payloads cannot appear successful.
     parameters:
-      native:
-        type: ctypes.CDLL
-      tmp_path:
-        type: Path
-      cut:
-        type: int
+      native: Loaded native runtime used by the ABI test.
+      tmp_path: Temporary directory for this test.
+      cut: Cut.
     """
     expected = sample_batch()
     sink = pa.BufferOutputStream()
@@ -285,8 +271,7 @@ def test_unsupported_import_releases_adopted_buffers(
     """
     title: Unsupported C Data types fail with no live output or leaked buffer.
     parameters:
-      native:
-        type: ctypes.CDLL
+      native: Loaded native runtime used by the ABI test.
     """
     batch = pa.record_batch(
         [pa.array([1], type=pa.duration("us"))], names=["duration"]
@@ -311,8 +296,7 @@ def test_builder_snapshot_preserves_timezone(native: ctypes.CDLL) -> None:
     """
     title: Builders own immutable schemas, including timestamp timezone types.
     parameters:
-      native:
-        type: ctypes.CDLL
+      native: Loaded native runtime used by the ABI test.
     """
     expected_schema = pa.schema(
         [pa.field("when", pa.timestamp("us", tz="UTC"), nullable=False)],
@@ -352,8 +336,7 @@ def test_stream_error_callbacks_and_single_release(
     """
     title: Callback errors stay errors and imported producers release once.
     parameters:
-      native:
-        type: ctypes.CDLL
+      native: Loaded native runtime used by the ABI test.
     """
     releases: list[bool] = []
     error = ffi.new("char[]", b"injected stream failure")
@@ -364,12 +347,10 @@ def test_stream_error_callbacks_and_single_release(
         """
         title: Supply an owned schema from a test producer.
         parameters:
-          stream:
-            type: object
-          out:
-            type: object
-        returns:
-          type: int
+          stream: Stream.
+          out: Out.
+        returns: 'Result of this operation: supply an owned schema from
+          a test producer.'
         """
         schema._export_to_c(address(out))
         return 0
@@ -379,12 +360,10 @@ def test_stream_error_callbacks_and_single_release(
         """
         title: Inject a recoverable C Stream error.
         parameters:
-          stream:
-            type: object
-          out:
-            type: object
-        returns:
-          type: int
+          stream: Stream.
+          out: Out.
+        returns: 'Result of this operation: inject a recoverable C Stream
+          error.'
         """
         return errno.EIO
 
@@ -393,10 +372,9 @@ def test_stream_error_callbacks_and_single_release(
         """
         title: Keep callback error storage alive for the producer lifetime.
         parameters:
-          stream:
-            type: object
-        returns:
-          type: object
+          stream: Stream.
+        returns: 'Result of this operation: keep callback error storage alive
+          for the producer lifetime.'
         """
         return error
 
@@ -405,8 +383,7 @@ def test_stream_error_callbacks_and_single_release(
         """
         title: Count ownership release and mark the C struct released.
         parameters:
-          stream:
-            type: object
+          stream: Stream.
         """
         releases.append(True)
         ffi.cast("struct ArrowArrayStream *", stream).release = ffi.NULL
@@ -441,10 +418,8 @@ def test_writer_rejects_metadata_mismatch(
     """
     title: Native writers do not silently rewrite batch schema metadata.
     parameters:
-      native:
-        type: ctypes.CDLL
-      tmp_path:
-        type: Path
+      native: Loaded native runtime used by the ABI test.
+      tmp_path: Temporary directory for this test.
     """
     expected = sample_batch()
     handle = import_batch(native, expected)
@@ -481,8 +456,7 @@ def test_pipe_reader_borrows_descriptor(native: ctypes.CDLL) -> None:
     """
     title: Byte transport reads pipes and closes only its duplicate descriptor.
     parameters:
-      native:
-        type: ctypes.CDLL
+      native: Loaded native runtime used by the ABI test.
     """
     if os.name != "posix":
         pytest.skip("POSIX descriptors required")
@@ -519,12 +493,9 @@ def test_c_export_rejects_unrepresentable_field_names(
     """
     title: C export must not truncate names that IPC can preserve intact.
     parameters:
-      native:
-        type: ctypes.CDLL
-      tmp_path:
-        type: Path
-      nested:
-        type: bool
+      native: Loaded native runtime used by the ABI test.
+      tmp_path: Temporary directory for this test.
+      nested: Whether to use nested.
     """
     if nested:
         values = pa.array([{"bad\x00name": 42}])

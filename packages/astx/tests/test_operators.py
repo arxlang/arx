@@ -171,10 +171,8 @@ def test_aug_assign_operations(operator: OpCodeAugAssign, value: int) -> None:
     """
     title: Test all augmented assignment operators using parametrize.
     parameters:
-      operator:
-        type: OpCodeAugAssign
-      value:
-        type: int
+      operator: Operator to apply.
+      value: Value to process.
     """
     var_x = astx.Identifier(name="x")
     literal_value = LiteralInt32(value)
@@ -200,12 +198,9 @@ def test_aug_assign_rejects_invalid_runtime_inputs(
     """
     title: Compound nodes enforce identifier, opcode, and value contracts.
     parameters:
-      target:
-        type: object
-      operator:
-        type: str
-      value:
-        type: object
+      target: Destination of the operation.
+      operator: Operator to apply.
+      value: Value to process.
     """
     with pytest.raises(TypeCheckError):
         AugAssign(

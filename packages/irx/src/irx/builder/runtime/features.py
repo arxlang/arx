@@ -28,10 +28,8 @@ class ExternalSymbolSpec:
     """
     title: Describe one external symbol exposed by a runtime feature.
     attributes:
-      name:
-        type: str
-      declare:
-        type: RuntimeSymbolFactory
+      name: Name identifying this declaration.
+      declare: Declare.
     """
 
     name: str
@@ -44,20 +42,13 @@ class RuntimeFeature:
     """
     title: Describe one optional native runtime feature.
     attributes:
-      name:
-        type: str
-      symbols:
-        type: Mapping[str, ExternalSymbolSpec]
-      artifacts:
-        type: tuple[NativeArtifact, Ellipsis]
-      linker_flags:
-        type: tuple[str, Ellipsis]
-      metadata:
-        type: Mapping[str, object]
-      dependencies:
-        type: tuple[str, Ellipsis]
-      unavailable_reason:
-        type: str | None
+      name: Name identifying this declaration.
+      symbols: Symbols.
+      artifacts: Artifacts.
+      linker_flags: Linker flags.
+      metadata: Metadata associated with the operation.
+      dependencies: Dependencies.
+      unavailable_reason: Unavailable reason.
     """
 
     name: str
@@ -87,14 +78,11 @@ def declare_external_function(
     """
     title: Declare or reuse an external function in an LLVM module.
     parameters:
-      module:
-        type: ir.Module
-      name:
-        type: str
-      fn_type:
-        type: ir.FunctionType
-    returns:
-      type: ir.Function
+      module: Module to process.
+      name: Name identifying the declaration or operation.
+      fn_type: Type of fn.
+    returns: 'Result of this operation: declare or reuse an external function
+      in an LLVM module.'
     """
     existing = module.globals.get(name)
     if existing is not None:

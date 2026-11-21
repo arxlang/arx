@@ -26,16 +26,11 @@ class LiteralListScenario:
     """
     title: One positive LiteralList lowering scenario.
     attributes:
-      elements_factory:
-        type: Callable[[], list[astx.Literal]]
-      requires_live_builder:
-        type: bool
-      expected_length:
-        type: int
-      expected_element_type:
-        type: ir.Type
-      expected_values:
-        type: list[int | float]
+      elements_factory: Elements factory.
+      requires_live_builder: Whether to use requires live builder.
+      expected_length: Expected length.
+      expected_element_type: Type of expected element.
+      expected_values: Expected values.
     """
 
     elements_factory: Callable[[], list[astx.Literal]]
@@ -49,10 +44,8 @@ def _constant_scalars(const: ir.Constant) -> list[int | float]:
     """
     title: Extract scalar values from an array constant payload.
     parameters:
-      const:
-        type: ir.Constant
-    returns:
-      type: list[int | float]
+      const: Const.
+    returns: Extracted scalar values from an array constant payload.
     """
     items = cast(list[ir.Constant], const.constant)
     return [cast(int | float, item.constant) for item in items]
@@ -147,10 +140,8 @@ def test_literal_list_positive_scenarios(
     """
     title: LiteralList should lower expected array constants across scenarios.
     parameters:
-      request:
-        type: pytest.FixtureRequest
-      scenario:
-        type: LiteralListScenario
+      request: Fixture request providing the current test context.
+      scenario: Scenario.
     """
     fixture_name = (
         "llvm_visitor_in_function"
@@ -182,8 +173,7 @@ def test_literal_list_incompatible_types_raise(
     """
     title: Incompatible LiteralList element types should raise TypeError.
     parameters:
-      llvm_visitor_in_function:
-        type: LLVMVisitor
+      llvm_visitor_in_function: LLVM visitor in function.
     """
     with pytest.raises(
         TypeError, match="LiteralList: cannot find common type"

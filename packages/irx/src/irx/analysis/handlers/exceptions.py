@@ -39,10 +39,9 @@ def exception_source_nodes(node: astx.AST) -> Iterator[astx.AST]:
     """
     title: Inspect one exceptional region without crossing nested functions.
     parameters:
-      node:
-        type: astx.AST
-    returns:
-      type: Iterator[astx.AST]
+      node: Syntax node to process.
+    returns: 'Result of this operation: inspect one exceptional region without
+      crossing nested functions.'
     """
     if isinstance(node, astx.FunctionDef):
         return
@@ -64,12 +63,9 @@ class ExceptionVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Reject exceptional-path accesses to unavailable owned bindings.
         parameters:
-          node:
-            type: astx.AST
-          symbols:
-            type: set[str]
-          message:
-            type: str
+          node: Syntax node to process.
+          symbols: Symbols.
+          message: Diagnostic or output message.
         """
         for child in exception_source_nodes(node):
             if isinstance(child, astx.Identifier):
@@ -88,10 +84,9 @@ class ExceptionVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Require an ordinary instance of a registered exception subtype.
         parameters:
-          node:
-            type: astx.Expr
-        returns:
-          type: ResolvedExceptionType | None
+          node: Syntax node to process.
+        returns: 'Result of this operation: require an ordinary instance
+          of a registered exception subtype.'
         """
         self.visit(node)
         value_type = self._expr_type(node)
@@ -115,10 +110,9 @@ class ExceptionVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Resolve nominal type references using ordinary lexical bindings.
         parameters:
-          node:
-            type: astx.Expr
-        returns:
-          type: ResolvedExceptionType | None
+          node: Syntax node to process.
+        returns: Resolved nominal type references using ordinary lexical
+          bindings.
         """
         class_: SemanticClass | None = None
         if isinstance(node, astx.Identifier):
@@ -150,8 +144,7 @@ class ExceptionVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Resolve explicit raises and dynamic bare re-raises.
         parameters:
-          node:
-            type: astx.ThrowStmt
+          node: Syntax node to process.
         """
         info = self._semantic(node)
         info.resolved_raise = None
@@ -190,8 +183,7 @@ class ExceptionVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Bind a handler-local owned reference and validate its body.
         parameters:
-          node:
-            type: astx.CatchHandlerStmt
+          node: Syntax node to process.
         """
         info = self._semantic(node)
         info.resolved_exception_handler = None
@@ -270,8 +262,7 @@ class ExceptionVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Validate a finalizer in its own lexical initialization scope.
         parameters:
-          node:
-            type: astx.FinallyHandlerStmt
+          node: Syntax node to process.
         """
         self._set_type(node, None)
         self._semantic(node).flow_outcomes = flow_outcomes(node)
@@ -289,8 +280,7 @@ class ExceptionVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Validate ordered handlers and isolated exceptional scopes.
         parameters:
-          node:
-            type: astx.ExceptionHandlerStmt
+          node: Syntax node to process.
         """
         info = self._semantic(node)
         info.resolved_try = None

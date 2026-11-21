@@ -1,8 +1,8 @@
 """
 title: Expression-oriented semantic visitors.
-summary: >-
-  Resolve lexical identifiers, visible function names, and expression typing
-  rules while delegating the implementation to smaller concern-focused mixins.
+summary: Resolve lexical identifiers, visible function names, and expression
+  typing rules while delegating the implementation to smaller concern-focused
+  mixins.
 """
 
 from __future__ import annotations
@@ -51,7 +51,7 @@ class ExpressionVisitorMixin(
 ):
     """
     title: Expression-oriented semantic visitors.
-    summary: >-
-      Compose the expression-focused semantic mixins so the analyzer keeps the
-      same visitor surface while the implementation stays split by concern.
+    summary: Compose the expression-focused semantic mixins so the analyzer
+      keeps the same visitor surface while the implementation stays split
+      by concern.
     """

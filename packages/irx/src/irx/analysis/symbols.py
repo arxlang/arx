@@ -1,7 +1,7 @@
 """
 title: Variable-symbol helpers for semantic analysis.
-summary: >-
-  Build variable-like semantic symbols that need local-style qualified names.
+summary: Build variable-like semantic symbols that need local-style qualified
+  names.
 """
 
 from __future__ import annotations
@@ -31,22 +31,14 @@ def variable_symbol(
     """
     title: Create a variable-like symbol.
     parameters:
-      symbol_id:
-        type: str
-      module_key:
-        type: ModuleKey
-      name:
-        type: str
-      type_:
-        type: astx.DataType
-      is_mutable:
-        type: bool
-      declaration:
-        type: astx.AST | None
-      kind:
-        type: str
-    returns:
-      type: SemanticSymbol
+      symbol_id: Identifier for symbol.
+      module_key: Canonical module identity.
+      name: Name identifying the declaration or operation.
+      type_: Type expression to process.
+      is_mutable: Whether is mutable.
+      declaration: Declaration being processed.
+      kind: Kind of value or operation.
+    returns: Created a variable-like symbol.
     """
     return SemanticSymbol(
         symbol_id=symbol_id,

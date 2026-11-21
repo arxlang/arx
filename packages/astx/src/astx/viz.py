@@ -1,9 +1,8 @@
 """
 title: AST graphic representation Module.
-summary: >-
-  This module provides utilities for converting an Abstract Syntax Tree (AST)
-  to Mermaid for inline display in Jupyter (Lab ≥4.1 / NB ≥7.1) and to ASCII
-  via the `mermaid-ascii` CLI.
+summary: This module provides utilities for converting an Abstract Syntax
+  Tree (AST) to Mermaid for inline display in Jupyter (Lab ≥4.1 / NB ≥7.1)
+  and to ASCII via the `mermaid-ascii` CLI.
 """
 
 from __future__ import annotations
@@ -25,14 +24,10 @@ def _stable_id(label: str, ref: str, content: object) -> str:
     """
     title: Build a stable-ish node id from label/ref/content.
     parameters:
-      label:
-        type: str
-      ref:
-        type: str
-      content:
-        type: object
-    returns:
-      type: str
+      label: Label.
+      ref: Identifier associated with this node.
+      content: Content to process.
+    returns: Constructed a stable-ish node id from label/ref/content.
     """
     h = hashlib.md5(
         f"{label}|{ref}|{type(content).__name__}|{content!r}".encode(),
@@ -45,10 +40,9 @@ def _esc_mermaid_label(s: str) -> str:
     """
     title: Escape quotes for Mermaid labels (image/Jupyter path).
     parameters:
-      s:
-        type: str
-    returns:
-      type: str
+      s: S.
+    returns: 'Result of this operation: escape quotes for Mermaid labels
+      (image/Jupyter path).'
     """
     return str(s).replace('"', r"\"")
 
@@ -61,25 +55,28 @@ def _traverse_ast_to_mermaid(
 ) -> str:
     """
     title: Convert AST to Mermaid.
-    summary: |-
+    summary: >2-
 
       Parameters
+
       ----------
+
       direction : "TD" | "LR"
+
       Layout direction.
+
       named_items : bool
+
       If True, emit `ID["Label"]` node declarations and quoted edge labels
+
       (best for Jupyter/image). If False, emit plain identifiers and pipe
+
       edge labels (compatible with mermaid-ascii).
     parameters:
-      ast:
-        type: ReprStruct
-      direction:
-        type: Direction
-      named_items:
-        type: bool
-    returns:
-      type: str
+      ast: AST.
+      direction: Direction.
+      named_items: Whether to use named items.
+    returns: Converted aST to Mermaid.
     """
     if direction not in ("TD", "LR"):
         raise ValueError('direction must be "TD" or "LR"')
@@ -94,12 +91,9 @@ def _traverse_ast_to_mermaid(
         """
         title: Walk one repr subtree and append Mermaid edges.
         parameters:
-          node:
-            type: ReprStruct
-          parent_id:
-            type: Optional[str]
-          carry_edge_label:
-            type: str
+          node: Syntax node to process.
+          parent_id: Identifier for parent.
+          carry_edge_label: Carry edge label.
         """
         if not isinstance(node, dict):
             return
@@ -162,27 +156,23 @@ def ast_to_mermaid(ast: ReprStruct, direction: Direction = "TD") -> str:
     """
     title: Mermaid for Jupyter/image (uses named items).
     parameters:
-      ast:
-        type: ReprStruct
-      direction:
-        type: Direction
-    returns:
-      type: str
+      ast: AST.
+      direction: Direction.
+    returns: 'Result of this operation: mermaid for Jupyter/image (uses named
+      items).'
     """
     return _traverse_ast_to_mermaid(ast, direction=direction, named_items=True)
 
 
 def ast_to_mermaid_ascii(ast: ReprStruct, direction: Direction = "TD") -> str:
     """
-    title: >-
-      Mermaid tailored for mermaid-ascii, no named items, pipe edge labels.
+    title: Mermaid tailored for mermaid-ascii, no named items, pipe edge
+      labels.
     parameters:
-      ast:
-        type: ReprStruct
-      direction:
-        type: Direction
-    returns:
-      type: str
+      ast: AST.
+      direction: Direction.
+    returns: 'Result of this operation: mermaid tailored for mermaid-ascii,
+      no named items, pipe edge labels.'
     """
     return _traverse_ast_to_mermaid(
         ast, direction=direction, named_items=False
@@ -193,10 +183,8 @@ def visualize_image(ast: ReprStruct, direction: Direction = "TD") -> None:
     """
     title: Display the AST as Mermaid inline in Jupyter (Lab ≥4.1 / NB ≥7.1).
     parameters:
-      ast:
-        type: ReprStruct
-      direction:
-        type: Direction
+      ast: AST.
+      direction: Direction.
     """
     _display(  # type: ignore
         {"text/vnd.mermaid": ast_to_mermaid(ast, direction=direction)},
@@ -207,8 +195,7 @@ def visualize_image(ast: ReprStruct, direction: Direction = "TD") -> None:
 def _find_mermaid_ascii() -> Optional[str]:
     """
     title: Resolve the `mermaid-ascii` CLI path or return None.
-    returns:
-      type: Optional[str]
+    returns: Resolved the `mermaid-ascii` CLI path or return None.
     """
     return shutil.which("mermaid-ascii") or shutil.which("mermaid-ascii.exe")
 
@@ -225,30 +212,24 @@ def visualize_ascii(
 ) -> str:
     """
     title: Render the AST to ASCII using the `mermaid-ascii` CLI.
-    summary: |-
+    summary: >2-
 
       For maximum compatibility, this uses an ASCII-friendly Mermaid form:
+
       - no named items (node text is the identifier)
+
       - pipe-labeled edges (--> |label| ...)
     parameters:
-      ast:
-        type: ReprStruct
-      timeout:
-        type: int
-      direction:
-        type: Direction
-      width:
-        type: Optional[int]
-      border_padding:
-        type: Optional[int]
-      padding_x:
-        type: Optional[int]
-      padding_y:
-        type: Optional[int]
-      ascii_only:
-        type: bool
-    returns:
-      type: str
+      ast: AST.
+      timeout: Time limit for the operation.
+      direction: Direction.
+      width: Bit width or display width.
+      border_padding: Border padding.
+      padding_x: Padding x.
+      padding_y: Padding y.
+      ascii_only: Whether to use ascii only.
+    returns: 'Result of this operation: render the AST to ASCII using the
+      `mermaid-ascii` CLI.'
     """
     exe = _find_mermaid_ascii()
     if exe is None:

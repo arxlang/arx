@@ -1,8 +1,7 @@
 """
 title: ASTx collection helper AST nodes.
-summary: >-
-  Group ASTx collection-oriented AST helpers behind one stable package boundary
-  while re-exporting the current public node names.
+summary: Group ASTx collection-oriented AST helpers behind one stable package
+  boundary while re-exporting the current public node names.
 """
 
 from __future__ import annotations

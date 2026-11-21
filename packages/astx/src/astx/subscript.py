@@ -27,24 +27,14 @@ class SubscriptExpr(DataType):
     """
     title: AST class for subscript expressions.
     attributes:
-      kind:
-        type: ASTKind
-      type_:
-        type: DataType
-      value:
-        type: Expr
-      index:
-        type: Expr
-      lower:
-        type: Expr
-      upper:
-        type: Expr
-      step:
-        type: Expr
-      is_slice:
-        type: bool
-        description: >-
-          Distinguish omitted slice bounds from an explicit none index.
+      kind: Kind of value or operation.
+      type_: Type associated with this expression.
+      value: Stored value.
+      index: Index selecting the item.
+      lower: Lower bound.
+      upper: Upper bound.
+      step: Iteration stride.
+      is_slice: Distinguish omitted slice bounds from an explicit none index.
     """
 
     kind: ASTKind
@@ -69,40 +59,49 @@ class SubscriptExpr(DataType):
     ) -> None:
         """
         title: Initialize the SubscriptExpr instance.
-        summary: |-
+        summary: >2-
 
           Parameters
+
           ----------
+
           value: Expr
+
           The expression representing the object being indexed (e.g.,
+
           an array or list).
+
           index (optional): Expr
+
           The index of the variable.
+
           lower (optional): Expr
+
           The lower bound of the slice (inclusive).
+
           upper (optional): Expr
+
           The upper bound of the slice (exclusive).
+
           step (optional): Expr
+
           The step size for the slice.
+
           loc: SourceLocation
+
           The source location of the expression.
+
           parent (optional): ASTNodes
+
           The parent AST node.
         parameters:
-          value:
-            type: Expr
-          index:
-            type: Optional[Expr]
-          lower:
-            type: Optional[Expr]
-          upper:
-            type: Optional[Expr]
-          step:
-            type: Optional[Expr]
-          loc:
-            type: SourceLocation
-          parent:
-            type: Optional[ASTNodes]
+          value: Value to process.
+          index: Index selecting the item.
+          lower: Lower bound.
+          upper: Upper bound.
+          step: Iteration stride.
+          loc: Source coordinates associated with the node.
+          parent: Parent node or enclosing scope.
         """
         super().__init__(loc=loc, parent=parent)
         self.is_slice = index is None or any(
@@ -127,8 +126,7 @@ class SubscriptExpr(DataType):
     def __str__(self) -> str:
         """
         title: Return a string that represents the object.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         if not self.is_slice:
             return f"SubscriptExpr({self.value}[{self.index}])"
@@ -152,10 +150,8 @@ class SubscriptExpr(DataType):
         """
         title: Return the AST structure of the object.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: DictDataTypesStruct
+          simplified: Whether to request the compact representation.
+        returns: The AST structure of the object.
         """
         value_dict: ReprStruct = {"indexed": self.value.get_struct(simplified)}
 
@@ -187,10 +183,8 @@ class SubscriptExpr(DataType):
         """
         title: Return the AST structure of the object.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         key = "SubscriptExpr"
         value = self._get_struct_wrapper(simplified)
@@ -204,8 +198,7 @@ class Ellipsis(Expr):
     """
     title: AST class for Ellipsis expressions.
     attributes:
-      kind:
-        type: ASTKind
+      kind: Kind of value or operation.
     """
 
     kind: ASTKind
@@ -218,10 +211,8 @@ class Ellipsis(Expr):
         """
         title: Initialize the ellipsis expression.
         parameters:
-          loc:
-            type: SourceLocation
-          parent:
-            type: Optional[ASTNodes]
+          loc: Source coordinates associated with the node.
+          parent: Parent node or enclosing scope.
         """
         super().__init__(loc=loc, parent=parent)
         self.kind = ASTKind.EllipsisKind
@@ -230,10 +221,8 @@ class Ellipsis(Expr):
         """
         title: Return the AST structure of the object.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         key = str(self)
         value: DictDataTypesStruct = {}

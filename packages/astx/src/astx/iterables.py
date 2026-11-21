@@ -1,8 +1,8 @@
 """
 title: ASTx iterable AST nodes.
-summary: >-
-  Provide small facade nodes for iterable constructs that are not yet present
-  in upstream ASTx but are needed by semantic analysis and lowering.
+summary: Provide small facade nodes for iterable constructs that
+  are not yet present in upstream ASTx but are needed by semantic
+  analysis and lowering.
 """
 
 from __future__ import annotations
@@ -20,16 +20,13 @@ from astx.tools.typing import typechecked
 class ForInLoopStmt(astx.StatementType):
     """
     title: Internal for-in statement node.
-    summary: >-
-      Model source forms equivalent to ``for target in iterable: body`` while
-      preserving ASTx-compatible target, iterable, and body child nodes.
+    summary: 'Model source forms equivalent to ``for target in iterable:
+      body`` while preserving ASTx-compatible target, iterable, and body
+      child nodes.'
     attributes:
-      target:
-        type: astx.AST
-      iterable:
-        type: astx.AST
-      body:
-        type: astx.Block
+      target: Destination of the operation.
+      iterable: Iterable.
+      body: Statements forming the body.
     """
 
     target: astx.AST
@@ -47,16 +44,11 @@ class ForInLoopStmt(astx.StatementType):
         """
         title: Initialize one for-in statement.
         parameters:
-          target:
-            type: astx.AST
-          iterable:
-            type: astx.AST
-          body:
-            type: astx.Block
-          loc:
-            type: SourceLocation
-          parent:
-            type: astx.ASTNodes | None
+          target: Destination of the operation.
+          iterable: Iterable.
+          body: Statements forming the body.
+          loc: Source coordinates associated with the node.
+          parent: Parent node or enclosing scope.
         """
         super().__init__(loc=loc, parent=parent)
         self.target = target
@@ -66,8 +58,7 @@ class ForInLoopStmt(astx.StatementType):
     def __str__(self) -> str:
         """
         title: Return a compact display string.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         return "ForInLoopStmt"
 
@@ -75,10 +66,8 @@ class ForInLoopStmt(astx.StatementType):
         """
         title: Return the structured representation.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         key = (
             f"FOR-IN-LOOP-STMT[{id(self)}]"
@@ -100,14 +89,11 @@ class ForInLoopStmt(astx.StatementType):
 class DictComprehension(astx.Comprehension):
     """
     title: Internal dictionary comprehension node.
-    summary: >-
-      Represent ``{key: value for ...}`` until upstream ASTx exposes a
-      canonical dictionary-comprehension expression node.
+    summary: 'Represent ``{key: value for ...}`` until upstream ASTx exposes
+      a canonical dictionary-comprehension expression node.'
     attributes:
-      key:
-        type: astx.Expr
-      value:
-        type: astx.Expr
+      key: Key selecting the entry.
+      value: Stored value.
     """
 
     key: astx.Expr
@@ -127,18 +113,11 @@ class DictComprehension(astx.Comprehension):
         """
         title: Initialize one dictionary comprehension.
         parameters:
-          key:
-            type: astx.Expr
-          value:
-            type: astx.Expr
-          generators:
-            type: >-
-              astx.ASTNodes[astx.ComprehensionClause] |
-              Iterable[astx.ComprehensionClause]
-          loc:
-            type: SourceLocation
-          parent:
-            type: astx.ASTNodes | None
+          key: Key selecting the entry.
+          value: Value to process.
+          generators: Generators.
+          loc: Source coordinates associated with the node.
+          parent: Parent node or enclosing scope.
         """
         super().__init__(generators=generators, loc=loc, parent=parent)
         self.key = key
@@ -147,8 +126,7 @@ class DictComprehension(astx.Comprehension):
     def __str__(self) -> str:
         """
         title: Return a compact display string.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         return "DictComprehension"
 
@@ -156,10 +134,8 @@ class DictComprehension(astx.Comprehension):
         """
         title: Return the structured representation.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         key = f"{self}#{id(self)}" if simplified else str(self)
         generators = (

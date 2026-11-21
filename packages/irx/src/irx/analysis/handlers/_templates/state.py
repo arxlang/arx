@@ -1,8 +1,7 @@
 """
 title: Template-specialization state helpers.
-summary: >-
-  Reset template-analysis state and manage AST-side metadata used across
-  specialization generation.
+summary: Reset template-analysis state and manage AST-side metadata
+  used across specialization generation.
 """
 
 from __future__ import annotations
@@ -36,8 +35,7 @@ class TemplateStateVisitorMixin(TemplateSupportVisitorMixin):
         """
         title: Remove semantic sidecars from one cloned AST subtree.
         parameters:
-          node:
-            type: astx.AST
+          node: Syntax node to process.
         """
         seen: set[int] = set()
 
@@ -45,8 +43,7 @@ class TemplateStateVisitorMixin(TemplateSupportVisitorMixin):
             """
             title: Clear semantic sidecars from one reachable AST node.
             parameters:
-              current:
-                type: astx.AST
+              current: Current.
             """
             current_id = id(current)
             if current_id in seen:
@@ -69,8 +66,7 @@ class TemplateStateVisitorMixin(TemplateSupportVisitorMixin):
         """
         title: Reset per-run template state attached to one module AST.
         parameters:
-          module:
-            type: astx.Module
+          module: Module to process.
         """
         astx.clear_generated_template_nodes(module)
         seen: set[int] = set()
@@ -79,8 +75,7 @@ class TemplateStateVisitorMixin(TemplateSupportVisitorMixin):
             """
             title: Clear template-analysis markers from one reachable AST node.
             parameters:
-              current:
-                type: astx.AST
+              current: Current.
             """
             current_id = id(current)
             if current_id in seen:
@@ -109,13 +104,11 @@ class TemplateStateVisitorMixin(TemplateSupportVisitorMixin):
         bindings: dict[str, astx.DataType],
     ) -> None:
         """
-        title: >-
-          Substitute template types throughout one cloned function subtree.
+        title: Substitute template types throughout one cloned function
+          subtree.
         parameters:
-          node:
-            type: astx.AST
-          bindings:
-            type: dict[str, astx.DataType]
+          node: Syntax node to process.
+          bindings: Bindings.
         """
         for attribute in ("type_", "element_type"):
             declared = getattr(node, attribute, None)
@@ -206,10 +199,8 @@ class TemplateStateVisitorMixin(TemplateSupportVisitorMixin):
         """
         title: Return the owning AST module for one semantic function.
         parameters:
-          function:
-            type: SemanticFunction
-        returns:
-          type: astx.Module | None
+          function: Function to process.
+        returns: The owning AST module for one semantic function.
         """
         if (
             self.session is not None
@@ -232,13 +223,11 @@ class TemplateStateVisitorMixin(TemplateSupportVisitorMixin):
         function: SemanticFunction,
     ) -> bool:
         """
-        title: >-
-          Return whether one template function already prepared its clones.
+        title: Return whether one template function already prepared its
+          clones.
         parameters:
-          function:
-            type: SemanticFunction
-        returns:
-          type: bool
+          function: Function to process.
+        returns: Whether one template function already prepared its clones.
         """
         carrier = function.definition or function.prototype
         return bool(getattr(carrier, _TEMPLATE_PREPARED_ATTR, False))
@@ -250,8 +239,7 @@ class TemplateStateVisitorMixin(TemplateSupportVisitorMixin):
         """
         title: Mark one template function as having prepared its clones.
         parameters:
-          function:
-            type: SemanticFunction
+          function: Function to process.
         """
         carrier = function.definition or function.prototype
         setattr(carrier, _TEMPLATE_PREPARED_ATTR, True)

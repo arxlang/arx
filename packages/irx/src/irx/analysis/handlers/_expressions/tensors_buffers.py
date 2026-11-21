@@ -1,8 +1,7 @@
 """
 title: Expression-oriented tensor and buffer-view visitors.
-summary: >-
-  Compose the tensor and buffer-view visitor overloads into the public tensor-
-  and-buffer expression mixin.
+summary: Compose the tensor and buffer-view visitor overloads into the public
+  tensor- and-buffer expression mixin.
 """
 
 from __future__ import annotations

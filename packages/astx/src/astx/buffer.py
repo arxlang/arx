@@ -1,8 +1,8 @@
 """
 title: ASTx low-level buffer AST nodes.
-summary: >-
-  Provide internal nodes that host compilers can target for the buffer/view
-  substrate without defining a user-facing array API.
+summary: Provide internal nodes that host compilers can target for
+  the buffer/view substrate without defining a user-facing array
+  API.
 """
 
 from __future__ import annotations
@@ -32,8 +32,7 @@ class BufferOwnerType(OpaqueHandleType):
     def __str__(self) -> str:
         """
         title: Render the buffer owner type.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         return "BufferOwnerType"
 
@@ -43,8 +42,7 @@ class BufferViewType(AnyType):
     """
     title: Internal canonical low-level buffer view descriptor type.
     attributes:
-      element_type:
-        type: astx.DataType | None
+      element_type: Type of each element.
     """
 
     element_type: astx.DataType | None
@@ -53,8 +51,7 @@ class BufferViewType(AnyType):
         """
         title: Initialize a buffer view descriptor type.
         parameters:
-          element_type:
-            type: astx.DataType | None
+          element_type: Type of each element.
         """
         super().__init__()
         self.element_type = element_type
@@ -62,8 +59,7 @@ class BufferViewType(AnyType):
     def __str__(self) -> str:
         """
         title: Render the buffer view type.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         if self.element_type is None:
             return "BufferViewType"
@@ -75,10 +71,8 @@ class BufferViewDescriptor(astx.base.DataType):
     """
     title: Internal low-level buffer view descriptor literal.
     attributes:
-      metadata:
-        type: Any
-      type_:
-        type: BufferViewType
+      metadata: Metadata associated with the operation.
+      type_: Type associated with this expression.
     """
 
     metadata: Any
@@ -92,10 +86,8 @@ class BufferViewDescriptor(astx.base.DataType):
         """
         title: Initialize one buffer view descriptor.
         parameters:
-          metadata:
-            type: Any
-          element_type:
-            type: astx.DataType | None
+          metadata: Metadata associated with the operation.
+          element_type: Type of each element.
         """
         super().__init__()
         self.metadata = metadata
@@ -105,10 +97,8 @@ class BufferViewDescriptor(astx.base.DataType):
         """
         title: Return the structured representation.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: astx.base.ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         _ = simplified
         return self._prepare_struct(
@@ -122,16 +112,13 @@ class BufferViewDescriptor(astx.base.DataType):
 class BufferViewIndex(astx.base.DataType):
     """
     title: Internal low-level indexed read through a buffer view.
-    summary: >-
-      Reads one scalar element by computing offset_bytes plus the sum of
-      index*stride byte offsets over the canonical buffer view descriptor.
+    summary: Reads one scalar element by computing offset_bytes plus
+      the sum of index*stride byte offsets over the canonical buffer
+      view descriptor.
     attributes:
-      base:
-        type: astx.AST
-      indices:
-        type: list[astx.AST]
-      type_:
-        type: astx.DataType
+      base: Base value or declaration.
+      indices: Indices.
+      type_: Type associated with this expression.
     """
 
     base: astx.AST
@@ -146,10 +133,8 @@ class BufferViewIndex(astx.base.DataType):
         """
         title: Initialize one low-level indexed read.
         parameters:
-          base:
-            type: astx.AST
-          indices:
-            type: Sequence[astx.AST]
+          base: Base value or declaration.
+          indices: Indices.
         """
         super().__init__()
         if not indices:
@@ -164,10 +149,8 @@ class BufferViewIndex(astx.base.DataType):
         """
         title: Return the structured representation.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: astx.base.ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         value = {
             "base": self.base.get_struct(simplified),
@@ -186,18 +169,13 @@ class BufferViewIndex(astx.base.DataType):
 class BufferViewStore(astx.base.DataType):
     """
     title: Internal low-level indexed store through a buffer view.
-    summary: >-
-      Stores one scalar element by computing the canonical descriptor element
-      address. This is not a user-facing array mutation API.
+    summary: Stores one scalar element by computing the canonical descriptor
+      element address. This is not a user-facing array mutation API.
     attributes:
-      base:
-        type: astx.AST
-      indices:
-        type: list[astx.AST]
-      value:
-        type: astx.AST
-      type_:
-        type: astx.Int32
+      base: Base value or declaration.
+      indices: Indices.
+      value: Stored value.
+      type_: Type associated with this expression.
     """
 
     base: astx.AST
@@ -214,12 +192,9 @@ class BufferViewStore(astx.base.DataType):
         """
         title: Initialize one low-level indexed store.
         parameters:
-          base:
-            type: astx.AST
-          indices:
-            type: Sequence[astx.AST]
-          value:
-            type: astx.AST
+          base: Base value or declaration.
+          indices: Indices.
+          value: Value to process.
         """
         super().__init__()
         if not indices:
@@ -235,10 +210,8 @@ class BufferViewStore(astx.base.DataType):
         """
         title: Return the structured representation.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: astx.base.ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         value = {
             "base": self.base.get_struct(simplified),
@@ -258,18 +231,14 @@ class BufferViewStore(astx.base.DataType):
 class BufferViewWrite(astx.base.DataType):
     """
     title: Internal low-level raw byte write through a buffer view.
-    summary: >-
-      Writes one 8-bit integer at offset_bytes + byte_offset. This is not a
-      generic typed element store or user-facing array mutation API.
+    summary: Writes one 8-bit integer at offset_bytes + byte_offset. This
+      is not a generic typed element store or user-facing array mutation
+      API.
     attributes:
-      view:
-        type: astx.AST
-      value:
-        type: astx.AST
-      byte_offset:
-        type: int
-      type_:
-        type: astx.Int32
+      view: View.
+      value: Stored value.
+      byte_offset: Byte offset.
+      type_: Type associated with this expression.
     """
 
     view: astx.AST
@@ -287,12 +256,9 @@ class BufferViewWrite(astx.base.DataType):
         """
         title: Initialize one low-level view write.
         parameters:
-          view:
-            type: astx.AST
-          value:
-            type: astx.AST
-          byte_offset:
-            type: int
+          view: View.
+          value: Value to process.
+          byte_offset: Byte offset.
         """
         super().__init__()
         self.view = view
@@ -304,10 +270,8 @@ class BufferViewWrite(astx.base.DataType):
         """
         title: Return the structured representation.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: astx.base.ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         value = {
             "view": self.view.get_struct(simplified),
@@ -326,10 +290,8 @@ class BufferViewRetain(astx.base.DataType):
     """
     title: Internal explicit runtime retain for a buffer view owner.
     attributes:
-      view:
-        type: astx.AST
-      type_:
-        type: astx.Int32
+      view: View.
+      type_: Type associated with this expression.
     """
 
     view: astx.AST
@@ -339,8 +301,7 @@ class BufferViewRetain(astx.base.DataType):
         """
         title: Initialize one buffer retain helper call.
         parameters:
-          view:
-            type: astx.AST
+          view: View.
         """
         super().__init__()
         self.view = view
@@ -350,10 +311,8 @@ class BufferViewRetain(astx.base.DataType):
         """
         title: Return the structured representation.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: astx.base.ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         return self._prepare_struct(
             "BufferViewRetain",
@@ -367,10 +326,8 @@ class BufferViewRelease(astx.base.DataType):
     """
     title: Internal explicit runtime release for a buffer view owner.
     attributes:
-      view:
-        type: astx.AST
-      type_:
-        type: astx.Int32
+      view: View.
+      type_: Type associated with this expression.
     """
 
     view: astx.AST
@@ -380,8 +337,7 @@ class BufferViewRelease(astx.base.DataType):
         """
         title: Initialize one buffer release helper call.
         parameters:
-          view:
-            type: astx.AST
+          view: View.
         """
         super().__init__()
         self.view = view
@@ -391,10 +347,8 @@ class BufferViewRelease(astx.base.DataType):
         """
         title: Return the structured representation.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: astx.base.ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         return self._prepare_struct(
             "BufferViewRelease",

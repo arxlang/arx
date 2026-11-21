@@ -73,12 +73,9 @@ def test_module_scalar_storage_plan(
     """
     title: Module scalar plans preserve contextual constants and null validity.
     parameters:
-      type_:
-        type: astx.DataType
-      value:
-        type: astx.DataType | None
-      expected:
-        type: int | float | bool | None
+      type_: Type expression to process.
+      value: Value to process.
+      expected: Expected result for this case.
     """
     declaration = astx.VariableDeclaration(
         "value",
@@ -124,14 +121,10 @@ def test_module_storage_rejects_unsupported_initializers(
     """
     title: Unused module declarations fail before lowering unsupported storage.
     parameters:
-      type_:
-        type: astx.DataType
-      value:
-        type: astx.DataType | None
-      mutable:
-        type: bool
-      message:
-        type: str
+      type_: Type expression to process.
+      value: Value to process.
+      mutable: Whether to use mutable.
+      message: Diagnostic or output message.
     """
     declaration = astx.VariableDeclaration(
         "value",
@@ -250,10 +243,9 @@ def _module_with_main(*nodes: astx.AST) -> astx.Module:
     title: Module with main.
     parameters:
       nodes:
-        type: astx.AST
         variadic: positional
-    returns:
-      type: astx.Module
+        description: Syntax nodes in source order.
+    returns: 'Result of this operation: module with main.'
     """
     module = astx.Module()
     proto = astx.FunctionPrototype(
@@ -272,10 +264,8 @@ def _semantic(node: astx.AST) -> SemanticInfo:
     """
     title: Semantic.
     parameters:
-      node:
-        type: astx.AST
-    returns:
-      type: SemanticInfo
+      node: Syntax node to process.
+    returns: 'Result of this operation: semantic.'
     """
     return cast(SemanticInfo, getattr(node, "semantic"))
 
@@ -285,10 +275,9 @@ def _block(*nodes: astx.AST) -> astx.Block:
     title: Block.
     parameters:
       nodes:
-        type: astx.AST
         variadic: positional
-    returns:
-      type: astx.Block
+        description: Syntax nodes in source order.
+    returns: 'Result of this operation: block.'
     """
     block = astx.Block()
     for node in nodes:
@@ -303,12 +292,10 @@ def statement_with_body(
     """
     title: Select a statement boundary without giving raw blocks a scope.
     parameters:
-      kind:
-        type: str
-      body:
-        type: astx.Block
-    returns:
-      type: astx.IfStmt | astx.WhileStmt
+      kind: Kind of value or operation.
+      body: Statements forming the body.
+    returns: 'Result of this operation: select a statement boundary without
+      giving raw blocks a scope.'
     """
     if kind == "if":
         return astx.IfStmt(astx.LiteralBoolean(True), body)
@@ -323,14 +310,11 @@ def _with_loc(node: astx.AST, line: int, col: int) -> astx.AST:
     """
     title: Attach a simple source location to one AST node.
     parameters:
-      node:
-        type: astx.AST
-      line:
-        type: int
-      col:
-        type: int
-    returns:
-      type: astx.AST
+      node: Syntax node to process.
+      line: Source line coordinate.
+      col: Source column or column selector.
+    returns: 'Result of this operation: attach a simple source location to
+      one AST node.'
     """
     node.loc = SimpleNamespace(line=line, col=col)
     return node
@@ -391,8 +375,8 @@ def test_unknown_identifier_diagnostic_includes_code_and_location() -> None:
 
 def test_assignment_type_mismatch_reports_expected_and_actual_types() -> None:
     """
-    title: >-
-      Assignment diagnostics should explain both expected and actual types.
+    title: Assignment diagnostics should explain both expected and actual
+      types.
     """
     assignment = _with_loc(
         astx.VariableAssignment("count", astx.LiteralFloat64(1.5)),
@@ -586,8 +570,7 @@ def test_analyze_rejects_duplicate_local_variable_declaration(
     """
     title: Same-body duplicates retain their previous-declaration location.
     parameters:
-      kind:
-        type: str
+      kind: Kind of value or operation.
     """
     body = _block(
         astx.VariableDeclaration(
@@ -650,8 +633,7 @@ def test_statement_body_bindings_shadow_without_leaking(kind: str) -> None:
     """
     title: Sibling declarations and writes use distinct nearest symbol IDs.
     parameters:
-      kind:
-        type: str
+      kind: Kind of value or operation.
     """
     outer = astx.VariableDeclaration(
         "x",
@@ -703,10 +685,8 @@ def test_statement_body_context_restores_after_failure(
     """
     title: Failed body analysis restores lexical, loop, and diagnostic state.
     parameters:
-      kind:
-        type: str
-      monkeypatch:
-        type: pytest.MonkeyPatch
+      kind: Kind of value or operation.
+      monkeypatch: Fixture for temporarily replacing dependencies and settings.
     """
     analyzer = SemanticAnalyzer()
     body = _block()
@@ -716,8 +696,7 @@ def test_statement_body_context_restores_after_failure(
         """
         title: Fail after entering the statement's body context.
         parameters:
-          node:
-            type: astx.AST
+          node: Syntax node to process.
         """
         if node is body:
             assert analyzer.context.scopes.current is not enclosing
@@ -1095,8 +1074,8 @@ def test_analyze_prefers_inner_for_count_scope_symbols() -> None:
 
 def test_preserves_module_qualified_function_struct_and_class_names() -> None:
     """
-    title: >-
-      Test analyze keeps module-qualified function, struct, and class names.
+    title: Test analyze keeps module-qualified function, struct, and class
+      names.
     """
     struct = astx.StructDefStmt(
         name="Point",
@@ -1150,8 +1129,7 @@ def test_analyze_rejects_body_local_after_statement(kind: str) -> None:
     """
     title: Body locals cannot escape, even after a definitely initialized arm.
     parameters:
-      kind:
-        type: str
+      kind: Kind of value or operation.
     """
     statement = statement_with_body(
         kind,
@@ -1271,8 +1249,7 @@ def test_declarations_requiring_initializers_fail_closed(
     """
     title: Direct AST input cannot bypass const or inference initialization.
     parameters:
-      inferred:
-        type: bool
+      inferred: Whether to use inferred.
     """
     declaration = astx.VariableDeclaration(
         "value", astx.InferredType() if inferred else astx.Int32()
@@ -1299,15 +1276,13 @@ def metadata_module(
     call: astx.MethodCall, *, runtime_schema: bool = False
 ) -> astx.Module:
     """
-    title: >-
-      Build a metadata-call body without runtime constructors or native setup.
+    title: Build a metadata-call body without runtime constructors or native
+      setup.
     parameters:
-      call:
-        type: astx.MethodCall
-      runtime_schema:
-        type: bool
-    returns:
-      type: astx.Module
+      call: Call being processed.
+      runtime_schema: Whether to use runtime schema.
+    returns: Constructed a metadata-call body without runtime constructors
+      or native setup.
     """
     type_ = astx.DataFrameType(
         None if runtime_schema else (astx.DataFrameColumn("x", astx.Int32()),)
@@ -1329,13 +1304,11 @@ def test_dataframe_metadata_signature_validation(
     method: str, arguments: str
 ) -> None:
     """
-    title: >-
-      DataFrame metadata signature policy is enforced on generic ASTx input.
+    title: DataFrame metadata signature policy is enforced on generic ASTx
+      input.
     parameters:
-      method:
-        type: str
-      arguments:
-        type: str
+      method: Method.
+      arguments: Arguments supplied to the call.
     """
     call = astx.MethodCall(
         astx.Identifier("rows"),
@@ -1368,10 +1341,8 @@ def test_metadata_reanalysis_discards_stale_normalization(
     """
     title: Validity and receiver changes cannot retain an old canonical count.
     parameters:
-      method:
-        type: str
-      runtime_schema:
-        type: bool
+      method: Method.
+      runtime_schema: Whether to use runtime schema.
     """
     call = astx.MethodCall(astx.Identifier("rows"), method, [])
     module = metadata_module(call, runtime_schema=runtime_schema)

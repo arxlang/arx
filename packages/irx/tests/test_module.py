@@ -15,12 +15,9 @@ def make_fn_add(int_type: type, literal_type: type) -> astx.AST:
     """
     title: Create a fixture for a function add.
     parameters:
-      int_type:
-        type: type
-      literal_type:
-        type: type
-    returns:
-      type: astx.AST
+      int_type: Type of int.
+      literal_type: Literal type used by this case.
+    returns: Created a fixture for a function add.
     """
     var_a = astx.Argument(name="a", type_=int_type(), default=literal_type(1))
     var_b = astx.Argument(name="b", type_=int_type(), default=literal_type(2))
@@ -36,9 +33,10 @@ def make_fn_add(int_type: type, literal_type: type) -> astx.AST:
 
 def make_fn_duplicate_default() -> astx.AST:
     """
-    title: Create one function whose default argument references a prior one.
-    returns:
-      type: astx.AST
+    title: Create one function whose default argument references a prior
+      one.
+    returns: Created one function whose default argument references a prior
+      one.
     """
     value = astx.Argument(name="value", type_=astx.Int32())
     copy = astx.Argument(
@@ -88,16 +86,11 @@ def test_module_fn_main(
     """
     title: Test ASTx Module with a main function and a function called add.
     parameters:
-      action:
-        type: str
-      expected_file:
-        type: str
-      builder_class:
-        type: type[Builder]
-      int_type:
-        type: type
-      literal_type:
-        type: type
+      action: Action.
+      expected_file: File containing expected.
+      builder_class: Builder implementation under test.
+      int_type: Type of int.
+      literal_type: Literal type used by this case.
     """
     builder = builder_class()
 
@@ -127,8 +120,7 @@ def test_function_call_uses_declared_default_argument(
     """
     title: Omitted trailing function arguments should lower through defaults.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     function = make_fn_duplicate_default()

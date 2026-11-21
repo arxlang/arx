@@ -27,14 +27,10 @@ def frame(
     """
     title: Construct a typed column AST without importing the Arx frontend.
     parameters:
-      type_:
-        type: astx.DataType
-      value:
-        type: astx.DataType
-      nullable:
-        type: bool
-    returns:
-      type: astx.VariableDeclaration
+      type_: Type expression to process.
+      value: Value to process.
+      nullable: Whether null values are permitted.
+    returns: Constructed a typed column AST without importing the Arx frontend.
     """
     schema = astx.DataFrameType([astx.DataFrameColumn("x", type_, nullable)])
     values = (value, astx.LiteralNone()) if nullable else (value,)
@@ -47,8 +43,7 @@ def frame(
 def column() -> astx.DataFrameColumnAccess:
     """
     title: Construct an independently resolved column reference.
-    returns:
-      type: astx.DataFrameColumnAccess
+    returns: Constructed an independently resolved column reference.
     """
     return astx.DataFrameColumnAccess(astx.Identifier("frame"), "x")
 
@@ -70,8 +65,7 @@ def test_integer_lowering(literal: Callable[[int], astx.DataType]) -> None:
     """
     title: Encode typed scalars and Series results for every integer width.
     parameters:
-      literal:
-        type: Callable[[int], astx.DataType]
+      literal: Literal.
     """
     value = literal(2)
     type_ = value.type_
@@ -108,10 +102,8 @@ def test_float_lowering(
     """
     title: Floating nullable scalars use bitcasts, not numeric conversions.
     parameters:
-      type_:
-        type: astx.DataType
-      literal:
-        type: Callable[[float], astx.DataType]
+      type_: Type expression to process.
+      literal: Literal.
     """
     optional = astx.NullableType(type_)
     value = astx.Cast(literal(1.5), optional)
@@ -133,8 +125,7 @@ def test_nullable_operators(op: str) -> None:
     """
     title: Resolve arithmetic and comparisons from ASTx nodes alone.
     parameters:
-      op:
-        type: str
+      op: Op.
     """
     optional = astx.NullableType(astx.Int32())
     left = astx.Cast(astx.LiteralNone(), optional)
@@ -151,8 +142,7 @@ def test_boolean_series(op: str) -> None:
     """
     title: Boolean Series use strict eager kernels rather than scalar branches.
     parameters:
-      op:
-        type: str
+      op: Op.
     """
     operation = astx.BinaryOp(op, column(), astx.LiteralBoolean(False))
     filled = astx.NullFill(operation, astx.LiteralBoolean(True))
@@ -252,10 +242,8 @@ def test_nullable_analysis_rejections(
     """
     title: Invalid operators and extraction requests fail before lowering.
     parameters:
-      expression:
-        type: Callable[[], astx.AST]
-      message:
-        type: str
+      expression: Expression to process.
+      message: Diagnostic or output message.
     """
     module = make_main_module(
         frame(astx.Int32(), astx.LiteralInt32(1)),
@@ -317,10 +305,8 @@ def test_declared_storage_rejections(
     """
     title: Direct AST hosts receive the same physical-type validation as Arx.
     parameters:
-      type_:
-        type: astx.DataType
-      message:
-        type: str
+      type_: Type expression to process.
+      message: Diagnostic or output message.
     """
     module = make_main_module(
         astx.VariableDeclaration(
@@ -388,8 +374,7 @@ def test_reduction_lowering(operation: str) -> None:
     """
     title: Resolve each null-skipping numeric reduction before native calls.
     parameters:
-      operation:
-        type: str
+      operation: Operation to resolve or execute.
     """
     reduction = astx.SeriesReduction(operation, column())
     module = make_main_module(
@@ -407,8 +392,7 @@ def test_boolean_reduction_lowering(operation: str) -> None:
     """
     title: Boolean reductions retain nullable result validity.
     parameters:
-      operation:
-        type: str
+      operation: Operation to resolve or execute.
     """
     reduction = astx.SeriesReduction(operation, column())
     module = make_main_module(

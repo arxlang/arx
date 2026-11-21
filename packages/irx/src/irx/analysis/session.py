@@ -1,8 +1,7 @@
 """
 title: Multi-module compilation session management.
-summary: >-
-  Track the reachable parsed-module graph, import edges, diagnostics, and
-  visible bindings for one multi-module analysis run.
+summary: Track the reachable parsed-module graph, import edges, diagnostics,
+  and visible bindings for one multi-module analysis run.
 """
 
 from __future__ import annotations
@@ -36,14 +35,11 @@ _IMPORTABLE_BINDING_KINDS = frozenset({"function", "struct", "class"})
 def _module_import_specifier(node: astx.ImportFromStmt) -> str:
     """
     title: Return the resolver-facing module specifier for import-from nodes.
-    summary: >-
-      Reconstruct the raw module specifier string that should be handed back to
-      the host resolver for a from-import statement.
+    summary: Reconstruct the raw module specifier string that should be handed
+      back to the host resolver for a from-import statement.
     parameters:
-      node:
-        type: astx.ImportFromStmt
-    returns:
-      type: str
+      node: Syntax node to process.
+    returns: The resolver-facing module specifier for import-from nodes.
     """
     return f"{'.' * node.level}{node.module or ''}"
 
@@ -52,14 +48,11 @@ def _module_import_specifier(node: astx.ImportFromStmt) -> str:
 def _declared_importable_names(module: astx.Module) -> set[str]:
     """
     title: Return the directly declared importable names for one module.
-    summary: >-
-      Collect the top-level names that import-from statements may bind without
-      consulting transitive imports.
+    summary: Collect the top-level names that import-from statements may
+      bind without consulting transitive imports.
     parameters:
-      module:
-        type: astx.Module
-    returns:
-      type: set[str]
+      module: Module to process.
+    returns: The directly declared importable names for one module.
     """
     names: set[str] = set()
     for node in module.nodes:
@@ -80,42 +73,25 @@ def _declared_importable_names(module: astx.Module) -> set[str]:
 class CompilationSession:
     """
     title: Shared state for multi-module analysis and lowering.
-    summary: >-
-      Own the loaded module graph and cross-module binding state that analysis
-      and lowering share for one compilation.
+    summary: Own the loaded module graph and cross-module binding state that
+      analysis and lowering share for one compilation.
     attributes:
-      root:
-        type: ParsedModule
-      resolver:
-        type: ImportResolver
-      modules:
-        type: dict[ModuleKey, ParsedModule]
-      graph:
-        type: dict[ModuleKey, set[ModuleKey]]
-      load_order:
-        type: list[ModuleKey]
-      diagnostics:
-        type: DiagnosticBag
-      visible_bindings:
-        type: dict[ModuleKey, dict[str, SemanticBinding]]
-      builtin_features:
-        type: frozenset[str]
-      native_features:
-        type: dict[str, NativeFeature]
-      native_bindings:
-        type: dict[int, tuple[str, Ellipsis]]
-      native_table_io:
-        type: dict[int, TableIOOperation]
-      native_compute:
-        type: dict[int, ComputeKernel]
-      lowering_declarations:
-        type: frozenset[int] | None
-      runtime_exception_types:
-        type: dict[str, ResolvedExceptionType]
-      _resolution_cache:
-        type: dict[tuple[ModuleKey, str], ParsedModule | None]
-      _probe_cache:
-        type: dict[tuple[ModuleKey, str], ParsedModule | None]
+      root: Root module or resource.
+      resolver: Host-supplied module resolver.
+      modules: Modules.
+      graph: Graph.
+      load_order: Load order.
+      diagnostics: Collected structured diagnostics.
+      visible_bindings: Visible bindings.
+      builtin_features: Builtin features.
+      native_features: Native features.
+      native_bindings: Native bindings.
+      native_table_io: Native table I/O.
+      native_compute: Native compute.
+      lowering_declarations: Lowering declarations.
+      runtime_exception_types: Types of runtime exception.
+      _resolution_cache: Resolution cache.
+      _probe_cache: Probe cache.
     """
 
     root: ParsedModule
@@ -148,23 +124,20 @@ class CompilationSession:
     def __post_init__(self) -> None:
         """
         title: Initialize session caches with the root module.
-        summary: >-
-          Seed the session with the root parsed module so graph expansion has
-          an initial node.
+        summary: Seed the session with the root parsed module so
+          graph expansion has an initial node.
         """
         self.register_module(self.root)
 
     def register_module(self, parsed_module: ParsedModule) -> ParsedModule:
         """
         title: Register one parsed module in the session cache.
-        summary: >-
-          Cache a parsed module once and initialize its graph and visible
-          binding slots.
+        summary: Cache a parsed module once and initialize its graph and
+          visible binding slots.
         parameters:
-          parsed_module:
-            type: ParsedModule
-        returns:
-          type: ParsedModule
+          parsed_module: Parsed module.
+        returns: 'Result of this operation: register one parsed module in
+          the session cache.'
         """
         existing = self.modules.get(parsed_module.key)
         if existing is not None:
@@ -190,8 +163,7 @@ class CompilationSession:
         """
         title: Collect consistent native capabilities only from loaded modules.
         parameters:
-          module:
-            type: ParsedModule
+          module: Module to process.
         """
         for feature in module.native_features:
             known_artifacts = {
@@ -234,25 +206,20 @@ class CompilationSession:
     def module(self, module_key: ModuleKey) -> ParsedModule:
         """
         title: Return a parsed module by key.
-        summary: >-
-          Look up a previously-registered parsed module by its canonical host
-          key.
+        summary: Look up a previously-registered parsed module by its canonical
+          host key.
         parameters:
-          module_key:
-            type: ModuleKey
-        returns:
-          type: ParsedModule
+          module_key: Canonical module identity.
+        returns: A parsed module by key.
         """
         return self.modules[module_key]
 
     def ordered_modules(self) -> list[ParsedModule]:
         """
         title: Return parsed modules in stable dependency order.
-        summary: >-
-          Materialize the dependency-ordered module list used by later semantic
-          and lowering passes.
-        returns:
-          type: list[ParsedModule]
+        summary: Materialize the dependency-ordered module list used by later
+          semantic and lowering passes.
+        returns: Parsed modules in stable dependency order.
         """
         return [self.modules[module_key] for module_key in self.load_order]
 
@@ -264,18 +231,14 @@ class CompilationSession:
     ) -> ParsedModule | None:
         """
         title: Resolve one import request through the host resolver.
-        summary: >-
-          Call the host resolver once per import request, memoizing both
-          successes and failures.
+        summary: Call the host resolver once per import request, memoizing
+          both successes and failures.
         parameters:
-          requesting_module_key:
-            type: ModuleKey
-          import_node:
-            type: astx.ImportStmt | astx.ImportFromStmt
-          requested_specifier:
-            type: str
-        returns:
-          type: ParsedModule | None
+          requesting_module_key: Requesting module key.
+          import_node: Import node.
+          requested_specifier: Import specifier requested by the source
+            module.
+        returns: Resolved one import request through the host resolver.
         """
         cache_key = (requesting_module_key, requested_specifier)
         if cache_key in self._resolution_cache:
@@ -317,19 +280,15 @@ class CompilationSession:
     ) -> ParsedModule | None:
         """
         title: Probe one import request without emitting diagnostics.
-        summary: >-
-          Try the host resolver for speculative import edges such as child-
-          module fallbacks while keeping expected missing-module probes silent
-          but still surfacing unexpected resolver failures.
+        summary: Try the host resolver for speculative import edges such
+          as child- module fallbacks while keeping expected missing-module
+          probes silent but still surfacing unexpected resolver failures.
         parameters:
-          requesting_module_key:
-            type: ModuleKey
-          import_node:
-            type: astx.ImportStmt | astx.ImportFromStmt
-          requested_specifier:
-            type: str
-        returns:
-          type: ParsedModule | None
+          requesting_module_key: Requesting module key.
+          import_node: Import node.
+          requested_specifier: Import specifier requested by the source module.
+        returns: 'Result of this operation: probe one import request without
+          emitting diagnostics.'
         """
         cache_key = (requesting_module_key, requested_specifier)
         if cache_key in self._probe_cache:
@@ -366,23 +325,18 @@ class CompilationSession:
         imported_name: str,
     ) -> tuple[SemanticBinding | None, ParsedModule | None]:
         """
-        title: >-
-          Resolve one import-from name to a direct binding or child module.
-        summary: >-
-          Apply symbol-first, child-module-second import-from semantics using
-          the parent module's visible bindings before attempting module
+        title: Resolve one import-from name to a direct binding or child
+          module.
+        summary: Apply symbol-first, child-module-second import-from semantics
+          using the parent module's visible bindings before attempting module
           namespace fallback.
         parameters:
-          requesting_module_key:
-            type: ModuleKey
-          import_node:
-            type: astx.ImportFromStmt
-          parent_module_key:
-            type: ModuleKey
-          imported_name:
-            type: str
-        returns:
-          type: tuple[SemanticBinding | None, ParsedModule | None]
+          requesting_module_key: Requesting module key.
+          import_node: Import node.
+          parent_module_key: Parent module key.
+          imported_name: Name of imported.
+        returns: Resolved one import-from name to a direct binding or child
+          module.
         """
         target_binding = self.visible_bindings.get(parent_module_key, {}).get(
             imported_name
@@ -404,9 +358,8 @@ class CompilationSession:
     def expand_graph(self) -> None:
         """
         title: Expand the reachable import graph from the root module.
-        summary: >-
-          Walk top-level imports from the root module, load every reachable
-          dependency, and reject cycles.
+        summary: Walk top-level imports from the root module, load every
+          reachable dependency, and reject cycles.
         """
         self.load_order.clear()
         temporary: list[ModuleKey] = []
@@ -417,16 +370,14 @@ class CompilationSession:
         def dfs(module_key: ModuleKey) -> set[str]:
             """
             title: Visit one reachable module during graph expansion.
-            summary: >-
-              Depth-first walk one module, record its outgoing edges, append it
-              to the stable load order after its dependencies, and track which
-              names later from-import statements may bind directly from that
-              module.
+            summary: Depth-first walk one module, record its outgoing edges,
+              append it to the stable load order after its dependencies,
+              and track which names later from-import statements may bind
+              directly from that module.
             parameters:
-              module_key:
-                type: ModuleKey
-            returns:
-              type: set[str]
+              module_key: Canonical module identity.
+            returns: 'Result of this operation: visit one reachable module
+              during graph expansion.'
             """
             if module_key in permanent:
                 return importable_names[module_key]

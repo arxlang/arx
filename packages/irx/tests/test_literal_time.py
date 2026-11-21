@@ -23,10 +23,8 @@ def _time_values(const: ir.Constant) -> list[int]:
     """
     title: Extract i32 values from the literal struct constant.
     parameters:
-      const:
-        type: ir.Constant
-    returns:
-      type: list[int]
+      const: Const.
+    returns: Extracted i32 values from the literal struct constant.
     """
     return [int(v) for v in re.findall(r"i32\s+(-?\d+)", str(const))]
 
@@ -41,8 +39,7 @@ def test_literal_time_hh_mm_ss(
     """
     title: HH:MM:SS time lowers to constant struct.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     visitor = cast(LLVMVisitor, builder.translator)
@@ -68,8 +65,7 @@ def test_literal_time_hh_mm(
     """
     title: HH:MM time defaults second to zero.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     visitor = cast(LLVMVisitor, builder.translator)
@@ -95,8 +91,7 @@ def test_literal_time_midnight(
     """
     title: Midnight 00:00:00 lowers correctly.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     visitor = cast(LLVMVisitor, builder.translator)
@@ -122,8 +117,7 @@ def test_literal_time_hour_out_of_range(
     """
     title: Reject hour outside 0-23 range.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     visitor = cast(LLVMVisitor, builder.translator)
@@ -142,8 +136,7 @@ def test_literal_time_fractional_rejected(
     """
     title: Reject fractional seconds.
     parameters:
-      builder_class:
-        type: type[Builder]
+      builder_class: Builder implementation under test.
     """
     builder = builder_class()
     visitor = cast(LLVMVisitor, builder.translator)

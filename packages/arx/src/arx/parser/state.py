@@ -1,8 +1,7 @@
 """
 title: Shared parser state declarations.
-summary: >-
-  Define parser prefix records and modifier constants shared across the
-  concern-grouped parser modules.
+summary: Define parser prefix records and modifier constants shared
+  across the concern-grouped parser modules.
 """
 
 from __future__ import annotations
@@ -20,9 +19,10 @@ INDENT_SIZE = 2
 class TypeUseContext(Enum):
     """
     title: Type annotation use context.
-    summary: >-
-      Describe where a parsed type annotation appears so surface types can
-      decide whether runtime-layout forms are allowed.
+    summary: Describe where a parsed type annotation appears so surface types
+      can decide whether runtime-layout forms are allowed.
+    attributes:
+      allows_runtime_layout: Whether to use allows runtime layout.
     """
 
     GENERAL = "general"
@@ -41,8 +41,7 @@ class TypeUseContext(Enum):
     def allows_runtime_layout(self) -> bool:
         """
         title: Return whether runtime-layout collection forms are allowed.
-        returns:
-          type: bool
+        returns: Whether runtime-layout collection forms are allowed.
         """
         return self is TypeUseContext.PARAMETER
 
@@ -51,14 +50,11 @@ class TypeUseContext(Enum):
 class ParsedAnnotation:
     """
     title: Parsed declaration modifiers with their source location.
-    summary: >-
-      Shared payload for an annotation prefix and an inline declaration
+    summary: Shared payload for an annotation prefix and an inline declaration
       modifier group; this record does not distinguish their surface spelling.
     attributes:
-      modifiers:
-        type: tuple[str, Ellipsis]
-      loc:
-        type: SourceLocation
+      modifiers: Modifiers.
+      loc: Source coordinates attached to this node.
     """
 
     modifiers: tuple[str, ...]
@@ -70,14 +66,10 @@ class ParsedDeclarationPrefixes:
     """
     title: Parsed declaration prefixes attached to one declaration.
     attributes:
-      modifiers:
-        type: ParsedAnnotation | None
-      template_params:
-        type: tuple[astx.TemplateParam, Ellipsis]
-      loc:
-        type: SourceLocation | None
-      description:
-        type: str
+      modifiers: Modifiers.
+      template_params: Template parameters declared by the callable.
+      loc: Source coordinates attached to this node.
+      description: Description.
     """
 
     modifiers: ParsedAnnotation | None = None

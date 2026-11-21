@@ -18,10 +18,8 @@ def parse(source: str) -> astx.Module:
     """
     title: Parse source into an AIX AST module.
     parameters:
-      source:
-        type: str
-    returns:
-      type: astx.Module
+      source: Source input to process.
+    returns: Parsed source into an AIX AST module.
     """
     return Parser().parse(Lexer(source).tokenize())
 

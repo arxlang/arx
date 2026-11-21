@@ -25,12 +25,9 @@ def _resolve(
     """
     title: Extract a function and resolve its signature (test helper).
     parameters:
-      fn:
-        type: PyFunc
-      explicit:
-        type: Signature | None
-    returns:
-      type: tuple[Signature | None, list[Diagnostic]]
+      fn: Function to process.
+      explicit: Explicit.
+    returns: Extracted a function and resolve its signature (test helper).
     """
     return resolve_signature(extract_source(fn), explicit)
 
@@ -44,14 +41,10 @@ def test_annotations_map_to_scalar_types() -> None:
         """
         title: Combine three scalars.
         parameters:
-          a:
-            type: int
-          b:
-            type: float
-          c:
-            type: bool
-        returns:
-          type: float
+          a: First operand.
+          b: Second operand.
+          c: Third operand.
+        returns: 'Result of this operation: combine three scalars.'
         """
         if c:
             return a + b
@@ -62,26 +55,20 @@ def test_annotations_map_to_scalar_types() -> None:
     assert signature == f64(i64, f64, bool_)
 
 
-def test_explicit_signature_short_circuits() -> None:
+def test_explicit_signature_short_circuits(tmp_path: pathlib.Path) -> None:
     """
     title: An explicit signature is returned as-is with no diagnostics.
-    summary: >-
-      The annotations are not read at all, so even a function that could not
-      produce a signature on its own resolves cleanly.
+    summary: The annotations are not read at all, so even a function that
+      could not produce a signature on its own resolves cleanly.
+    parameters:
+      tmp_path: Temporary directory for this test.
     """
 
-    def sample(a, b):  # type: ignore[no-untyped-def]
-        """
-        title: Add two values of unknown type.
-        parameters:
-          a:
-            description: The left operand, deliberately unannotated.
-          b:
-            description: The right operand, deliberately unannotated.
-        returns:
-          type: object
-        """
-        return a + b
+    sample = _module_function(
+        tmp_path,
+        "unannotated",
+        "def sample(a, b):\n    return a + b\n\nkernel = sample\n",
+    )
 
     explicit = i64(i64, i64)
     signature, diagnostics = _resolve(sample, explicit)
@@ -89,28 +76,25 @@ def test_explicit_signature_short_circuits() -> None:
     assert diagnostics == []
 
 
-def test_explicit_signature_arity_must_match_the_function() -> None:
+def test_explicit_signature_arity_must_match_the_function(
+    tmp_path: pathlib.Path,
+) -> None:
     """
-    title: An explicit signature cannot declare a different argument count.
-    summary: >-
-      The explicit signature decides types, which is the caller's choice, but
-      how many parameters the function has is a fact of the definition. A
-      signature that disagrees would compile to a calling convention Python
-      cannot satisfy.
+    title: An explicit signature cannot declare a different argument
+      count.
+    summary: The explicit signature decides types, which is the caller's
+      choice, but how many parameters the function has is a fact
+      of the definition. A signature that disagrees would compile
+      to a calling convention Python cannot satisfy.
+    parameters:
+      tmp_path: Temporary directory for this test.
     """
 
-    def sample(a, b):  # type: ignore[no-untyped-def]
-        """
-        title: Add two values of unknown type.
-        parameters:
-          a:
-            description: The left operand, deliberately unannotated.
-          b:
-            description: The right operand, deliberately unannotated.
-        returns:
-          type: object
-        """
-        return a + b
+    sample = _module_function(
+        tmp_path,
+        "unannotated",
+        "def sample(a, b):\n    return a + b\n\nkernel = sample\n",
+    )
 
     signature, (diagnostic,) = _resolve(sample, i64(i64))
     assert signature is None
@@ -122,21 +106,19 @@ def test_explicit_signature_arity_must_match_the_function() -> None:
 
 def test_arity_message_pluralizes_the_declared_count() -> None:
     """
-    title: The mismatch message agrees in number with the declared count.
-    summary: >-
-      The singular case is covered above; this pins the other side, which line
-      coverage cannot distinguish because both sit on one conditional
-      expression.
+    title: The mismatch message agrees in number with the declared
+      count.
+    summary: The singular case is covered above; this pins the other
+      side, which line coverage cannot distinguish because both sit
+      on one conditional expression.
     """
 
     def sample(x: int) -> int:
         """
         title: Return the argument unchanged.
         parameters:
-          x:
-            type: int
-        returns:
-          type: int
+          x: Input value.
+        returns: The argument unchanged.
         """
         return x
 
@@ -150,19 +132,17 @@ def test_arity_message_pluralizes_the_declared_count() -> None:
 def test_explicit_signature_with_matching_arity_is_accepted() -> None:
     """
     title: A correctly sized explicit signature still short-circuits.
-    summary: >-
-      The arity check must not disturb the rule that an explicit signature
-      wins: the annotations here say float and are still not consulted.
+    summary: 'The arity check must not disturb the rule that an explicit
+      signature wins: the annotations here say float and are still
+      not consulted.'
     """
 
     def sample(x: float) -> float:
         """
         title: Return the argument unchanged.
         parameters:
-          x:
-            type: float
-        returns:
-          type: float
+          x: Input value.
+        returns: The argument unchanged.
         """
         return x
 
@@ -175,11 +155,10 @@ def test_explicit_signature_with_matching_arity_is_accepted() -> None:
 def test_explicit_signature_does_not_bypass_the_shape_check() -> None:
     """
     title: A non-positional shape is rejected even with an explicit signature.
-    summary: >-
-      The structural checks run before the explicit signature is accepted, so
-      passing one cannot skip them. Only the shape is reported: counting the
-      positional parameters of a *args function would give a number that means
-      nothing to the caller.
+    summary: 'The structural checks run before the explicit signature
+      is accepted, so passing one cannot skip them. Only the shape is
+      reported: counting the positional parameters of a *args function
+      would give a number that means nothing to the caller.'
     """
     source = "def sample(*args: int) -> int:\n    return 1\n"
     node = ast.parse(source).body[0]
@@ -200,8 +179,7 @@ def test_zero_argument_explicit_signature_matches_a_bare_function() -> None:
     def sample() -> int:
         """
         title: Return a constant.
-        returns:
-          type: int
+        returns: A constant.
         """
         return 1
 
@@ -214,21 +192,18 @@ def test_zero_argument_explicit_signature_matches_a_bare_function() -> None:
 def test_positional_only_parameters_are_included() -> None:
     """
     title: Positional-only parameters appear in the derived signature.
-    summary: >-
-      Validation permits them, so reconciliation must not silently drop them
-      from the argument list.
+    summary: Validation permits them, so reconciliation must not silently
+      drop them from the argument list.
     """
 
     def sample(a: int, /, b: float) -> float:
         """
         title: Add a positional-only and an ordinary parameter.
         parameters:
-          a:
-            type: int
-          b:
-            type: float
-        returns:
-          type: float
+          a: First operand.
+          b: Second operand.
+        returns: 'Result of this operation: add a positional-only and an
+          ordinary parameter.'
         """
         return a + b
 
@@ -250,14 +225,12 @@ def test_positional_only_parameters_are_included() -> None:
 def test_non_positional_shape_cannot_derive_a_signature(source: str) -> None:
     """
     title: An argument shape a positional signature cannot express is refused.
-    summary: >-
-      Validation rejects these shapes first, so this is unreachable through
-      @jit, but resolve_signature is public: without the check it would leave
-      the parameters out and return a signature that is quietly wrong, such as
-      i64() for a function taking *args.
+    summary: 'Validation rejects these shapes first, so this is unreachable
+      through @jit, but resolve_signature is public: without the check it
+      would leave the parameters out and return a signature that is quietly
+      wrong, such as i64() for a function taking *args.'
     parameters:
-      source:
-        type: str
+      source: Source input to process.
     """
     node = ast.parse(source).body[0]
     assert isinstance(node, ast.FunctionDef)
@@ -278,8 +251,7 @@ def test_zero_parameter_function_resolves() -> None:
     def sample() -> int:
         """
         title: Return a constant.
-        returns:
-          type: int
+        returns: A constant.
         """
         return 1
 
@@ -288,23 +260,18 @@ def test_zero_parameter_function_resolves() -> None:
     assert signature == i64()
 
 
-def test_no_annotations_warns_once() -> None:
+def test_no_annotations_warns_once(tmp_path: pathlib.Path) -> None:
     """
     title: A wholly unannotated function yields a single WARNING.
+    parameters:
+      tmp_path: Temporary directory for this test.
     """
 
-    def sample(a, b):  # type: ignore[no-untyped-def]
-        """
-        title: Add two values of unknown type.
-        parameters:
-          a:
-            description: The left operand, deliberately unannotated.
-          b:
-            description: The right operand, deliberately unannotated.
-        returns:
-          type: object
-        """
-        return a + b
+    sample = _module_function(
+        tmp_path,
+        "unannotated",
+        "def sample(a, b):\n    return a + b\n\nkernel = sample\n",
+    )
 
     signature, (diagnostic,) = _resolve(sample)
     assert signature is None
@@ -312,21 +279,18 @@ def test_no_annotations_warns_once() -> None:
     assert "stays interpreted" in diagnostic.message
 
 
-def test_missing_return_annotation_is_an_error() -> None:
+def test_missing_return_annotation_is_an_error(tmp_path: pathlib.Path) -> None:
     """
     title: Annotated parameters with no return annotation is an error.
+    parameters:
+      tmp_path: Temporary directory for this test.
     """
 
-    def sample(a: int):  # type: ignore[no-untyped-def]
-        """
-        title: Return the argument unchanged.
-        parameters:
-          a:
-            type: int
-        returns:
-          type: int
-        """
-        return a
+    sample = _module_function(
+        tmp_path,
+        "unannotated",
+        "def sample(a: int):\n    return a\n\nkernel = sample\n",
+    )
 
     signature, (diagnostic,) = _resolve(sample)
     assert signature is None
@@ -343,10 +307,8 @@ def test_unsupported_return_annotation_is_an_error() -> None:
         """
         title: Render the argument.
         parameters:
-          a:
-            type: int
-        returns:
-          type: str
+          a: First operand.
+        returns: 'Result of this operation: render the argument.'
         """
         return "x"
 
@@ -364,10 +326,8 @@ def test_subscripted_annotation_is_rejected() -> None:
         """
         title: Return a constant, ignoring the argument.
         parameters:
-          values:
-            type: list[int]
-        returns:
-          type: int
+          values: Values to process, in order.
+        returns: A constant, ignoring the argument.
         """
         return 1
 
@@ -387,10 +347,8 @@ def test_dotted_annotation_is_rejected() -> None:
         """
         title: Return a constant, ignoring the argument.
         parameters:
-          value:
-            type: ast.AST
-        returns:
-          type: int
+          value: Value to process.
+        returns: A constant, ignoring the argument.
         """
         return 1
 
@@ -401,25 +359,19 @@ def test_dotted_annotation_is_rejected() -> None:
     )
 
 
-def test_every_bad_parameter_is_reported() -> None:
+def test_every_bad_parameter_is_reported(tmp_path: pathlib.Path) -> None:
     """
     title: Reconciliation collects all bad parameters, not just the first.
+    parameters:
+      tmp_path: Temporary directory for this test.
     """
 
-    def sample(a: str, b, c: int) -> int:  # type: ignore[no-untyped-def]
-        """
-        title: Combine three values.
-        parameters:
-          a:
-            type: str
-          b:
-            description: The middle operand, deliberately unannotated.
-          c:
-            type: int
-        returns:
-          type: int
-        """
-        return c
+    sample = _module_function(
+        tmp_path,
+        "unannotated",
+        "def sample(a: str, b, c: int) -> int:\n"
+        "    return c\n\nkernel = sample\n",
+    )
 
     signature, diagnostics = _resolve(sample)
     assert signature is None
@@ -452,19 +404,15 @@ int = str
 def _module_function(tmp_path: pathlib.Path, name: str, source: str) -> PyFunc:
     """
     title: Import a written-out module and return its kernel (test helper).
-    summary: >-
-      A real module is needed rather than a hand-built ExtractedSource: the
-      point of these cases is what the module's live globals do after the
-      function is defined, which only a real import reproduces.
+    summary: 'A real module is needed rather than a hand-built ExtractedSource:
+      the point of these cases is what the module''s live globals do after
+      the function is defined, which only a real import reproduces.'
     parameters:
-      tmp_path:
-        type: pathlib.Path
-      name:
-        type: str
-      source:
-        type: str
-    returns:
-      type: PyFunc
+      tmp_path: Temporary directory for this test.
+      name: Name identifying the declaration or operation.
+      source: Source input to process.
+    returns: 'Result of this operation: import a written-out module and return
+      its kernel (test helper).'
     """
     path = tmp_path / f"{name}.py"
     path.write_text(source, encoding="utf-8")
@@ -480,15 +428,15 @@ def test_reserved_spelling_wins_over_the_defining_namespace(
     name: str,
 ) -> None:
     """
-    title: A rebound builtin name still denotes the reserved scalar type.
-    summary: >-
-      int, float and bool are reserved annotation spellings, so a module that
-      rebinds one does not change what the annotation means to the compiler.
-      The namespace is deliberately not consulted; see _annotation_type for why
-      resolving through it cannot be made sound.
+    title: A rebound builtin name still denotes the reserved scalar
+      type.
+    summary: int, float and bool are reserved annotation spellings,
+      so a module that rebinds one does not change what the annotation
+      means to the compiler. The namespace is deliberately not consulted;
+      see _annotation_type for why resolving through it cannot be
+      made sound.
     parameters:
-      name:
-        type: str
+      name: Name identifying the declaration or operation.
     """
     source = f"def sample(value: {name}) -> {name}:\n    return value\n"
     node = ast.parse(source).body[0]
@@ -513,15 +461,13 @@ def test_rebinding_restored_after_definition_still_resolves(
 ) -> None:
     """
     title: A name rebound at definition and restored after resolves the same.
-    summary: >-
-      One of the two directions live globals get wrong: __annotations__ records
-      str, because that was the binding when the def ran, but the module now
-      says int is the builtin. A namespace-based check would answer from the
-      restored binding and derive a signature the annotation never meant. The
-      reserved spelling answers the same either way.
+    summary: 'One of the two directions live globals get wrong: __annotations__
+      records str, because that was the binding when the def ran, but the
+      module now says int is the builtin. A namespace-based check would answer
+      from the restored binding and derive a signature the annotation never
+      meant. The reserved spelling answers the same either way.'
     parameters:
-      tmp_path:
-        type: pathlib.Path
+      tmp_path: Temporary directory for this test.
     """
     kernel = _module_function(
         tmp_path, "rebound_restored", _REBOUND_THEN_RESTORED
@@ -541,14 +487,12 @@ def test_rebinding_after_definition_still_resolves(
 ) -> None:
     """
     title: A name rebound only after the def resolves the same.
-    summary: >-
-      The other direction: the annotation genuinely denoted the builtin when
-      the function was defined, and a namespace-based check would reject it
-      because the module was rebound afterwards. Nothing about the function
-      changed, so nothing about its signature does.
+    summary: 'The other direction: the annotation genuinely denoted the builtin
+      when the function was defined, and a namespace-based check would reject
+      it because the module was rebound afterwards. Nothing about the function
+      changed, so nothing about its signature does.'
     parameters:
-      tmp_path:
-        type: pathlib.Path
+      tmp_path: Temporary directory for this test.
     """
     kernel = _module_function(tmp_path, "rebound_after", _REBOUND_AFTER_DEF)
     # What __annotations__ reports is itself version-dependent, which is the
@@ -564,18 +508,16 @@ def test_rebinding_after_definition_still_resolves(
 def test_enclosing_scope_rebinding_still_resolves() -> None:
     """
     title: A name rebound by an enclosing function resolves the same.
-    summary: >-
-      The annotation here denotes str, as __annotations__ confirms, and under
-      the reserved-spelling contract that does not matter: the spelling is what
-      selects the type. This was previously pinned as a limitation of the
-      namespace check; it is now an instance of the rule.
+    summary: 'The annotation here denotes str, as __annotations__ confirms,
+      and under the reserved-spelling contract that does not matter: the
+      spelling is what selects the type. This was previously pinned as a
+      limitation of the namespace check; it is now an instance of the rule.'
     """
 
     def outer() -> PyFunc:
         """
         title: Return a function annotated against a rebound builtin.
-        returns:
-          type: PyFunc
+        returns: A function annotated against a rebound builtin.
         """
         int = str
 
@@ -583,10 +525,8 @@ def test_enclosing_scope_rebinding_still_resolves() -> None:
             """
             title: Return the argument unchanged.
             parameters:
-              x:
-                type: int
-            returns:
-              type: int
+              x: Input value.
+            returns: The argument unchanged.
             """
             return x
 
@@ -608,10 +548,8 @@ def test_diagnostic_points_at_the_annotation() -> None:
         """
         title: Return a constant, ignoring the argument.
         parameters:
-          value:
-            type: str
-        returns:
-          type: int
+          value: Value to process.
+        returns: A constant, ignoring the argument.
         """
         return 1
 
@@ -626,12 +564,12 @@ def test_diagnostic_points_at_the_annotation() -> None:
 def test_string_annotations_are_read_from_the_ast() -> None:
     """
     title: A quoted annotation resolves like an ordinary one.
-    summary: >-
-      "from __future__ import annotations" turns every annotation into a string
-      at runtime; reading them from the ast instead of __annotations__ makes
-      that irrelevant. A quoted annotation is the same situation written out by
-      hand, and parses to a Constant rather than a Name, so it is reported
-      rather than silently accepted.
+    summary: '"from __future__ import annotations" turns every annotation
+      into a string at runtime; reading them from the ast instead
+      of __annotations__ makes that irrelevant. A quoted annotation
+      is the same situation written out by hand, and parses to a
+      Constant rather than a Name, so it is reported rather than
+      silently accepted.'
     """
     source = 'def sample(x: "int") -> int:\n    return x\n'
     node = ast.parse(source).body[0]

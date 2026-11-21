@@ -61,8 +61,7 @@ def test_checked_facade_recovery_and_atomic_outputs(tmp_path: Path) -> None:
     """
     title: Failed calls publish no result and a later valid call can succeed.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     native = ctypes.CDLL(str(ensure_record_batch_shared_library()))
     pointer = ctypes.c_void_p
@@ -211,8 +210,7 @@ def test_cpp_exceptions_cannot_cross_checked_boundary(tmp_path: Path) -> None:
     """
     title: Standard and unknown foreign exceptions are contained by the C ABI.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     import shutil  # noqa: PLC0415
     import subprocess  # noqa: PLC0415

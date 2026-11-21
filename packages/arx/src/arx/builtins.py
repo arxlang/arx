@@ -1,5 +1,7 @@
 """
 title: Compiler builtin helpers and bundled builtin-module loader.
+attributes:
+  Traversable: Traversable.
 """
 
 from __future__ import annotations
@@ -39,16 +41,11 @@ class BuiltinModuleAsset:
     """
     title: One bundled builtin module asset.
     attributes:
-      logical_name:
-        type: str
-      specifier:
-        type: str
-      origin:
-        type: str
-      source:
-        type: str
-      is_package:
-        type: bool
+      logical_name: Name of logical.
+      specifier: Specifier.
+      origin: Origin.
+      source: Source input to process.
+      is_package: Whether is package.
     """
 
     logical_name: str
@@ -63,10 +60,8 @@ class AmbientBuiltinBinding:
     """
     title: One compiler-injected builtin binding.
     attributes:
-      name:
-        type: str
-      module:
-        type: str
+      name: Name identifying this declaration.
+      module: Module to process.
     """
 
     name: str
@@ -116,10 +111,8 @@ def is_builtin(name: str) -> bool:
     """
     title: Check whether a function name is a parser-level built-in.
     parameters:
-      name:
-        type: str
-    returns:
-      type: bool
+      name: Name identifying the declaration or operation.
+    returns: Whether a function name is a parser-level built-in.
     """
     return name in {
         "is_null",
@@ -149,12 +142,9 @@ def build_cast(
     """
     title: Build an IRx Cast node.
     parameters:
-      value:
-        type: astx.DataType
-      target_type:
-        type: astx.DataType
-    returns:
-      type: irx_astx.Cast
+      value: Value to process.
+      target_type: Destination type for the conversion.
+    returns: Constructed an IRx Cast node.
     """
     return irx_astx.Cast(value=value, target_type=target_type)
 
@@ -166,12 +156,9 @@ def build_isinstance(
     """
     title: Build an IRx IsInstanceExpr node.
     parameters:
-      value:
-        type: astx.Expr
-      target_type:
-        type: astx.DataType
-    returns:
-      type: irx_astx.IsInstanceExpr
+      value: Value to process.
+      target_type: Destination type for the conversion.
+    returns: Constructed an IRx IsInstanceExpr node.
     """
     return irx_astx.IsInstanceExpr(value=value, target_type=target_type)
 
@@ -180,10 +167,8 @@ def build_print(message: astx.Expr) -> irx_astx.PrintExpr:
     """
     title: Build an IRx PrintExpr node.
     parameters:
-      message:
-        type: astx.Expr
-    returns:
-      type: irx_astx.PrintExpr
+      message: Diagnostic or output message.
+    returns: Constructed an IRx PrintExpr node.
     """
     return irx_astx.PrintExpr(message=message)
 
@@ -192,10 +177,8 @@ def build_type_of(value: astx.Expr) -> irx_astx.TypeOfExpr:
     """
     title: Build an IRx TypeOfExpr node.
     parameters:
-      value:
-        type: astx.Expr
-    returns:
-      type: irx_astx.TypeOfExpr
+      value: Value to process.
+    returns: Constructed an IRx TypeOfExpr node.
     """
     return irx_astx.TypeOfExpr(value=value)
 
@@ -204,10 +187,8 @@ def is_builtin_module_specifier(specifier: str) -> bool:
     """
     title: Return whether one specifier targets the bundled builtins.
     parameters:
-      specifier:
-        type: str
-    returns:
-      type: bool
+      specifier: Specifier.
+    returns: Whether one specifier targets the bundled builtins.
     """
     return specifier == BUILTIN_NAMESPACE or specifier.startswith(
         f"{BUILTIN_NAMESPACE}."
@@ -217,8 +198,7 @@ def is_builtin_module_specifier(specifier: str) -> bool:
 def list_builtin_modules() -> tuple[str, ...]:
     """
     title: List bundled builtin module names.
-    returns:
-      type: tuple[str, Ellipsis]
+    returns: 'Result of this operation: list bundled builtin module names.'
     """
     module_names: list[str] = []
     seen: set[str] = set()
@@ -238,10 +218,8 @@ def resolve_builtin_resource(module_name: str) -> Traversable:
     """
     title: Resolve one builtin logical module name to a packaged resource.
     parameters:
-      module_name:
-        type: str
-    returns:
-      type: Traversable
+      module_name: Module name to resolve.
+    returns: Resolved one builtin logical module name to a packaged resource.
     """
     resource, _relative_path, _is_package = _resolve_builtin_module_entry(
         module_name
@@ -253,10 +231,8 @@ def get_builtin_source(module_name: str) -> str:
     """
     title: Return the bundled source text for one builtin module.
     parameters:
-      module_name:
-        type: str
-    returns:
-      type: str
+      module_name: Module name to resolve.
+    returns: The bundled source text for one builtin module.
     """
     return cast(
         str,
@@ -268,10 +244,8 @@ def load_builtin_module(specifier: str) -> BuiltinModuleAsset:
     """
     title: Load one builtin module from packaged resources.
     parameters:
-      specifier:
-        type: str
-    returns:
-      type: BuiltinModuleAsset
+      specifier: Specifier.
+    returns: Loaded one builtin module from packaged resources.
     """
     if specifier == BUILTIN_NAMESPACE:
         resource = _join_resource(_builtin_root(), "__init__.x")
@@ -303,10 +277,8 @@ def get_ambient_builtin_imports(
     """
     title: Build the implicit builtin imports for one module.
     parameters:
-      module_key:
-        type: str
-    returns:
-      type: tuple[irx_astx.ImportFromStmt, Ellipsis]
+      module_key: Canonical module identity.
+    returns: Constructed the implicit builtin imports for one module.
     """
     grouped_aliases: dict[str, list[irx_astx.AliasExpr]] = {}
 
@@ -326,8 +298,7 @@ def get_ambient_builtin_imports(
 def _builtin_root() -> Traversable:
     """
     title: Return the resource root for bundled builtin assets.
-    returns:
-      type: Traversable
+    returns: The resource root for bundled builtin assets.
     """
     return files(_ARX_RESOURCE_PACKAGE).joinpath(_BUILTIN_RESOURCE_DIR)
 
@@ -339,12 +310,10 @@ def _iter_builtin_modules(
     """
     title: Recursively collect bundled builtin module names.
     parameters:
-      directory:
-        type: Traversable
-      prefix:
-        type: tuple[str, Ellipsis]
-    returns:
-      type: tuple[str, Ellipsis]
+      directory: Directory.
+      prefix: Prefix.
+    returns: 'Result of this operation: recursively collect bundled builtin
+      module names.'
     """
     module_names: list[str] = []
 
@@ -381,10 +350,8 @@ def _resolve_builtin_module_entry(
     """
     title: Resolve one builtin logical module entry.
     parameters:
-      module_name:
-        type: str
-    returns:
-      type: tuple[Traversable, str, bool]
+      module_name: Module name to resolve.
+    returns: Resolved one builtin logical module entry.
     """
     parts = _split_module_name(module_name)
     file_parts = (*parts[:-1], f"{parts[-1]}{BUILTIN_SOURCE_EXTENSION}")
@@ -416,13 +383,12 @@ def _join_resource(root: Traversable, *parts: str) -> Traversable:
     """
     title: Join one package resource path from traversable parts.
     parameters:
-      root:
-        type: Traversable
+      root: Root module or resource.
       parts:
-        type: str
         variadic: positional
-    returns:
-      type: Traversable
+        description: Parts.
+    returns: 'Result of this operation: join one package resource path from
+      traversable parts.'
     """
     resource = root
     for part in parts:
@@ -434,10 +400,9 @@ def _split_module_name(module_name: str) -> tuple[str, ...]:
     """
     title: Validate and split one dotted builtin module name.
     parameters:
-      module_name:
-        type: str
-    returns:
-      type: tuple[str, Ellipsis]
+      module_name: Module name to resolve.
+    returns: 'Result of this operation: validate and split one dotted builtin
+      module name.'
     """
     if (
         not module_name
@@ -453,9 +418,8 @@ def needs_exception_builtin(module: astx.Module) -> bool:
     """
     title: Require canonical exception identities for generated runtime guards.
     parameters:
-      module:
-        type: astx.Module
-    returns:
-      type: bool
+      module: Module to process.
+    returns: 'Result of this operation: require canonical exception identities
+      for generated runtime guards.'
     """
     return module.name != BUILTIN_EXCEPTION_MODULE

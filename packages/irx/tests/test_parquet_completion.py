@@ -16,13 +16,11 @@ from .test_parquet_followup import read_batches, write_batch
 @pytest.mark.parametrize("atomic", [False, True])
 def test_reconstructed_dataset(tmp_path: Path, atomic: bool) -> None:
     """
-    title: >-
-      Restore nullable fixed lists and numeric dictionaries across fragments.
+    title: Restore nullable fixed lists and numeric dictionaries
+      across fragments.
     parameters:
-      tmp_path:
-        type: Path
-      atomic:
-        type: bool
+      tmp_path: Temporary directory for this test.
+      atomic: Whether to use atomic.
     """
     batch = pa.record_batch(
         [
@@ -89,12 +87,9 @@ def test_numeric_hive_keys(
     """
     title: Preserve decimal precision, floating widths and null partition keys.
     parameters:
-      tmp_path:
-        type: Path
-      type_:
-        type: pa.DataType
-      values:
-        type: list[object]
+      tmp_path: Temporary directory for this test.
+      type_: Type expression to process.
+      values: Values to process, in order.
     """
     batch = pa.record_batch(
         [pa.array(values, type=type_), pa.array([0, 1, 2])],
@@ -115,13 +110,11 @@ def test_numeric_hive_keys(
 @pytest.mark.parametrize("value", [float("nan"), float("inf"), -0.0])
 def test_nonroundtrippable_float_keys(tmp_path: Path, value: float) -> None:
     """
-    title: >-
-      Refuse key values whose grouping cannot preserve bit-level semantics.
+    title: Refuse key values whose grouping cannot preserve bit-level
+      semantics.
     parameters:
-      tmp_path:
-        type: Path
-      value:
-        type: float
+      tmp_path: Temporary directory for this test.
+      value: Value to process.
     """
     batch = pa.record_batch([[value], [1]], names=["key", "id"])
     with pytest.raises(RuntimeError, match=r"finite.*negative zero"):

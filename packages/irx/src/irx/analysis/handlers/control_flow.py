@@ -2,8 +2,7 @@
 
 """
 title: Control-flow semantic visitors.
-summary: >-
-  Handle returns, loops, and branch-level validation while using shared
+summary: Handle returns, loops, and branch-level validation while using shared
   registry helpers for lexical declarations introduced by statement bodies.
 """
 
@@ -75,8 +74,7 @@ class ControlFlowVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Resolve ownership transfer for one list-valued return.
         parameters:
-          node:
-            type: astx.FunctionReturn
+          node: Syntax node to process.
         """
         self._semantic(node).resource_ownership = None
         if self.context.current_function is None:
@@ -205,8 +203,7 @@ class ControlFlowVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Resolve ownership transfer for one string-valued return.
         parameters:
-          node:
-            type: astx.FunctionReturn
+          node: Syntax node to process.
         """
         if node.value is None:
             return
@@ -298,10 +295,8 @@ class ControlFlowVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Return the active generator metadata, if any.
         parameters:
-          node:
-            type: astx.AST
-        returns:
-          type: ResolvedGeneratorFunction | None
+          node: Syntax node to process.
+        returns: The active generator metadata, if any.
         """
         function = self.context.current_function
         if function is None:
@@ -328,10 +323,9 @@ class ControlFlowVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Analyze and return one yielded value type.
         parameters:
-          value:
-            type: astx.AST | None
-        returns:
-          type: astx.DataType
+          value: Value to process.
+        returns: 'Result of this operation: analyze and return one yielded
+          value type.'
         """
         if value is None:
             return astx.NoneType()
@@ -347,12 +341,9 @@ class ControlFlowVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Resolve one yield statement or expression.
         parameters:
-          node:
-            type: astx.AST
-          value:
-            type: astx.AST | None
-        returns:
-          type: ResolvedYield | None
+          node: Syntax node to process.
+          value: Value to process.
+        returns: Resolved one yield statement or expression.
         """
         generator = self._current_generator(node)
         value_type = self._yield_value_type(value)
@@ -397,17 +388,14 @@ class ControlFlowVisitorMixin(SemanticVisitorMixinBase):
     ) -> astx.VariableDeclaration | None:
         """
         title: Bind an already analyzed enter result with ordinary ownership.
-        summary: >-
-          Even an ignored owning result needs a local owner. Source targets
-          retain their declared type and mutability; identifier targets are
-          immutable bindings, not immutable objects.
+        summary: Even an ignored owning result needs a local owner. Source
+          targets retain their declared type and mutability; identifier targets
+          are immutable bindings, not immutable objects.
         parameters:
-          node:
-            type: astx.WithStmt
-          enter_call:
-            type: astx.MethodCall
-        returns:
-          type: astx.VariableDeclaration | None
+          node: Syntax node to process.
+          enter_call: Enter call.
+        returns: 'Result of this operation: bind an already analyzed enter
+          result with ordinary ownership.'
         """
         enter_type = self._expr_type(enter_call)
         if enter_type is None:
@@ -492,10 +480,8 @@ class ControlFlowVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Validate a control-flow condition is Boolean.
         parameters:
-          condition:
-            type: astx.AST
-          label:
-            type: str
+          condition: Condition controlling the operation.
+          label: Label.
         """
         if not self._require_value_expression(condition, context=label):
             return
@@ -514,8 +500,7 @@ class ControlFlowVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Visit AssertStmt nodes.
         parameters:
-          node:
-            type: astx.AssertStmt
+          node: Syntax node to process.
         """
         self.visit(node.condition)
         self._validate_boolean_condition(node.condition, label="assert")
@@ -547,8 +532,7 @@ class ControlFlowVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Visit FunctionReturn nodes.
         parameters:
-          node:
-            type: astx.FunctionReturn
+          node: Syntax node to process.
         """
         if self.context.current_function is None:
             self.context.diagnostics.add(
@@ -598,8 +582,7 @@ class ControlFlowVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Visit YieldStmt nodes.
         parameters:
-          node:
-            type: astx.YieldStmt
+          node: Syntax node to process.
         """
         self._resolve_yield(node, node.value)
         self._set_type(node, None)
@@ -609,8 +592,7 @@ class ControlFlowVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Visit YieldExpr nodes.
         parameters:
-          node:
-            type: astx.YieldExpr
+          node: Syntax node to process.
         """
         self._resolve_yield(node, node.value)
         self._set_type(node, astx.NoneType())
@@ -620,8 +602,7 @@ class ControlFlowVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Visit YieldFromExpr nodes.
         parameters:
-          node:
-            type: astx.YieldFromExpr
+          node: Syntax node to process.
         """
         self.context.diagnostics.add(
             "yield from is not supported yet",
@@ -635,12 +616,11 @@ class ControlFlowVisitorMixin(SemanticVisitorMixinBase):
     def visit(self, node: astx.IfStmt) -> None:
         """
         title: Analyze each conditional arm in its own declaration scope.
-        summary: >-
-          Inner declarations may shadow outer bindings; assignments resolve to
-          the nearest visible binding. Arm-local declarations do not escape.
+        summary: Inner declarations may shadow outer bindings; assignments
+          resolve to the nearest visible binding. Arm-local declarations
+          do not escape.
         parameters:
-          node:
-            type: astx.IfStmt
+          node: Syntax node to process.
         """
         self.visit(node.condition)
         self._validate_boolean_condition(node.condition, label="if")
@@ -666,13 +646,11 @@ class ControlFlowVisitorMixin(SemanticVisitorMixinBase):
     def visit(self, node: astx.WhileStmt) -> None:
         """
         title: Analyze a while body without leaking its declarations.
-        summary: >-
-          The condition uses the enclosing scope. Body-local declarations
-          shadow outer bindings but remain invisible after the loop, including
-          when the body never executes.
+        summary: The condition uses the enclosing scope. Body-local
+          declarations shadow outer bindings but remain invisible
+          after the loop, including when the body never executes.
         parameters:
-          node:
-            type: astx.WhileStmt
+          node: Syntax node to process.
         """
         self.visit(node.condition)
         self._validate_boolean_condition(node.condition, label="while")
@@ -689,8 +667,7 @@ class ControlFlowVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Visit ForCountLoopStmt nodes.
         parameters:
-          node:
-            type: astx.ForCountLoopStmt
+          node: Syntax node to process.
         """
         with self.context.scope("for-count"):
             self.visit(node.initializer)
@@ -726,8 +703,7 @@ class ControlFlowVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Visit ForRangeLoopStmt nodes.
         parameters:
-          node:
-            type: astx.ForRangeLoopStmt
+          node: Syntax node to process.
         """
         loop_type = node.variable.type_
         self._resolve_declared_type(loop_type, node=node.variable)
@@ -780,8 +756,7 @@ class ControlFlowVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Visit ForInLoopStmt nodes.
         parameters:
-          node:
-            type: astx.ForInLoopStmt
+          node: Syntax node to process.
         """
         with self.context.scope("for-in"):
             self.visit(node.iterable)
@@ -823,15 +798,14 @@ class ControlFlowVisitorMixin(SemanticVisitorMixinBase):
     @SemanticAnalyzerCore.visit.dispatch
     def visit(self, node: astx.WithStmt) -> None:
         """
-        title: Resolve a pinned manager, owning enter result, and checked exit.
-        summary: >-
-          __enter__ is called without explicit arguments using normal defaults.
-          __exit__ takes exactly one Boolean completion argument and returns
-          none. Manager and entered-value lifetimes use ordinary local stores;
-          each source manager and enter call is analyzed once.
+        title: Resolve a pinned manager, owning enter result, and checked
+          exit.
+        summary: __enter__ is called without explicit arguments using normal
+          defaults. __exit__ takes exactly one Boolean completion argument
+          and returns none. Manager and entered-value lifetimes use ordinary
+          local stores; each source manager and enter call is analyzed once.
         parameters:
-          node:
-            type: astx.WithStmt
+          node: Syntax node to process.
         """
         self._set_context_manager(node, None)
         self._set_type(node, None)
@@ -957,8 +931,7 @@ class ControlFlowVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Visit BreakStmt nodes.
         parameters:
-          node:
-            type: astx.BreakStmt
+          node: Syntax node to process.
         """
         if self.context.loop_depth <= 0:
             self.context.diagnostics.add(
@@ -973,8 +946,7 @@ class ControlFlowVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Visit ContinueStmt nodes.
         parameters:
-          node:
-            type: astx.ContinueStmt
+          node: Syntax node to process.
         """
         if self.context.loop_depth <= 0:
             self.context.diagnostics.add(

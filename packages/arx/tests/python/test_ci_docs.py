@@ -56,18 +56,13 @@ def test_ci_docs_only_skip_known_reexports(
     skipped: bool,
 ) -> None:
     """
-    title: Execute the real workflow shell with controlled build outcomes.
+    title: Verify site paths and the real workflow's controlled build outcomes.
     parameters:
-      tmp_path:
-        type: Path
-      workflow:
-        type: str
-      message:
-        type: str
-      exit_code:
-        type: int
-      skipped:
-        type: bool
+      tmp_path: Temporary directory for this test.
+      workflow: Workflow.
+      message: Diagnostic or output message.
+      exit_code: Exit code.
+      skipped: Whether to use skipped.
     """
     config = yaml.safe_load(
         (ROOT / ".github" / "workflows" / workflow).read_text(encoding="utf-8")
@@ -77,6 +72,13 @@ def test_ci_docs_only_skip_known_reexports(
     publish = next(
         step for step in steps if step.get("name") == "GitHub Pages action"
     )
+    publish_options = cast(dict[str, str], publish["with"])
+    site = yaml.safe_load((ROOT / "doukimd.yaml").read_text(encoding="utf-8"))
+    tasks = yaml.safe_load((ROOT / ".makim.yaml").read_text(encoding="utf-8"))
+    preview = tasks["groups"]["docs"]["tasks"]["preview"]["run"]
+    assert site["output_dir"] == "build/docs"
+    assert Path(publish_options["publish_dir"]) == Path(site["output_dir"])
+    assert f"--directory {site['output_dir']} " in preview
     assert "steps.docs.outputs.built == 'true'" in str(publish["if"])
     assert "github.event_name == 'workflow_dispatch'" in str(publish["if"])
 

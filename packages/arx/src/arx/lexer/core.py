@@ -1,5 +1,7 @@
 """
 title: Module for handling the lexer analysis.
+attributes:
+  MAP_KW_TOKEN_TO_NAME: Map kw token to name.
 """
 
 from __future__ import annotations
@@ -152,14 +154,10 @@ class Token:
     """
     title: Token class store the kind and the value of the token.
     attributes:
-      kind:
-        type: TokenKind
-      value:
-        type: Any
-      location:
-        type: SourceLocation
-      source_text:
-        type: str | None
+      kind: Kind of value or operation.
+      value: Stored value.
+      location: Source location attached to this record.
+      source_text: Source text.
     """
 
     kind: TokenKind
@@ -177,14 +175,10 @@ class Token:
         """
         title: Initialize Token.
         parameters:
-          kind:
-            type: TokenKind
-          value:
-            type: Any
-          location:
-            type: SourceLocation
-          source_text:
-            type: str | None
+          kind: Kind of value or operation.
+          value: Value to process.
+          location: Source coordinates associated with the operation.
+          source_text: Source text.
         """
         self.source_text = source_text
         self.kind = kind
@@ -194,26 +188,21 @@ class Token:
     def __hash__(self) -> int:
         """
         title: Implement hash method for Token.
-        returns:
-          type: int
+        returns: Hash of this instance.
         """
         return hash(f"{self.kind}{self.value}")
 
     def get_name(self) -> str:
         """
         title: Get the name of the specified token.
-        returns:
-          type: str
-          description: Name of the token.
+        returns: Name of the token.
         """
         return MAP_KW_TOKEN_TO_NAME.get(self.kind, str(self.value))
 
     def get_display_value(self) -> str:
         """
         title: Return the string representation of a token value.
-        returns:
-          type: str
-          description: The string representation of the token value.
+        returns: The string representation of the token value.
         """
         if self.kind == TokenKind.identifier:
             return "(" + str(self.value) + ")"
@@ -239,10 +228,8 @@ class Token:
         """
         title: Overload __eq__ operator.
         parameters:
-          other:
-            type: object
-        returns:
-          type: bool
+          other: Other value participating in the operation.
+        returns: Whether the values are equal.
         """
         tok_other = cast(Token, other)
         return (self.kind, self.value) == (tok_other.kind, tok_other.value)
@@ -250,8 +237,7 @@ class Token:
     def __str__(self) -> str:
         """
         title: Display the token in a readable way.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         return f"{self.get_name()}{self.get_display_value()}"
 
@@ -260,12 +246,9 @@ class TokenList:
     """
     title: Class for handle a List of tokens.
     attributes:
-      tokens:
-        type: list[Token]
-      position:
-        type: int
-      cur_tok:
-        type: Token
+      tokens: Tokens in source order.
+      position: Position.
+      cur_tok: Cur tok.
     """
 
     tokens: list[Token]
@@ -276,8 +259,7 @@ class TokenList:
         """
         title: Instantiate a TokenList object.
         parameters:
-          tokens:
-            type: list[Token]
+          tokens: Tokens in source order.
         """
         self.tokens = tokens
         self.position = 0
@@ -286,8 +268,7 @@ class TokenList:
     def __iter__(self) -> TokenList:
         """
         title: Overload the iterator operation.
-        returns:
-          type: TokenList
+        returns: Iterator over the contained items.
         """
         self.position = 0
         return self
@@ -295,8 +276,7 @@ class TokenList:
     def __next__(self) -> Token:
         """
         title: Overload the next method used by the iteration.
-        returns:
-          type: Token
+        returns: Next item from the iterator.
         """
         if self.position == len(self.tokens):
             raise StopIteration
@@ -305,9 +285,7 @@ class TokenList:
     def get_token(self) -> Token:
         """
         title: Get the next token.
-        returns:
-          type: Token
-          description: The next token from standard input.
+        returns: The next token from standard input.
         """
         if self.position >= len(self.tokens):
             location = self.cur_tok.location
@@ -320,11 +298,8 @@ class TokenList:
     def get_next_token(self) -> Token:
         """
         title: Provide a simple token buffer.
-        returns:
-          type: Token
-          description: >-
-            The current token the parser is looking at. Reads another token
-            from the lexer and updates cur_tok with its results.
+        returns: The current token the parser is looking at. Reads another
+          token from the lexer and updates cur_tok with its results.
         """
         self.cur_tok = self.get_token()
         return self.cur_tok
@@ -333,9 +308,6 @@ class TokenList:
 class LexerError(ArxError):
     """
     title: Custom exception for lexer errors.
-    attributes:
-      location:
-        description: The source location where the error occurred.
     """
 
     def __init__(
@@ -347,12 +319,9 @@ class LexerError(ArxError):
         """
         title: Initialize LexerError.
         parameters:
-          message:
-            type: str
-          location:
-            type: SourceLocation
-          code:
-            type: str
+          message: Diagnostic or output message.
+          location: Source coordinates associated with the operation.
+          code: Source code or diagnostic identifier.
         """
         super().__init__(
             f"{message} at line {location.line}, col {location.col}",
@@ -365,25 +334,15 @@ class Lexer:
     """
     title: Lexer class for tokenizing known variables.
     attributes:
-      lex_loc:
-        type: SourceLocation
-        description: Source location for lexer.
-      last_char:
-        type: str
-      initialized:
-        type: bool
-      new_line:
-        type: bool
-      _keyword_map:
-        type: dict[str, TokenKind]
-      _line_comment_delims:
-        type: tuple[str, Ellipsis]
-      _multi_char_ops:
-        type: set[str]
-      _literal_keywords:
-        type: dict[str, Any]
-      _keyword_token_map:
-        type: dict[str, TokenKind]
+      lex_loc: Source location for lexer.
+      last_char: Last char.
+      initialized: Whether to use initialized.
+      new_line: Whether to use new line.
+      _keyword_map: Keyword map.
+      _line_comment_delims: Line comment delims.
+      _multi_char_ops: Multi char ops.
+      _literal_keywords: Literal keywords.
+      _keyword_token_map: Keyword token map.
     """
 
     lex_loc: SourceLocation = SourceLocation(1, 0)
@@ -448,12 +407,9 @@ class Lexer:
     def get_token(self) -> Token:
         """
         title: Get the next token.
-        summary: >-
-          Skip blank and comment-only lines before emitting indentation.
+        summary: Skip blank and comment-only lines before emitting indentation.
           Trailing whitespace or comments produce only EOF, not indentation.
-        returns:
-          type: Token
-          description: The next token from standard input.
+        returns: The next token from standard input.
         """
         buffer_was_replaced = (
             self.last_char == EOF
@@ -616,8 +572,7 @@ class Lexer:
     def _parse_docstring(self) -> Token:
         """
         title: Parse docstrings delimited by triple backticks.
-        returns:
-          type: Token
+        returns: Parsed docstrings delimited by triple backticks.
         """
         doc_loc = copy.deepcopy(self.lex_loc)
 
@@ -665,8 +620,7 @@ class Lexer:
     def _parse_quoted_literal(self) -> Token:
         """
         title: Parse quoted string or character literals.
-        returns:
-          type: Token
+        returns: Parsed quoted string or character literals.
         """
         literal_loc = copy.deepcopy(self.lex_loc)
         quote = self.last_char
@@ -717,9 +671,7 @@ class Lexer:
     def advance(self) -> str:
         """
         title: Advance the token from the buffer.
-        returns:
-          type: str
-          description: TokenKind in integer form.
+        returns: TokenKind in integer form.
         """
         last_char = ArxIO.get_char()
         if last_char in ("\n", "\r"):
@@ -732,8 +684,7 @@ class Lexer:
     def lex(self) -> TokenList:
         """
         title: Create a list of tokens from input source.
-        returns:
-          type: TokenList
+        returns: Created a list of tokens from input source.
         """
         self.clean()
         cur_tok = Token(kind=TokenKind.not_initialized, value="")
@@ -771,8 +722,7 @@ class Lexer:
     def _parse_operator(self) -> Token:
         """
         title: Parse multi-character operators.
-        returns:
-          type: Token
+        returns: Parsed multi-character operators.
         """
         location = copy.deepcopy(self.lex_loc)
         op = self.last_char

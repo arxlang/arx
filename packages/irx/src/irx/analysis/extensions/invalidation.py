@@ -17,8 +17,7 @@ def invalidate_facts(root: astx.AST) -> None:
     """
     title: Clear one generation without following old semantic or parent edges.
     parameters:
-      root:
-        type: astx.AST
+      root: Root module or resource.
     """
     pending: list[object] = [root]
     seen: set[int] = set()

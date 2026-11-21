@@ -38,12 +38,9 @@ def load_test_module(name: str, path: Path) -> ModuleType:
     """
     title: Load shared scripts and oracles without test-package collisions.
     parameters:
-      name:
-        type: str
-      path:
-        type: Path
-    returns:
-      type: ModuleType
+      name: Name identifying the declaration or operation.
+      path: Path to the input or output resource.
+    returns: Loaded shared scripts and oracles without test-package collisions.
     """
     spec = importlib.util.spec_from_file_location(name, path)
     if spec is None or spec.loader is None:
@@ -81,12 +78,9 @@ def test_installed_pure_arx_library(
     """
     title: Execute installed source-only math against the shared f64 oracle.
     parameters:
-      tmp_path:
-        type: Path
-      monkeypatch:
-        type: pytest.MonkeyPatch
-      invalid:
-        type: str | None
+      tmp_path: Temporary directory for this test.
+      monkeypatch: Fixture for temporarily replacing dependencies and settings.
+      invalid: Invalid.
     """
     wheel = wheel_smoke.build_pure_arx_fixture_wheel(
         SCRIPT_PATH.parents[1], tmp_path
@@ -208,10 +202,8 @@ def test_pure_arx_fixture_rejects_author_glue(
     """
     title: Do not let the source-only acceptance fixture acquire native glue.
     parameters:
-      tmp_path:
-        type: Path
-      content:
-        type: str
+      tmp_path: Temporary directory for this test.
+      content: Content to process.
     """
     fixture = tmp_path / "packages/arx/tests/fixtures/pure-arx-package"
     fixture.mkdir(parents=True)
@@ -233,12 +225,9 @@ def test_smoke_driver_reports_structured_diagnostics(
     """
     title: Print every diagnostic without inventing absent source locations.
     parameters:
-      monkeypatch:
-        type: pytest.MonkeyPatch
-      tmp_path:
-        type: Path
-      capsys:
-        type: pytest.CaptureFixture[str]
+      monkeypatch: Fixture for temporarily replacing dependencies and settings.
+      tmp_path: Temporary directory for this test.
+      capsys: Fixture capturing standard output and error streams.
     """
     error = CompileError(
         "compilation failed",
@@ -301,16 +290,14 @@ def artifact_workspace(
 ) -> Path:
     """
     title: Create minimal artifacts with an arbitrary Python requirement.
-    summary: >-
-      A synthetic future requirement proves the audit reads configuration
-      rather than copying the repository's current support range.
+    summary: A synthetic future requirement proves the audit reads
+      configuration rather than copying the repository's current
+      support range.
     parameters:
-      monkeypatch:
-        type: pytest.MonkeyPatch
-      tmp_path:
-        type: Path
-    returns:
-      type: Path
+      monkeypatch: Fixture for temporarily replacing dependencies
+        and settings.
+      tmp_path: Temporary directory for this test.
+    returns: Created minimal artifacts with an arbitrary Python requirement.
     """
     package = wheel_smoke.PackageArtifact("sample", "sample", "sample")
     monkeypatch.setattr(wheel_smoke, "PACKAGES", (package,))
@@ -342,8 +329,7 @@ def test_audit_reads_python_requirement_from_manifests(
     """
     title: Artifact checks follow the declared requirement without a code edit.
     parameters:
-      artifact_workspace:
-        type: Path
+      artifact_workspace: Artifact workspace.
     """
     (wheel,) = wheel_smoke.audit_artifacts(artifact_workspace)
     assert wheel.name == "sample-1.0-py3-none-any.whl"
@@ -355,8 +341,7 @@ def test_python_requirement_rejects_non_string_metadata(
     """
     title: Reject malformed Python requirements rather than auditing them.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     (tmp_path / "pyproject.toml").write_text(
         '[project]\nrequires-python = [">=3.99"]\n', encoding="utf-8"
@@ -373,10 +358,8 @@ def test_audit_rejects_inconsistent_python_requirements(
     """
     title: Root, package, and wheel Python requirements must agree.
     parameters:
-      artifact_workspace:
-        type: Path
-      changed:
-        type: str
+      artifact_workspace: Artifact workspace.
+      changed: Changed.
     """
     package_dir = artifact_workspace / "packages" / "sample"
     if changed == "wheel":
@@ -404,10 +387,8 @@ def test_run_smoke_uses_and_removes_only_a_tool_owned_directory(
     """
     title: Wheel smoke execution preserves every pre-existing directory.
     parameters:
-      monkeypatch:
-        type: pytest.MonkeyPatch
-      tmp_path:
-        type: Path
+      monkeypatch: Fixture for temporarily replacing dependencies and settings.
+      tmp_path: Temporary directory for this test.
     """
     caller_directory = tmp_path / "caller-data"
     caller_directory.mkdir()
@@ -456,12 +437,9 @@ def test_cli_rejects_caller_controlled_work_directories(
     """
     title: The CLI has no option that accepts a deletion destination.
     parameters:
-      monkeypatch:
-        type: pytest.MonkeyPatch
-      tmp_path:
-        type: Path
-      unsafe_path:
-        type: str
+      monkeypatch: Fixture for temporarily replacing dependencies and settings.
+      tmp_path: Temporary directory for this test.
+      unsafe_path: Path to unsafe.
     """
     sentinel = tmp_path / "keep.txt"
     sentinel.write_text("keep", encoding="utf-8")

@@ -20,11 +20,11 @@ def skip_unused(*args: Any, **kwargs: Any) -> None:
     title: Referencing variables to pacify static analyzers.
     parameters:
       args:
-        type: Any
         variadic: positional
+        description: Positional arguments.
       kwargs:
-        type: Any
         variadic: keyword
+        description: Keyword arguments.
     """
     for _arg in args:
         pass
@@ -38,10 +38,9 @@ def copy_type(f: _T) -> Callable[[Any], _T]:
     """
     title: Copy types for args, kwargs from parent class.
     parameters:
-      f:
-        type: _T
-    returns:
-      type: Callable[[Any], _T]
+      f: F.
+    returns: 'Result of this operation: copy types for args, kwargs from
+      parent class.'
     """
     skip_unused(f)
     return lambda x: x

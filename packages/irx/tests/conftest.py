@@ -39,8 +39,7 @@ os.environ.setdefault(
 def workspace_test_temp_root() -> Path:
     """
     title: Return the workspace-local temporary directory for tests.
-    returns:
-      type: Path
+    returns: The workspace-local temporary directory for tests.
     """
     TEST_TEMP_PATH.mkdir(parents=True, exist_ok=True)
     return TEST_TEMP_PATH
@@ -50,10 +49,9 @@ def workspace_test_temp_root() -> Path:
 def workspace_tmpdir_env() -> Iterator[Path]:
     """
     title: Temporarily route Python temp files into the workspace.
-    returns:
-      type: Iterator[Path]
-    yields:
-      type: Path
+    returns: 'Result of this operation: temporarily route Python temp files
+      into the workspace.'
+    yields: Values yielded by this iterator.
     """
     temp_root = workspace_test_temp_root()
     original_tmpdir = os.environ.get("TMPDIR")
@@ -71,10 +69,9 @@ def workspace_tmpdir_env() -> Iterator[Path]:
 def use_workspace_tmpdir() -> Iterator[None]:
     """
     title: Route tempfile defaults into the workspace during tests.
-    returns:
-      type: Iterator[None]
-    yields:
-      type: None
+    returns: 'Result of this operation: route tempfile defaults into the
+      workspace during tests.'
+    yields: Values yielded by this iterator.
     """
     with workspace_tmpdir_env():
         yield
@@ -84,12 +81,10 @@ def similarity(text_a: str, text_b: str) -> float:
     """
     title: Calculate the similarity between two strings.
     parameters:
-      text_a:
-        type: str
-      text_b:
-        type: str
-    returns:
-      type: float
+      text_a: Text a.
+      text_b: Text b.
+    returns: 'Result of this operation: calculate the similarity between
+      two strings.'
     """
     return SequenceMatcher(None, text_a, text_b).ratio()
 
@@ -106,20 +101,13 @@ def check_result(
     """
     title: Check the result for translation or build.
     parameters:
-      action:
-        type: str
-      builder:
-        type: Builder
-      module:
-        type: astx.Module
-      expected_file:
-        type: str
-      expected_output:
-        type: str | None
-      similarity_factor:
-        type: float
-      tolerance:
-        type: float
+      action: Action.
+      builder: Builder generating the intermediate representation.
+      module: Module to process.
+      expected_file: File containing expected.
+      expected_output: Expected output.
+      similarity_factor: Similarity factor.
+      tolerance: Tolerance.
     """
     if action == "build":
         if expected_output is not None:
@@ -144,12 +132,9 @@ def build_and_run(builder: Builder, module: astx.Module) -> CommandResult:
     """
     title: Build a module and run the resulting executable.
     parameters:
-      builder:
-        type: Builder
-      module:
-        type: astx.Module
-    returns:
-      type: CommandResult
+      builder: Builder generating the intermediate representation.
+      module: Module to process.
+    returns: Constructed a module and run the resulting executable.
     """
     output_path = ""
     with workspace_tmpdir_env() as temp_root:
@@ -177,12 +162,9 @@ def assert_build_output(
     """
     title: Assert that building and running a module yields exact output.
     parameters:
-      builder:
-        type: Builder
-      module:
-        type: astx.Module
-      expected_output:
-        type: str
+      builder: Builder generating the intermediate representation.
+      module: Module to process.
+      expected_output: Expected output.
     """
     result = build_and_run(builder, module)
     actual_output = result.stdout.strip() or str(result.returncode)
@@ -196,10 +178,8 @@ def assert_build_succeeds(builder: Builder, module: astx.Module) -> None:
     """
     title: Assert that a module builds and runs successfully.
     parameters:
-      builder:
-        type: Builder
-      module:
-        type: astx.Module
+      builder: Builder generating the intermediate representation.
+      module: Module to process.
     """
     result = build_and_run(builder, module)
     assert result.returncode == 0, (
@@ -210,14 +190,13 @@ def assert_build_succeeds(builder: Builder, module: astx.Module) -> None:
 
 def jit_int_main(builder: Builder, module: astx.Module) -> int:
     """
-    title: JIT-run one Int32 main function directly from translated IR.
+    title: JIT-run one Int32 main function directly from translated
+      IR.
     parameters:
-      builder:
-        type: Builder
-      module:
-        type: astx.Module
-    returns:
-      type: int
+      builder: Builder generating the intermediate representation.
+      module: Module to process.
+    returns: 'Result of this operation: jIT-run one Int32 main function
+      directly from translated IR.'
     """
     ir_text = translate_ir(builder, module)
     if (
@@ -274,12 +253,9 @@ def assert_jit_int_main_result(
     """
     title: Assert that JIT-running Int32 main yields one expected result.
     parameters:
-      builder:
-        type: Builder
-      module:
-        type: astx.Module
-      expected_result:
-        type: int
+      builder: Builder generating the intermediate representation.
+      module: Module to process.
+      expected_result: Expected result.
     """
     actual_result = jit_int_main(builder, module)
     assert actual_result == expected_result, (
@@ -291,12 +267,9 @@ def translate_ir(builder: Builder, module: astx.Module) -> str:
     """
     title: Translate a module to LLVM IR text.
     parameters:
-      builder:
-        type: Builder
-      module:
-        type: astx.Module
-    returns:
-      type: str
+      builder: Builder generating the intermediate representation.
+      module: Module to process.
+    returns: 'Result of this operation: translate a module to LLVM IR text.'
     """
     return builder.translate(module)
 
@@ -305,8 +278,7 @@ def assert_ir_parses(ir_text: str) -> None:
     """
     title: Assert that LLVM can parse generated IR.
     parameters:
-      ir_text:
-        type: str
+      ir_text: IR text.
     """
     llvm.parse_assembly(ir_text)
 
@@ -318,13 +290,12 @@ def make_main_module(
     """
     title: Build a small module with a deterministic Int32 main entrypoint.
     parameters:
-      return_type:
-        type: astx.DataType | None
+      return_type: Declared result type.
       nodes:
-        type: astx.AST
         variadic: positional
-    returns:
-      type: astx.Module
+        description: Syntax nodes in source order.
+    returns: Constructed a small module with a deterministic Int32
+      main entrypoint.
     """
     module = astx.Module()
     normalized_return_type = cast(Any, return_type or astx.Int32())
@@ -375,13 +346,11 @@ def make_module(name: str, *nodes: astx.AST) -> astx.Module:
     """
     title: Build a named module with the provided top-level nodes.
     parameters:
-      name:
-        type: str
+      name: Name identifying the declaration or operation.
       nodes:
-        type: astx.AST
         variadic: positional
-    returns:
-      type: astx.Module
+        description: Syntax nodes in source order.
+    returns: Constructed a named module with the provided top-level nodes.
     """
     module = astx.Module(name=name)
     for node in nodes:
@@ -398,17 +367,13 @@ def make_parsed_module(
     """
     title: Build a ParsedModule test fixture.
     parameters:
-      key:
-        type: str
-      module_name:
-        type: str | None
-      display_name:
-        type: str | None
+      key: Key selecting the entry.
+      module_name: Module name to resolve.
+      display_name: Name of display.
       nodes:
-        type: astx.AST
         variadic: positional
-    returns:
-      type: ParsedModule
+        description: Syntax nodes in source order.
+    returns: Constructed a ParsedModule test fixture.
     """
     module = make_module(module_name or key, *nodes)
     return ParsedModule(
@@ -422,8 +387,7 @@ class StaticImportResolver:
     """
     title: Small test resolver backed by an in-memory module mapping.
     attributes:
-      modules:
-        type: dict[str, ParsedModule]
+      modules: Modules.
     """
 
     modules: dict[str, ParsedModule]
@@ -432,8 +396,7 @@ class StaticImportResolver:
         """
         title: Initialize StaticImportResolver.
         parameters:
-          modules:
-            type: dict[str, ParsedModule]
+          modules: Modules.
         """
         self.modules = modules
 
@@ -446,14 +409,10 @@ class StaticImportResolver:
         """
         title: Resolve one requested specifier.
         parameters:
-          requesting_module_key:
-            type: ModuleKey
-          import_node:
-            type: astx.ImportStmt | astx.ImportFromStmt
-          requested_specifier:
-            type: str
-        returns:
-          type: ParsedModule
+          requesting_module_key: Requesting module key.
+          import_node: Import node.
+          requested_specifier: Import specifier requested by the source module.
+        returns: Resolved one requested specifier.
         """
         _ = requesting_module_key
         _ = import_node
@@ -470,14 +429,11 @@ def translate_modules_ir(
     """
     title: Translate a parsed module graph to LLVM IR text.
     parameters:
-      builder:
-        type: LLVMBuilder
-      root:
-        type: ParsedModule
-      resolver:
-        type: StaticImportResolver
-    returns:
-      type: str
+      builder: Builder generating the intermediate representation.
+      root: Root module or resource.
+      resolver: Host-supplied module resolver.
+    returns: 'Result of this operation: translate a parsed module graph to
+      LLVM IR text.'
     """
     return builder.translate_modules(root, resolver)
 
@@ -486,8 +442,7 @@ def translate_modules_ir(
 def llvm_builder() -> LLVMBuilder:
     """
     title: Return a fresh llvmliteir builder.
-    returns:
-      type: LLVMBuilder
+    returns: A fresh llvmliteir builder.
     """
     return LLVMBuilder()
 
@@ -496,8 +451,7 @@ def llvm_builder() -> LLVMBuilder:
 def llvm_visitor() -> LLVMVisitor:
     """
     title: Return a fresh llvmliteir visitor with an empty result stack.
-    returns:
-      type: LLVMVisitor
+    returns: A fresh llvmliteir visitor with an empty result stack.
     """
     builder = LLVMBuilder()
     visitor = builder.translator
@@ -509,11 +463,10 @@ def llvm_visitor() -> LLVMVisitor:
 def llvm_visitor_in_function() -> LLVMVisitor:
     """
     title: Return a fresh llvmliteir visitor inside a live basic block.
-    summary: >-
-      Some lowering helpers require a valid insertion point. This fixture
-      creates a dummy function and positions the IRBuilder at its entry block.
-    returns:
-      type: LLVMVisitor
+    summary: Some lowering helpers require a valid insertion point. This
+      fixture creates a dummy function and positions the IRBuilder at its
+      entry block.
+    returns: A fresh llvmliteir visitor inside a live basic block.
     """
     builder = LLVMBuilder()
     visitor = builder.translator
@@ -528,13 +481,12 @@ def llvm_visitor_in_function() -> LLVMVisitor:
 def pytest_configure(config: pytest.Config) -> None:
     """
     title: Build the record_batch native runtime before collection.
-    summary: >-
-      The native library is a first-class part of the feature and must be
-      available for its tests, mirroring the array runtime. Build it here so
-      the tests run against a fresh artifact. A build failure is not swallowed:
-      the native tests then fail loudly rather than silently passing.
+    summary: 'The native library is a first-class part of the feature and
+      must be available for its tests, mirroring the array runtime. Build
+      it here so the tests run against a fresh artifact. A build failure
+      is not swallowed: the native tests then fail loudly rather than silently
+      passing.'
     parameters:
-      config:
-        type: pytest.Config
+      config: Config.
     """
     ensure_record_batch_shared_library()

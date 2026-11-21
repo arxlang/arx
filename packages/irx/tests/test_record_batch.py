@@ -67,10 +67,8 @@ def test_record_batch_library_path_uses_abi_scoped_cache(
     """
     title: Generated libraries live in a writable ABI-scoped cache.
     parameters:
-      monkeypatch:
-        type: pytest.MonkeyPatch
-      tmp_path:
-        type: Path
+      monkeypatch: Fixture for temporarily replacing dependencies and settings.
+      tmp_path: Temporary directory for this test.
     """
     monkeypatch.setenv(IRX_NATIVE_CACHE_DIR_ENV, str(tmp_path))
     monkeypatch.delenv(IRX_RECORD_BATCH_LIBRARY_ENV, raising=False)
@@ -91,10 +89,8 @@ def test_record_batch_library_path_honors_explicit_override(
     """
     title: An explicit native library override takes precedence over caching.
     parameters:
-      monkeypatch:
-        type: pytest.MonkeyPatch
-      tmp_path:
-        type: Path
+      monkeypatch: Fixture for temporarily replacing dependencies and settings.
+      tmp_path: Temporary directory for this test.
     """
     configured = tmp_path / "custom-record-batch.so"
     monkeypatch.setenv(IRX_RECORD_BATCH_LIBRARY_ENV, str(configured))
@@ -109,10 +105,8 @@ def test_record_batch_loader_builds_or_refreshes_default_cache(
     """
     title: First direct API use ensures a fingerprint-current cache library.
     parameters:
-      monkeypatch:
-        type: pytest.MonkeyPatch
-      tmp_path:
-        type: Path
+      monkeypatch: Fixture for temporarily replacing dependencies and settings.
+      tmp_path: Temporary directory for this test.
     """
     monkeypatch.delenv(IRX_RECORD_BATCH_LIBRARY_ENV, raising=False)
     library = tmp_path / record_batch_library_name()
@@ -122,8 +116,7 @@ def test_record_batch_loader_builds_or_refreshes_default_cache(
     def fake_ensure() -> Path:
         """
         title: Return one simulated freshly built native library.
-        returns:
-          type: Path
+        returns: One simulated freshly built native library.
         """
         ensured.append(True)
         return library
@@ -132,10 +125,8 @@ def test_record_batch_loader_builds_or_refreshes_default_cache(
         """
         title: Record the path passed to ctypes.
         parameters:
-          path:
-            type: str
-        returns:
-          type: object
+          path: Path to the input or output resource.
+        returns: 'Result of this operation: record the path passed to ctypes.'
         """
         loaded.append(path)
         return object()
@@ -161,10 +152,8 @@ def test_record_batch_loader_rejects_missing_exact_override(
     """
     title: An explicit missing native library is never silently replaced.
     parameters:
-      monkeypatch:
-        type: pytest.MonkeyPatch
-      tmp_path:
-        type: Path
+      monkeypatch: Fixture for temporarily replacing dependencies and settings.
+      tmp_path: Temporary directory for this test.
     """
     missing = tmp_path / record_batch_library_name()
     monkeypatch.setenv(IRX_RECORD_BATCH_LIBRARY_ENV, str(missing))
@@ -179,8 +168,7 @@ def test_record_batch_build_lock_times_out_for_live_owner(
     """
     title: A competing native build times out while its owner is alive.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     output = tmp_path / "libirx_record_batch.so"
     lock_path = output.with_name(f"{output.name}.lock")
@@ -229,10 +217,8 @@ def test_record_batch_build_lock_recovers_after_owner_exits(
     """
     title: A killed lock owner cannot permanently disable native builds.
     parameters:
-      monkeypatch:
-        type: pytest.MonkeyPatch
-      tmp_path:
-        type: Path
+      monkeypatch: Fixture for temporarily replacing dependencies and settings.
+      tmp_path: Temporary directory for this test.
     """
     output = tmp_path / "libirx_record_batch.so"
     script = """
@@ -263,12 +249,10 @@ with record_batch_build_lock(Path(sys.argv[1])):
         """
         title: Report the fixture library as stale.
         parameters:
-          output_path:
-            type: Path | None
-          cxx_binary:
-            type: str
-        returns:
-          type: bool
+          output_path: Destination path for generated output.
+          cxx_binary: Cxx binary.
+        returns: 'Result of this operation: report the fixture library as
+          stale.'
         """
         del output_path, cxx_binary
         return False
@@ -281,14 +265,11 @@ with record_batch_build_lock(Path(sys.argv[1])):
         """
         title: Materialize a fixture library after recovering the lock.
         parameters:
-          output_path:
-            type: Path | None
-          build_dir:
-            type: Path | None
-          cxx_binary:
-            type: str
-        returns:
-          type: Path
+          output_path: Destination path for generated output.
+          build_dir: Build dir.
+          cxx_binary: Cxx binary.
+        returns: 'Result of this operation: materialize a fixture library
+          after recovering the lock.'
         """
         del build_dir, cxx_binary
         assert output_path is not None
@@ -318,8 +299,7 @@ def test_record_batch_build_lock_ignores_untrusted_file_contents(
     """
     title: Lock ownership never depends on parseable lock-file contents.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     output = tmp_path / "libirx_record_batch.so"
     lock_path = output.with_name(f"{output.name}.lock")
@@ -345,8 +325,7 @@ def test_record_batch_native_abi_mismatch_fails_before_symbol_binding(
     """
     title: An incompatible native ABI fails with an actionable load error.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     compiler = shutil.which("clang") or shutil.which("cc")
     if compiler is None:
@@ -388,8 +367,7 @@ def test_record_batch_artifact_fingerprint_rejects_stale_sidecar(
     """
     title: A native library is current only with the exact build fingerprint.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     output = tmp_path / "libirx_record_batch.so"
     output.write_bytes(b"test artifact")
@@ -412,10 +390,8 @@ def test_ensure_record_batch_library_rebuilds_stale_artifact(
     """
     title: Ensuring a stale native artifact invokes the atomic builder.
     parameters:
-      monkeypatch:
-        type: pytest.MonkeyPatch
-      tmp_path:
-        type: Path
+      monkeypatch: Fixture for temporarily replacing dependencies and settings.
+      tmp_path: Temporary directory for this test.
     """
     output = tmp_path / "libirx_record_batch.so"
     output.write_bytes(b"stale")
@@ -433,14 +409,11 @@ def test_ensure_record_batch_library_rebuilds_stale_artifact(
         """
         title: Record one requested native rebuild.
         parameters:
-          output_path:
-            type: Path | None
-          build_dir:
-            type: Path | None
-          cxx_binary:
-            type: str
-        returns:
-          type: Path
+          output_path: Destination path for generated output.
+          build_dir: Build dir.
+          cxx_binary: Cxx binary.
+        returns: 'Result of this operation: record one requested
+          native rebuild.'
         """
         del build_dir
         del cxx_binary
@@ -464,8 +437,7 @@ def test_schema_finalizer_is_safe_after_native_load_failure(
     """
     title: Schema cleanup tolerates a constructor that failed before loading.
     parameters:
-      monkeypatch:
-        type: pytest.MonkeyPatch
+      monkeypatch: Fixture for temporarily replacing dependencies and settings.
     """
 
     def fail_native_load() -> None:
@@ -487,8 +459,7 @@ def test_schema_finalizer_is_safe_after_native_load_failure(
 def make_simple_schema() -> RecordBatchSchema:
     """
     title: Create a simple schema with one int32 and one float64 column.
-    returns:
-      type: RecordBatchSchema
+    returns: Created a simple schema with one int32 and one float64 column.
     """
     schema = RecordBatchSchema()
     schema.add_field("id", IrxColumnType.INT32, nullable=False)
@@ -500,10 +471,8 @@ def fill_builder(builder: RecordBatchBuilder, n: int) -> None:
     """
     title: Append a simple pattern of rows to a record-batch builder.
     parameters:
-      builder:
-        type: RecordBatchBuilder
-      n:
-        type: int
+      builder: Builder generating the intermediate representation.
+      n: N.
     """
     for i in range(n):
         builder.append_int32(0, i)
@@ -514,7 +483,11 @@ def fill_builder(builder: RecordBatchBuilder, n: int) -> None:
 
 
 class TestSchema:
-    def test_empty_schema(self):
+    """
+    title: RecordBatch schema tests.
+    """
+
+    def test_empty_schema(self) -> None:
         """
         title: Ensure an empty schema reports zero fields.
         """
@@ -522,7 +495,7 @@ class TestSchema:
         assert s.num_fields == 0
         s.release()
 
-    def test_add_fields(self):
+    def test_add_fields(self) -> None:
         """
         title: Ensure schema fields can be added and counted.
         """
@@ -547,7 +520,7 @@ class TestSchema:
         assert s.num_fields == len(scalar_types)
         s.release()
 
-    def test_double_release_is_safe(self):
+    def test_double_release_is_safe(self) -> None:
         """
         title: Ensure releasing a schema more than once is harmless.
         """
@@ -560,7 +533,11 @@ class TestSchema:
 
 
 class TestBuilder:
-    def test_build_and_inspect(self):
+    """
+    title: RecordBatch builder tests.
+    """
+
+    def test_build_and_inspect(self) -> None:
         """
         title: Ensure builders can create and inspect a simple batch.
         """
@@ -580,7 +557,7 @@ class TestBuilder:
         builder.release()
         schema.release()
 
-    def test_null_values(self):
+    def test_null_values(self) -> None:
         """
         title: Ensure null values are reported correctly.
         """
@@ -602,7 +579,7 @@ class TestBuilder:
         builder.release()
         schema.release()
 
-    def test_bool_column(self):
+    def test_bool_column(self) -> None:
         """
         title: Ensure boolean columns round-trip through the builder.
         """
@@ -621,7 +598,7 @@ class TestBuilder:
         builder.release()
         schema.release()
 
-    def test_all_numeric_types(self):
+    def test_all_numeric_types(self) -> None:
         """
         title: Ensure all numeric column types are supported.
         """
@@ -656,7 +633,7 @@ class TestBuilder:
         builder.release()
         schema.release()
 
-    def test_oob_column_raises(self):
+    def test_oob_column_raises(self) -> None:
         """
         title: Ensure out-of-bounds columns raise a runtime error.
         """
@@ -668,7 +645,7 @@ class TestBuilder:
         builder.release()
         schema.release()
 
-    def test_type_mismatch_raises(self):
+    def test_type_mismatch_raises(self) -> None:
         """
         title: Ensure type mismatches raise a runtime error.
         """
@@ -680,7 +657,7 @@ class TestBuilder:
         builder.release()
         schema.release()
 
-    def test_empty_batch(self):
+    def test_empty_batch(self) -> None:
         """
         title: Ensure an empty batch can be produced and inspected.
         """
@@ -697,18 +674,20 @@ class TestBuilder:
 
 
 class TestBufferRoundTrip:
+    """
+    title: RecordBatch buffer interchange tests.
+    """
+
     def _write_batches(
         self, schema: RecordBatchSchema, batches_data: list
     ) -> bytes:
         """
         title: Write a list of batches into an in-memory stream.
         parameters:
-          schema:
-            type: RecordBatchSchema
-          batches_data:
-            type: list
-        returns:
-          type: bytes
+          schema: Declared data schema.
+          batches_data: Batches data.
+        returns: 'Result of this operation: write a list of batches into
+          an in-memory stream.'
         """
         writer = RecordBatchStreamWriter.open_buffer(schema)
         for rows in batches_data:
@@ -725,7 +704,7 @@ class TestBufferRoundTrip:
         writer.release()
         return data
 
-    def test_single_batch_round_trip(self):
+    def test_single_batch_round_trip(self) -> None:
         """
         title: Ensure a single batch survives a buffer round-trip.
         """
@@ -745,7 +724,7 @@ class TestBufferRoundTrip:
         reader.close()
         schema.release()
 
-    def test_multiple_batches_round_trip(self):
+    def test_multiple_batches_round_trip(self) -> None:
         """
         title: Ensure multiple batches survive a buffer round-trip.
         """
@@ -764,7 +743,7 @@ class TestBufferRoundTrip:
         assert all_ids == list(range(15))
         schema.release()
 
-    def test_empty_stream(self):
+    def test_empty_stream(self) -> None:
         """
         title: Ensure an empty stream yields no batches.
         """
@@ -779,7 +758,7 @@ class TestBufferRoundTrip:
         reader.close()
         schema.release()
 
-    def test_context_manager(self):
+    def test_context_manager(self) -> None:
         """
         title: Ensure the writer and reader work as context managers.
         """
@@ -808,12 +787,15 @@ class TestBufferRoundTrip:
 
 
 class TestFileRoundTrip:
+    """
+    title: RecordBatch file interchange tests.
+    """
+
     def test_file_round_trip(self, tmp_path: Path) -> None:
         """
         title: Ensure file-based streams round-trip correctly.
         parameters:
-          tmp_path:
-            type: Path
+          tmp_path: Temporary directory for this test.
         """
         path = tmp_path / "test.arrows"
         schema = make_simple_schema()
@@ -845,7 +827,7 @@ class TestFileRoundTrip:
         reader.close()
         schema.release()
 
-    def test_missing_file_raises(self):
+    def test_missing_file_raises(self) -> None:
         """
         title: Ensure opening a missing file raises a runtime error.
         """
@@ -857,13 +839,16 @@ class TestFileRoundTrip:
 
 
 class TestLargeBatch:
+    """
+    title: Large RecordBatch tests.
+    """
+
     @pytest.mark.parametrize("n", [1_000, 100_000])
     def test_large_batch(self, n: int) -> None:
         """
         title: Ensure large batches can be written and read back.
         parameters:
-          n:
-            type: int
+          n: N.
         """
         schema = RecordBatchSchema()
         schema.add_field("x", IrxColumnType.INT64)
@@ -903,7 +888,7 @@ class TestPyArrowInterop:
     title: TestPyArrowInterop.
     """
 
-    def test_irx_buffer_read_by_pyarrow(self):
+    def test_irx_buffer_read_by_pyarrow(self) -> None:
         """
         title: Ensure PyArrow can read IRx-written IPC bytes.
         """
@@ -935,7 +920,7 @@ class TestPyArrowInterop:
         assert table.column("id").to_pylist() == [0, 1, 2, 3, 4]
         assert table.column("value").to_pylist() == [0.0, None, 3.0, None, 6.0]
 
-    def test_pyarrow_buffer_read_by_irx(self):
+    def test_pyarrow_buffer_read_by_irx(self) -> None:
         """
         title: Ensure the IRx reader can import PyArrow-written IPC bytes.
         """
@@ -971,10 +956,10 @@ class TestPyArrowInterop:
         assert reader.next_batch() is None
         reader.close()
 
-    def test_irx_pyarrow_all_numeric_types(self):
+    def test_irx_pyarrow_all_numeric_types(self) -> None:
         """
-        title: >-
-          Ensure fixed-width numeric types survive the IRx to PyArrow trip.
+        title: Ensure fixed-width numeric types survive the IRx to PyArrow
+          trip.
         """
         schema = RecordBatchSchema()
         schema.add_field("i8", IrxColumnType.INT8)
@@ -1016,7 +1001,7 @@ class TestStringTypes:
     title: TestStringTypes.
     """
 
-    def test_build_and_inspect_utf8(self):
+    def test_build_and_inspect_utf8(self) -> None:
         """
         title: Build a utf8 column and read the values back.
         """
@@ -1034,7 +1019,7 @@ class TestStringTypes:
         builder.release()
         schema.release()
 
-    def test_unicode_round_trip(self):
+    def test_unicode_round_trip(self) -> None:
         """
         title: Ensure multi-byte UTF-8 survives a byte-length round-trip.
         """
@@ -1051,7 +1036,7 @@ class TestStringTypes:
         builder.release()
         schema.release()
 
-    def test_string_nulls(self):
+    def test_string_nulls(self) -> None:
         """
         title: Ensure null slots in a string column read back as null.
         """
@@ -1070,7 +1055,7 @@ class TestStringTypes:
         builder.release()
         schema.release()
 
-    def test_large_utf8(self):
+    def test_large_utf8(self) -> None:
         """
         title: Ensure the large_utf8 (64-bit offset) column works.
         """
@@ -1087,7 +1072,7 @@ class TestStringTypes:
         builder.release()
         schema.release()
 
-    def test_wrong_column_type_raises(self):
+    def test_wrong_column_type_raises(self) -> None:
         """
         title: Ensure appending a string to a numeric column is rejected.
         """
@@ -1099,7 +1084,7 @@ class TestStringTypes:
         builder.release()
         schema.release()
 
-    def test_get_string_on_non_string_column_raises(self):
+    def test_get_string_on_non_string_column_raises(self) -> None:
         """
         title: Ensure get_string on a numeric column raises a type error.
         """
@@ -1114,7 +1099,7 @@ class TestStringTypes:
         builder.release()
         schema.release()
 
-    def test_buffer_round_trip(self):
+    def test_buffer_round_trip(self) -> None:
         """
         title: Ensure string columns survive an in-memory stream round-trip.
         """
@@ -1151,7 +1136,7 @@ class TestStringTypes:
         reader.close()
         schema.release()
 
-    def test_irx_strings_read_by_pyarrow(self):
+    def test_irx_strings_read_by_pyarrow(self) -> None:
         """
         title: Ensure PyArrow reads IRx-written utf8 and large_utf8 columns.
         """
@@ -1179,7 +1164,7 @@ class TestStringTypes:
         assert table.column("name").to_pylist() == ["x", None]
         assert table.column("tag").to_pylist() == ["a", "b"]
 
-    def test_pyarrow_strings_read_by_irx(self):
+    def test_pyarrow_strings_read_by_irx(self) -> None:
         """
         title: Ensure the IRx reader imports PyArrow-written string columns.
         """
@@ -1218,10 +1203,10 @@ class TestTemporalTypes:
     title: TestTemporalTypes.
     """
 
-    def test_date32_round_trip(self):
+    def test_date32_round_trip(self) -> None:
         """
-        title: >-
-          Ensure date32 accepts datetime.date and returns days-since-epoch.
+        title: Ensure date32 accepts datetime.date and returns
+          days-since-epoch.
         """
         schema = RecordBatchSchema()
         schema.add_field("d", IrxColumnType.DATE32, nullable=False)
@@ -1237,7 +1222,7 @@ class TestTemporalTypes:
         builder.release()
         schema.release()
 
-    def test_date64_round_trip(self):
+    def test_date64_round_trip(self) -> None:
         """
         title: Ensure date64 stores milliseconds since epoch.
         """
@@ -1253,7 +1238,7 @@ class TestTemporalTypes:
         builder.release()
         schema.release()
 
-    def test_date_accepts_raw_int(self):
+    def test_date_accepts_raw_int(self) -> None:
         """
         title: Ensure append_date also accepts raw storage ints.
         """
@@ -1267,7 +1252,7 @@ class TestTemporalTypes:
         builder.release()
         schema.release()
 
-    def test_timestamp_all_units_round_trip(self):
+    def test_timestamp_all_units_round_trip(self) -> None:
         """
         title: Ensure every timestamp unit round-trips at its native scale.
         """
@@ -1296,7 +1281,7 @@ class TestTemporalTypes:
         builder.release()
         schema.release()
 
-    def test_timestamp_naive_treated_as_utc(self):
+    def test_timestamp_naive_treated_as_utc(self) -> None:
         """
         title: Ensure a naive datetime is interpreted as UTC on append.
         """
@@ -1313,7 +1298,7 @@ class TestTemporalTypes:
         builder.release()
         schema.release()
 
-    def test_time_all_units_round_trip(self):
+    def test_time_all_units_round_trip(self) -> None:
         """
         title: Ensure every time unit round-trips at its native scale.
         """
@@ -1339,7 +1324,7 @@ class TestTemporalTypes:
         builder.release()
         schema.release()
 
-    def test_temporal_nulls(self):
+    def test_temporal_nulls(self) -> None:
         """
         title: Ensure null slots in temporal columns read back as null.
         """
@@ -1363,7 +1348,7 @@ class TestTemporalTypes:
         builder.release()
         schema.release()
 
-    def test_append_wrong_type_raises(self):
+    def test_append_wrong_type_raises(self) -> None:
         """
         title: Ensure temporal appenders reject non-matching column types.
         """
@@ -1379,7 +1364,7 @@ class TestTemporalTypes:
         builder.release()
         schema.release()
 
-    def test_get_wrong_type_raises(self):
+    def test_get_wrong_type_raises(self) -> None:
         """
         title: Ensure temporal getters reject non-matching column types.
         """
@@ -1398,7 +1383,7 @@ class TestTemporalTypes:
         builder.release()
         schema.release()
 
-    def test_temporal_family_mismatch_raises(self):
+    def test_temporal_family_mismatch_raises(self) -> None:
         """
         title: Ensure append_date rejects a timestamp column and vice versa.
         """
@@ -1413,11 +1398,12 @@ class TestTemporalTypes:
         builder.release()
         schema.release()
 
-    def test_date32_overflow_rejected(self):
+    def test_date32_overflow_rejected(self) -> None:
         """
         title: append_date rejects values outside int32 range for DATE32.
-        summary: |-
+        summary: >-
           A millisecond-epoch value passed to a DATE32 column would silently
+
           narrow to a bogus day count; the native guard must reject it instead.
         """
         schema = RecordBatchSchema()
@@ -1430,7 +1416,7 @@ class TestTemporalTypes:
         builder.release()
         schema.release()
 
-    def test_time32_overflow_rejected(self):
+    def test_time32_overflow_rejected(self) -> None:
         """
         title: append_time rejects values outside int32 range for TIME32.
         """
@@ -1442,7 +1428,7 @@ class TestTemporalTypes:
         builder.release()
         schema.release()
 
-    def test_buffer_round_trip(self):
+    def test_buffer_round_trip(self) -> None:
         """
         title: Ensure temporal columns survive a stream round-trip.
         """
@@ -1487,7 +1473,7 @@ class TestTemporalTypes:
         rb.release()
         reader.close()
 
-    def test_irx_temporal_read_by_pyarrow(self):
+    def test_irx_temporal_read_by_pyarrow(self) -> None:
         """
         title: Ensure PyArrow reads IRx-written temporal columns.
         """
@@ -1520,7 +1506,7 @@ class TestTemporalTypes:
         assert table.column("ts").to_pylist() == [dt.replace(tzinfo=None)]
         assert table.column("t").to_pylist() == [tv]
 
-    def test_pyarrow_temporal_read_by_irx(self):
+    def test_pyarrow_temporal_read_by_irx(self) -> None:
         """
         title: Ensure the IRx reader imports PyArrow-written temporal columns.
         """
@@ -1576,7 +1562,7 @@ class TestListColumns:
     title: List column build, inspection, streaming, and PyArrow interop.
     """
 
-    def test_build_and_read_int_lists(self):
+    def test_build_and_read_int_lists(self) -> None:
         """
         title: Build a list<int32> column and read every row back.
         """
@@ -1598,7 +1584,7 @@ class TestListColumns:
         builder.release()
         schema.release()
 
-    def test_null_list_slot(self):
+    def test_null_list_slot(self) -> None:
         """
         title: A null list slot reads back as None, unlike an empty list.
         """
@@ -1619,7 +1605,7 @@ class TestListColumns:
         builder.release()
         schema.release()
 
-    def test_float_lists(self):
+    def test_float_lists(self) -> None:
         """
         title: Build and read a list<float64> column.
         """
@@ -1636,7 +1622,7 @@ class TestListColumns:
         builder.release()
         schema.release()
 
-    def test_date_element_lists(self):
+    def test_date_element_lists(self) -> None:
         """
         title: Temporal list elements accept date objects and read back raw.
         """
@@ -1653,7 +1639,7 @@ class TestListColumns:
         builder.release()
         schema.release()
 
-    def test_unsupported_element_type_raises(self):
+    def test_unsupported_element_type_raises(self) -> None:
         """
         title: Schema rejects list element types outside the supported set.
         """
@@ -1664,7 +1650,7 @@ class TestListColumns:
             schema.add_list_field("bad", IrxColumnType.UTF8)
         schema.release()
 
-    def test_append_list_on_scalar_column_raises(self):
+    def test_append_list_on_scalar_column_raises(self) -> None:
         """
         title: append_list on a non-list column raises rather than corrupting.
         """
@@ -1676,7 +1662,7 @@ class TestListColumns:
         builder.release()
         schema.release()
 
-    def test_list_buffer_round_trip(self):
+    def test_list_buffer_round_trip(self) -> None:
         """
         title: A list column survives an IPC buffer round-trip.
         """
@@ -1709,7 +1695,7 @@ class TestListColumns:
         rb.release()
         reader.close()
 
-    def test_irx_list_read_by_pyarrow(self):
+    def test_irx_list_read_by_pyarrow(self) -> None:
         """
         title: PyArrow can read an IRx-written list column.
         """
@@ -1733,7 +1719,7 @@ class TestListColumns:
         assert table.schema.field("xs").type == pa.list_(pa.int32())
         assert table.column("xs").to_pylist() == [[1, 2], None, [3, 4, 5]]
 
-    def test_pyarrow_list_read_by_irx(self):
+    def test_pyarrow_list_read_by_irx(self) -> None:
         """
         title: The IRx reader imports a PyArrow-written list column.
         """
@@ -1765,7 +1751,7 @@ class TestStructColumns:
     title: Struct column build, inspection, streaming, and PyArrow interop.
     """
 
-    def test_build_and_read_struct(self):
+    def test_build_and_read_struct(self) -> None:
         """
         title: Build a struct column with mixed field types and read it back.
         """
@@ -1790,7 +1776,7 @@ class TestStructColumns:
         builder.release()
         schema.release()
 
-    def test_append_struct_positional(self):
+    def test_append_struct_positional(self) -> None:
         """
         title: append_struct accepts a positional sequence in field order.
         """
@@ -1809,7 +1795,7 @@ class TestStructColumns:
         builder.release()
         schema.release()
 
-    def test_null_struct_slot(self):
+    def test_null_struct_slot(self) -> None:
         """
         title: A null struct slot reads back as None.
         """
@@ -1830,7 +1816,7 @@ class TestStructColumns:
         builder.release()
         schema.release()
 
-    def test_temporal_struct_fields(self):
+    def test_temporal_struct_fields(self) -> None:
         """
         title: Struct date/time fields take Python temporals, read as ints.
         """
@@ -1852,7 +1838,7 @@ class TestStructColumns:
         builder.release()
         schema.release()
 
-    def test_int32_field_overflow_rejected(self):
+    def test_int32_field_overflow_rejected(self) -> None:
         """
         title: A too-wide value for an INT32 struct field is refused.
         """
@@ -1866,7 +1852,7 @@ class TestStructColumns:
         builder.release()
         schema.release()
 
-    def test_unsupported_field_type_raises(self):
+    def test_unsupported_field_type_raises(self) -> None:
         """
         title: Schema rejects struct field types outside the supported set.
         """
@@ -1877,7 +1863,7 @@ class TestStructColumns:
             schema.add_struct_field("bad", [("f", IrxColumnType.UTF8)])
         schema.release()
 
-    def test_empty_struct_rejected(self):
+    def test_empty_struct_rejected(self) -> None:
         """
         title: A struct column must declare at least one field.
         """
@@ -1886,7 +1872,7 @@ class TestStructColumns:
             schema.add_struct_field("empty", [])
         schema.release()
 
-    def test_append_struct_on_scalar_column_raises(self):
+    def test_append_struct_on_scalar_column_raises(self) -> None:
         """
         title: append_struct on a non-struct column raises rather than corrupt.
         """
@@ -1898,7 +1884,7 @@ class TestStructColumns:
         builder.release()
         schema.release()
 
-    def test_struct_buffer_round_trip(self):
+    def test_struct_buffer_round_trip(self) -> None:
         """
         title: A struct column survives an IPC buffer round-trip.
         """
@@ -1931,7 +1917,7 @@ class TestStructColumns:
         rb.release()
         reader.close()
 
-    def test_irx_struct_read_by_pyarrow(self):
+    def test_irx_struct_read_by_pyarrow(self) -> None:
         """
         title: PyArrow can read an IRx-written struct column.
         """
@@ -1963,7 +1949,7 @@ class TestStructColumns:
             None,
         ]
 
-    def test_pyarrow_struct_read_by_irx(self):
+    def test_pyarrow_struct_read_by_irx(self) -> None:
         """
         title: The IRx reader imports a PyArrow-written struct column.
         """

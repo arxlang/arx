@@ -63,10 +63,8 @@ def test_column_types(type_: astx.ColumnType, expected: pa.DataType) -> None:
     """
     title: Resolve every parameter and nested nullable field exactly.
     parameters:
-      type_:
-        type: astx.ColumnType
-      expected:
-        type: pa.DataType
+      type_: Type expression to process.
+      expected: Expected result for this case.
     """
     assert column_arrow_type(type_).equals(expected)
     cloned = clone_type(type_)
@@ -106,8 +104,7 @@ def test_invalid_column_types(type_: astx.ColumnType) -> None:
     """
     title: Reject unsupported descriptors without a backend fallback.
     parameters:
-      type_:
-        type: astx.ColumnType
+      type_: Type expression to process.
     """
     with pytest.raises((ValueError, TypeError)):
         column_arrow_type(type_)

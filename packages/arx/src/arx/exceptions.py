@@ -14,10 +14,8 @@ class ArxError(Exception):
     """
     title: Base class for expected user-facing Arx failures.
     attributes:
-      code:
-        type: str
-      location:
-        type: SourceLocation | None
+      code: Stable diagnostic identifier.
+      location: Source location attached to this record.
     """
 
     code: str
@@ -33,12 +31,9 @@ class ArxError(Exception):
         """
         title: Initialize an expected Arx failure.
         parameters:
-          message:
-            type: str
-          code:
-            type: str
-          location:
-            type: SourceLocation | None
+          message: Diagnostic or output message.
+          code: Source code or diagnostic identifier.
+          location: Source coordinates associated with the operation.
         """
         super().__init__(message)
         self.code = code
@@ -49,12 +44,9 @@ class ParserException(ArxError):
     """
     title: Handle exceptions for the Parser phase.
     attributes:
-      code:
-        type: str
-      location:
-        type: SourceLocation | None
-      message:
-        type: str
+      code: Stable diagnostic identifier.
+      location: Source location attached to this record.
+      message: Diagnostic message.
     """
 
     message: str
@@ -68,12 +60,9 @@ class ParserException(ArxError):
         """
         title: Initialize ParserException.
         parameters:
-          message:
-            type: str
-          location:
-            type: SourceLocation | None
-          code:
-            type: str
+          message: Diagnostic or output message.
+          location: Source coordinates associated with the operation.
+          code: Source code or diagnostic identifier.
         """
         self.message = message
         super().__init__(
@@ -86,10 +75,8 @@ class ParserException(ArxError):
         """
         title: Format the parser failure with an optional source location.
         parameters:
-          location:
-            type: SourceLocation | None
-        returns:
-          type: str
+          location: Source coordinates associated with the operation.
+        returns: Formatted the parser failure with an optional source location.
         """
         formatted = f"ParserError: {self.message}"
         if location is None:
@@ -100,10 +87,9 @@ class ParserException(ArxError):
         """
         title: Attach a source-backed location when one is not already set.
         parameters:
-          location:
-            type: SourceLocation
-        returns:
-          type: ParserException
+          location: Source coordinates associated with the operation.
+        returns: 'Result of this operation: attach a source-backed location
+          when one is not already set.'
         """
         if self.location is not None:
             return self
@@ -116,10 +102,8 @@ class CodeGenException(ArxError):
     """
     title: Handle exceptions for the CodeGen phase.
     attributes:
-      code:
-        type: str
-      location:
-        type: SourceLocation | None
+      code: Stable diagnostic identifier.
+      location: Source location attached to this record.
     """
 
     def __init__(
@@ -131,12 +115,9 @@ class CodeGenException(ArxError):
         """
         title: Initialize ParserException.
         parameters:
-          message:
-            type: str
-          location:
-            type: SourceLocation | None
-          code:
-            type: str
+          message: Diagnostic or output message.
+          location: Source coordinates associated with the operation.
+          code: Source code or diagnostic identifier.
         """
         formatted = f"CodeGenError: {message}"
         if location is not None:
@@ -148,10 +129,8 @@ class SourceError(ArxError):
     """
     title: Handle expected source loading and size failures.
     attributes:
-      code:
-        type: str
-      location:
-        type: SourceLocation | None
+      code: Stable diagnostic identifier.
+      location: Source location attached to this record.
     """
 
     def __init__(
@@ -162,10 +141,8 @@ class SourceError(ArxError):
         """
         title: Initialize SourceError.
         parameters:
-          message:
-            type: str
-          code:
-            type: str
+          message: Diagnostic or output message.
+          code: Source code or diagnostic identifier.
         """
         super().__init__(message, code=code)
 

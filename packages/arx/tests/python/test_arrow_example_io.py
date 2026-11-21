@@ -30,12 +30,9 @@ def test_tcp_example_handles_fragmented_io(
     """
     title: Socket file wrappers complete short reads and writes in the demo.
     parameters:
-      monkeypatch:
-        type: pytest.MonkeyPatch
-      tmp_path:
-        type: Path
-      fragment_size:
-        type: int
+      monkeypatch: Fixture for temporarily replacing dependencies and settings.
+      tmp_path: Temporary directory for this test.
+      fragment_size: Size of fragment.
     """
     batch = examples.expected_batch()
     sink = pa.BufferOutputStream()
@@ -47,12 +44,12 @@ def test_tcp_example_handles_fragmented_io(
 
     def receive(buffer: bytearray | memoryview) -> int:
         """
-        title: Simulate TCP segmentation independently of packet scheduling.
+        title: Simulate TCP segmentation independently of packet
+          scheduling.
         parameters:
-          buffer:
-            type: bytearray | memoryview
-        returns:
-          type: int
+          buffer: Buffer holding the data.
+        returns: 'Result of this operation: simulate TCP segmentation
+          independently of packet scheduling.'
         """
         data = incoming.read(min(len(buffer), fragment_size))
         buffer[: len(data)] = data
@@ -62,10 +59,9 @@ def test_tcp_example_handles_fragmented_io(
         """
         title: Simulate partial socket sends without losing the remainder.
         parameters:
-          data:
-            type: bytes | memoryview
-        returns:
-          type: int
+          data: Data to process.
+        returns: 'Result of this operation: simulate partial socket sends
+          without losing the remainder.'
         """
         count = min(len(data), fragment_size)
         outgoing.extend(data[:count])

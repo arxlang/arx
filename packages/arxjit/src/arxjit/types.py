@@ -1,9 +1,8 @@
 """
 title: Scalar type and signature API for arxjit.
-summary: >-
-  Defines the built-in scalar types (``i64``, ``f64`` ...) that users reference
-  in ``@jit`` signatures, and the ``Signature`` produced by calling a return
-  type with argument types, e.g. ``i64(i64, i64)``.
+summary: Defines the built-in scalar types (``i64``, ``f64`` ...) that users
+  reference in ``@jit`` signatures, and the ``Signature`` produced by calling
+  a return type with argument types, e.g. ``i64(i64, i64)``.
 """
 
 from __future__ import annotations
@@ -15,17 +14,12 @@ from dataclasses import dataclass
 class SigType:
     """
     title: A type usable in an arxjit signature.
-    summary: >-
-      Scalar today (e.g. ``i64``); the name is kept element-vs-array neutral so
-      array forms such as ``i64[2, 2]`` can be added later via subscripting
-      without renaming the public type.
+    summary: Scalar today (e.g. ``i64``); the name is kept element-vs-array
+      neutral so array forms such as ``i64[2, 2]`` can be added later via
+      subscripting without renaming the public type.
     attributes:
-      name:
-        type: str
-        description: The arxjit-facing name, e.g. ``i64``.
-      astx_name:
-        type: str
-        description: The astx class this type lowers to, e.g. ``Int64``.
+      name: The arxjit-facing name, e.g. ``i64``.
+      astx_name: The astx class this type lowers to, e.g. ``Int64``.
     """
 
     name: str
@@ -36,19 +30,16 @@ class SigType:
         title: Build a Signature using this type as the return type.
         parameters:
           arg_types:
-            type: SigType
             description: The positional argument types, in order.
             variadic: positional
-        returns:
-          type: Signature
+        returns: Constructed a Signature using this type as the return type.
         """
         return Signature(return_type=self, arg_types=arg_types)
 
     def __str__(self) -> str:
         """
         title: Return the arxjit name of the type.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         return self.name
 
@@ -58,12 +49,8 @@ class Signature:
     """
     title: A compiled-function signature (return type and argument types).
     attributes:
-      return_type:
-        type: SigType
-        description: The type returned by the compiled function.
-      arg_types:
-        type: tuple[SigType, Ellipsis]
-        description: The positional argument types, in order.
+      return_type: The type returned by the compiled function.
+      arg_types: The positional argument types, in order.
     """
 
     return_type: SigType
@@ -72,8 +59,7 @@ class Signature:
     def __str__(self) -> str:
         """
         title: Render the signature as ``ret(arg, arg)``.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         args = ", ".join(str(arg) for arg in self.arg_types)
         return f"{self.return_type}({args})"

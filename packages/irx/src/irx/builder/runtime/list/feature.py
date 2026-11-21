@@ -1,9 +1,8 @@
 """
 title: Dynamic-list runtime feature declarations.
-summary: >-
-  Declare append, checked status, index, and idempotent storage destruction for
-  IRX lists. Language-level cleanup insertion remains owned by semantic
-  ownership metadata and lowering.
+summary: Declare append, checked status, index, and idempotent storage
+  destruction for IRX lists. Language-level cleanup insertion remains
+  owned by semantic ownership metadata and lowering.
 """
 
 from __future__ import annotations
@@ -38,8 +37,7 @@ if TYPE_CHECKING:
 def build_list_runtime_feature() -> RuntimeFeature:
     """
     title: Build the dynamic-list runtime feature specification.
-    returns:
-      type: RuntimeFeature
+    returns: Constructed the dynamic-list runtime feature specification.
     """
     native_root = Path(__file__).resolve().parent / "native"
     return RuntimeFeature(
@@ -99,10 +97,8 @@ def _list_llvm_type(visitor: VisitorProtocol) -> ir.LiteralStructType:
     """
     title: Return the canonical lowered list ABI type.
     parameters:
-      visitor:
-        type: VisitorProtocol
-    returns:
-      type: ir.LiteralStructType
+      visitor: Visitor performing the traversal or lowering.
+    returns: The canonical lowered list ABI type.
     """
     return ir.LiteralStructType(
         [
@@ -120,10 +116,9 @@ def _declare_list_append(visitor: VisitorProtocol) -> ir.Function:
     """
     title: Declare the dynamic-list append helper.
     parameters:
-      visitor:
-        type: VisitorProtocol
-    returns:
-      type: ir.Function
+      visitor: Visitor performing the traversal or lowering.
+    returns: 'Result of this operation: declare the dynamic-list
+      append helper.'
     """
     fn_type = ir.FunctionType(
         visitor._llvm.INT32_TYPE,
@@ -144,10 +139,9 @@ def _declare_list_at(visitor: VisitorProtocol) -> ir.Function:
     """
     title: Declare the dynamic-list indexed-access helper.
     parameters:
-      visitor:
-        type: VisitorProtocol
-    returns:
-      type: ir.Function
+      visitor: Visitor performing the traversal or lowering.
+    returns: 'Result of this operation: declare the dynamic-list indexed-access
+      helper.'
     """
     fn_type = ir.FunctionType(
         visitor._llvm.INT32_TYPE,
@@ -169,10 +163,9 @@ def _declare_list_destroy(visitor: VisitorProtocol) -> ir.Function:
     """
     title: Declare the idempotent dynamic-list storage destructor.
     parameters:
-      visitor:
-        type: VisitorProtocol
-    returns:
-      type: ir.Function
+      visitor: Visitor performing the traversal or lowering.
+    returns: 'Result of this operation: declare the idempotent dynamic-list
+      storage destructor.'
     """
     fn_type = ir.FunctionType(
         visitor._llvm.VOID_TYPE,
@@ -191,10 +184,9 @@ def declare_list_status_message(visitor: VisitorProtocol) -> ir.Function:
     """
     title: Declare the non-throwing status diagnostic accessor.
     parameters:
-      visitor:
-        type: VisitorProtocol
-    returns:
-      type: ir.Function
+      visitor: Visitor performing the traversal or lowering.
+    returns: 'Result of this operation: declare the non-throwing
+      status diagnostic accessor.'
     """
     fn_type = ir.FunctionType(
         visitor._llvm.INT8_TYPE.as_pointer(),

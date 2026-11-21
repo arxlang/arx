@@ -25,8 +25,7 @@ def test_arx_test_runner_parses_ambient_range_in_test_modules(
     """
     title: Test modules receive ambient range during runner parsing.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     entry = tmp_path / "test_generators.x"
     entry.write_text(
@@ -56,10 +55,8 @@ def test_arx_test_runner_lists_matching_tests_across_files(
     """
     title: Test multi-file discovery with `--list` and -k filtering.
     parameters:
-      tmp_path:
-        type: Path
-      capsys:
-        type: pytest.CaptureFixture[str]
+      tmp_path: Temporary directory for this test.
+      capsys: Fixture capturing standard output and error streams.
     """
     tests_dir = tmp_path / "tests"
     tests_dir.mkdir()
@@ -112,10 +109,8 @@ def test_arx_test_runner_honors_exclude_glob(
     """
     title: Test discovery honors ``exclude`` glob patterns.
     parameters:
-      tmp_path:
-        type: Path
-      capsys:
-        type: pytest.CaptureFixture[str]
+      tmp_path: Temporary directory for this test.
+      capsys: Fixture capturing standard output and error streams.
     """
     tests_dir = tmp_path / "tests"
     tests_dir.mkdir()
@@ -147,10 +142,8 @@ def test_arx_test_runner_honors_custom_patterns(
     """
     title: Test discovery honors custom file/function patterns.
     parameters:
-      tmp_path:
-        type: Path
-      capsys:
-        type: pytest.CaptureFixture[str]
+      tmp_path: Temporary directory for this test.
+      capsys: Fixture capturing standard output and error streams.
     """
     tests_dir = tmp_path / "checks"
     tests_dir.mkdir()
@@ -188,12 +181,9 @@ def test_arx_test_runner_uses_path_qualified_names_for_same_stem_files(
     """
     title: Test same-stem files in different dirs produce distinct IDs.
     parameters:
-      tmp_path:
-        type: Path
-      capsys:
-        type: pytest.CaptureFixture[str]
-      monkeypatch:
-        type: pytest.MonkeyPatch
+      tmp_path: Temporary directory for this test.
+      capsys: Fixture capturing standard output and error streams.
+      monkeypatch: Fixture for temporarily replacing dependencies and settings.
     """
     unit_dir = tmp_path / "unit"
     integration_dir = tmp_path / "integration"
@@ -229,12 +219,9 @@ def test_arx_test_runner_accepts_none_test_signatures(
     """
     title: Bare and explicit none-return forms are both accepted.
     parameters:
-      tmp_path:
-        type: Path
-      capsys:
-        type: pytest.CaptureFixture[str]
-      monkeypatch:
-        type: pytest.MonkeyPatch
+      tmp_path: Temporary directory for this test.
+      capsys: Fixture capturing standard output and error streams.
+      monkeypatch: Fixture for temporarily replacing dependencies and settings.
     """
     tests_dir = tmp_path / "tests"
     tests_dir.mkdir()
@@ -274,10 +261,8 @@ def test_arx_test_runner_rejects_invalid_test_signature(
     """
     title: Test collection rejects tests with parameters.
     parameters:
-      tmp_path:
-        type: Path
-      capsys:
-        type: pytest.CaptureFixture[str]
+      tmp_path: Temporary directory for this test.
+      capsys: Fixture capturing standard output and error streams.
     """
     entry = tmp_path / "main.x"
     entry.write_text(
@@ -303,10 +288,8 @@ def test_arx_test_runner_rejects_non_none_return_type(
     """
     title: Test collection rejects non-none return types with guidance.
     parameters:
-      tmp_path:
-        type: Path
-      capsys:
-        type: pytest.CaptureFixture[str]
+      tmp_path: Temporary directory for this test.
+      capsys: Fixture capturing standard output and error streams.
     """
     entry = tmp_path / "main.x"
     entry.write_text(
@@ -333,13 +316,11 @@ def test_arx_test_runner_rejects_module_scope_variable_declarations(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """
-    title: >-
-      Test collection reports unsupported module-scope declarations clearly.
+    title: Test collection reports unsupported module-scope declarations
+      clearly.
     parameters:
-      tmp_path:
-        type: Path
-      capsys:
-        type: pytest.CaptureFixture[str]
+      tmp_path: Temporary directory for this test.
+      capsys: Fixture capturing standard output and error streams.
     """
     entry = tmp_path / "main.x"
     entry.write_text(
@@ -369,10 +350,8 @@ def test_arx_test_runner_rejects_module_level_executable_code(
     """
     title: Test collection still rejects true module-level executable code.
     parameters:
-      tmp_path:
-        type: Path
-      capsys:
-        type: pytest.CaptureFixture[str]
+      tmp_path: Temporary directory for this test.
+      capsys: Fixture capturing standard output and error streams.
     """
     entry = tmp_path / "main.x"
     entry.write_text(
@@ -404,10 +383,8 @@ def test_arx_test_runner_builds_one_wrapper_per_selected_test(
     """
     title: Test wrapper generation keeps only one selected test plus main.
     parameters:
-      monkeypatch:
-        type: pytest.MonkeyPatch
-      tmp_path:
-        type: Path
+      monkeypatch: Fixture for temporarily replacing dependencies and settings.
+      tmp_path: Temporary directory for this test.
     """
     entry = tmp_path / "main.x"
     entry.write_text(
@@ -434,10 +411,8 @@ def test_arx_test_runner_builds_one_wrapper_per_selected_test(
         """
         title: Return one stable display name for a synthetic wrapper node.
         parameters:
-          node:
-            type: object
-        returns:
-          type: str
+          node: Syntax node to process.
+        returns: One stable display name for a synthetic wrapper node.
         """
         prototype = getattr(node, "prototype", None)
         if prototype is not None and hasattr(prototype, "name"):
@@ -462,16 +437,11 @@ def test_arx_test_runner_builds_one_wrapper_per_selected_test(
             """
             title: Record synthetic wrapper contents.
             parameters:
-              root:
-                type: ParsedModule
-              resolver:
-                type: ImportResolver
-              output_file:
-                type: str
-              link:
-                type: bool
-              link_mode:
-                type: str
+              root: Root module or resource.
+              resolver: Host-supplied module resolver.
+              output_file: Destination file for generated output.
+              link: Whether to use link.
+              link_mode: Link mode.
             """
             del resolver
             del link
@@ -491,12 +461,9 @@ def test_arx_test_runner_builds_one_wrapper_per_selected_test(
             """
             title: Return a passing command result.
             parameters:
-              capture_stderr:
-                type: bool
-              raise_on_error:
-                type: bool
-            returns:
-              type: CommandResult
+              capture_stderr: Whether to use capture stderr.
+              raise_on_error: Whether to use raise on error.
+            returns: A passing command result.
             """
             del capture_stderr
             del raise_on_error
@@ -527,10 +494,8 @@ def test_arx_test_runner_preserves_supported_shared_declarations(
     """
     title: Test wrappers keep supported shared top-level declarations.
     parameters:
-      monkeypatch:
-        type: pytest.MonkeyPatch
-      tmp_path:
-        type: Path
+      monkeypatch: Fixture for temporarily replacing dependencies and settings.
+      tmp_path: Temporary directory for this test.
     """
     entry = tmp_path / "main.x"
     entry.write_text(
@@ -559,10 +524,8 @@ def test_arx_test_runner_preserves_supported_shared_declarations(
         """
         title: Return one stable display name for a synthetic wrapper node.
         parameters:
-          node:
-            type: object
-        returns:
-          type: str
+          node: Syntax node to process.
+        returns: One stable display name for a synthetic wrapper node.
         """
         prototype = getattr(node, "prototype", None)
         if prototype is not None and hasattr(prototype, "name"):
@@ -590,16 +553,11 @@ def test_arx_test_runner_preserves_supported_shared_declarations(
             """
             title: Record synthetic wrapper contents with shared declarations.
             parameters:
-              root:
-                type: ParsedModule
-              resolver:
-                type: ImportResolver
-              output_file:
-                type: str
-              link:
-                type: bool
-              link_mode:
-                type: str
+              root: Root module or resource.
+              resolver: Host-supplied module resolver.
+              output_file: Destination file for generated output.
+              link: Whether to use link.
+              link_mode: Link mode.
             """
             del resolver
             del link
@@ -618,12 +576,9 @@ def test_arx_test_runner_preserves_supported_shared_declarations(
             """
             title: Return a passing command result.
             parameters:
-              capture_stderr:
-                type: bool
-              raise_on_error:
-                type: bool
-            returns:
-              type: CommandResult
+              capture_stderr: Whether to use capture stderr.
+              raise_on_error: Whether to use raise on error.
+            returns: A passing command result.
             """
             del capture_stderr
             del raise_on_error
@@ -665,10 +620,8 @@ def test_arx_test_runner_supports_package_relative_imports(
     """
     title: Test runner build flow supports package files with relative imports.
     parameters:
-      monkeypatch:
-        type: pytest.MonkeyPatch
-      tmp_path:
-        type: Path
+      monkeypatch: Fixture for temporarily replacing dependencies and settings.
+      tmp_path: Temporary directory for this test.
     """
     src_dir = tmp_path / "src"
     package_dir = src_dir / "samplepkg"
@@ -741,16 +694,11 @@ def test_arx_test_runner_supports_package_relative_imports(
             """
             title: Resolve package imports during test wrapper build.
             parameters:
-              root:
-                type: ParsedModule
-              resolver:
-                type: ImportResolver
-              output_file:
-                type: str
-              link:
-                type: bool
-              link_mode:
-                type: str
+              root: Root module or resource.
+              resolver: Host-supplied module resolver.
+              output_file: Destination file for generated output.
+              link: Whether to use link.
+              link_mode: Link mode.
             """
             del link
             del link_mode
@@ -784,12 +732,9 @@ def test_arx_test_runner_supports_package_relative_imports(
             """
             title: Return a passing command result.
             parameters:
-              capture_stderr:
-                type: bool
-              raise_on_error:
-                type: bool
-            returns:
-              type: CommandResult
+              capture_stderr: Whether to use capture stderr.
+              raise_on_error: Whether to use raise on error.
+            returns: A passing command result.
             """
             del capture_stderr
             del raise_on_error
@@ -817,12 +762,9 @@ def test_arx_test_runner_reports_machine_readable_failures(
     """
     title: Test failure rendering decodes escaped IRx assertion reports.
     parameters:
-      monkeypatch:
-        type: pytest.MonkeyPatch
-      tmp_path:
-        type: Path
-      capsys:
-        type: pytest.CaptureFixture[str]
+      monkeypatch: Fixture for temporarily replacing dependencies and settings.
+      tmp_path: Temporary directory for this test.
+      capsys: Fixture capturing standard output and error streams.
     """
     entry = tmp_path / "main.x"
     entry.write_text(
@@ -853,16 +795,11 @@ def test_arx_test_runner_reports_machine_readable_failures(
             """
             title: Capture the output path and ignore compile inputs.
             parameters:
-              root:
-                type: object
-              resolver:
-                type: ImportResolver
-              output_file:
-                type: str
-              link:
-                type: bool
-              link_mode:
-                type: str
+              root: Root module or resource.
+              resolver: Host-supplied module resolver.
+              output_file: Destination file for generated output.
+              link: Whether to use link.
+              link_mode: Link mode.
             """
             del root
             del resolver
@@ -879,12 +816,9 @@ def test_arx_test_runner_reports_machine_readable_failures(
             """
             title: Return one failing command result with escaped protocol.
             parameters:
-              capture_stderr:
-                type: bool
-              raise_on_error:
-                type: bool
-            returns:
-              type: CommandResult
+              capture_stderr: Whether to use capture stderr.
+              raise_on_error: Whether to use raise on error.
+            returns: One failing command result with escaped protocol.
             """
             del capture_stderr
             del raise_on_error
@@ -921,8 +855,7 @@ def test_arx_test_runner_end_to_end_with_assertions(
     """
     title: Test end-to-end compiled execution for passing and failing asserts.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     entry = tmp_path / "main.x"
     entry.write_text(

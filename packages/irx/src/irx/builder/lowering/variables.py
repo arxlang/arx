@@ -51,10 +51,8 @@ class VariableVisitorMixin(ClassVisitorMixin):
         """
         title: Release one validated lexical owner of scalar iterator state.
         parameters:
-          node:
-            type: astx.VariableDeclaration | astx.InlineVariableDeclaration
-          storage:
-            type: ir.Value
+          node: Syntax node to process.
+          storage: Storage.
         """
         if not isinstance(self._resolved_ast_type(node), astx.GeneratorType):
             return
@@ -96,10 +94,8 @@ class VariableVisitorMixin(ClassVisitorMixin):
         """
         title: Register lexical cleanup for one semantically owned list local.
         parameters:
-          node:
-            type: astx.VariableDeclaration | astx.InlineVariableDeclaration
-          list_ptr:
-            type: ir.Value
+          node: Syntax node to process.
+          list_ptr: List ptr.
         """
         if not isinstance(
             self._resolved_ast_type(node), (astx.ListType, astx.Bytes)
@@ -163,12 +159,9 @@ class VariableVisitorMixin(ClassVisitorMixin):
         """
         title: Destroy owned list storage immediately before replacement.
         parameters:
-          node:
-            type: astx.AST
-          list_ptr:
-            type: ir.Value
-          target_name:
-            type: str
+          node: Syntax node to process.
+          list_ptr: List ptr.
+          target_name: Name of target.
         """
         ownership = resource_ownership(node)
         if ownership is None or ownership.kind is not OwnershipKind.OWNED:
@@ -193,12 +186,8 @@ class VariableVisitorMixin(ClassVisitorMixin):
         """
         title: Register lexical cleanup for one semantically owned string.
         parameters:
-          node:
-            type: >-
-              astx.VariableDeclaration | astx.InlineVariableDeclaration |
-              astx.Identifier
-          string_ptr:
-            type: ir.Value
+          node: Syntax node to process.
+          string_ptr: String ptr.
         """
         if not is_string_type(self._resolved_ast_type(node)):
             return
@@ -258,12 +247,9 @@ class VariableVisitorMixin(ClassVisitorMixin):
         """
         title: Destroy owned string storage before a validated replacement.
         parameters:
-          node:
-            type: astx.AST
-          string_ptr:
-            type: ir.Value
-          target_name:
-            type: str
+          node: Syntax node to process.
+          string_ptr: String ptr.
+          target_name: Name of target.
         """
         ownership = resource_ownership(node)
         if ownership is None:
@@ -295,8 +281,7 @@ class VariableVisitorMixin(ClassVisitorMixin):
         """
         title: Visit VariableAssignment nodes.
         parameters:
-          expr:
-            type: astx.VariableAssignment
+          expr: Expression to process.
         """
         var_name = expr.name
         var_key = semantic_assignment_key(expr, var_name)
@@ -346,8 +331,7 @@ class VariableVisitorMixin(ClassVisitorMixin):
         """
         title: Visit Identifier nodes.
         parameters:
-          node:
-            type: astx.Identifier
+          node: Syntax node to process.
         """
         symbol_key = semantic_symbol_key(node, node.name)
         expr_var = self.named_values.get(symbol_key)
@@ -370,8 +354,7 @@ class VariableVisitorMixin(ClassVisitorMixin):
         """
         title: Visit FieldAccess nodes.
         parameters:
-          node:
-            type: astx.FieldAccess
+          node: Syntax node to process.
         """
         if lower_collection_access(self, node):
             return
@@ -438,8 +421,7 @@ class VariableVisitorMixin(ClassVisitorMixin):
         """
         title: Visit BaseFieldAccess nodes.
         parameters:
-          node:
-            type: astx.BaseFieldAccess
+          node: Syntax node to process.
         """
         field_ptr = self._base_class_field_address(node)
         result = self._llvm.ir_builder.load(field_ptr, node.field_name)
@@ -450,8 +432,7 @@ class VariableVisitorMixin(ClassVisitorMixin):
         """
         title: Visit StaticFieldAccess nodes.
         parameters:
-          node:
-            type: astx.StaticFieldAccess
+          node: Syntax node to process.
         """
         field_ptr = self._static_class_field_address(node)
         result = self._llvm.ir_builder.load(field_ptr, node.field_name)
@@ -461,12 +442,10 @@ class VariableVisitorMixin(ClassVisitorMixin):
     def visit(self, node: astx.VariableDeclaration) -> None:
         """
         title: Visit VariableDeclaration nodes.
-        summary: >-
-          Consume analyzed concrete types while source annotations may remain
-          inference requests.
+        summary: Consume analyzed concrete types while source annotations
+          may remain inference requests.
         parameters:
-          node:
-            type: astx.VariableDeclaration
+          node: Syntax node to process.
         """
         symbol_key = semantic_symbol_key(node, node.name)
         existing_storage = self.named_values.get(symbol_key)
@@ -626,12 +605,10 @@ class VariableVisitorMixin(ClassVisitorMixin):
     def visit(self, node: astx.InlineVariableDeclaration) -> None:
         """
         title: Visit InlineVariableDeclaration nodes.
-        summary: >-
-          Consume analyzed concrete types while source annotations may remain
-          inference requests.
+        summary: Consume analyzed concrete types while source annotations
+          may remain inference requests.
         parameters:
-          node:
-            type: astx.InlineVariableDeclaration
+          node: Syntax node to process.
         """
         symbol_key = semantic_symbol_key(node, node.name)
         existing_storage = self.named_values.get(symbol_key)

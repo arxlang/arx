@@ -1,8 +1,7 @@
 """
 title: Shared class-member semantic helpers.
-summary: >-
-  Provide reusable class-member formatting and owner-resolution helpers for
-  declaration and expression visitor mixins.
+summary: Provide reusable class-member formatting and owner-resolution helpers
+  for declaration and expression visitor mixins.
 """
 
 from __future__ import annotations
@@ -28,10 +27,8 @@ class ClassMemberFormattingVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Return the module key for one declaring class member.
         parameters:
-          member:
-            type: SemanticClassMember
-        returns:
-          type: str
+          member: Member.
+        returns: The module key for one declaring class member.
         """
         return member.owner_qualified_name.partition(
             CLASS_QUALIFIED_NAME_SEPARATOR
@@ -44,10 +41,8 @@ class ClassMemberFormattingVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Return the declaring class for one resolved class member.
         parameters:
-          member:
-            type: SemanticClassMember
-        returns:
-          type: SemanticClass | None
+          member: Member.
+        returns: The declaring class for one resolved class member.
         """
         return self.context.get_class(
             self._member_owner_module_key(member),
@@ -61,10 +56,8 @@ class ClassMemberFormattingVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Return one class member name with its declaring owner.
         parameters:
-          member:
-            type: SemanticClassMember
-        returns:
-          type: str
+          member: Member.
+        returns: One class member name with its declaring owner.
         """
         return f"{member.owner_name}.{member.name}"
 
@@ -75,10 +68,8 @@ class ClassMemberFormattingVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Return one human-facing method signature string.
         parameters:
-          member:
-            type: SemanticClassMember
-        returns:
-          type: str
+          member: Member.
+        returns: One human-facing method signature string.
         """
         if member.signature is None:
             return member.name

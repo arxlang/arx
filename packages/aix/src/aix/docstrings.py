@@ -20,8 +20,7 @@ from jsonschema import ValidationError, validate
 def _schema() -> dict[str, Any]:
     """
     title: Load and cache the Douki JSON schema used by Arx.
-    returns:
-      type: dict[str, Any]
+    returns: Loaded and cache the Douki JSON schema used by Arx.
     """
     with (
         files("aix.schema").joinpath("douki.json").open(encoding="utf-8") as fh
@@ -33,11 +32,9 @@ def validate_docstring(raw: str) -> dict[str, Any]:
     """
     title: Validate docstring content as Douki YAML.
     parameters:
-      raw:
-        type: str
-        description: Raw text found inside the docstring block.
-    returns:
-      type: dict[str, Any]
+      raw: Raw text found inside the docstring block.
+    returns: 'Result of this operation: validate docstring content as Douki
+      YAML.'
     """
     normalized = textwrap.dedent(raw).strip()
     if not normalized:

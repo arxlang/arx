@@ -1,6 +1,6 @@
 """
-title: >-
-  Explicit host capabilities and construction of native-backed File classes.
+title: Explicit host capabilities and construction of native-backed File
+  classes.
 """
 
 from typing import cast
@@ -41,14 +41,13 @@ def is_native_file_class(
     analyzer: SemanticAnalyzerCore, class_: SemanticClass
 ) -> bool:
     """
-    title: Identify a builtin by its host-registered declaration, not its name.
+    title: Identify a builtin by its host-registered declaration,
+      not its name.
     parameters:
-      analyzer:
-        type: SemanticAnalyzerCore
-      class_:
-        type: SemanticClass
-    returns:
-      type: bool
+      analyzer: Semantic analyzer resolving the operation.
+      class_: Class being processed.
+    returns: 'Result of this operation: identify a builtin by its
+      host-registered declaration, not its name.'
     """
     return analyzer.session is not None and any(
         module.native_file_class is class_.declaration
@@ -64,12 +63,10 @@ def reject_native_file_cast(
     """
     title: Preserve file-cast restrictions after resolving public class types.
     parameters:
-      analyzer:
-        type: SemanticAnalyzerCore
-      node:
-        type: astx.Cast
-    returns:
-      type: bool
+      analyzer: Semantic analyzer resolving the operation.
+      node: Syntax node to process.
+    returns: 'Result of this operation: preserve file-cast restrictions after
+      resolving public class types.'
     """
     for type_ in (analyzer._expr_type(node.value), node.target_type):
         if not isinstance(type_, astx.ClassType):
@@ -94,12 +91,12 @@ def registered_file_class(
     analyzer: SemanticAnalyzerCore,
 ) -> SemanticClass | None:
     """
-    title: Look up the unique native File capability supplied by the host.
+    title: Look up the unique native File capability supplied by
+      the host.
     parameters:
-      analyzer:
-        type: SemanticAnalyzerCore
-    returns:
-      type: SemanticClass | None
+      analyzer: Semantic analyzer resolving the operation.
+    returns: 'Result of this operation: look up the unique native
+      File capability supplied by the host.'
     """
     if analyzer.session is None:
         return None
@@ -122,12 +119,10 @@ def validate_native_file_class(
     """
     title: Prove the layout contract before granting native initialization.
     parameters:
-      analyzer:
-        type: SemanticAnalyzerCore
-      class_:
-        type: SemanticClass
-    returns:
-      type: bool
+      analyzer: Semantic analyzer resolving the operation.
+      class_: Class being processed.
+    returns: 'Result of this operation: prove the layout contract before
+      granting native initialization.'
     """
     if not is_native_file_class(analyzer, class_):
         return False
@@ -222,12 +217,9 @@ def resolve_public_file_construction(
     """
     title: Bind both public factories to one checked class initialization plan.
     parameters:
-      analyzer:
-        type: SemanticAnalyzerCore
-      node:
-        type: astx.FunctionCall | astx.ClassConstruct | astx.MethodCall
-      class_:
-        type: SemanticClass
+      analyzer: Semantic analyzer resolving the operation.
+      node: Syntax node to process.
+      class_: Class being processed.
     """
     if not validate_native_file_class(analyzer, class_):
         return

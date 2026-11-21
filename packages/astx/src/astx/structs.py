@@ -15,14 +15,10 @@ class StructType(AnyType):
     """
     title: Named struct type reference.
     attributes:
-      name:
-        type: str
-      resolved_name:
-        type: str | None
-      module_key:
-        type: str | None
-      qualified_name:
-        type: str | None
+      name: Name identifying this declaration.
+      resolved_name: Name of resolved.
+      module_key: Canonical module identity.
+      qualified_name: Name of qualified.
     """
 
     name: str
@@ -41,14 +37,10 @@ class StructType(AnyType):
         """
         title: Initialize one named struct type reference.
         parameters:
-          name:
-            type: str
-          resolved_name:
-            type: str | None
-          module_key:
-            type: str | None
-          qualified_name:
-            type: str | None
+          name: Name identifying the declaration or operation.
+          resolved_name: Name of resolved.
+          module_key: Canonical module identity.
+          qualified_name: Name of qualified.
         """
         super().__init__()
         self.name = name
@@ -59,8 +51,7 @@ class StructType(AnyType):
     def __str__(self) -> str:
         """
         title: Render one struct type reference as text.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         return f"StructType[{self.name}]"
 
@@ -68,10 +59,8 @@ class StructType(AnyType):
         """
         title: Build one repr structure for a struct type reference.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: astx.base.ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         key = f"STRUCT-TYPE[{self.name}]"
         value = self.qualified_name or self.name
@@ -83,12 +72,9 @@ class FieldAccess(astx.DataType):
     """
     title: Field access expression.
     attributes:
-      value:
-        type: astx.AST
-      field_name:
-        type: str
-      type_:
-        type: AnyType
+      value: Stored value.
+      field_name: Name of field.
+      type_: Type associated with this expression.
     """
 
     value: astx.AST
@@ -99,10 +85,8 @@ class FieldAccess(astx.DataType):
         """
         title: Initialize one field access expression.
         parameters:
-          value:
-            type: astx.AST
-          field_name:
-            type: str
+          value: Value to process.
+          field_name: Name of field.
         """
         super().__init__()
         self.value = value
@@ -112,8 +96,7 @@ class FieldAccess(astx.DataType):
     def __str__(self) -> str:
         """
         title: Render one field access expression as text.
-        returns:
-          type: str
+        returns: String representation of this instance.
         """
         return f"FieldAccess[{self.field_name}]"
 
@@ -121,10 +104,8 @@ class FieldAccess(astx.DataType):
         """
         title: Build one repr structure for a field access expression.
         parameters:
-          simplified:
-            type: bool
-        returns:
-          type: astx.base.ReprStruct
+          simplified: Whether to request the compact representation.
+        returns: Structured representation of this node.
         """
         key = f"FIELD-ACCESS[{self.field_name}]"
         value = self.value.get_struct(simplified)

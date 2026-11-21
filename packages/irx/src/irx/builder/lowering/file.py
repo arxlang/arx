@@ -37,8 +37,8 @@ class FileVisitorMixin(VisitorMixinBase):
     def file_error_buffer(self) -> ir.Value:
         """
         title: Allocate caller-owned native error storage.
-        returns:
-          type: ir.Value
+        returns: 'Result of this operation: allocate caller-owned native
+          error storage.'
         """
         storage = self.create_entry_block_alloca(
             "file_error",
@@ -59,16 +59,11 @@ class FileVisitorMixin(VisitorMixinBase):
         """
         title: Guard file outputs before use, reporting caller-owned errors.
         parameters:
-          node:
-            type: astx.AST
-          status:
-            type: ir.Value
-          error:
-            type: ir.Value
-          code:
-            type: str
-          cleanup_temporaries:
-            type: bool
+          node: Syntax node to process.
+          status: Native operation status.
+          error: Error being reported or inspected.
+          code: Source code or diagnostic identifier.
+          cleanup_temporaries: Whether to use cleanup temporaries.
         """
         function = self._llvm.ir_builder.function
         fail = function.append_basic_block("native.fail")
@@ -150,12 +145,9 @@ class FileVisitorMixin(VisitorMixinBase):
         """
         title: Register exactly-once wrapper release on ordinary scope exits.
         parameters:
-          node:
-            type: astx.AST
-          handle:
-            type: ir.Value
-          owner_id:
-            type: str | None
+          node: Syntax node to process.
+          handle: Opaque native handle.
+          owner_id: Identifier for owner.
         """
         error = self.file_error_buffer()
         release = self.require_runtime_symbol("file", "irx_file_release")
@@ -175,8 +167,7 @@ class FileVisitorMixin(VisitorMixinBase):
         """
         title: Evaluate the resolved file operands and produce an owned handle.
         parameters:
-          node:
-            type: astx.FunctionCall
+          node: Syntax node to process.
         """
         attached = getattr(node, "semantic", None)
         semantic = require_semantic_metadata(
@@ -223,16 +214,12 @@ class FileVisitorMixin(VisitorMixinBase):
         """
         title: Publish a native handle only after caller-side status checking.
         parameters:
-          node:
-            type: astx.AST
-          resolution:
-            type: ResolvedFileOpen
-          values:
-            type: list[ir.Value]
-          cleanup_temporaries:
-            type: bool
-        returns:
-          type: ir.Value
+          node: Syntax node to process.
+          resolution: Resolution.
+          values: Values to process, in order.
+          cleanup_temporaries: Whether to use cleanup temporaries.
+        returns: 'Result of this operation: publish a native handle only
+          after caller-side status checking.'
         """
         mode = (
             values[resolution.mode_index]
@@ -267,8 +254,7 @@ class FileVisitorMixin(VisitorMixinBase):
         """
         title: Lower one validated file operation and its status-gated output.
         parameters:
-          node:
-            type: astx.MethodCall
+          node: Syntax node to process.
         """
         attached = getattr(node, "semantic", None)
         semantic = require_semantic_metadata(

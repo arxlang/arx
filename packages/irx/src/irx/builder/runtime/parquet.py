@@ -1,8 +1,8 @@
 """
 title: On-demand Parquet plugin linked to the owning RecordBatch library.
-summary: >-
-  Opaque handles and thread-local errors belong to one base shared library. The
-  optional plugin links that library rather than duplicating its objects.
+summary: Opaque handles and thread-local errors belong to one base shared
+  library. The optional plugin links that library rather than duplicating
+  its objects.
 """
 
 from __future__ import annotations
@@ -30,15 +30,13 @@ from irx.typecheck import typechecked
 def ensure_parquet_shared_library(cxx_binary: str = "c++") -> Path:
     """
     title: Build a fingerprinted plugin only when Parquet is requested.
-    summary: >-
-      Keep the base path in DT_NEEDED so both loaded modules share handles and
-      error state. The base fingerprint includes compiler, sources and headers;
-      the plugin adds its optional library flags and sources to that identity.
+    summary: Keep the base path in DT_NEEDED so both loaded modules share
+      handles and error state. The base fingerprint includes compiler, sources
+      and headers; the plugin adds its optional library flags and sources
+      to that identity.
     parameters:
-      cxx_binary:
-        type: str
-    returns:
-      type: Path
+      cxx_binary: Cxx binary.
+    returns: Constructed a fingerprinted plugin only when Parquet is requested.
     """
     feature = build_parquet_runtime_feature()
     if feature.unavailable_reason is not None:

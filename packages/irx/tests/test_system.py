@@ -43,16 +43,11 @@ def test_print_expr(
     """
     title: Test the PrintExpr node.
     parameters:
-      action:
-        type: str
-      expected_file:
-        type: str
-      builder_class:
-        type: type[Builder]
-      int_type:
-        type: type
-      literal_type:
-        type: type
+      action: Action.
+      expected_file: File containing expected.
+      builder_class: Builder implementation under test.
+      int_type: Type of int.
+      literal_type: Literal type used by this case.
     """
     builder = builder_class()
     module = builder.module()

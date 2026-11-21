@@ -34,8 +34,7 @@ if TYPE_CHECKING:
 def build_tensor_runtime_feature() -> RuntimeFeature:
     """
     title: Build the builtin tensor runtime feature specification.
-    returns:
-      type: RuntimeFeature
+    returns: Constructed the builtin tensor runtime feature specification.
     """
     runtime_root = Path(__file__).resolve().parent
     native_root = (runtime_root.parent / "arrow" / "native").resolve()
@@ -161,16 +160,12 @@ def _declare_function(
     """
     title: Declare one Arrow tensor runtime symbol.
     parameters:
-      visitor:
-        type: VisitorProtocol
-      name:
-        type: str
-      return_type:
-        type: ir.Type
-      arg_types:
-        type: list[ir.Type]
-    returns:
-      type: ir.Function
+      visitor: Visitor performing the traversal or lowering.
+      name: Name identifying the declaration or operation.
+      return_type: Declared result type.
+      arg_types: Types of arg.
+    returns: 'Result of this operation: declare one Arrow tensor runtime
+      symbol.'
     """
     fn_type = ir.FunctionType(return_type, arg_types)
     return declare_external_function(visitor._llvm.module, name, fn_type)
@@ -181,10 +176,8 @@ def _declare_tensor_builder_new(visitor: VisitorProtocol) -> ir.Function:
     """
     title: Declare Arrow tensor builder new.
     parameters:
-      visitor:
-        type: VisitorProtocol
-    returns:
-      type: ir.Function
+      visitor: Visitor performing the traversal or lowering.
+    returns: 'Result of this operation: declare Arrow tensor builder new.'
     """
     return _declare_function(
         visitor,
@@ -207,10 +200,9 @@ def _declare_tensor_builder_append_int(
     """
     title: Declare Arrow tensor builder append int.
     parameters:
-      visitor:
-        type: VisitorProtocol
-    returns:
-      type: ir.Function
+      visitor: Visitor performing the traversal or lowering.
+    returns: 'Result of this operation: declare Arrow tensor builder append
+      int.'
     """
     return _declare_function(
         visitor,
@@ -227,10 +219,9 @@ def _declare_tensor_builder_append_uint(
     """
     title: Declare Arrow tensor builder append uint.
     parameters:
-      visitor:
-        type: VisitorProtocol
-    returns:
-      type: ir.Function
+      visitor: Visitor performing the traversal or lowering.
+    returns: 'Result of this operation: declare Arrow tensor builder append
+      uint.'
     """
     return _declare_function(
         visitor,
@@ -247,10 +238,9 @@ def _declare_tensor_builder_append_double(
     """
     title: Declare Arrow tensor builder append double.
     parameters:
-      visitor:
-        type: VisitorProtocol
-    returns:
-      type: ir.Function
+      visitor: Visitor performing the traversal or lowering.
+    returns: 'Result of this operation: declare Arrow tensor builder append
+      double.'
     """
     return _declare_function(
         visitor,
@@ -265,10 +255,8 @@ def _declare_tensor_builder_finish(visitor: VisitorProtocol) -> ir.Function:
     """
     title: Declare Arrow tensor builder finish.
     parameters:
-      visitor:
-        type: VisitorProtocol
-    returns:
-      type: ir.Function
+      visitor: Visitor performing the traversal or lowering.
+    returns: 'Result of this operation: declare Arrow tensor builder finish.'
     """
     return _declare_function(
         visitor,
@@ -286,10 +274,8 @@ def _declare_tensor_builder_release(visitor: VisitorProtocol) -> ir.Function:
     """
     title: Declare Arrow tensor builder release.
     parameters:
-      visitor:
-        type: VisitorProtocol
-    returns:
-      type: ir.Function
+      visitor: Visitor performing the traversal or lowering.
+    returns: 'Result of this operation: declare Arrow tensor builder release.'
     """
     return _declare_function(
         visitor,
@@ -304,10 +290,8 @@ def _declare_tensor_type_id(visitor: VisitorProtocol) -> ir.Function:
     """
     title: Declare Arrow tensor type id.
     parameters:
-      visitor:
-        type: VisitorProtocol
-    returns:
-      type: ir.Function
+      visitor: Visitor performing the traversal or lowering.
+    returns: 'Result of this operation: declare Arrow tensor type id.'
     """
     return _declare_function(
         visitor,
@@ -322,10 +306,8 @@ def _declare_tensor_ndim(visitor: VisitorProtocol) -> ir.Function:
     """
     title: Declare Arrow tensor ndim.
     parameters:
-      visitor:
-        type: VisitorProtocol
-    returns:
-      type: ir.Function
+      visitor: Visitor performing the traversal or lowering.
+    returns: 'Result of this operation: declare Arrow tensor ndim.'
     """
     return _declare_function(
         visitor,
@@ -340,10 +322,8 @@ def _declare_tensor_size(visitor: VisitorProtocol) -> ir.Function:
     """
     title: Declare Arrow tensor size.
     parameters:
-      visitor:
-        type: VisitorProtocol
-    returns:
-      type: ir.Function
+      visitor: Visitor performing the traversal or lowering.
+    returns: 'Result of this operation: declare Arrow tensor size.'
     """
     return _declare_function(
         visitor,
@@ -358,10 +338,8 @@ def _declare_tensor_shape(visitor: VisitorProtocol) -> ir.Function:
     """
     title: Declare Arrow tensor shape.
     parameters:
-      visitor:
-        type: VisitorProtocol
-    returns:
-      type: ir.Function
+      visitor: Visitor performing the traversal or lowering.
+    returns: 'Result of this operation: declare Arrow tensor shape.'
     """
     return _declare_function(
         visitor,
@@ -376,10 +354,8 @@ def _declare_tensor_strides(visitor: VisitorProtocol) -> ir.Function:
     """
     title: Declare Arrow tensor strides.
     parameters:
-      visitor:
-        type: VisitorProtocol
-    returns:
-      type: ir.Function
+      visitor: Visitor performing the traversal or lowering.
+    returns: 'Result of this operation: declare Arrow tensor strides.'
     """
     return _declare_function(
         visitor,
@@ -396,10 +372,9 @@ def _declare_tensor_borrow_buffer_view(
     """
     title: Declare Arrow tensor borrow buffer view.
     parameters:
-      visitor:
-        type: VisitorProtocol
-    returns:
-      type: ir.Function
+      visitor: Visitor performing the traversal or lowering.
+    returns: 'Result of this operation: declare Arrow tensor borrow buffer
+      view.'
     """
     return _declare_function(
         visitor,
@@ -417,10 +392,8 @@ def _declare_tensor_retain(visitor: VisitorProtocol) -> ir.Function:
     """
     title: Declare Arrow tensor retain.
     parameters:
-      visitor:
-        type: VisitorProtocol
-    returns:
-      type: ir.Function
+      visitor: Visitor performing the traversal or lowering.
+    returns: 'Result of this operation: declare Arrow tensor retain.'
     """
     return _declare_function(
         visitor,
@@ -435,10 +408,8 @@ def _declare_tensor_release(visitor: VisitorProtocol) -> ir.Function:
     """
     title: Declare Arrow tensor release.
     parameters:
-      visitor:
-        type: VisitorProtocol
-    returns:
-      type: ir.Function
+      visitor: Visitor performing the traversal or lowering.
+    returns: 'Result of this operation: declare Arrow tensor release.'
     """
     return _declare_function(
         visitor,
@@ -453,10 +424,8 @@ def _declare_last_error(visitor: VisitorProtocol) -> ir.Function:
     """
     title: Declare Arrow last error.
     parameters:
-      visitor:
-        type: VisitorProtocol
-    returns:
-      type: ir.Function
+      visitor: Visitor performing the traversal or lowering.
+    returns: 'Result of this operation: declare Arrow last error.'
     """
     return _declare_function(
         visitor,

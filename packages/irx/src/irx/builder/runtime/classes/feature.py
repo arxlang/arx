@@ -22,8 +22,8 @@ from irx.typecheck import typechecked
 def build_class_runtime_feature() -> RuntimeFeature:
     """
     title: Declare checked reference-counted class operations.
-    returns:
-      type: RuntimeFeature
+    returns: 'Result of this operation: declare checked reference-counted
+      class operations.'
     """
     native = Path(__file__).parent / "native"
     symbols: dict[str, ExternalSymbolSpec] = {}
@@ -43,12 +43,10 @@ def build_class_runtime_feature() -> RuntimeFeature:
             """
             title: Declare one native class ABI entry point.
             parameters:
-              visitor:
-                type: VisitorProtocol
-              operation:
-                type: str
-            returns:
-              type: ir.Function
+              visitor: Visitor performing the traversal or lowering.
+              operation: Operation to resolve or execute.
+            returns: 'Result of this operation: declare one native class
+              ABI entry point.'
             """
             pointer = visitor._llvm.INT8_TYPE.as_pointer()
             integer = visitor._llvm.INT32_TYPE

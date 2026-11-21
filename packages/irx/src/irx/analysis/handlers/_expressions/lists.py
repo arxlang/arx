@@ -44,10 +44,9 @@ def flatten_collection(
     """
     title: Flatten rectangular syntax only under an explicit tensor context.
     parameters:
-      node:
-        type: astx.ListExpr
-    returns:
-      type: tuple[tuple[int, Ellipsis], list[astx.Expr]]
+      node: Syntax node to process.
+    returns: 'Result of this operation: flatten rectangular syntax only under
+      an explicit tensor context.'
     """
     shapes: list[tuple[int, ...]] = []
     values: list[astx.Expr] = []
@@ -70,10 +69,9 @@ def infer_list_element(types: list[astx.DataType]) -> astx.DataType | None:
     """
     title: Choose an order-independent lossless domain for all elements.
     parameters:
-      types:
-        type: list[astx.DataType]
-    returns:
-      type: astx.DataType | None
+      types: Types.
+    returns: 'Result of this operation: choose an order-independent lossless
+      domain for all elements.'
     """
     if not types:
         return None
@@ -113,8 +111,7 @@ class ExpressionListVisitorMixin(SemanticVisitorMixinBase):
         """
         title: Analyze elements in evaluation order.
         parameters:
-          node:
-            type: astx.ListExpr
+          node: Syntax node to process.
         """
         info = self._semantic(node)
         info.collection_tensor = None

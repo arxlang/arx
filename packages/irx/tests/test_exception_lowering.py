@@ -29,10 +29,9 @@ def block(*nodes: astx.AST) -> astx.Block:
     title: Build an ordered statement block.
     parameters:
       nodes:
-        type: astx.AST
         variadic: positional
-    returns:
-      type: astx.Block
+        description: Syntax nodes in source order.
+    returns: Constructed an ordered statement block.
     """
     result = astx.Block()
     for node in nodes:
@@ -46,14 +45,10 @@ def function(
     """
     title: Build a resolved-by-analysis source function.
     parameters:
-      name:
-        type: str
-      body:
-        type: astx.Block
-      return_type:
-        type: AnyType | None
-    returns:
-      type: astx.FunctionDef
+      name: Name identifying the declaration or operation.
+      body: Statements forming the body.
+      return_type: Declared result type.
+    returns: Constructed a resolved-by-analysis source function.
     """
     return astx.FunctionDef(
         astx.FunctionPrototype(
@@ -66,8 +61,7 @@ def function(
 def raised() -> astx.ThrowStmt:
     """
     title: Construct a nominal builtin raise without Arx parsing.
-    returns:
-      type: astx.ThrowStmt
+    returns: Constructed a nominal builtin raise without Arx parsing.
     """
     return astx.ThrowStmt(
         astx.FunctionCall("ValueError", [astx.LiteralString("failure")])
@@ -80,12 +74,9 @@ def caught(
     """
     title: Return a supplied value when ValueError reaches this region.
     parameters:
-      body:
-        type: astx.Block
-      value:
-        type: astx.DataType
-    returns:
-      type: astx.ExceptionHandlerStmt
+      body: Statements forming the body.
+      value: Value to process.
+    returns: A supplied value when ValueError reaches this region.
     """
     return astx.ExceptionHandlerStmt(
         body,
@@ -102,13 +93,12 @@ def run_module(tmp_path: Path, *nodes: astx.AST) -> tuple[str, int]:
     """
     title: Verify generated LLVM and execute its platform wrapper.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
       nodes:
-        type: astx.AST
         variadic: positional
-    returns:
-      type: tuple[str, int]
+        description: Syntax nodes in source order.
+    returns: 'Result of this operation: verify generated LLVM and execute
+      its platform wrapper.'
     """
     if shutil.which("clang") is None:
         pytest.skip("native exception test requires clang")
@@ -135,8 +125,7 @@ def test_status_call_reads_only_success_output(tmp_path: Path) -> None:
     """
     title: A throwing function never exposes its uninitialized return slot.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     helper = function("helper", block(raised()))
     main = function(
@@ -171,8 +160,7 @@ def test_text_result_rolls_back_when_receiver_cleanup_raises(
     """
     title: A text result is protected before fallible operand cleanup and move.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     source = astx.ClassDefStmt(
         "TextSource",
@@ -222,12 +210,9 @@ def test_loop_transfer_runs_finally(
     """
     title: Direct AST loop transfers run finalization once per iteration.
     parameters:
-      tmp_path:
-        type: Path
-      transfer:
-        type: str
-      expected:
-        type: int
+      tmp_path: Temporary directory for this test.
+      transfer: Transfer.
+      expected: Expected result for this case.
     """
     counter = astx.VariableDeclaration(
         "counter",
@@ -286,8 +271,7 @@ def test_with_exception_runs_exit_before_handler(tmp_path: Path) -> None:
     """
     title: Exceptional with exit runs through the same status ABI as methods.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     state = astx.VariableDeclaration(
         "state",
@@ -340,13 +324,11 @@ def test_with_exception_runs_exit_before_handler(tmp_path: Path) -> None:
 @pytest.mark.parametrize("dispatch", ["virtual", "static", "base"])
 def test_method_status_propagates(tmp_path: Path, dispatch: str) -> None:
     """
-    title: >-
-      Every resolved method dispatch shape propagates an exceptional status.
+    title: Every resolved method dispatch shape propagates an exceptional
+      status.
     parameters:
-      tmp_path:
-        type: Path
-      dispatch:
-        type: str
+      tmp_path: Temporary directory for this test.
+      dispatch: Dispatch.
     """
     method = function("fail", block(raised()))
     if dispatch == "static":
@@ -377,8 +359,7 @@ def test_raise_operand_survives_mutating_cause(tmp_path: Path) -> None:
     """
     title: Pin a borrowed raised field before a cause expression replaces it.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     original = astx.FunctionCall(
         "ValueError", [astx.LiteralString("original")]
@@ -455,13 +436,11 @@ def test_cancelled_return_owns_only_its_completion(
     tmp_path: Path, nested: bool
 ) -> None:
     """
-    title: >-
-      Local loop transfers cancel inner returns without releasing older ones.
+    title: Local loop transfers cancel inner returns without releasing older
+      ones.
     parameters:
-      tmp_path:
-        type: Path
-      nested:
-        type: bool
+      tmp_path: Temporary directory for this test.
+      nested: Whether to use nested.
     """
     original = astx.BinaryOp(
         "+", astx.LiteralString("original"), astx.LiteralString("")
@@ -528,10 +507,8 @@ def test_cancelled_list_move_restores_surviving_binding(
     """
     title: A cancelled affine move returns ownership to an in-scope binding.
     parameters:
-      tmp_path:
-        type: Path
-      cancellation:
-        type: str
+      tmp_path: Temporary directory for this test.
+      cancellation: Cancellation.
     """
     type_ = astx.ListType([astx.Int32()])
     body = block(
@@ -612,10 +589,8 @@ def test_void_return_evaluates_failing_expression(
     """
     title: Void return expressions propagate failures before committing return.
     parameters:
-      tmp_path:
-        type: Path
-      generator:
-        type: bool
+      tmp_path: Temporary directory for this test.
+      generator: Whether to use generator.
     """
     fail = function("fail", block(raised()), astx.NoneType())
     body = block()
@@ -706,10 +681,8 @@ def test_empty_exception_reference_is_checked(
     """
     title: Empty raised values and explicit causes become checked RuntimeError.
     parameters:
-      tmp_path:
-        type: Path
-      empty:
-        type: str
+      tmp_path: Temporary directory for this test.
+      empty: Empty.
     """
     declaration = astx.VariableDeclaration(
         "missing",
@@ -810,10 +783,8 @@ def test_partial_owned_list_return_rolls_back(
     """
     title: Failure drops partial returns even when ownership will move.
     parameters:
-      tmp_path:
-        type: Path
-      comprehension:
-        type: bool
+      tmp_path: Temporary directory for this test.
+      comprehension: Whether to use comprehension.
     """
     item = astx.FunctionDef(
         astx.FunctionPrototype(

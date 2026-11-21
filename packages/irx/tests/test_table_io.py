@@ -33,8 +33,7 @@ def test_csv_chunks_projection_and_ownership(tmp_path: Path) -> None:
     """
     title: Eager reads preserve every batch and independent table ownership.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     source = tmp_path / "input.csv"
     source.write_text(
@@ -62,8 +61,7 @@ def test_csv_controls_and_headerless_names(tmp_path: Path) -> None:
     """
     title: Named CSV controls map to the native reader without a second parser.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     source = tmp_path / "input.csv"
     source.write_text("ignored\n1;'a;λ'\n\n2;NULL\n3;''\n", encoding="utf-8")
@@ -92,8 +90,7 @@ def test_csv_projection_does_not_hide_bad_source(tmp_path: Path) -> None:
     """
     title: Unselected columns still undergo full declared parsing and checks.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     source = tmp_path / "input.csv"
     source.write_text("id,bad\n1,not-an-integer\n")
@@ -110,10 +107,8 @@ def test_csv_writer_options(tmp_path: Path, quoting: str) -> None:
     """
     title: Writers expose supported quoting, EOL, null and delimiter controls.
     parameters:
-      tmp_path:
-        type: Path
-      quoting:
-        type: str
+      tmp_path: Temporary directory for this test.
+      quoting: Quoting.
     """
     target = tmp_path / "output.csv"
     table = pa.table({"text": ["abc", None, "λ"]})
@@ -152,10 +147,8 @@ def test_csv_rejects_invalid_settings(
     """
     title: Bad selectors and options fail explicitly instead of being ignored.
     parameters:
-      tmp_path:
-        type: Path
-      settings:
-        type: dict[str, object]
+      tmp_path: Temporary directory for this test.
+      settings: Settings.
     """
     source = tmp_path / "input.csv"
     source.write_text("id\n1\n")
@@ -167,8 +160,7 @@ def test_csv_validation_precedes_truncation(tmp_path: Path) -> None:
     """
     title: Invalid writer options or unsupported types do not destroy output.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     target = tmp_path / "output.csv"
     target.write_text("keep")
@@ -184,8 +176,7 @@ def test_empty_tables_keep_schema(tmp_path: Path) -> None:
     """
     title: Schema-only results are owned, serializable tables rather than EOF.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     table = pa.table({"id": pa.array([], type=pa.int64())})
     csv = tmp_path / "empty.csv"
@@ -198,11 +189,10 @@ def test_empty_tables_keep_schema(tmp_path: Path) -> None:
 
 def test_parquet_nested_chunks_and_schema(tmp_path: Path) -> None:
     """
-    title: >-
-      Whole-file bridges preserve uneven chunks, nested values and metadata.
+    title: Whole-file bridges preserve uneven chunks, nested values
+      and metadata.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     schema = pa.schema(
         [
@@ -233,11 +223,10 @@ def test_parquet_nested_chunks_and_schema(tmp_path: Path) -> None:
 
 def test_parquet_filters_options_and_groups(tmp_path: Path) -> None:
     """
-    title: >-
-      Predicates filter rows, snapshots do not mutate, and defaults override.
+    title: Predicates filter rows, snapshots do not mutate, and defaults
+      override.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     table = pa.table(
         {
@@ -307,10 +296,8 @@ def test_parquet_rejects_invalid_settings(
     """
     title: Invalid or wrong-mode Parquet options fail instead of falling back.
     parameters:
-      tmp_path:
-        type: Path
-      settings:
-        type: dict[str, object]
+      tmp_path: Temporary directory for this test.
+      settings: Settings.
     """
     path = tmp_path / "data.parquet"
     write_parquet(pa.table({"id": [1]}), path)
@@ -322,8 +309,7 @@ def test_parquet_dataset_discovery_and_transactions(tmp_path: Path) -> None:
     """
     title: Directory discovery and local atomic writes reuse the native engine.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     table = pa.table({"id": [1, 2, 3], "group": ["a", "b", "a"]})
     root = tmp_path / "dataset"
@@ -345,10 +331,8 @@ def test_predicate_validation(operation: str, value: int | None) -> None:
     """
     title: Unsupported filter syntax and missing or extra values are rejected.
     parameters:
-      operation:
-        type: str
-      value:
-        type: int | None
+      operation: Operation to resolve or execute.
+      value: Value to process.
     """
     with pytest.raises(ValueError):
         where("id", operation, value)
@@ -392,20 +376,18 @@ def test_csv_helpers_without_optional_parquet(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """
-    title: >-
-      CSV convenience operations never request the optional Parquet plugin.
+    title: CSV convenience operations never request the optional Parquet
+      plugin.
     parameters:
-      tmp_path:
-        type: Path
-      monkeypatch:
-        type: pytest.MonkeyPatch
+      tmp_path: Temporary directory for this test.
+      monkeypatch: Fixture for temporarily replacing dependencies and settings.
     """
 
     def unavailable() -> ctypes.CDLL:
         """
         title: Fail immediately on optional runtime activation.
-        returns:
-          type: ctypes.CDLL
+        returns: 'Result of this operation: fail immediately on optional
+          runtime activation.'
         """
         raise AssertionError("CSV activated Parquet")
 
@@ -443,8 +425,7 @@ def test_table_helpers_reject_stale_overrides(
     """
     title: A library without table symbols gives an actionable error.
     parameters:
-      monkeypatch:
-        type: pytest.MonkeyPatch
+      monkeypatch: Fixture for temporarily replacing dependencies and settings.
     """
     process = ctypes.CDLL(None)
     monkeypatch.setattr(table_io, "c_data_library", lambda: process)
@@ -456,8 +437,7 @@ def test_late_csv_corruption_returns_no_partial_table(tmp_path: Path) -> None:
     """
     title: A conversion error after valid blocks does not return partial rows.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     path = tmp_path / "late.csv"
     path.write_text("id\n" + "1\n" * 64 + "invalid\n")
@@ -480,10 +460,8 @@ def test_table_writers_reject_lossy_c_schemas(
     """
     title: C Stream interchange never truncates names or timezone formats.
     parameters:
-      tmp_path:
-        type: Path
-      field:
-        type: pa.Field
+      tmp_path: Temporary directory for this test.
+      field: Field to process.
     """
     table = pa.Table.from_arrays(
         [pa.array([], type=field.type)], schema=pa.schema([field])
@@ -500,8 +478,7 @@ def test_native_table_bridge_rejects_lossy_ipc_names(tmp_path: Path) -> None:
     """
     title: Native table construction validates names before exporting a stream.
     parameters:
-      tmp_path:
-        type: Path
+      tmp_path: Temporary directory for this test.
     """
     path = tmp_path / "bad.arrow"
     table = pa.table({"bad\0name": [1]})

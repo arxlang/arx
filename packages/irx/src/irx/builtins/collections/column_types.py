@@ -22,12 +22,10 @@ def column_field(name: str, type_: astx.DataType) -> pa.Field:
     """
     title: Preserve explicit nested nullability in a column field.
     parameters:
-      name:
-        type: str
-      type_:
-        type: astx.DataType
-    returns:
-      type: pa.Field
+      name: Name identifying the declaration or operation.
+      type_: Type expression to process.
+    returns: 'Result of this operation: preserve explicit nested nullability
+      in a column field.'
     """
     nullable = isinstance(type_, astx.NullableType)
     inner = type_.value_type if isinstance(type_, astx.NullableType) else type_
@@ -40,10 +38,8 @@ def binary_column(type_: astx.ColumnType) -> pa.DataType:
     """
     title: Resolve variable or fixed binary and large UTF-8 storage.
     parameters:
-      type_:
-        type: astx.ColumnType
-    returns:
-      type: pa.DataType
+      type_: Type expression to process.
+    returns: Resolved variable or fixed binary and large UTF-8 storage.
     """
     name, args = type_.column_kind, type_.arguments
     if not args:
@@ -68,10 +64,9 @@ def decimal_column(type_: astx.ColumnType) -> pa.DataType:
     """
     title: Validate decimal precision and signed scale.
     parameters:
-      type_:
-        type: astx.ColumnType
-    returns:
-      type: pa.DataType
+      type_: Type expression to process.
+    returns: 'Result of this operation: validate decimal precision and signed
+      scale.'
     """
     args = type_.arguments
     if len(args) != PAIR_SIZE or not all(type(a) is int for a in args):
@@ -90,10 +85,9 @@ def temporal_column(type_: astx.ColumnType) -> pa.DataType:
     """
     title: Validate physical time units and optional timestamp zones.
     parameters:
-      type_:
-        type: astx.ColumnType
-    returns:
-      type: pa.DataType
+      type_: Type expression to process.
+    returns: 'Result of this operation: validate physical time units and
+      optional timestamp zones.'
     """
     args = type_.arguments
     if not 1 <= len(args) <= PAIR_SIZE or not all(
@@ -123,10 +117,8 @@ def list_column(type_: astx.ColumnType) -> pa.DataType:
     """
     title: Resolve list offset widths, child nullability and fixed sizes.
     parameters:
-      type_:
-        type: astx.ColumnType
-    returns:
-      type: pa.DataType
+      type_: Type expression to process.
+    returns: Resolved list offset widths, child nullability and fixed sizes.
     """
     args = type_.arguments
     if not args or not isinstance(args[0], astx.DataType):
@@ -153,10 +145,8 @@ def paired_column(type_: astx.ColumnType) -> pa.DataType:
     """
     title: Resolve dictionary index/value or map key/item types.
     parameters:
-      type_:
-        type: astx.ColumnType
-    returns:
-      type: pa.DataType
+      type_: Type expression to process.
+    returns: Resolved dictionary index/value or map key/item types.
     """
     args = type_.arguments
     if len(args) != PAIR_SIZE or not all(
@@ -176,10 +166,9 @@ def struct_column(type_: astx.ColumnType) -> pa.DataType:
     """
     title: Validate ordered, unique named fields with explicit nullability.
     parameters:
-      type_:
-        type: astx.ColumnType
-    returns:
-      type: pa.DataType
+      type_: Type expression to process.
+    returns: 'Result of this operation: validate ordered, unique named fields
+      with explicit nullability.'
     """
     args = type_.arguments
     if not args or len(args) % PAIR_SIZE:
@@ -202,10 +191,8 @@ def column_arrow_type(type_: astx.DataType) -> pa.DataType:
     """
     title: Resolve exact column storage without lossy coercions.
     parameters:
-      type_:
-        type: astx.DataType
-    returns:
-      type: pa.DataType
+      type_: Type expression to process.
+    returns: Resolved exact column storage without lossy coercions.
     """
     primitive: dict[type[astx.DataType], pa.DataType] = {
         astx.Int8: pa.int8(),
@@ -263,10 +250,9 @@ def dataframe_schema_ipc(type_: astx.DataFrameType) -> bytes:
     """
     title: Serialize the exact declared schema, not input-dependent inference.
     parameters:
-      type_:
-        type: astx.DataFrameType
-    returns:
-      type: bytes
+      type_: Type expression to process.
+    returns: 'Result of this operation: serialize the exact declared schema,
+      not input-dependent inference.'
     """
     if not type_.columns:
         raise ValueError("a static DataFrame schema must contain columns")
