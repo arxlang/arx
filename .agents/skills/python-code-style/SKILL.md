@@ -21,7 +21,7 @@ from public import public
 @public
 @typechecked
 def normalize_width(width: int) -> int:
-    """ 
+    """
     title: Validate a requested numeric width.
     parameters:
       width: Width in bits.

@@ -5,7 +5,7 @@ description: Apply Arx native C++20 style, RAII, ownership and opaque ABI bounda
 
 # C++ native implementation conventions
 
-**Use for native C++ and C ABI changes**, including `irx_arrow_*`/`irx_rb_*` integration. Read [native-runtime-design](../native-runtime-design/SKILL.md) and [minimal-change](../minimal-change/SKILL.md).
+**Use for native C++ and C ABI changes**, including `irx_arrow_*`/`irx_rb_*` integration. Apply [minimal-change](../minimal-change/SKILL.md). Read [native-runtime-design](../native-runtime-design/SKILL.md) when changing C ABI, ownership/lifetime, status/output or native feature registration/linking contracts.
 
 ## Before editing
 

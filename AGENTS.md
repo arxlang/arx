@@ -9,10 +9,11 @@ release changes unless a more specific instruction file overrides it.
 Task workflows and detailed coding/architecture guidance live in
 `.agents/skills/<skill-name>/SKILL.md`. Select relevant skills for Python/C++,
 Douki, compiler, Arrow/native work, testing, PR review and planning. In
-particular, apply `minimal-change` to implementation and `implementation-planning`
-to plans: keep diffs necessary and coherent, reuse existing tests/docs, add no
-unrequested benchmarks, and normally timebox plans to one working week.
-These skills supplement—not override—the repository contracts below.
+particular, apply `minimal-change` to implementation and
+`implementation-planning` to plans: keep diffs necessary and coherent, reuse
+existing tests/docs, add no unrequested benchmarks, and normally timebox plans
+to one working week. These skills supplement—not override—the repository
+contracts below.
 
 ## Core Objectives
 

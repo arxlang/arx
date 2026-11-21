@@ -5,7 +5,7 @@ description: Choose Arrow-first types, data representations and compute operatio
 
 # Arrow-first types, storage and computation
 
-**Use before adding a data type, column/Series representation, data kernel, math operation or interchange contract.** See [arx-architecture](../arx-architecture/SKILL.md) and [native-runtime-design](../native-runtime-design/SKILL.md).
+**Use before adding a data type, column/Series representation, data kernel, math operation or interchange contract.** Consult [arx-architecture](../arx-architecture/SKILL.md) when package ownership or cross-package boundaries change, and [native-runtime-design](../native-runtime-design/SKILL.md) when C ABI, native ownership/status or feature registration/linking contracts change.
 
 **Rule:** Arrow first, **not** Arrow only. Arx is a general-purpose LLVM language. IRx owns language type *meaning*, ASTx models reusable language-neutral types, Arrow is the preferred runtime data/compute representation when it satisfies Arx's semantics. Never force function/generic/control-flow types into physical Arrow storage.
 

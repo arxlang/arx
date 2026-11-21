@@ -5,7 +5,7 @@ description: Design minimal and coherent Arx syntax, builtins and stdlib behavio
 
 # Arx language and standard-library design
 
-**Use for syntax, builtin, stdlib, methods, types, protocols and user-facing diagnostics.** Refer to [compiler-design](../compiler-design/SKILL.md), [api-design](../api-design/SKILL.md), and [minimal-change](../minimal-change/SKILL.md).
+**Use for syntax, builtin, stdlib, methods, types, protocols and user-facing diagnostics.** Apply [minimal-change](../minimal-change/SKILL.md). Consult [api-design](../api-design/SKILL.md) when public call contracts or exports change, and [compiler-design](../compiler-design/SKILL.md) when syntax or compiler-stage contracts change.
 
 ## Decide the smallest useful public behavior
 

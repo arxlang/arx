@@ -36,7 +36,7 @@ description: Navigate Arx's package ownership and compiler pipeline, preserving 
 2. Locate its owner above; inspect existing comparable implementation and the actual caller chain.
 3. If a new reusable node is required, implement ASTx shape first, then align frontend emission, IRx analysis and lowering. Do not claim that AST modeling alone enables execution.
 4. If the change is semantic, resolve it in `irx.analysis` and attach metadata rather than reparsing names/types in the builder.
-5. If native behavior changes, follow [arrow-first-design](../arrow-first-design/SKILL.md) and [native-runtime-design](../native-runtime-design/SKILL.md).
+5. If native behavior changes, follow [native-runtime-design](../native-runtime-design/SKILL.md). Also follow [arrow-first-design](../arrow-first-design/SKILL.md) when data representations, compute semantics or interchange contracts change.
 6. Touch exports, schemas, docs, package manifests, examples or tests **only where the changed contract reaches them**.
 
 ## Design decision examples

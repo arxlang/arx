@@ -7,6 +7,8 @@ description: Keep Arx changes and PRs minimal without compromising correctness; 
 
 **Use for every implementation, plan, refactor, test, review, or documentation task.** This skill is a scope-control procedure, not a prohibition on changing established code. Root `AGENTS.md` owns the binding project policy.
 
+Load companion skills only when their stated conditions match the current task, not recursively just because they are linked. Reuse instructions already in context rather than following reciprocal references again.
+
 ## First establish the actual change
 
 1. Read the user's request and current behavior. State the observable result in one sentence; distinguish explicitly requested work from ideas that merely sound useful.

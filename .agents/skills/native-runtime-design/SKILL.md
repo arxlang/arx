@@ -5,7 +5,7 @@ description: Design and review IRx native runtime features, Arrow opaque C ABI, 
 
 # Native feature and C ABI implementation
 
-**Use for Arrow C++ glue, resource lifetimes, C ABI, linker/native feature changes.** Read [cpp-code-style](../cpp-code-style/SKILL.md), [arrow-first-design](../arrow-first-design/SKILL.md).
+**Use for Arrow C++ glue, resource lifetimes, C ABI, linker/native feature changes.** Read [cpp-code-style](../cpp-code-style/SKILL.md) when editing C++ sources, headers or C interfaces, and [arrow-first-design](../arrow-first-design/SKILL.md) when changing data representations, compute semantics or interchange contracts.
 
 ## Work backward from the call contract
 
