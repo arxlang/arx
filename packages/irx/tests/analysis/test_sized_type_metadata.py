@@ -35,7 +35,9 @@ def test_clone_type_preserves_sized_metadata() -> None:
     """
     list_type = clone_type(astx.ListType([astx.Int32()], size=LIST_SIZE))
     tensor_type = clone_type(astx.TensorType(astx.Float64(), shape=(2, 3)))
-    series_type = clone_type(astx.SeriesType(astx.Int32(), size=SERIES_SIZE))
+    series_type = clone_type(
+        astx.SeriesType(astx.Int32(), nullable=True, size=SERIES_SIZE)
+    )
     dataframe_type = clone_type(
         astx.DataFrameType(
             _dataframe_columns(),
@@ -49,6 +51,7 @@ def test_clone_type_preserves_sized_metadata() -> None:
     assert tensor_type.shape == (2, 3)
     assert isinstance(series_type, astx.SeriesType)
     assert series_type.size == SERIES_SIZE
+    assert series_type.nullable
     assert isinstance(dataframe_type, astx.DataFrameType)
     assert dataframe_type.row_count == DATAFRAME_ROW_COUNT
 
@@ -85,6 +88,22 @@ def test_display_type_name_canonicalizes_sized_metadata() -> None:
             astx.DataFrameType(_dataframe_columns(), row_count=100)
         )
         == "DataFrameType[age: Int32, 100]"
+    )
+    assert display_type_name(astx.NullableType(astx.Float64())) == (
+        "nullable[Float64]"
+    )
+    assert (
+        display_type_name(astx.SeriesType(astx.Float64(), nullable=True))
+        == "SeriesType[nullable[Float64]]"
+    )
+    nullable_series = astx.SeriesType(
+        astx.Float32(), nullable=True, size=SERIES_SIZE
+    )
+    assert display_type_name(nullable_series) == (
+        "SeriesType[nullable[Float32], 100]"
+    )
+    assert display_type_name(astx.ListType([nullable_series])) == (
+        "ListType[SeriesType[nullable[Float32], 100]]"
     )
 
 

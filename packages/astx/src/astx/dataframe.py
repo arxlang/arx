@@ -131,11 +131,14 @@ class SeriesType(AnyType):
     def __str__(self) -> str:
         """
         title: Render the Series type.
+        summary: Include element nullability and the optional static size.
         returns: String representation of this instance.
         """
         if self.element_type is None:
             return "SeriesType"
         parts = [_format_type_name(self.element_type)]
+        if self.nullable:
+            parts[0] = f"nullable[{parts[0]}]"
         if self.size is not None:
             parts.append(str(self.size))
         return f"SeriesType[{', '.join(parts)}]"
