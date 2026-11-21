@@ -3,24 +3,40 @@ name: testing-standards
 description: Select and reuse existing Arx tests, adding only distinct necessary coverage and targeted verification. Use when writing, reviewing or selecting tests.
 ---
 
-# Minimal, meaningful verification
+# Select the smallest meaningful test coverage
 
-Use when selecting, writing, changing, or reviewing tests. Read [minimal-change](../minimal-change/SKILL.md) first.
+**Use whenever adding, changing, selecting or reviewing tests.** Apply [minimal-change](../minimal-change/SKILL.md). The goal is proving contracts, not maximizing test/function/file counts.
 
-## Coverage before new tests
+## Pre-test audit (mandatory before adding a test)
 
-Locate existing suites, fixtures, parametrized cases, and assertions before creating anything. Ask: what distinct invariant or failure mode is currently unproven? Reuse existing coverage when sufficient; extend a nearby test or its parameters if that is the clearest solution. Add a new test or file only when existing coverage cannot express the new contract cleanly. Do not create a per-PR or per-bug test merely for visibility.
+1. Search relevant tests, existing fixtures, parametrized matrices, and compiled-language cases for the **invariant** rather than the bug/PR number. Trace the assertion to the changed code.
+2. Ask: would the existing test fail if the broken behavior returned? If yes, no new test is required. If no, can an existing test be **extended with one case/assertion**?
+3. Add a new function/file only when the behavior belongs to a distinct layer or cannot be represented clearly in existing coverage. Explain the missing failure mode briefly in the PR.
+4. Avoid duplicating an entire matrix across ASTx, parser, analysis, compiled language and native suites. Choose the earliest responsible layer, and one meaningful boundary integration if needed.
+5. Preserve essential negative paths and regression coverage. Removing a duplicated test is acceptable only if its invariant remains covered (or an intentionally removed pre-2.0 contract no longer applies).
 
-Tests must be capable of detecting the regression, not just exercise the code. Preserve existing relevant negative tests, data integrity, cleanup, ownership, invalid types, and boundary conditions. Avoid repeating the same large parameter matrix in parser, ASTx, analysis, and compiled integration layers.
+## Test decision map
 
-## Verification selection
+| Work area | Preferred existing verification |
+| --- | --- |
+| Lexer and syntax | `packages/arx/tests/python/`, `makim arx.check-syntax` |
+| Parser and source shape | Targeted parser tests; significant two-space indent, valid Douki module docs |
+| ASTx node/model | `packages/astx/tests/` with invalid-input checks |
+| IRx meaning | `packages/irx/tests/analysis/`, `makim irx.test-analysis` |
+| LLVM lowering/control flow | Existing codegen translation tests, `llvm.parse_assembly`, `makim arx.test-compiled` |
+| Native C ABI/Arrow | Existing IRx native tests, `makim irx.test-sanitizers` when ownership/UB affected |
+| ArxJIT | `packages/arxjit/tests/` and `analyze(lower(...))` proof |
+| Source user workflow | Existing compiled `.x` tests/examples and `makim arx.test-smoke` |
+| Public installed package graph | `makim all.wheel-smoke` when exports/import/ABI change |
 
-- Lexer/parser: syntax, significant indentation, invalid forms and reliable locations.
-- ASTx: reusable node shape and runtime invalid-input checks.
-- IRx analysis: meaning, symbols, shadowing, conversions, and structured failures.
-- Lowering: LLVM verification, terminators, PHIs and result-stack safety.
-- Native Arrow: null, empty, mismatch, status/error, overflow, ownership and interchange when affected.
-- ArxJIT: Python AST, Unicode, closures, signatures and `analyze(lower(...))`.
-- Public package boundary: representative installed-package and compiled execution test when relevant.
+## Distinct failure probes
 
-Start with a narrow pytest target; use existing `makim <package>.ci`, `makim arx.test-compiled`, `makim irx.test-sanitizers`, and broader checks only when their boundaries are affected or requested. Do not add CI tasks or benchmarks by default. Report exact checks run and limitations. Do not reduce coverage thresholds or weaken assertions for speed.
+Choose **relevant** risks, not all for every change: wrong types including nested collection items, Unicode spans, shadowed symbols, signed integer edges/overflow, empty and null arrays, C ABI error output, double release, terminators, invalid PHI predecessors, unsupported syntax, Python-version differences, installed wheel imports.
+
+Do not create a new benchmark, test suite, CI job, test harness, or parametrization dimension merely to be comprehensive. The current `.makim.yaml` defines canonical tasks; test paths and commands must be confirmed from code.
+
+## Verification order
+
+Run targeted `pytest -q <existing test path or node>` first; follow with relevant `makim <package>.typecheck`, `makim <package>.lint`, `makim <package>.ci` or cross-package checks only when affected. Existing `all.ci` is not an excuse to repeatedly perform costly unchanged checks. Do not reduce assertions, coverage gates, or skip markers for a green result.
+
+**Exit report:** what invariant is proven by which test; commands actually executed and outcomes; what remains unverified. Do not claim that code coverage percentage alone proves correctness.
