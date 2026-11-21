@@ -88,7 +88,7 @@ def test_tensor_literal_and_view_preserve_shape_metadata() -> None:
 
 def test_series_type_optional_size_metadata() -> None:
     """
-    title: SeriesType stores optional static sizes.
+    title: SeriesType stores sizes and renders nullable element types.
     """
     unconstrained = astx.SeriesType(astx.Int32())
     sized = astx.SeriesType(astx.Int32(), size=SERIES_SIZE)
@@ -97,6 +97,13 @@ def test_series_type_optional_size_metadata() -> None:
     assert sized.size == SERIES_SIZE
     assert str(unconstrained) == "SeriesType[Int32]"
     assert str(sized) == "SeriesType[Int32, 100]"
+    assert str(astx.SeriesType(astx.Float64())) == "SeriesType[Float64]"
+    nullable = astx.SeriesType(astx.Float64(), nullable=True)
+    nullable_sized = astx.SeriesType(
+        astx.Float64(), nullable=True, size=SERIES_SIZE
+    )
+    assert str(nullable) == "SeriesType[nullable[Float64]]"
+    assert str(nullable_sized) == "SeriesType[nullable[Float64], 100]"
     with pytest.raises(ValueError, match="non-negative"):
         astx.SeriesType(astx.Int32(), size=-1)
 
