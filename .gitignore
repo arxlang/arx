@@ -106,7 +106,6 @@ ENV/
 # llm
 .codex
 .claude
-.agents
 
 # tmp
 pytest-*
@@ -119,3 +118,4 @@ packages/irx/src/irx/builder/runtime/arrow/libirx_record_batch.*
 packages/irx/src/irx/builder/runtime/arrow/irx_record_batch.dll
 
 plans/*
+tmp/*
