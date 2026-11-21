@@ -2,6 +2,7 @@
 title: Test parser methods.
 """
 
+from decimal import Decimal
 from textwrap import dedent
 
 import astx
@@ -445,33 +446,32 @@ def test_compound_assignment_rejects_invalid_surface_contexts(
     assert captured.value.location is not None
 
 
-def test_parse_float_expr() -> None:
+@pytest.mark.parametrize(
+    "source",
+    [
+        "1.0 2.5",
+        "3.25",
+        "1e3 1.0E+3",
+        "1.000000059604644830901776231257827021181583404541015625e0",
+        "1e400 1e-1000000000",
+    ],
+)
+def test_parse_float_expr(source: str) -> None:
     """
-    title: Test gettok for main tokens.
+    title: Floating literals preserve exact decimal values and token locations.
+    parameters:
+      source: Numeric source spellings.
     """
-    ArxIO.string_to_buffer("1.0 2.5")
-    lexer = Lexer()
-    parser = Parser(lexer.lex())
-
+    ArxIO.string_to_buffer(source)
+    parser = Parser(Lexer().lex())
     parser.tokens.get_next_token()
-    expr = parser.parse_float_expr()
-    assert expr
-    assert isinstance(expr, astx.LiteralFloat)
-    assert expr.value == 1.0
-
-    expr = parser.parse_float_expr()
-    assert expr
-    assert isinstance(expr, astx.LiteralFloat)
-    assert expr.value == 2.5
-
-    ArxIO.string_to_buffer("3.25")
-    parser = Parser(lexer.lex())
-
-    parser.tokens.get_next_token()
-    expr = parser.parse_float_expr()
-    assert expr
-    assert isinstance(expr, astx.LiteralFloat)
-    assert expr.value == 3.25
+    column = 1
+    for text in source.split():
+        expr = parser.parse_float_expr()
+        assert isinstance(expr, astx.LiteralFloat)
+        assert expr.value.as_tuple() == Decimal(text).as_tuple()
+        assert (expr.loc.line, expr.loc.col) == (1, column)
+        column += len(text) + 1
 
 
 def test_parse_int_expr() -> None:

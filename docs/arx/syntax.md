@@ -71,11 +71,18 @@ Supported forms:
 
 - decimal integers: `0`, `42`
 - decimal floats with one dot: `3.14`, `.5`, `5.`
+- scientific floats with `e` or `E` and an optional exponent sign: `1e3`,
+  `1.5e-3`, `.5E+2`, `5.e2`
+
+Scientific notation always produces a floating literal, even without a decimal
+point. Exponents require at least one digit; `1e`, `1e+`, and `1e-` are lexical
+errors. Floating literals retain their exact decimal value until semantic
+analysis selects the contextual type (or `f32` without a context). Overflow in
+that type is rejected; underflow uses normal rounding, including signed zero.
 
 Not supported:
 
 - hexadecimal, binary, or octal prefixes
-- exponent notation such as `1e9`
 - separators such as `1_000`
 - literal suffixes such as `42u32`
 

@@ -1,5 +1,5 @@
 {
-  "syntax_pack_version": "0.17.0",
+  "syntax_pack_version": "0.18.0",
   "language": "arx",
   "status": "draft",
   "source_of_truth": "Canonical lexical source for editor tooling and lexer tables.",
@@ -81,7 +81,12 @@
     "bases": [10],
     "underscores": { "allowed": false },
     "suffixes": [],
-    "exponent": { "allowed": false, "forms": [] },
+    "exponent": {
+      "allowed": true,
+      "forms": ["e", "E"],
+      "optional_sign": ["+", "-"],
+      "digits_required": true
+    },
     "leading_dot_float": true,
     "trailing_dot_float": true,
     "multiple_dots": "invalid"

@@ -22,6 +22,7 @@ from arx.parser import Parser
 from irx.analysis import SemanticError, analyze
 from irx.analysis.module_interfaces import ParsedModule
 from irx.builder.runtime.exceptions import parse_exception_output
+from irx.diagnostics import DiagnosticCodes
 from llvmlite import binding as llvm
 from public import private
 
@@ -546,6 +547,41 @@ def test_invalid_numeric_source_is_rejected(body: str) -> None:
         translate_numeric(numeric_program(body, "import math from stdlib\n"))
 
 
+@pytest.mark.parametrize(
+    "target,literal,resolved",
+    [
+        ("f32", "1e100", "Float32"),
+        ("f64", "1e400", "Float64"),
+        ("f64", "-1e400", "Float64"),
+        ("auto", "1e100", "Float32"),
+    ],
+)
+def test_unrepresentable_scientific_literal(
+    target: str, literal: str, resolved: str
+) -> None:
+    """
+    title: Scientific overflow is a structured semantic error in the chosen
+      type.
+    parameters:
+      target: Declared source type or inference marker.
+      literal: Scientific source spelling.
+      resolved: Expected semantic type name.
+    """
+    prefix = f"value: {target} = "
+    with pytest.raises(SemanticError) as error:
+        translate_numeric(numeric_program(prefix + literal))
+    diagnostics = error.value.diagnostics.diagnostics
+    assert len(diagnostics) == 1
+    diagnostic = diagnostics[0]
+    assert diagnostic.code == DiagnosticCodes.SEMANTIC_TYPE_MISMATCH
+    assert diagnostic.message == (
+        f"numeric literal is not representable in {resolved}"
+    )
+    location = diagnostic.resolved_source()
+    assert location is not None
+    assert (location.line, location.col) == (5, len(prefix) + 3)
+
+
 @pytest.mark.parametrize("value", [-129, 128])
 def test_typed_ast_literals_do_not_become_contextual(value: int) -> None:
     """
@@ -729,7 +765,7 @@ def test_exact_decimal_literals_across_contexts(
       tmp_path: Temporary directory for this test.
       optimization: Optimization level.
     """
-    exact = "1.000000059604644830901776231257827021181583404541015625"
+    exact = "1.000000059604644830901776231257827021181583404541015625e0"
     definitions = (
         "type Floating = f32 | f64\n"
         "@<T: Floating>\n"

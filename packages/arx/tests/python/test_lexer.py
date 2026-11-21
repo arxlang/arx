@@ -2,6 +2,8 @@
 title: Tests for `arx`.`lexer`.
 """
 
+from decimal import Decimal, InvalidOperation, localcontext
+
 import arx.lexer.core as lexer_core
 import pytest
 
@@ -655,19 +657,27 @@ def test_lexer_rejects_excessive_nesting(
     assert captured.value.location.col == 4
 
 
+@pytest.mark.parametrize(
+    "source", ["12345", ".1234", "1.234", "1e123", "1E+12", "1e-12"]
+)
 def test_lexer_rejects_oversized_numeric_literal(
-    monkeypatch: pytest.MonkeyPatch,
+    monkeypatch: pytest.MonkeyPatch, source: str
 ) -> None:
     """
-    title: Numeric token size is bounded before Python integer conversion.
+    title: Numeric token size includes the mantissa, marker, sign, and digits.
     parameters:
       monkeypatch: Fixture for temporarily replacing dependencies and settings.
+      source: Numeric source spelling.
     """
     monkeypatch.setattr(lexer_core, "MAX_NUMERIC_LITERAL_CHARS", 4)
-    ArxIO.string_to_buffer("12345")
+    ArxIO.string_to_buffer(source)
     with pytest.raises(LexerError) as captured:
         Lexer().lex()
     assert captured.value.code == "ARX-LEX-NUMBER-SIZE-001"
+    assert (captured.value.location.line, captured.value.location.col) == (
+        1,
+        1,
+    )
 
 
 def test_lexer_rejects_excessive_token_count(
@@ -749,13 +759,117 @@ def test_lexer_docstring_only_two_ticks_before_content() -> None:
         lexer.get_token()
 
 
-def test_lexer_float_literal_round_trip() -> None:
+@pytest.mark.parametrize(
+    "source",
+    [
+        "0.25",
+        "3.14",
+        ".5",
+        "5.",
+        "1e3",
+        "1E3",
+        "1.5e3",
+        "1.5e-3",
+        "1.5E+3",
+        ".5e2",
+        "5.e2",
+        "1e400",
+        "1e-1000000000",
+        "1.000000059604644830901776231257827021181583404541015625e0",
+    ],
+)
+def test_lexer_float_literal_round_trip(
+    monkeypatch: pytest.MonkeyPatch, source: str
+) -> None:
     """
-    title: Decimal numeric lexemes become float tokens.
+    title: Decimal and scientific tokens preserve exact values and spelling.
+    parameters:
+      monkeypatch: Fixture for temporarily replacing dependencies and settings.
+      source: Numeric source spelling.
     """
-    ArxIO.string_to_buffer("0.25\n")
+    monkeypatch.setattr(lexer_core, "MAX_NUMERIC_LITERAL_CHARS", len(source))
+    ArxIO.string_to_buffer(f"é {source}\n")
     lexer = Lexer()
-    assert lexer.get_token() == Token(TokenKind.float_literal, 0.25)
+    assert lexer.get_token() == Token(TokenKind.identifier, "é")
+    token = lexer.get_token()
+    assert token.kind is TokenKind.float_literal
+    assert isinstance(token.value, Decimal)
+    assert token.value.as_tuple() == Decimal(source).as_tuple()
+    assert token.source_text == source
+    assert (token.location.line, token.location.col) == (1, 3)
+    assert lexer.get_token().kind is TokenKind.eof
+
+
+@pytest.mark.parametrize(
+    "source",
+    [
+        "1e",
+        "1e+",
+        "1e-",
+        "1E",
+        "1E+",
+        "1E-",
+        ".5e",
+        "5.e+",
+        "1.5e-",
+        "1e2e3",
+        "1e2.3",
+        "1e9999999999999999999",
+    ],
+)
+def test_lexer_rejects_invalid_exponents(source: str) -> None:
+    """
+    title: Malformed exponents fail lexically at the offending numeric token.
+    parameters:
+      source: Numeric source spelling.
+    """
+    ArxIO.string_to_buffer(f"é\n  {source}")
+    lexer = Lexer()
+    assert lexer.get_token().kind is TokenKind.identifier
+    assert lexer.get_token().kind is TokenKind.indent
+    with pytest.raises(LexerError, match="Invalid number exponent") as error:
+        lexer.get_token()
+    assert error.value.code == "ARX-LEX-NUMBER-EXPONENT-001"
+    assert (error.value.location.line, error.value.location.col) == (2, 3)
+
+
+def test_lexer_decimal_range_error_without_decimal_trap() -> None:
+    """
+    title: Disabling Decimal traps cannot admit nonfinite exact literals.
+    """
+    ArxIO.string_to_buffer("1e9999999999999999999")
+    with localcontext() as context:
+        context.traps[InvalidOperation] = False
+        with pytest.raises(LexerError, match="supported decimal range"):
+            Lexer().get_token()
+
+
+def test_lexer_exponent_sign_and_adjacent_operators() -> None:
+    """
+    title: Only the exponent sign belongs to a scientific numeric token.
+    """
+    ArxIO.string_to_buffer("-1e-3+2E+4-5*6/7")
+    tokens = list(Lexer().lex())
+    assert [(token.kind, token.value) for token in tokens] == [
+        (TokenKind.operator, "-"),
+        (TokenKind.float_literal, Decimal("1e-3")),
+        (TokenKind.operator, "+"),
+        (TokenKind.float_literal, Decimal("2E+4")),
+        (TokenKind.operator, "-"),
+        (TokenKind.int_literal, 5),
+        (TokenKind.operator, "*"),
+        (TokenKind.int_literal, 6),
+        (TokenKind.operator, "/"),
+        (TokenKind.int_literal, 7),
+        (TokenKind.eof, ""),
+    ]
+    exponent = load_syntax_manifest().data["numbers"]["exponent"]
+    assert exponent == {
+        "allowed": True,
+        "forms": ["e", "E"],
+        "optional_sign": ["+", "-"],
+        "digits_required": True,
+    }
 
 
 def test_lexer_docstring_unterminated() -> None:
