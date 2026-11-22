@@ -187,20 +187,30 @@ def test_compute_plan_identity_and_reanalysis(
 
 
 @pytest.mark.parametrize(
-    "type_",
+    "type_,explicit",
     [
-        astx.Float32(),
-        astx.Int64(),
-        astx.TensorType(astx.Float64(), shape=(2,)),
+        (astx.Float32(), None),
+        (astx.Int64(), None),
+        (astx.TensorType(astx.Float64(), shape=(2,)), None),
+        (astx.Float32(), astx.NullableType(astx.Float64())),
+        (astx.NullableType(astx.Float64()), astx.Float64()),
+        (astx.Float64(), astx.NullableType(astx.Int32())),
+        (astx.Float64(), astx.NullableType(astx.String())),
+        (astx.Float64(), astx.SeriesType(astx.Float64())),
     ],
 )
-def test_compute_rejects_unsupported_shape(type_: astx.DataType) -> None:
+def test_compute_rejects_unsupported_shape(
+    type_: astx.DataType, explicit: astx.DataType | None
+) -> None:
     """
     title: Existing storage support never implies a math capability or cast.
     parameters:
       type_: Type expression to process.
+      explicit: Requested specialization, if any.
     """
     root, resolver, call = compute_modules("sqrt", type_)
+    if explicit is not None:
+        astx.set_template_args(call, (explicit,))
     with pytest.raises(SemanticError, match="supported f64 scalar/Series"):
         analyze_modules(root, resolver)
     assert cast(SemanticInfo, call.semantic).facts.get(CALL_PLAN) is None
@@ -269,17 +279,23 @@ def test_compute_shadowing_and_ffi_are_independent() -> None:
     assert info.resolved_function.signature.operation is None
 
 
-def test_compute_monomorphic_nullable_conversion() -> None:
+@pytest.mark.parametrize("explicit", [False, True])
+def test_compute_nullable_conversion(explicit: bool) -> None:
     """
-    title: A nullable declaration preserves its result contract for f64 inputs.
+    title: Nullable declarations and specializations lift unchanged f64 inputs.
+    parameters:
+      explicit: Whether to explicitly select a nullable template argument.
     """
     root, resolver, call = compute_modules("sqrt", astx.Float64())
     provider = resolver("root", astx.ImportStmt([]), "provider")
     prototype = provider.native_bindings[0].declaration
     optional = astx.NullableType(astx.Float64())
-    prototype.args.nodes[0].type_ = optional
-    prototype.return_type = optional
-    astx.set_template_params(prototype, ())
+    if explicit:
+        astx.set_template_args(call, (optional,))
+    else:
+        prototype.args.nodes[0].type_ = optional
+        prototype.return_type = optional
+        astx.set_template_params(prototype, ())
     analyze_modules(root, resolver)
     plan = cast(SemanticInfo, call.semantic).facts.get(CALL_PLAN)
     assert isinstance(plan, ComputePlan)
@@ -287,6 +303,36 @@ def test_compute_monomorphic_nullable_conversion() -> None:
     assert isinstance(plan.result_type, astx.NullableType)
     assert isinstance(plan.conversion.source_type, astx.Float64)
     assert isinstance(plan.conversion.target_type, astx.NullableType)
+
+
+def test_compute_specialization_respects_declared_bound() -> None:
+    """
+    title: A safe nullable conversion cannot authorize an out-of-bound type.
+    """
+    root, resolver, call = compute_modules("sqrt", astx.Float64())
+    provider = resolver("root", astx.ImportStmt([]), "provider")
+    prototype = provider.native_bindings[0].declaration
+    variable = astx.TemplateTypeVar("T", bound=astx.Float64())
+    prototype.args.nodes[0].type_ = variable
+    prototype.return_type = variable
+    astx.set_template_params(
+        prototype, (astx.TemplateParam("T", astx.Float64()),)
+    )
+    astx.set_template_args(call, (astx.NullableType(astx.Float64()),))
+    with pytest.raises(SemanticError, match="explicit specialization"):
+        analyze_modules(root, resolver)
+    assert cast(SemanticInfo, call.semantic).facts.get(CALL_PLAN) is None
+
+
+def test_compute_nullable_literal_representability() -> None:
+    """
+    title: Lifted literals must be representable in the selected f64 payload.
+    """
+    root, resolver, call = compute_modules("sqrt", astx.Float64())
+    call.args = [astx.LiteralFloat("1e400")]
+    astx.set_template_args(call, (astx.NullableType(astx.Float64()),))
+    with pytest.raises(SemanticError, match="not representable in Float64"):
+        analyze_modules(root, resolver)
 
 
 @pytest.mark.parametrize("attribute", ["__version__", "cpp_version"])

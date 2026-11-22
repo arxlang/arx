@@ -7,9 +7,11 @@ summary: >-
   floating, Boolean, and nullable specializations of these helpers are not
   supported. sqrt and exp use Arrow Compute for f64 scalars and Series,
   including nullable values. These preserve null validity and use IEEE domain
-  results, not Python math domain exceptions. They accept one value and no
-  options; Series results are independently owned and preserve order/length,
-  not chunk boundaries. f32, integer and binary math overloads are unsupported.
+  results, not Python math domain exceptions. Explicit nullable[f64]
+  specialization safely lifts f64 inputs without changing their numeric type.
+  They accept one value and no options; Series results are independently owned
+  and preserve order/length, not chunk boundaries. f32, integer and binary math
+  overloads are unsupported.
 ```
 
 @<T: f64 | nullable[f64] | series[f64] | series[nullable[f64]]>

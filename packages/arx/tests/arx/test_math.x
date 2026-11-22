@@ -14,8 +14,15 @@ fn test_arrow_math() -> none:
   assert math.sqrt(4.0) == 2.0
   assert math.sqrt(1.0 + 3.0) == 2.0
   assert math.exp(cast(0, f64)) == 1.0
+  input: f64 = 4.0
+  lifted: nullable[f64] = math.sqrt<nullable[f64]>(input)
+  assert not is_null(lifted)
+  assert fill_null(lifted, 0.0) == 2.0
+  assert fill_null(math.sqrt<nullable[f64]>(1.0 + 3.0), 0.0) == 2.0
+  assert fill_null(math.exp<nullable[f64]>(0), 0.0) == 1.0
   missing: nullable[f64] = none
   assert is_null(math.sqrt(missing))
+  assert is_null(math.sqrt<nullable[f64]>(missing))
   assert is_null(math.exp(missing))
   negative: f64 = math.sqrt(0.0 - 1.0)
   assert not (negative == negative)
