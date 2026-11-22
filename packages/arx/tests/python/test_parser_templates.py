@@ -44,9 +44,14 @@ def _parse(code: str) -> astx.Module:
     return tree
 
 
-def test_parse_template_function_metadata_and_calls() -> None:
+@pytest.mark.parametrize("explicit_type", ["f64", "(f64)", "(\n    f64\n  )"])
+def test_parse_template_function_metadata_and_calls(
+    explicit_type: str,
+) -> None:
     """
     title: Parse one template function plus inferred and explicit calls.
+    parameters:
+      explicit_type: Plain or parenthesized explicit specialization type.
     """
     tree = _parse(
         dedent(
@@ -63,7 +68,9 @@ def test_parse_template_function_metadata_and_calls() -> None:
               print(decimal)
               return whole
             """
-        ).lstrip()
+        )
+        .lstrip()
+        .replace("add<f64>", f"add<{explicit_type}>")
     )
 
     function = tree.nodes[0]
@@ -91,6 +98,7 @@ def test_parse_template_function_metadata_and_calls() -> None:
 
     main = tree.nodes[1]
     assert isinstance(main, astx.FunctionDef)
+    assert len(main.body.nodes) == 4
     whole_decl = main.body.nodes[0]
     assert isinstance(whole_decl, astx.VariableDeclaration)
     inferred_call = whole_decl.value
