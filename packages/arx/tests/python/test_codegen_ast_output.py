@@ -910,6 +910,46 @@ def test_numeric_operand_plans_translate_mixed_widths() -> None:
     )
 
 
+def test_contextual_float_arithmetic_translates_resolved_widths() -> None:
+    """
+    title: Assignment, return and call contexts lower floating literal trees.
+    """
+    ArxIO.string_to_buffer(
+        "```\ntitle: Contextual floating arithmetic\n```\n"
+        "fn identity(value: f64) -> f64:\n"
+        "  return value\n"
+        "@<T: f32 | f64>\n"
+        "fn generic(value: T) -> T:\n"
+        "  return value\n"
+        "fn returned() -> f64:\n"
+        "  return -(1e100 + 2.0)\n"
+        "fn expression() -> f64:\n"
+        "  value: f64 = 0.0 - 1.0\n"
+        "  value = (1.0 + 2.0) * 3.0\n"
+        "  return identity(-(1e100 + 2.0)) + generic<f64>(3.0 / 2.0)\n"
+        "fn main() -> i32:\n"
+        "  result: f64 = expression()\n"
+        "  return 0\n"
+    )
+    text = ArxBuilder().translate(Parser().parse(Lexer().lex()))
+    module = llvm.parse_assembly(text)
+    module.verify()
+    operations = [
+        instruction
+        for function in module.functions
+        for block in function.blocks
+        for instruction in block.instructions
+        if instruction.opcode in {"fadd", "fsub", "fmul", "fdiv", "fneg"}
+    ]
+    assert {operation.opcode for operation in operations} >= {
+        "fadd",
+        "fsub",
+        "fmul",
+        "fdiv",
+    }
+    assert all(str(operation.type) == "double" for operation in operations)
+
+
 def test_numeric_union_comparison_has_a_resolved_storage_plan() -> None:
     """
     title: Numeric unions retain comparison support without a raw

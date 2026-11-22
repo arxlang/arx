@@ -12,11 +12,12 @@ fn test_arrow_math() -> none:
   ```
   assert isinstance(math.sqrt(4.0), f64)
   assert math.sqrt(4.0) == 2.0
+  assert math.sqrt(1.0 + 3.0) == 2.0
   assert math.exp(cast(0, f64)) == 1.0
   missing: nullable[f64] = none
   assert is_null(math.sqrt(missing))
   assert is_null(math.exp(missing))
-  negative: f64 = math.sqrt(-1.0)
+  negative: f64 = math.sqrt(0.0 - 1.0)
   assert not (negative == negative)
   frame: dataframe[x:f64 | none] = dataframe({x:[0.0, none, 4.0]})
   roots: series[nullable[f64]] = math.sqrt(frame.x)

@@ -87,6 +87,20 @@ fn test_numeric_casts_and_widths() -> none:
   assert underflow == 0.0
   negative_zero: f64 = -1e-1000000000
   assert (1.0 / negative_zero) < 0.0
+  contextual: f64 = (16777216.0 + 1.0) - 16777216.0
+  assert contextual == 1.0
+  rounded: f32 = (16777216.0 + 1.0) - 16777216.0
+  assert rounded == 0.0
+  half: f16 = -(1.0 + 2.0) / 2.0
+  assert half == -1.5
+  nested: f64 = (1.0 + 2.0) * 3.0
+  nested = 3.0 * (1.0 + 2.0)
+  assert nested == 9.0
+  integer_part: f64 = (5 / 2) + 0.5
+  assert integer_part == 2.5
+  typed: f32 = 16777216.0
+  preserved: f64 = typed + 1.0
+  assert preserved == 16777216.0
 
 fn test_fixed_width_integer_wrapping() -> none:
   ```

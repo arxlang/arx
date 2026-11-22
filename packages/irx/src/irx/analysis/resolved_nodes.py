@@ -1948,8 +1948,8 @@ class SemanticInfo:
       tensor_index: Index selecting tensor.
       numeric_storage: Numeric storage.
       module_storage: Module storage.
-      literal_context: Expected literal or collection type, consumed on
-        visit.
+      literal_context: Expected literal, literal-arithmetic, or collection
+        type, consumed on visit.
       numeric_constant: Numeric constant.
       numeric_conversion: Numeric conversion.
       numeric_mode: Numeric mode.

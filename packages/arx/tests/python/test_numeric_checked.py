@@ -521,6 +521,11 @@ fn choose(value: T, other: T = 3) -> T:
         "x: u8 = -1",
         "x: i64 = 9223372036854775808",
         "x: f32 = 16777217",
+        "x: f64 = 1.0 + true",
+        'x: f64 = 1.0 + "invalid"',
+        "x: f64 = 2147483647 + 1",
+        "x: f64 = (2147483647 + 1) + 0.0",
+        "x: f64 = 0.0 + (1 / 0)",
         "x: i64 = 1\ny: f64 = 2.0\nx + y",
         "x: i64 = -1\ny: u64 = 1\nx < y",
         "x: i8 = 1\nx + 200",
@@ -554,6 +559,8 @@ def test_invalid_numeric_source_is_rejected(body: str) -> None:
         ("f64", "1e400", "Float64"),
         ("f64", "-1e400", "Float64"),
         ("auto", "1e100", "Float32"),
+        ("f32", "1e100 + 2.0", "Float32"),
+        ("f64", "1e400 + 2.0", "Float64"),
     ],
 )
 def test_unrepresentable_scientific_literal(
