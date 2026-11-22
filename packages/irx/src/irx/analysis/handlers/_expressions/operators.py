@@ -171,6 +171,10 @@ class ExpressionOperatorVisitorMixin(SemanticVisitorMixinBase):
         parameters:
           node: Syntax node to process.
         """
+        expected = self._semantic(node).literal_context
+        self._semantic(node).literal_context = None
+        if expected is not None:
+            contextualize_literal(node.operand, expected)
         self.visit(node.operand)
         if not self._require_value_expression(
             node.operand,
@@ -241,6 +245,11 @@ class ExpressionOperatorVisitorMixin(SemanticVisitorMixinBase):
         self._semantic(node).resource_ownership = None
         self._semantic(node).resolved_resource_store = None
         self._semantic(node).lifecycle_field_store = False
+        expected = self._semantic(node).literal_context
+        self._semantic(node).literal_context = None
+        if expected is not None:
+            contextualize_literal(node.lhs, expected)
+            contextualize_literal(node.rhs, expected)
         source_literal = (astx.LiteralInteger, astx.LiteralFloat)
         rhs_visited = False
         if isinstance(node.lhs, source_literal) and not isinstance(
@@ -248,7 +257,8 @@ class ExpressionOperatorVisitorMixin(SemanticVisitorMixinBase):
         ):
             self.visit(node.rhs)
             rhs_visited = True
-            contextualize_literal(node.lhs, self._expr_type(node.rhs))
+            if expected is None:
+                contextualize_literal(node.lhs, self._expr_type(node.rhs))
         explicit = (
             astx.get_template_args(node)
             if node.mode is astx.NumericMode.WRAPPING
@@ -259,7 +269,7 @@ class ExpressionOperatorVisitorMixin(SemanticVisitorMixinBase):
             contextualize_literal(node.rhs, explicit[0])
         self.visit(node.lhs)
         target = self._expr_type(node.lhs)
-        if not isinstance(node.lhs, source_literal):
+        if expected is None and not isinstance(node.lhs, source_literal):
             contextualize_literal(node.rhs, target)
         if (
             node.op_code == "="

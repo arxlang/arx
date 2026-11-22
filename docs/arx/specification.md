@@ -88,7 +88,10 @@ Source integer literals use the declared/argument/peer type when representable,
 otherwise default to `i32`, then `i64`. Uncontextualized floating literals
 default to `f32`. Decimal literals retain their exact value until type
 selection, then round directly to the chosen binary format, nearest with ties to
-even. Explicitly typed ASTx literals are never recontextualized. Generic
+even. Floating literal arithmetic, including nested operations and unary signs,
+inherits an expected floating type. Integer-only subexpressions keep integer
+semantics; typed operands and function results are not reinterpreted as
+literals. Explicitly typed ASTx literals are never recontextualized. Generic
 inference uses concrete arguments before contextualizing literal arguments,
 independently of argument order; literals do not make conflicting concrete
 same-`T` arguments compatible.

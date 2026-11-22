@@ -44,12 +44,41 @@ def default_numeric_literal_type(
 
 @private
 @typechecked
+def floating_literal_expression(node: astx.AST) -> bool | None:
+    """
+    title: Classify unresolved literal arithmetic without inferring types.
+    parameters:
+      node: Expression to inspect.
+    returns: True for floating literal arithmetic, False for integer-only
+      arithmetic, or None for typed operands and unsupported operators.
+    """
+    if isinstance(node, astx.LiteralFloat):
+        return True
+    if isinstance(node, astx.LiteralInteger):
+        return False
+    if isinstance(node, astx.UnaryOp) and node.op_code in {"+", "-"}:
+        return floating_literal_expression(node.operand)
+    if (
+        isinstance(node, astx.BinaryOp)
+        and node.mode is astx.NumericMode.CHECKED
+        and node.op_code in {"+", "-", "*", "/", "%"}
+    ):
+        left = floating_literal_expression(node.lhs)
+        right = floating_literal_expression(node.rhs)
+        if left is not None and right is not None:
+            return left or right
+    return None
+
+
+@private
+@typechecked
 def contextualize_literal(
     value: astx.AST | None, target: astx.DataType | None
 ) -> None:
     """
-    title: Record expected types for exact literals, never for typed
-      computations.
+    title: Record expected types for exact literals and floating literal
+      arithmetic, never for typed computations.
+    summary: Integer-only subexpressions retain integer operator semantics.
     parameters:
       value: Value to process.
       target: Destination of the operation.
@@ -76,6 +105,14 @@ def contextualize_literal(
         return
     if isinstance(target, astx.NullableType):
         target = target.value_type
+    if isinstance(value, (astx.BinaryOp, astx.UnaryOp)):
+        literal_semantic(value).literal_context = (
+            target
+            if type(target) in FLOAT_PRECISIONS
+            and floating_literal_expression(value) is True
+            else None
+        )
+        return
     if isinstance(
         value, (astx.LiteralInteger, astx.LiteralFloat)
     ) and isinstance(target, astx.SeriesType):

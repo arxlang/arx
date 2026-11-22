@@ -105,16 +105,30 @@ def test_extreme_decimal_exponents_are_bounded(target: astx.DataType) -> None:
     assert math.copysign(1.0, tiny) < 0
 
 
-def test_literal_resolution_preserves_payload_and_reanalyzes_context() -> None:
+@pytest.mark.parametrize("nested", [False, True])
+def test_literal_resolution_preserves_payload_and_reanalyzes_context(
+    nested: bool,
+) -> None:
     """
-    title: Reusing an exact literal never inherits prior rounding or width.
+    title: Reusing literal arithmetic never inherits prior rounding or width.
+    parameters:
+      nested: Whether to nest the literal in signed arithmetic.
     """
     exact = Decimal("1.000000059604644830901776231257827021181583404541015625")
     literal = astx.LiteralFloat(exact)
     declared = literal.type_
     original_structure = literal.to_json()
     original_hash = hash(literal)
-    narrow = astx.VariableDeclaration("value", astx.Float32(), value=literal)
+    expression = (
+        astx.UnaryOp(
+            "-", astx.BinaryOp("*", astx.LiteralFloat("2.0"), literal)
+        )
+        if nested
+        else literal
+    )
+    narrow = astx.VariableDeclaration(
+        "value", astx.Float32(), value=expression
+    )
     analyze(narrow)
     expected = 1.00000011920928955078125
     assert numeric_constant(literal) == expected
@@ -123,19 +137,75 @@ def test_literal_resolution_preserves_payload_and_reanalyzes_context() -> None:
     assert literal.to_json() == original_structure
     assert hash(literal) == original_hash
 
-    wide = astx.VariableDeclaration("value", astx.Float64(), value=literal)
+    wide = astx.VariableDeclaration("value", astx.Float64(), value=expression)
     analyze(wide)
     assert numeric_constant(literal) == float(exact)
     assert literal.value == exact
     assert literal.type_ is declared
     # No declaration context: default to f32 again, not the previous f64.
-    analyze(literal)
+    analyze(expression)
     assert numeric_constant(literal) == expected
     semantic = cast(SemanticInfo, getattr(literal, "semantic"))
     assert isinstance(semantic.resolved_type, astx.Float32)
     assert semantic.literal_context is None
     assert literal.to_json() == original_structure
     assert hash(literal) == original_hash
+
+
+@pytest.mark.parametrize("floating", [False, True])
+def test_float_context_preserves_integer_arithmetic(floating: bool) -> None:
+    """
+    title: Float contexts do not change integer-only subexpression semantics.
+    parameters:
+      floating: Whether to embed the integer division in floating arithmetic.
+    """
+    division = astx.BinaryOp(
+        "/", astx.LiteralInteger(5), astx.LiteralInteger(2)
+    )
+    expression = (
+        astx.BinaryOp("+", astx.LiteralFloat("0.0"), division)
+        if floating
+        else division
+    )
+    analyze(
+        astx.VariableDeclaration("value", astx.Float64(), value=expression)
+    )
+    expected_quotient = 2
+    assert numeric_constant(division) == expected_quotient
+    semantic = cast(SemanticInfo, getattr(division, "semantic"))
+    assert isinstance(semantic.resolved_type, astx.Int32)
+    if floating:
+        plan = cast(
+            SemanticInfo, getattr(expression, "semantic")
+        ).resolved_operator
+        assert plan is not None
+        assert isinstance(plan.lhs_type, astx.Float64)
+        assert isinstance(plan.rhs_type, astx.Int32)
+        assert plan.rhs_conversion is not None
+        assert isinstance(plan.rhs_conversion.target_type, astx.Float64)
+
+
+@pytest.mark.parametrize(
+    "typed",
+    [
+        astx.LiteralFloat32(1.0),
+        astx.Cast(astx.LiteralFloat("1.0"), astx.Float32()),
+    ],
+)
+def test_float_context_preserves_typed_operands(typed: astx.DataType) -> None:
+    """
+    title: Typed operands prevent reinterpretation as unresolved arithmetic.
+    parameters:
+      typed: Explicitly typed operand of a floating expression.
+    """
+    literal = astx.LiteralFloat("0.1")
+    expression = astx.BinaryOp("+", typed, literal)
+    analyze(
+        astx.VariableDeclaration("value", astx.Float64(), value=expression)
+    )
+    for node in (typed, literal, expression):
+        semantic = cast(SemanticInfo, getattr(node, "semantic"))
+        assert isinstance(semantic.resolved_type, astx.Float32)
 
 
 def test_failed_context_does_not_damage_a_literal() -> None:
