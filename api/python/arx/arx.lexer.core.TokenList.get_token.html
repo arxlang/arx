@@ -28,7 +28,7 @@
       <a class="site-brand" href="../../../index.html">
         <img class="brand-logo" src="../../../images/arx-logo-terracotta.png" alt="ArxLang">
         <span class="brand-name">ArxLang</span>
-        <span class="version badge rounded-pill">1.29.0</span>
+        <span class="version badge rounded-pill">1.30.0</span>
       </a>
       
       <nav class="site-navbar" aria-label="Primary">
@@ -1211,8 +1211,9 @@
         <h1 id="get-_token"><span class="api-kind api-kind--method">method</span> get_token</h1>
 <pre class="highlight"><code><span class="n">get_token</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Token</span>
 </code></pre>
-<p>Source: packages/arx/src/arx/lexer/core.py:285</p>
+<p>Source: packages/arx/src/arx/lexer/core.py:289</p>
 <p>Get the next token.</p>
+<p>Parser scopes may skip indentation markers without changing the stored tokens or their source locations.</p>
 <h3 id="returns">Returns</h3>
 <p>The next token from standard input.; <strong>Type:</strong> Token</p>
 

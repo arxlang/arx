@@ -28,7 +28,7 @@
       <a class="site-brand" href="../index.html">
         <img class="brand-logo" src="../images/arx-logo-terracotta.png" alt="ArxLang">
         <span class="brand-name">ArxLang</span>
-        <span class="version badge rounded-pill">1.29.0</span>
+        <span class="version badge rounded-pill">1.30.0</span>
       </a>
       
       <nav class="site-navbar" aria-label="Primary">
@@ -1279,7 +1279,10 @@ select <code>math.square&lt;i64&gt;(narrow)</code> before multiplication, not af
 otherwise default to <code>i32</code>, then <code>i64</code>. Uncontextualized floating literals
 default to <code>f32</code>. Decimal literals retain their exact value until type
 selection, then round directly to the chosen binary format, nearest with ties to
-even. Explicitly typed ASTx literals are never recontextualized. Generic
+even. Floating literal arithmetic, including nested operations and unary signs,
+inherits an expected floating type. Integer-only subexpressions keep integer
+semantics; typed operands and function results are not reinterpreted as
+literals. Explicitly typed ASTx literals are never recontextualized. Generic
 inference uses concrete arguments before contextualizing literal arguments,
 independently of argument order; literals do not make conflicting concrete
 same-<code>T</code> arguments compatible.</p>

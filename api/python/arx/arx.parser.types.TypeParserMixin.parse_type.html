@@ -28,7 +28,7 @@
       <a class="site-brand" href="../../../index.html">
         <img class="brand-logo" src="../../../images/arx-logo-terracotta.png" alt="ArxLang">
         <span class="brand-name">ArxLang</span>
-        <span class="version badge rounded-pill">1.29.0</span>
+        <span class="version badge rounded-pill">1.30.0</span>
       </a>
       
       <nav class="site-navbar" aria-label="Primary">
@@ -1213,13 +1213,14 @@
 </code></pre>
 <p>Source: packages/arx/src/arx/parser/types.py:289</p>
 <p>Parse a type annotation.</p>
+<p>Parentheses group a complete type with multiline layout while preserving template-variable and type-use restrictions. They do not introduce tuple types or additional runtime union support.</p>
 <h3 id="parameters">Parameters</h3>
 <ul>
 <li>
 <p><strong>allow_template_vars</strong> — Whether to use allow template vars.; <strong>Type:</strong> bool</p>
 </li>
 <li>
-<p><strong>allow_union</strong> — Whether to use allow union.; <strong>Type:</strong> bool</p>
+<p><strong>allow_union</strong> — Whether to consume unparenthesized union members.; <strong>Type:</strong> bool</p>
 </li>
 <li>
 <p><strong>type_context</strong> — Type context.; <strong>Type:</strong> TypeUseContext</p>
