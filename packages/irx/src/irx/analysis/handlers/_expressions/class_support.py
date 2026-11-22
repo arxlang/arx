@@ -10,7 +10,11 @@ from typing import cast
 
 import astx
 
-from irx.analysis.call_arguments import argument_slots
+from irx.analysis.call_arguments import (
+    argument_slots,
+    call_evaluations,
+    is_numeric_literal_argument,
+)
 from irx.analysis.handlers.class_helpers import (
     ClassMemberFormattingVisitorMixin,
 )
@@ -535,6 +539,16 @@ class ExpressionClassSupportVisitorMixin(ClassMemberFormattingVisitorMixin):
 
         if len(accessible_candidates) == 1:
             return accessible_candidates[0], accessible_candidates
+
+        # Overload sets need ordinary computed types before exact matching.
+        # Keep single-candidate calls deferred so their context can still reach
+        # literal arithmetic without premature default-width diagnostics.
+        for index, argument in enumerate(call_evaluations(node)):
+            if is_numeric_literal_argument(argument) and not isinstance(
+                argument, (astx.LiteralInteger, astx.LiteralFloat)
+            ):
+                self.visit(argument)
+                arg_types[index] = self._expr_type(argument)
 
         exact_matches = tuple(
             candidate

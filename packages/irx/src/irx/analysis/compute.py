@@ -23,10 +23,13 @@ from plum import dispatch
 from public import private
 
 from irx.analysis.arrow_conversion import arrow_ownership
-from irx.analysis.call_arguments import argument_slots, call_evaluations
+from irx.analysis.call_arguments import (
+    argument_slots,
+    call_evaluations,
+    contextualize_argument,
+)
 from irx.analysis.extensions.calls import AnalysisCall
 from irx.analysis.extensions.records import CALL_PLAN, CallOperation, CallPlan
-from irx.analysis.numeric_literals import contextualize_literal
 from irx.analysis.resolved_nodes import (
     ImplicitConversion,
     OwnershipKind,
@@ -307,11 +310,6 @@ class ComputeAnalysisVisitor(TableIOAnalysisVisitor):
         if argument_slots(call.function, node, call.diagnostics) is None:
             return
         argument = call_evaluations(node)[0]
-        contextualize_literal(argument, astx.Float64())
-        source = call.services.evaluate(argument)
-        if source is None:
-            return
-        shape = compute_shape(source)
         declared = call.function.signature.parameters[0].type_
         target = declared
         if isinstance(declared, astx.TemplateTypeVar):
@@ -322,9 +320,21 @@ class ComputeAnalysisVisitor(TableIOAnalysisVisitor):
             if explicit is not None and len(explicit) == 1
             else None
         )
+        contextualize_argument(
+            argument, requested if requested is not None else declared
+        )
+        source = call.services.evaluate(argument)
+        if source is None:
+            return
+        shape = compute_shape(source)
         if (
             shape is None
             or not is_assignable(target, source)
+            or (
+                call.function.template_params
+                and explicit is None
+                and not is_type_member(target, source)
+            )
             or (
                 explicit is not None
                 and (

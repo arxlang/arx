@@ -939,6 +939,66 @@ def test_analyze_resolves_exact_method_overloads() -> None:
     assert int_call.overload_key != float_call.overload_key
 
 
+@pytest.mark.parametrize("kind", ["instance", "static", "base"])
+@pytest.mark.parametrize("unresolved", [False, True])
+def test_overloads_resolve_deferred_literal_expressions(
+    kind: str, unresolved: bool
+) -> None:
+    """
+    title: Overload lookup resolves deferred arithmetic before exact matching.
+    parameters:
+      kind: Method call path to check.
+      unresolved: Whether ASTx leaves the binary expression type unresolved.
+    """
+    expression = astx.BinaryOp(
+        "+",
+        astx.LiteralFloat("1.0") if unresolved else astx.LiteralInteger(1),
+        astx.LiteralFloat("2.0"),
+    )
+    if unresolved:
+        expression.type_ = astx.ExprType()
+    base = astx.ClassDefStmt(
+        name="Base",
+        methods=[
+            _returning_method(
+                "render",
+                astx.LiteralInt32(index),
+                astx.Argument("value", type_),
+                is_static=kind == "static",
+            )
+            for index, type_ in enumerate((astx.Float32(), astx.Float64()))
+        ],
+    )
+    child = astx.ClassDefStmt(name="Child", bases=[_class_type("Base")])
+    call: astx.MethodCall | astx.StaticMethodCall | astx.BaseMethodCall
+    if kind == "static":
+        call = astx.StaticMethodCall("Child", "render", [expression])
+    elif kind == "base":
+        call = astx.BaseMethodCall(
+            astx.Identifier("value"), "Base", "render", [expression]
+        )
+    else:
+        call = astx.MethodCall(
+            astx.Identifier("value"), "render", [expression]
+        )
+    probe = astx.FunctionDef(
+        astx.FunctionPrototype(
+            "probe",
+            astx.Arguments(astx.Argument("value", _class_type("Child"))),
+            astx.Int32(),
+        ),
+        _method_body(call),
+    )
+    module = make_module("app.main", base, child, probe)
+    expected = astx.Float32 if unresolved else astx.Float64
+    for _ in range(2):
+        analyze(module)
+        resolved = _semantic(call).resolved_method_call
+        assert resolved is not None
+        assert isinstance(resolved.call.resolved_argument_types[0], expected)
+        assert isinstance(_semantic(expression).resolved_type, expected)
+
+
 def test_analyze_rejects_conversion_ranked_method_overloads() -> None:
     """
     title: Overload selection requires one exact explicit argument match.

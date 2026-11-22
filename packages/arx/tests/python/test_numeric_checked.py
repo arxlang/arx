@@ -686,6 +686,29 @@ def test_nullable_conversion_rejects_present_overflow(
     assert result.stdout == ""
 
 
+def test_overload_literal_arithmetic_uses_default_numeric_semantics(
+    tmp_path: Path,
+) -> None:
+    """
+    title: Deferred literal arithmetic selects the exact executed overload.
+    parameters:
+      tmp_path: Temporary directory for the compiled numeric program.
+    """
+    result = run_numeric(
+        tmp_path,
+        "assert Chooser.pick(1.0 + 2.0) == 1\n"
+        "assert Chooser.pick(1 + 2.0) == 2",
+        definitions=(
+            "class Chooser:\n"
+            "  fn pick(value: f32) -> public static :: i32:\n"
+            "    return 1\n"
+            "  fn pick(value: f64) -> public static :: i32:\n"
+            "    return 2\n"
+        ),
+    )
+    assert result.returncode == 0, result.stderr
+
+
 def test_contextual_mutation_and_container_literals(tmp_path: Path) -> None:
     """
     title: Literal contexts apply to assignments and list append.
