@@ -11,7 +11,11 @@ from typing import cast
 
 import astx
 
-from irx.analysis.call_arguments import argument_slots
+from irx.analysis.call_arguments import (
+    argument_slots,
+    call_evaluations,
+    literal_bound_contexts,
+)
 from irx.analysis.handlers._templates.build import (
     TemplateBuildVisitorMixin,
 )
@@ -262,6 +266,27 @@ class TemplateResolutionVisitorMixin(TemplateBuildVisitorMixin):
             if self._type_within_template_bound(argument, param.bound):
                 continue
             if diagnose:
+                slots = argument_slots(function, node)
+                ambiguous = explicit_args is None and any(
+                    isinstance(
+                        expected := function.signature.parameters[slot].type_,
+                        astx.TemplateTypeVar,
+                    )
+                    and expected.name == param.name
+                    and len(literal_bound_contexts(value, param.bound)) > 1
+                    for slot, value in zip(slots or (), call_evaluations(node))
+                    if slot < len(function.signature.parameters)
+                )
+                if ambiguous:
+                    self.context.diagnostics.add(
+                        "Ambiguous numeric literal inference for template "
+                        f"parameter '{param.name}' in call to "
+                        f"'{function.name}'; "
+                        "use an explicit specialization",
+                        node=node,
+                        code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
+                    )
+                    return None
                 self.context.diagnostics.add(
                     f"Template argument '{display_type_name(argument)}' does "
                     f"not satisfy bound '{display_type_name(param.bound)}' "

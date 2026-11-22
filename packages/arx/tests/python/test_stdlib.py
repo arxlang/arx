@@ -4,6 +4,8 @@ title: Bundled stdlib resolution and packaging tests.
 
 from __future__ import annotations
 
+import shutil
+import subprocess
 import tomllib
 
 from pathlib import Path
@@ -24,10 +26,130 @@ from irx.analysis.compute import ComputePlan
 from irx.analysis.extensions.records import CALL_PLAN
 from irx.analysis.module_interfaces import ParsedModule
 from irx.analysis.resolved_nodes import SemanticInfo
+from irx.analysis.types import same_type
 from irx.diagnostics import SemanticError
 from llvmlite import binding as llvm
 
 from .test_app_paths import _write_installed_arx_distribution
+
+
+def test_installed_generic_math_literal_inference(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """
+    title: Installed pure-Arx wrappers share math inference and specialization.
+    parameters:
+      tmp_path: Temporary installed package and compiled consumer.
+      monkeypatch: Fixture for replacing installed-package discovery paths.
+    """
+    if shutil.which("clang") is None or shutil.which("c++") is None:
+        pytest.skip("compiled math checks require native compilers")
+    document = "```\ntitle: Installed generic math fixture\n```\n"
+    site = tmp_path / "installed"
+    package = _write_installed_arx_distribution(
+        site,
+        "arx-generic-math-fixture",
+        "library",
+        {
+            "__init__.x": document + "import rooted from library.kernels\n",
+            "kernels.x": document
+            + (
+                "import math from stdlib\n"
+                "@<T: f64 | nullable[f64] | "
+                "series[f64] | series[nullable[f64]]>\n"
+                "fn rooted(value: T) -> T:\n"
+                "  return math.sqrt(value)\n"
+            ),
+        },
+    )
+    assert all(
+        path.suffix in {".x", ".toml"}
+        for path in package.rglob("*")
+        if path.is_file()
+    )
+    app = tmp_path / "app"
+    app.mkdir()
+    (app / ".arxproject.toml").write_text(
+        '[project]\nname="consumer"\nversion="0"\n'
+        'dependencies=["arx-generic-math-fixture"]\n',
+        encoding="utf-8",
+    )
+    monkeypatch.syspath_prepend(str(site))
+    monkeypatch.chdir(app)
+    source = document + (
+        "import math from stdlib\n"
+        "import rooted from library\n"
+        "import kernels from library\n"
+        "fn main() -> i32:\n"
+        "  direct: f64 = math.sqrt(9.0)\n"
+        "  inferred: f64 = rooted(9.0)\n"
+        "  expression: f64 = kernels.rooted(3.0 + 6.0)\n"
+        "  value: f64 = 9.0\n"
+        "  typed: f64 = rooted(value)\n"
+        "  explicit: f64 = rooted<f64>(9.0)\n"
+        "  lifted: nullable[f64] = rooted<nullable[f64]>(9.0)\n"
+        "  assert inferred == direct\n"
+        "  assert expression == direct\n"
+        "  assert typed == direct\n"
+        "  assert explicit == direct\n"
+        "  assert not is_null(lifted)\n"
+        "  assert fill_null(lifted, 0.0) == direct\n"
+        "  missing: nullable[f64] = none\n"
+        "  assert is_null(rooted(missing))\n"
+        "  frame: dataframe[x:f64, y:f64 | none] = "
+        "dataframe({x:[9.0, 4.0], y:[9.0, none]})\n"
+        "  roots: series[f64] = rooted(frame.x)\n"
+        "  optional_roots: series[nullable[f64]] = kernels.rooted(frame.y)\n"
+        "  assert roots[0] == direct\n"
+        "  assert roots[1] == 2.0\n"
+        "  assert fill_null(optional_roots[0], 0.0) == direct\n"
+        "  assert is_null(optional_roots[1])\n"
+        "  return 0\n"
+    )
+    path = app / "main.x"
+    path.write_text(source, encoding="utf-8")
+    ArxIO.string_to_buffer(source)
+    module = Parser().parse(Lexer().lex(), "main")
+    root = ParsedModule(
+        "main", main_module.inject_ambient_builtin_imports(module)
+    )
+    builder = ArxBuilder()
+    text = builder.translate_modules(
+        root, main_module.FileImportResolver((str(path),))
+    )
+    llvm.parse_assembly(text).verify()
+    main = next(
+        node
+        for node in module.nodes
+        if isinstance(node, irx_astx.FunctionDef) and node.name == "main"
+    )
+    calls = {
+        node.name: cast(SemanticInfo, node.value.semantic)
+        for node in main.body.nodes
+        if isinstance(node, irx_astx.VariableDeclaration)
+        and node.name
+        in {"direct", "inferred", "expression", "typed", "explicit", "lifted"}
+    }
+    selected = calls["inferred"].resolved_function
+    assert selected is not None and selected.specialization_key is not None
+    for name in ("expression", "typed", "explicit"):
+        assert calls[name].resolved_function is selected
+    direct = calls["direct"].facts.get(CALL_PLAN)
+    assert isinstance(direct, ComputePlan)
+    assert same_type(calls["inferred"].resolved_type, direct.result_type)
+    nullable = calls["lifted"].resolved_function
+    assert nullable is not None
+    assert nullable.specialization_key != selected.specialization_key
+    binary = app / "program"
+    builder._build_from_ir_result(text, str(binary), True, "auto")
+    result = subprocess.run(
+        [str(binary)],
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=30,
+    )
+    assert result.returncode == 0, result.stderr
 
 
 @pytest.mark.parametrize("kernel", ["sqrt", "exp"])

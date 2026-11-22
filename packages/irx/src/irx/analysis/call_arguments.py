@@ -11,9 +11,18 @@ import astx
 from plum import dispatch
 from public import private
 
-from irx.analysis.numeric_literals import contextualize_literal
+from irx.analysis.numeric_literals import (
+    contextualize_literal,
+    default_numeric_literal_type,
+    floating_literal_expression,
+)
+from irx.analysis.numeric_policy import FLOAT_PRECISIONS, integer_bounds
 from irx.analysis.resolved_nodes import SemanticFunction
-from irx.analysis.types import sequence_element_type, substitute_type
+from irx.analysis.types import (
+    same_type,
+    sequence_element_type,
+    substitute_type,
+)
 from irx.diagnostics import DiagnosticBag, DiagnosticCodes
 from irx.typecheck import typechecked
 
@@ -154,6 +163,76 @@ def contextualize_null_arguments(
 
 @private
 @typechecked
+def is_numeric_literal_argument(value: astx.AST) -> bool:
+    """
+    title: Recognize unresolved scalar literals and floating arithmetic.
+    parameters:
+      value: Source argument to inspect.
+    returns: Whether numeric analysis can wait for argument context.
+    """
+    return (
+        isinstance(value, (astx.LiteralInteger, astx.LiteralFloat))
+        or floating_literal_expression(value) is True
+    )
+
+
+@private
+@typechecked
+def literal_bound_contexts(
+    value: astx.AST, bound: astx.DataType
+) -> tuple[astx.DataType, ...]:
+    """
+    title: Keep an admitted numeric default or collect scalar bound contexts.
+    summary: Nullable and storage bounds do not implicitly lift or box a
+      scalar during inference. Candidate selection never depends on declaration
+      order or on rounding a literal to see whether it fits.
+    parameters:
+      value: Unresolved literal or floating literal arithmetic.
+      bound: Finite template bound.
+    returns: The admitted source default, eligible alternatives, or no context.
+    """
+    integer = isinstance(value, astx.LiteralInteger)
+    if isinstance(value, astx.LiteralInteger):
+        default = default_numeric_literal_type(value)
+    elif isinstance(value, astx.LiteralFloat) or (
+        floating_literal_expression(value) is True
+    ):
+        default = astx.Float32()
+    else:
+        return ()
+    members = bound.members if isinstance(bound, astx.UnionType) else (bound,)
+    candidates = tuple(
+        {
+            type(member): member
+            for member in members
+            if type(member) in FLOAT_PRECISIONS
+            or (integer and integer_bounds(member) is not None)
+        }.values()
+    )
+    if any(same_type(default, member) for member in candidates):
+        return (default,)
+    return candidates
+
+
+@private
+@typechecked
+def contextualize_argument(
+    value: astx.AST, expected: astx.DataType | None
+) -> None:
+    """
+    title: Share literal-bound context between ordinary and native calls.
+    parameters:
+      value: Source argument to contextualize.
+      expected: Parameter type after explicit or concrete sibling substitution.
+    """
+    if isinstance(expected, astx.TemplateTypeVar):
+        candidates = literal_bound_contexts(value, expected.bound)
+        expected = candidates[0] if len(candidates) == 1 else None
+    contextualize_literal(value, expected)
+
+
+@private
+@typechecked
 def analyze_numeric_arguments(
     node: astx.AST,
     function: SemanticFunction | None,
@@ -193,19 +272,13 @@ def analyze_numeric_arguments(
     }
     expected: astx.DataType | None
     for value, slot in zip(values, slots):
-        if isinstance(
-            value,
-            (
-                astx.LiteralInteger,
-                astx.LiteralFloat,
-                astx.ListExpr,
-                astx.LiteralList,
-            ),
+        if is_numeric_literal_argument(value) or isinstance(
+            value, (astx.ListExpr, astx.LiteralList)
         ):
             continue
         if slot < len(function.signature.parameters):
             expected = function.signature.parameters[slot].type_
-            contextualize_literal(value, substitute_type(expected, selected))
+            contextualize_argument(value, substitute_type(expected, selected))
         if not typed_visited:
             visit(value)
         if slot < len(function.signature.parameters):
@@ -213,14 +286,9 @@ def analyze_numeric_arguments(
             actual = type_of(value)
             collect_literal_context(expected, actual, selected)
     for value, slot in zip(values, slots):
-        if not isinstance(
-            value,
-            (
-                astx.LiteralInteger,
-                astx.LiteralFloat,
-                astx.ListExpr,
-                astx.LiteralList,
-            ),
+        if not (
+            is_numeric_literal_argument(value)
+            or isinstance(value, (astx.ListExpr, astx.LiteralList))
         ):
             continue
         expected = (
@@ -230,7 +298,7 @@ def analyze_numeric_arguments(
         )
         if expected is not None:
             expected = substitute_type(expected, selected)
-        contextualize_literal(value, expected)
+        contextualize_argument(value, expected)
         visit(value)
     return [type_of(value) for value in values]
 

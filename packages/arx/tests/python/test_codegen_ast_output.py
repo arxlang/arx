@@ -914,25 +914,40 @@ def test_numeric_operand_plans_translate_mixed_widths() -> None:
     )
 
 
-def test_contextual_float_arithmetic_translates_resolved_widths() -> None:
+@pytest.mark.parametrize("generic", [False, True])
+def test_contextual_float_arithmetic_translates_resolved_widths(
+    generic: bool,
+) -> None:
     """
     title: Assignment, return and call contexts lower floating literal trees.
+    parameters:
+      generic: Whether the identity call infers its type from a generic bound.
     """
+    identity = (
+        "@<T: f64>\nfn identity(value: T) -> T:\n"
+        if generic
+        else "fn identity(value: f64) -> f64:\n"
+    )
     ArxIO.string_to_buffer(
         "```\ntitle: Contextual floating arithmetic\n```\n"
-        "fn identity(value: f64) -> f64:\n"
-        "  return value\n"
+        + identity
+        + "  return value\n"
         "@<T: f32 | f64>\n"
         "fn generic(value: T) -> T:\n"
         "  return value\n"
         "fn returned() -> f64:\n"
         "  return -(1e100 + 2.0)\n"
+        "class Bounds:\n"
+        "  @<T: f64>\n"
+        "  fn echo(value: T) -> public static :: T:\n"
+        "    return value\n"
         "fn expression() -> f64:\n"
         "  value: f64 = 0.0 - 1.0\n"
         "  value = (1.0 + 2.0) * 3.0\n"
         "  return identity(-(1e100 + 2.0)) + generic<f64>(3.0 / 2.0)\n"
         "fn main() -> i32:\n"
         "  result: f64 = expression()\n"
+        "  result = Bounds.echo(1e100 + 2.0)\n"
         "  return 0\n"
     )
     text = ArxBuilder().translate(Parser().parse(Lexer().lex()))

@@ -305,20 +305,25 @@ def test_compute_nullable_conversion(explicit: bool) -> None:
     assert isinstance(plan.conversion.target_type, astx.NullableType)
 
 
-def test_compute_specialization_respects_declared_bound() -> None:
+@pytest.mark.parametrize("explicit", [False, True])
+def test_compute_specialization_respects_declared_bound(
+    explicit: bool,
+) -> None:
     """
     title: A safe nullable conversion cannot authorize an out-of-bound type.
+    parameters:
+      explicit: Whether the call explicitly selects the out-of-bound type.
     """
     root, resolver, call = compute_modules("sqrt", astx.Float64())
     provider = resolver("root", astx.ImportStmt([]), "provider")
     prototype = provider.native_bindings[0].declaration
-    variable = astx.TemplateTypeVar("T", bound=astx.Float64())
+    bound = astx.Float64() if explicit else astx.NullableType(astx.Float64())
+    variable = astx.TemplateTypeVar("T", bound=bound)
     prototype.args.nodes[0].type_ = variable
     prototype.return_type = variable
-    astx.set_template_params(
-        prototype, (astx.TemplateParam("T", astx.Float64()),)
-    )
-    astx.set_template_args(call, (astx.NullableType(astx.Float64()),))
+    astx.set_template_params(prototype, (astx.TemplateParam("T", bound),))
+    if explicit:
+        astx.set_template_args(call, (astx.NullableType(astx.Float64()),))
     with pytest.raises(SemanticError, match="explicit specialization"):
         analyze_modules(root, resolver)
     assert cast(SemanticInfo, call.semantic).facts.get(CALL_PLAN) is None

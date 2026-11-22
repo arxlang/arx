@@ -17,6 +17,7 @@ from irx.analysis import (
 )
 from irx.analysis.resolved_nodes import SemanticInfo
 from irx.analysis.types import same_type
+from irx.diagnostics import DiagnosticCodes
 
 from ..conftest import (
     StaticImportResolver,
@@ -271,6 +272,145 @@ def test_explicit_nullable_template_argument_conversion(
     assert same_type(conversion.target_type, optional)
 
 
+@pytest.mark.parametrize(
+    "members,argument,expected",
+    [
+        (
+            (astx.Float64(), astx.NullableType(astx.Float64())),
+            astx.LiteralFloat("9.0"),
+            astx.Float64(),
+        ),
+        (
+            (astx.NullableType(astx.Float64()), astx.Float64()),
+            astx.LiteralInteger(9),
+            astx.Float64(),
+        ),
+        (
+            (astx.Float64(), astx.Float32()),
+            astx.LiteralFloat("9.0"),
+            astx.Float32(),
+        ),
+        (
+            (astx.Float64(),),
+            astx.BinaryOp(
+                "+", astx.LiteralFloat("1e100"), astx.LiteralFloat("2.0")
+            ),
+            astx.Float64(),
+        ),
+        ((astx.Int16(),), astx.LiteralInteger(9), astx.Int16()),
+    ],
+)
+def test_template_literal_inference_uses_bound_context(
+    members: tuple[astx.DataType, ...],
+    argument: astx.DataType,
+    expected: astx.DataType,
+) -> None:
+    """
+    title: Prefer permitted defaults or one scalar bound without ordering bias.
+    parameters:
+      members: Concrete types permitted by the template bound.
+      argument: Untyped numeric literal or eligible arithmetic expression.
+      expected: Selected concrete specialization type.
+    """
+    bound = members[0] if len(members) == 1 else astx.UnionType(members)
+    variable = astx.TemplateTypeVar("T", bound=bound)
+    function = _templated_function(
+        "identity",
+        astx.Identifier("value"),
+        astx.Argument("value", variable),
+        return_type=variable,
+        template_params=(astx.TemplateParam("T", bound),),
+    )
+    call = astx.FunctionCall("identity", [argument])
+    main = _main_returning(astx.LiteralInt32(0))
+    main.body.nodes.insert(0, call)
+    analyze(make_module("app.main", function, main))
+    resolution = _semantic(call).resolved_call
+    assert resolution is not None
+    assert same_type(resolution.result_type, expected)
+    assert same_type(_semantic(argument).resolved_type, expected)
+
+
+@pytest.mark.parametrize("reverse", [False, True])
+def test_template_literal_inference_rejects_ambiguity(reverse: bool) -> None:
+    """
+    title: Multiple non-default scalar bounds require explicit specialization.
+    parameters:
+      reverse: Whether to reverse the ambiguous bound's declaration order.
+    """
+    members = (astx.Float16(), astx.Float64())
+    bound = astx.UnionType(members[::-1] if reverse else members)
+    variable = astx.TemplateTypeVar("T", bound=bound)
+    function = _templated_function(
+        "identity",
+        astx.Identifier("value"),
+        astx.Argument("value", variable),
+        return_type=variable,
+        template_params=(astx.TemplateParam("T", bound),),
+    )
+    call = astx.FunctionCall("identity", [astx.LiteralFloat("9.0")])
+    main = _main_returning(astx.LiteralInt32(0))
+    main.body.nodes.insert(0, call)
+    with pytest.raises(
+        SemanticError, match="Ambiguous numeric literal"
+    ) as error:
+        analyze(make_module("app.main", function, main))
+    assert error.value.diagnostics.diagnostics[0].code == (
+        DiagnosticCodes.SEMANTIC_TYPE_MISMATCH
+    )
+
+
+@pytest.mark.parametrize("reverse", [False, True])
+def test_template_literal_expression_uses_typed_sibling(reverse: bool) -> None:
+    """
+    title: Literal arithmetic waits for concrete sibling context in either
+      order.
+    parameters:
+      reverse: Whether to put the typed argument before the literal expression.
+    """
+    function = _templated_function(
+        "pick",
+        astx.Identifier("lhs"),
+        astx.Argument("lhs", _template_var()),
+        astx.Argument("rhs", _template_var()),
+    )
+    expression = astx.BinaryOp(
+        "+", astx.LiteralFloat("1e100"), astx.LiteralFloat("2.0")
+    )
+    arguments = [expression, astx.LiteralFloat64(9.0)]
+    call = astx.FunctionCall("pick", arguments[::-1] if reverse else arguments)
+    main = _main_returning(astx.LiteralInt32(0))
+    main.body.nodes.insert(0, call)
+    analyze(make_module("app.main", function, main))
+    assert isinstance(_semantic(expression).resolved_type, astx.Float64)
+
+
+@pytest.mark.parametrize("reverse", [False, True])
+def test_template_inference_preserves_concrete_conflicts(
+    reverse: bool,
+) -> None:
+    """
+    title: Bound context never promotes conflicting concrete arguments.
+    parameters:
+      reverse: Whether to reverse the two concrete arguments.
+    """
+    function = _templated_function(
+        "pick",
+        astx.Identifier("lhs"),
+        astx.Argument("lhs", _template_var()),
+        astx.Argument("rhs", _template_var()),
+    )
+    arguments = [astx.LiteralInt32(1), astx.LiteralFloat64(2.0)]
+    call = astx.FunctionCall("pick", arguments[::-1] if reverse else arguments)
+    main = _main_returning(astx.LiteralInt32(0))
+    main.body.nodes.insert(0, call)
+    with pytest.raises(SemanticError, match="Conflicting inferences") as error:
+        analyze(make_module("app.main", function, main))
+    assert error.value.diagnostics.diagnostics[0].code == (
+        DiagnosticCodes.SEMANTIC_TYPE_MISMATCH
+    )
+
+
 def test_series_template_specializations_preserve_nullability() -> None:
     """
     title: Series bounds preserve validity in type identity and cached calls.
@@ -320,17 +460,27 @@ def test_series_template_specializations_preserve_nullability() -> None:
     assert keys[0] != keys[1]
 
 
-def test_analyze_template_function_rejects_out_of_bound_explicit_arg() -> None:
+@pytest.mark.parametrize("explicit", [False, True])
+def test_analyze_template_function_rejects_out_of_bound_arg(
+    explicit: bool,
+) -> None:
     """
-    title: Explicit template arguments must satisfy their finite bound.
+    title: Explicit types and inferred concrete operands must satisfy the
+      bound.
+    parameters:
+      explicit: Whether to explicitly request an unsupported template type.
     """
     template_fn = _templated_function(
         "identity",
         astx.Identifier("value"),
         astx.Argument("value", _template_var()),
     )
-    call = astx.FunctionCall("identity", [astx.LiteralString("bad")])
-    astx.set_template_args(call, (astx.String(),))
+    call = astx.FunctionCall(
+        "identity",
+        [astx.LiteralString("bad") if explicit else astx.LiteralFloat32(9.0)],
+    )
+    if explicit:
+        astx.set_template_args(call, (astx.String(),))
     body = astx.Block()
     body.append(call)
     body.append(astx.FunctionReturn(astx.LiteralInt32(0)))

@@ -21,6 +21,7 @@ from irx.analysis.builtin_file import (
 from irx.analysis.call_arguments import (
     analyze_numeric_arguments,
     call_evaluations,
+    is_numeric_literal_argument,
 )
 from irx.analysis.class_lifecycle import (
     CONTEXT_ENTER_HOOK,
@@ -248,7 +249,7 @@ class ExpressionClassAccessVisitorMixin(ExpressionClassSupportVisitorMixin):
             return
         arg_types: list[astx.DataType | None] = []
         for arg in call_evaluations(node):
-            if not isinstance(arg, (astx.LiteralInteger, astx.LiteralFloat)):
+            if not is_numeric_literal_argument(arg):
                 self.visit(arg)
             arg_types.append(
                 default_numeric_literal_type(arg)
@@ -264,7 +265,7 @@ class ExpressionClassAccessVisitorMixin(ExpressionClassSupportVisitorMixin):
         receiver_type = self._expr_type(node.receiver)
         if isinstance(receiver_type, astx.FileType):
             for arg in call_evaluations(node):
-                if isinstance(arg, (astx.LiteralInteger, astx.LiteralFloat)):
+                if is_numeric_literal_argument(arg):
                     self.visit(arg)
             resolve_file_method(cast(SemanticAnalyzerCore, self), node)
             return
@@ -399,7 +400,7 @@ class ExpressionClassAccessVisitorMixin(ExpressionClassSupportVisitorMixin):
         self.visit(node.receiver)
         arg_types: list[astx.DataType | None] = []
         for arg in call_evaluations(node):
-            if not isinstance(arg, (astx.LiteralInteger, astx.LiteralFloat)):
+            if not is_numeric_literal_argument(arg):
                 self.visit(arg)
             arg_types.append(
                 default_numeric_literal_type(arg)
@@ -509,7 +510,7 @@ class ExpressionClassAccessVisitorMixin(ExpressionClassSupportVisitorMixin):
             return
         arg_types: list[astx.DataType | None] = []
         for arg in call_evaluations(node):
-            if not isinstance(arg, (astx.LiteralInteger, astx.LiteralFloat)):
+            if not is_numeric_literal_argument(arg):
                 self.visit(arg)
             arg_types.append(
                 default_numeric_literal_type(arg)

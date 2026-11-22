@@ -182,6 +182,12 @@ for the same `T` must agree in type; use explicit specialization or casts to
 choose conversions. Each concrete member of a bound must support the function
 body, so define only the numeric group that the operation actually supports.
 
+Untyped numeric literals and floating literal arithmetic use explicit or
+concrete sibling context first. Otherwise, inference keeps a source default
+admitted by the bound or uses its unique compatible non-nullable numeric member.
+Ambiguous choices require explicit specialization. Typed values retain their
+actual types; inference does not implicitly choose a nullable wrapper.
+
 ## Function Body Rules
 
 - The block starts after `:`.
