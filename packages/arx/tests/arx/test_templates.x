@@ -7,10 +7,17 @@ type SignedInteger = i8 | i16 | i32 | i64
 type UnsignedInteger = u8 | u16 | u32 | u64
 type Integer = SignedInteger | UnsignedInteger
 type Float = f32 | f64
-type Real = Integer | Float
+type Real = (
+  Integer
+  | Float
+)
 
 @<T: Real>
-fn add(lhs: T, rhs: T) -> T:
+fn add(lhs: (
+  T
+), rhs: T) -> (
+  T
+):
   ```
   title: add
   summary: Returns the sum of two values with the same template type.
@@ -44,7 +51,9 @@ fn test_template_float_specialization() -> none:
   title: test_template_float_specialization
   summary: Verifies explicit floating-point specialization and casting.
   ```
-  decimal: f64 = add<f64>(1.5, 2.5)
+  decimal: (
+    f64
+  ) = add<f64>(1.5, 2.5)
   rounded: i32 = cast(decimal, i32)
   assert rounded == 4
 

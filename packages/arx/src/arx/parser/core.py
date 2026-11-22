@@ -607,12 +607,23 @@ class ParserCore(ParserMixinBase):
     def _peek_token(self, offset: int = 0) -> Token:
         """
         title: Peek one token ahead without consuming it.
+        summary: Respect the active token stream indentation policy.
         parameters:
           offset: Offset within the data.
         returns: 'Result of this operation: peek one token ahead without
           consuming it.'
         """
         index = self.tokens.position + offset
+        if self.tokens.ignore_indentation:
+            index = self.tokens.position
+            for lookahead in range(offset + 1):
+                while (
+                    index < len(self.tokens.tokens)
+                    and self.tokens.tokens[index].kind == TokenKind.indent
+                ):
+                    index += 1
+                if lookahead < offset:
+                    index += 1
         if index >= len(self.tokens.tokens):
             return Token(TokenKind.eof, "")
         return self.tokens.tokens[index]

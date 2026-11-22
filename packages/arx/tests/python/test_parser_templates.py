@@ -113,7 +113,7 @@ def test_parse_composed_alias_bounds() -> None:
     """
     tree = _parse(
         "```\ntitle: Composed numeric bounds\n```\n"
-        "type SignedInteger = i8 | i16 | i32 | i64\n"
+        "type SignedInteger = i8 | i16 | (\n  i32 | i64\n)\n"
         "type UnsignedInteger = u8 | u16 | u32 | u64\n"
         "type Integer = SignedInteger | UnsignedInteger\n"
         "type Float = f32 | f64\n"
@@ -154,8 +154,8 @@ def test_template_bound_diagnostic_keeps_nullable_series() -> None:
     """
     module = _parse(
         "```\ntitle: Nullable Series template bound\n```\n"
-        "@<T: f64 | nullable[f64] | series[f64] | "
-        "series[nullable[f64]]>\n"
+        "@<T: (\n  f64 | nullable[f64]\n  | series[f64]\n"
+        "  | series[nullable[f64]]\n)>\n"
         "fn identity(value: T) -> T:\n  return value\n"
         "fn main() -> i32:\n  identity(true)\n  return 0\n"
     )

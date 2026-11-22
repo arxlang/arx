@@ -295,15 +295,40 @@ class TypeParserMixin(ParserMixinBase):
     ) -> astx.DataType:
         """
         title: Parse a type annotation.
+        summary: Parentheses group a complete type with multiline layout
+          while preserving template-variable and type-use restrictions.
+          They do not introduce tuple types or additional runtime union
+          support.
         parameters:
           allow_template_vars: Whether to use allow template vars.
-          allow_union: Whether to use allow union.
+          allow_union: Whether to consume unparenthesized union members.
           type_context: Type context.
         returns: Parsed a type annotation.
         """
-        if self.tokens.cur_tok.kind == TokenKind.none_literal:
+        type_: astx.DataType
+        if self._is_operator("("):
+            previous_layout = self.tokens.ignore_indentation
+            self.tokens.ignore_indentation = True
+            try:
+                self._consume_operator("(")
+                type_ = self.parse_type(
+                    allow_template_vars=allow_template_vars,
+                    allow_union=True,
+                    type_context=type_context,
+                )
+                if not self._is_operator(")"):
+                    raise ParserException(
+                        "Expected ')' after parenthesized type",
+                        self.tokens.cur_tok.location,
+                        code="ARX-PARSE-TYPE-GROUP-001",
+                    )
+            finally:
+                # The token after ')' may be a body's or sibling's indentation.
+                self.tokens.ignore_indentation = previous_layout
+            self._consume_operator(")")
+        elif self.tokens.cur_tok.kind == TokenKind.none_literal:
             self.tokens.get_next_token()  # eat none
-            type_: astx.DataType = astx.NoneType()
+            type_ = astx.NoneType()
         else:
             if self.tokens.cur_tok.kind not in {
                 TokenKind.identifier,
@@ -312,6 +337,7 @@ class TypeParserMixin(ParserMixinBase):
                 raise ParserException("Parser: Expected a type name")
 
             type_name = cast(str, self.tokens.cur_tok.value)
+            type_location = self.tokens.cur_tok.location
             if type_name == "auto":
                 if type_context not in {
                     TypeUseContext.VARIABLE,
@@ -574,7 +600,7 @@ class TypeParserMixin(ParserMixinBase):
                     type_ = astx.ClassType(type_name)
                 else:
                     raise ParserException(
-                        f"Parser: Unknown type '{type_name}'."
+                        f"Parser: Unknown type '{type_name}'.", type_location
                     )
 
         if not allow_union or not self._is_operator("|"):

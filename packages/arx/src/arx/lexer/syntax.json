@@ -1,5 +1,5 @@
 {
-  "syntax_pack_version": "0.18.0",
+  "syntax_pack_version": "0.19.0",
   "language": "arx",
   "status": "draft",
   "source_of_truth": "Canonical lexical source for editor tooling and lexer tables.",
@@ -226,6 +226,10 @@
       "form": "type Name = type",
       "supports_union_rhs": true,
       "top_level_only": true
+    },
+    "type_group": {
+      "form": "(type)",
+      "multiline": true
     },
     "relative_imports": {
       "leading_dot_tokens": true
