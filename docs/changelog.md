@@ -1,6 +1,23 @@
 # Release Notes
 ---
 
+# [1.30.0](https://github.com/arxlang/arx/compare/1.29.0...1.30.0) (2026-11-22)
+
+
+### Bug Fixes
+
+* **irx:** distinguish nullable series types in template diagnostic ([#210](https://github.com/arxlang/arx/issues/210)) ([fce48f4](https://github.com/arxlang/arx/commit/fce48f46e4ba1fbf4bd94769a155b8de2bb8644d))
+* **irx:** preserve source argument positions in range diagnostics ([#209](https://github.com/arxlang/arx/issues/209)) ([915d865](https://github.com/arxlang/arx/commit/915d8659cf417b46cf03df13c93b01b9bd9ffac4))
+* **irx:** propagate contextual types through numeric literal expressions ([#212](https://github.com/arxlang/arx/issues/212)) ([6aaf931](https://github.com/arxlang/arx/commit/6aaf9313892437118d5ff254f0afa63492a1d4cf))
+* **irx:** support nullable lifting in explicit generic calls ([#213](https://github.com/arxlang/arx/issues/213)) ([b725721](https://github.com/arxlang/arx/commit/b725721af35dc6bc051d2c05a743d047b968b611))
+* **irx:** unify contextual literal inference for generic calls ([#214](https://github.com/arxlang/arx/issues/214)) ([99e9431](https://github.com/arxlang/arx/commit/99e9431d7a0748fdcbb308a68e9b13a1e1ffdb67))
+
+
+### Features
+
+* **arx:** support multiline type annotations and aliases ([#211](https://github.com/arxlang/arx/issues/211)) ([f61922a](https://github.com/arxlang/arx/commit/f61922a71f09c702ed05317b48c8af34110ad2a6))
+* **arx:** support scientific notation in floating-point literals ([#208](https://github.com/arxlang/arx/issues/208)) ([b8698ab](https://github.com/arxlang/arx/commit/b8698ab0d404edc0a1e6d28cfc741b20e7204fb6))
+
 # [1.29.0](https://github.com/arxlang/arx/compare/1.28.0...1.29.0) (2026-11-21)
 
 
