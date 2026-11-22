@@ -237,6 +237,40 @@ def test_analyze_template_function_uses_explicit_template_args() -> None:
     assert isinstance(resolved_call.resolved_argument_types[0], astx.Float64)
 
 
+@pytest.mark.parametrize(
+    "argument", [astx.LiteralFloat("1e100"), astx.LiteralFloat64(4.0)]
+)
+def test_explicit_nullable_template_argument_conversion(
+    argument: astx.DataType,
+) -> None:
+    """
+    title: User templates record the ordinary valid-value nullable conversion.
+    parameters:
+      argument: Exact literal or explicitly typed non-nullable value.
+    """
+    optional = astx.NullableType(astx.Float64())
+    variable = astx.TemplateTypeVar("T", bound=optional)
+    template_fn = _templated_function(
+        "identity",
+        astx.Identifier("value"),
+        astx.Argument("value", variable),
+        return_type=variable,
+        template_params=(astx.TemplateParam("T", optional),),
+    )
+    call = astx.FunctionCall("identity", [argument])
+    astx.set_template_args(call, (optional,))
+    main = _main_returning(astx.LiteralInt32(0))
+    main.body.nodes.insert(0, call)
+    analyze(make_module("app.main", template_fn, main))
+    resolved = _semantic(call).resolved_call
+    assert resolved is not None
+    assert same_type(resolved.result_type, optional)
+    conversion = resolved.implicit_conversions[0]
+    assert conversion is not None
+    assert isinstance(conversion.source_type, astx.Float64)
+    assert same_type(conversion.target_type, optional)
+
+
 def test_series_template_specializations_preserve_nullability() -> None:
     """
     title: Series bounds preserve validity in type identity and cached calls.

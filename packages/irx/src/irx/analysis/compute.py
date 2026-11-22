@@ -35,7 +35,12 @@ from irx.analysis.resolved_nodes import (
     SemanticInfo,
 )
 from irx.analysis.table_io import TableIOAnalysisVisitor
-from irx.analysis.types import clone_type, is_assignable, same_type
+from irx.analysis.types import (
+    clone_type,
+    is_assignable,
+    is_type_member,
+    same_type,
+)
 from irx.builtins.collections.column_types import column_arrow_type
 from irx.diagnostics import DiagnosticCodes
 from irx.native import COMPUTE_CATALOG, ComputeKernel, validate_compute_kernel
@@ -278,6 +283,8 @@ class ComputeAnalysisVisitor(TableIOAnalysisVisitor):
     def visit(self, operation: ComputeOperation, call: AnalysisCall) -> None:
         """
         title: Resolve one typed unary call after ordinary symbol lookup.
+        summary: Explicit nullable specializations safely lift f64 inputs;
+          inferred calls preserve their source shape.
         parameters:
           operation: Operation to resolve or execute.
           call: Call being processed.
@@ -310,6 +317,11 @@ class ComputeAnalysisVisitor(TableIOAnalysisVisitor):
         if isinstance(declared, astx.TemplateTypeVar):
             target = call.function.template_params[0].bound
         explicit = astx.get_template_args(node)
+        requested = (
+            explicit[0]
+            if explicit is not None and len(explicit) == 1
+            else None
+        )
         if (
             shape is None
             or not is_assignable(target, source)
@@ -317,8 +329,10 @@ class ComputeAnalysisVisitor(TableIOAnalysisVisitor):
                 explicit is not None
                 and (
                     not call.function.template_params
-                    or len(explicit) != 1
-                    or not same_type(explicit[0], source)
+                    or requested is None
+                    or compute_shape(requested) is None
+                    or not is_type_member(target, requested)
+                    or not is_assignable(requested, source)
                 )
             )
         ):
@@ -336,10 +350,14 @@ class ComputeAnalysisVisitor(TableIOAnalysisVisitor):
                 code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
             )
             return
-        # Monomorphic nullable parameters box scalar inputs. A template instead
-        # preserves its inferred concrete shape, including known Series length.
+        # Preserve explicit nullable contracts. Otherwise keep the inferred
+        # concrete shape, including known Series length.
         result = clone_type(
-            declared if isinstance(declared, astx.NullableType) else source
+            requested
+            if isinstance(requested, astx.NullableType)
+            else declared
+            if isinstance(declared, astx.NullableType)
+            else source
         )
         shape = compute_shape(result)
         assert shape is not None

@@ -40,6 +40,27 @@ class Math:
     ```
     return value
 
+@<T: nullable[f64]>
+fn optional_identity(value: T) -> T:
+  ```
+  title: optional_identity
+  summary: Preserves validity through one explicit nullable specialization.
+  ```
+  return value
+
+fn test_nullable_template_specialization() -> none:
+  ```
+  title: test_nullable_template_specialization
+  summary: Lift non-nullable values and literals without replacing null values.
+  ```
+  value: f64 = 4.0
+  lifted: nullable[f64] = optional_identity<nullable[f64]>(value)
+  assert not is_null(lifted)
+  assert fill_null(lifted, 0.0) == 4.0
+  assert fill_null(optional_identity<nullable[f64]>(4.0), 0.0) == 4.0
+  missing: nullable[f64] = none
+  assert is_null(optional_identity<nullable[f64]>(missing))
+
 fn test_template_inference() -> none:
   ```
   title: test_template_inference

@@ -72,8 +72,8 @@ def test_math_compute_plans_through_source_reexports(
         "type Number = f64\n"
         "fn scalar(value: Number) -> Number:\n"
         "  return compute(value=value)\n"
-        "fn optional(value: nullable[f64]) -> nullable[f64]:\n"
-        "  return compute(value)\n"
+        "fn optional(value: Number) -> nullable[f64]:\n"
+        "  return compute<nullable[f64]>(value)\n"
         "fn column(value: series[nullable[f64]]) "
         "-> series[nullable[f64]]:\n"
         "  return compute(value)\n"
@@ -110,6 +110,10 @@ def test_math_compute_plans_through_source_reexports(
         ]
         assert isinstance(plans[2].result_type, irx_astx.SeriesType)
         assert plans[2].result_type.nullable
+        assert isinstance(plans[1].conversion.source_type, irx_astx.Float64)
+        assert isinstance(
+            plans[1].conversion.target_type, irx_astx.NullableType
+        )
         assert plans[0].function.prototype is plans[-1].function.prototype
 
     compiler = Compiler()
