@@ -133,6 +133,8 @@ Parentheses group a complete type in an annotation or alias and allow multiline
 layout, including unions and nested parameterized types. Continuation
 indentation, blank lines, and comments inside the type group do not change body
 indentation. Grouping does not introduce tuple types or change type validity.
+When a parameter annotation spans lines, prefer a multiline parameter list with
+one parameter per line.
 
 ````arx
 ```
@@ -147,9 +149,12 @@ type Real = (
 )
 
 @<T: Real>
-fn add(x: (
-  T
-), y: T) -> private :: (
+fn add(
+  x: (
+    T
+  ),
+  y: T
+) -> private :: (
   T
 ):
   ```

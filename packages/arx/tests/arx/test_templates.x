@@ -13,9 +13,12 @@ type Real = (
 )
 
 @<T: Real>
-fn add(lhs: (
-  T
-), rhs: T) -> (
+fn add(
+  lhs: (
+    T
+  ),
+  rhs: T
+) -> (
   T
 ):
   ```
