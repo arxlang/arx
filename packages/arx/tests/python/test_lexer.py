@@ -46,6 +46,30 @@ def test_auto_is_contextual_not_a_reserved_token() -> None:
     assert Lexer().get_token() == Token(TokenKind.identifier, "auto")
 
 
+def test_type_group_layout_tokens() -> None:
+    """
+    title: Type grouping retains lexical layout and permits scoped skipping.
+    """
+    ArxIO.string_to_buffer(
+        "type Number = (\n  i32 |\n  i64\n)\nfn main() -> i32:\n  return 0\n"
+    )
+    tokens = Lexer().lex()
+    stored = list(tokens.tokens)
+    assert [
+        (token.location.line, token.location.col, token.value)
+        for token in stored
+        if token.kind is TokenKind.indent
+    ] == [(2, 3, 2), (3, 3, 2), (6, 3, 2)]
+    assert not tokens.ignore_indentation
+    tokens.ignore_indentation = True
+    assert all(token.kind is not TokenKind.indent for token in tokens)
+    assert tokens.tokens == stored
+    assert load_syntax_manifest().data["structural_forms"]["type_group"] == {
+        "form": "(type)",
+        "multiline": True,
+    }
+
+
 def test_token_name() -> None:
     """
     title: Test token name.

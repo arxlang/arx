@@ -450,7 +450,7 @@ class ParserMixinBase:
         title: Parse one type annotation.
         parameters:
           allow_template_vars: Whether to use allow template vars.
-          allow_union: Whether to use allow union.
+          allow_union: Whether to consume unparenthesized union members.
           type_context: Type context.
         returns: Parsed one type annotation.
         """

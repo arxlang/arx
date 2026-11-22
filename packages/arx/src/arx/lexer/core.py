@@ -250,11 +250,13 @@ class TokenList:
       tokens: Tokens in source order.
       position: Position.
       cur_tok: Cur tok.
+      ignore_indentation: Whether a parser scope ignores indentation markers.
     """
 
     tokens: list[Token]
     position: int = 0
     cur_tok: Token
+    ignore_indentation: bool
 
     def __init__(self, tokens: list[Token]) -> None:
         """
@@ -265,6 +267,7 @@ class TokenList:
         self.tokens = tokens
         self.position = 0
         self.cur_tok: Token = Token(kind=TokenKind.not_initialized, value="")
+        self.ignore_indentation = False
 
     def __iter__(self) -> TokenList:
         """
@@ -286,8 +289,16 @@ class TokenList:
     def get_token(self) -> Token:
         """
         title: Get the next token.
+        summary: Parser scopes may skip indentation markers without changing
+          the stored tokens or their source locations.
         returns: The next token from standard input.
         """
+        while (
+            self.ignore_indentation
+            and self.position < len(self.tokens)
+            and self.tokens[self.position].kind == TokenKind.indent
+        ):
+            self.position += 1
         if self.position >= len(self.tokens):
             location = self.cur_tok.location
             return Token(TokenKind.eof, "", location)

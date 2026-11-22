@@ -129,6 +129,13 @@ can name and compose these bounds; importing aliases from another module is not
 supported. Explicit template arguments are written between the callee name and
 `(`.
 
+Parentheses group a complete type in an annotation or alias and allow multiline
+layout, including unions and nested parameterized types. Continuation
+indentation, blank lines, and comments inside the type group do not change body
+indentation. Grouping does not introduce tuple types or change type validity.
+When a parameter annotation spans lines, prefer a multiline parameter list with
+one parameter per line.
+
 ````arx
 ```
 title: Template function example
@@ -136,10 +143,20 @@ summary: Uses one bounded template parameter with inferred and explicit calls.
 ```
 type SignedInteger = i8 | i16 | i32 | i64
 type Float = f32 | f64
-type Real = SignedInteger | Float
+type Real = (
+  SignedInteger
+  | Float
+)
 
 @<T: Real>
-fn add(x: T, y: T) -> private :: T:
+fn add(
+  x: (
+    T
+  ),
+  y: T
+) -> private :: (
+  T
+):
   ```
   title: add
   summary: Adds two values that share one template-bound type.

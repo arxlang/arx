@@ -1351,14 +1351,23 @@ def test_parse_builtin_cast_and_print() -> None:
     assert isinstance(fn.body.nodes[1], irx_astx.PrintExpr)
 
 
-def test_parse_type_alias_and_union_signature() -> None:
+@pytest.mark.parametrize(
+    "union",
+    [
+        "i32 | i64",
+        "(i32 | i64)",
+        "(\n  i32 | # wider alternative\n\n  i64\n)",
+        "(\n  (i32)\n  | (\n    i64\n  )\n)",
+    ],
+)
+def test_parse_type_alias_and_union_signature(union: str) -> None:
     """
     title: Type aliases should resolve in union signatures.
+    parameters:
+      union: Equivalent grouped or ungrouped union spelling.
     """
     tree = _parse_module(
-        "type Number = i32 | i64\n"
-        "fn widen(x: Number) -> i32 | i64:\n"
-        "  return x\n"
+        f"type Number = {union}\nfn widen(x: Number) -> {union}:\n  return x\n"
     )
 
     fn = tree.nodes[0]
@@ -1372,6 +1381,127 @@ def test_parse_type_alias_and_union_signature() -> None:
         astx.Int64,
     ]
     assert isinstance(ret_type, astx.UnionType)
+    assert [type(member) for member in ret_type.members] == [
+        astx.Int32,
+        astx.Int64,
+    ]
+    assert len(fn.body.nodes) == 1
+
+
+def test_grouped_type_annotations_preserve_block_layout() -> None:
+    """
+    title: Grouped fields, parameters and locals leave body and sibling layout.
+    """
+    tree = _parse_module(
+        "class Holder:\n"
+        "  first: (\n    i32\n  )\n"
+        "  second: i32 = 2\n"
+        "  fn read(self, values: (\n"
+        "    list[\n      (i32)\n    ]\n"
+        "  )) -> (\n    i32\n  ):\n"
+        "    result: (\n      i32\n    ) = values[0]\n"
+        "    return result\n"
+        "  fn next(self) -> i32:\n    return 0\n"
+        "fn next() -> i32:\n  return 0\n"
+    )
+    holder, sibling = tree.nodes
+    assert isinstance(holder, astx.ClassDefStmt)
+    assert [field.name for field in holder.attributes] == ["first", "second"]
+    assert [method.name for method in holder.methods] == ["read", "next"]
+    read = holder.methods[0]
+    parameter = read.prototype.args.nodes[0].type_
+    assert isinstance(parameter, astx.ListType)
+    assert isinstance(parameter.element_types[0], astx.Int32)
+    assert isinstance(read.prototype.return_type, astx.Int32)
+    assert len(read.body.nodes) == 2
+    assert isinstance(read.body.nodes[0].type_, astx.Int32)
+    assert isinstance(sibling, astx.FunctionDef)
+    assert sibling.name == "next"
+
+
+def test_grouped_type_lookahead_preserves_column_parameters() -> None:
+    """
+    title: Lookahead skips layout inside nested parameterized type groups.
+    """
+    tree = _parse_module(
+        "type Frame = (\n  dataframe[\n"
+        '    when: timestamp\n      ["us", "UTC"],\n'
+        "    count: i32\n  ]\n)\n"
+        "fn inspect(value: Frame) -> i32:\n  return 0\n"
+    )
+    frame = tree.nodes[0].prototype.args.nodes[0].type_
+    assert isinstance(frame, astx.DataFrameType)
+    assert frame.columns is not None
+    timestamp = frame.columns[0].type_
+    assert isinstance(timestamp, astx.ColumnType)
+    assert timestamp.column_kind == "timestamp"
+    assert timestamp.arguments == ("us", "UTC")
+    assert isinstance(frame.columns[1].type_, astx.Int32)
+
+
+@pytest.mark.parametrize(
+    "source,message",
+    [
+        ("type Bad = ()", "Expected a type name"),
+        ("type Bad = (i32", "Expected '\\)' after parenthesized type"),
+        ("type Bad = (\n  i32 |\n)", "Expected a type name"),
+        ("type Bad = (i32,)", "Expected '\\)' after parenthesized type"),
+        ("type Bad = (i32 str)", "Expected '\\)' after parenthesized type"),
+        ("type Bad = (auto)", "only allowed on initialized"),
+        (
+            "fn bad(value: (auto)) -> i32:\n  return 0",
+            "only allowed on initialized",
+        ),
+        (
+            "fn bad(value: (list[tensor[i32, ...]])) -> i32:\n  return 0",
+            "only supported in function parameter annotations",
+        ),
+        (
+            "fn bad() -> i32:\n  return cast(1, (i32 | i64))",
+            "does not support union target types",
+        ),
+    ],
+)
+def test_invalid_grouped_types_restore_layout(
+    source: str, message: str
+) -> None:
+    """
+    title: Invalid groups fail closed without leaking continuation layout.
+    parameters:
+      source: Invalid grouped type program.
+      message: Expected parser diagnostic.
+    """
+    ArxIO.string_to_buffer(source)
+    tokens = Lexer().lex()
+    stored = list(tokens.tokens)
+    with pytest.raises(ParserException, match=message):
+        Parser().parse(tokens)
+    assert not tokens.ignore_indentation
+    assert tokens.tokens == stored
+
+
+@pytest.mark.parametrize(
+    "source,marker",
+    [
+        ("type Café = (i32, i64)", ","),
+        ("type Café = (\n  i32 | 42\n)", "42"),
+        ("type Café = (Unknown)", "Unknown"),
+    ],
+)
+def test_grouped_type_error_location(source: str, marker: str) -> None:
+    """
+    title: Group errors retain real Unicode-aware token locations.
+    parameters:
+      source: Invalid grouped type program.
+      marker: Source token that causes the diagnostic.
+    """
+    with pytest.raises(ParserException) as error:
+        _parse_module(source)
+    location = error.value.location
+    assert location is not None
+    position = source.index(marker)
+    assert location.line == source[:position].count("\n") + 1
+    assert location.col == position - source.rfind("\n", 0, position)
 
 
 def test_parse_type_alias_with_cast_isinstance_and_typeof() -> None:
@@ -1775,7 +1905,8 @@ def test_multiline_callable_headers_keep_body_and_sibling_boundaries() -> None:
         "    public\n    static\n    ::\n    T\n  :\n"
         "    ```\n    title: Calculate\n    ```\n"
         "    return other\n"
-        "  fn abstract_read(\n    self,\n  ) ->\n    abstract :: i32\n"
+        "  fn abstract_read(\n    self,\n  ) ->\n"
+        "    abstract :: (\n      i32\n    )\n"
         "  fn native(\n    self\n  ) -> extern :: i32\n"
         "  fn read(self) -> i32:\n    return 1\n"
         "extern external(\n  value: i32,\n) ->\n  private ::\n  i32\n"

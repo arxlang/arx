@@ -44,9 +44,14 @@ def _parse(code: str) -> astx.Module:
     return tree
 
 
-def test_parse_template_function_metadata_and_calls() -> None:
+@pytest.mark.parametrize("explicit_type", ["f64", "(f64)", "(\n    f64\n  )"])
+def test_parse_template_function_metadata_and_calls(
+    explicit_type: str,
+) -> None:
     """
     title: Parse one template function plus inferred and explicit calls.
+    parameters:
+      explicit_type: Plain or parenthesized explicit specialization type.
     """
     tree = _parse(
         dedent(
@@ -63,7 +68,9 @@ def test_parse_template_function_metadata_and_calls() -> None:
               print(decimal)
               return whole
             """
-        ).lstrip()
+        )
+        .lstrip()
+        .replace("add<f64>", f"add<{explicit_type}>")
     )
 
     function = tree.nodes[0]
@@ -91,6 +98,7 @@ def test_parse_template_function_metadata_and_calls() -> None:
 
     main = tree.nodes[1]
     assert isinstance(main, astx.FunctionDef)
+    assert len(main.body.nodes) == 4
     whole_decl = main.body.nodes[0]
     assert isinstance(whole_decl, astx.VariableDeclaration)
     inferred_call = whole_decl.value
@@ -113,7 +121,7 @@ def test_parse_composed_alias_bounds() -> None:
     """
     tree = _parse(
         "```\ntitle: Composed numeric bounds\n```\n"
-        "type SignedInteger = i8 | i16 | i32 | i64\n"
+        "type SignedInteger = i8 | i16 | (\n  i32 | i64\n)\n"
         "type UnsignedInteger = u8 | u16 | u32 | u64\n"
         "type Integer = SignedInteger | UnsignedInteger\n"
         "type Float = f32 | f64\n"
@@ -154,8 +162,8 @@ def test_template_bound_diagnostic_keeps_nullable_series() -> None:
     """
     module = _parse(
         "```\ntitle: Nullable Series template bound\n```\n"
-        "@<T: f64 | nullable[f64] | series[f64] | "
-        "series[nullable[f64]]>\n"
+        "@<T: (\n  f64 | nullable[f64]\n  | series[f64]\n"
+        "  | series[nullable[f64]]\n)>\n"
         "fn identity(value: T) -> T:\n  return value\n"
         "fn main() -> i32:\n  identity(true)\n  return 0\n"
     )
