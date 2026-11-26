@@ -15,16 +15,17 @@ dedicate time to making that foundation more reliable and useful.
 **[Support ArxLang on Open Collective](https://opencollective.com/osl/projects/arxlang/donate?interval=month&amount=20&name=&legalName=&email=)**
 
 You can make a one-time donation or choose recurring support. Both help keep
-development moving; recurring contributions are especially valuable for
-planning long-term maintenance.
+development moving; recurring contributions are especially valuable for planning
+long-term maintenance.
 
 ## Acknowledgments
 
 ArxLang is community-led and community-governed. Its engineering and
 documentation are advanced through [SciStitch](https://scistitch.com/) with
-open-source contributors. We thank [Open Science Labs (OSL)](https://opensciencelabs.org/)
-for its institutional support, and every contributor, reviewer, tester, user,
-and supporter who helps strengthen the project.
+open-source contributors. We thank
+[Open Science Labs (OSL)](https://opensciencelabs.org/) for its institutional
+support, and every contributor, reviewer, tester, user, and supporter who helps
+strengthen the project.
 
 <p>
   <a href="https://scistitch.com/"><img src="https://scistitch.com/images/logo/wordmark-color.svg" alt="SciStitch" width="160" style="background: #fff; border-radius: 6px; padding: 6px 8px;"></a>
