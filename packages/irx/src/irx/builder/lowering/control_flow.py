@@ -1054,7 +1054,7 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
                 node.update,
                 loop_symbol_key=initializer_key,
             ):
-                self._llvm.ir_builder.store(update_val, var_addr)
+                self.store_local_resource(node, var_addr, update_val)
             self._emit_temporary_cleanups(update_cleanup_depth)
             self._llvm.ir_builder.branch(cond_bb)
 

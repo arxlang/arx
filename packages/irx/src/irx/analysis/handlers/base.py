@@ -1916,6 +1916,19 @@ class SemanticAnalyzerCore(BaseVisitor):
                 self.bindings.bind_class(node.name, class_, node=node)
                 self._set_class(node, class_)
 
+    def visit_function_body(self, body: astx.Block) -> None:
+        """
+        title: Analyze a function and validate its resolved local moves.
+        parameters:
+          body: Function body.
+        """
+        moves = self.context.local_list_moves
+        self.visit(body)
+        if self.context.local_list_moves != moves:
+            from irx.analysis.local_moves import ListMoveCheck  # noqa: PLC0415
+
+            ListMoveCheck(self.context.diagnostics).visit(body, frozenset())
+
     def _visit_module(
         self,
         module: astx.Module,

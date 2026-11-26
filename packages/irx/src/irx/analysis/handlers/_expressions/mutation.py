@@ -20,6 +20,7 @@ from irx.analysis.handlers.class_helpers import (
 from irx.analysis.numeric_literals import contextualize_literal
 from irx.analysis.ownership import (
     list_resource_ownership,
+    local_list_move_source,
     resource_ownership,
     string_resource_ownership,
     symbol_resource_ownership,
@@ -301,20 +302,23 @@ class ExpressionMutationVisitorMixin(ClassMemberFormattingVisitorMixin):
                 code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
             )
             return
-        if (
-            value_ownership is None
-            or value_ownership.kind is not OwnershipKind.OWNED
+        source = local_list_move_source(value)
+        if value_ownership is None or (
+            value_ownership.kind is not OwnershipKind.OWNED and source is None
         ):
             self.context.diagnostics.add(
-                f"assignment to list '{target_name}' requires a freshly "
-                "owned value; borrowed and static list copies are not "
-                "supported",
+                f"assignment to list '{target_name}' requires an owned "
+                "value; borrowed and static list copies are not supported",
                 node=value,
                 code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
             )
             return
 
-        if symbol.symbol_id in self.context.active_list_iteration_owners:
+        source_id = source.symbol_id if source is not None else None
+        if (
+            source_id != symbol.symbol_id
+            and symbol.symbol_id in self.context.active_list_iteration_owners
+        ):
             self.context.diagnostics.add(
                 f"cannot replace list '{target_name}' while it is being "
                 "iterated; move the replacement after the loop or use a "
@@ -323,21 +327,41 @@ class ExpressionMutationVisitorMixin(ClassMemberFormattingVisitorMixin):
                 code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
             )
             return
+        if (
+            source is not None
+            and source_id != symbol.symbol_id
+            and source_id in self.context.active_list_iteration_owners
+        ):
+            self.context.diagnostics.add(
+                f"cannot move list '{source.name}' while it is being iterated",
+                node=value,
+                code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
+            )
+            return
 
-        self._set_resource_ownership(
-            value,
-            transfer_resource_ownership(
-                value_ownership,
-                owner_symbol_id=symbol.symbol_id,
-                transfer_kind=OwnershipTransferKind.MOVE,
-            ),
+        if source is None:
+            self._set_resource_ownership(
+                value,
+                transfer_resource_ownership(
+                    value_ownership,
+                    owner_symbol_id=symbol.symbol_id,
+                    transfer_kind=OwnershipTransferKind.MOVE,
+                ),
+            )
+        elif source_id != symbol.symbol_id:
+            self.context.local_list_moves += 1
+        self._semantic(node).resolved_resource_store = list_resource_ownership(
+            OwnershipKind.OWNED,
+            owner_symbol_id=symbol.symbol_id,
+            source_symbol_id=source_id,
+            transfer_kind=OwnershipTransferKind.MOVE,
         )
         self._set_resource_ownership(
             node,
             list_resource_ownership(
-                OwnershipKind.OWNED,
+                OwnershipKind.BORROWED,
                 owner_symbol_id=symbol.symbol_id,
-                transfer_kind=OwnershipTransferKind.MOVE,
+                transfer_kind=OwnershipTransferKind.BORROW,
             ),
         )
 
@@ -350,6 +374,7 @@ class ExpressionMutationVisitorMixin(ClassMemberFormattingVisitorMixin):
         target_name: str,
         target_type: astx.DataType | None,
         is_local: bool,
+        copy_borrowed: bool = False,
     ) -> None:
         """
         title: Validate and record one string pointer replacement.
@@ -360,6 +385,8 @@ class ExpressionMutationVisitorMixin(ClassMemberFormattingVisitorMixin):
           target_name: Name of target.
           target_type: Destination type for the conversion.
           is_local: Whether is local.
+          copy_borrowed: Preserve borrowed values in implicit loop updates
+            by copying into the loop's owned slot.
         """
         if not is_string_type(target_type):
             return
@@ -373,22 +400,26 @@ class ExpressionMutationVisitorMixin(ClassMemberFormattingVisitorMixin):
             )
             return
         value_kind = value_ownership.kind
+        transfer = OwnershipTransferKind.NONE
+        source_id: str | None = None
         if value_kind is OwnershipKind.BORROWED:
-            source_symbol = getattr(
-                getattr(value, "semantic", None),
-                "resolved_symbol",
-                None,
-            )
-            source_ownership = (
-                symbol_resource_ownership(source_symbol)
-                if isinstance(source_symbol, SemanticSymbol)
-                else None
-            )
-            if (
-                source_ownership is not None
-                and source_ownership.kind is OwnershipKind.STATIC
-            ):
-                value_kind = OwnershipKind.STATIC
+            source = self._semantic(value).resolved_symbol
+            source_ownership = symbol_resource_ownership(source)
+            if source_ownership is not None and source is not None:
+                source_id = source.symbol_id
+                if source_ownership.kind is OwnershipKind.STATIC:
+                    value_kind = OwnershipKind.STATIC
+                elif source_ownership.kind in {
+                    OwnershipKind.OWNED,
+                    OwnershipKind.OWNED_OR_STATIC,
+                }:
+                    value_kind = OwnershipKind.OWNED
+                    transfer = OwnershipTransferKind.COPY
+            if value_kind is OwnershipKind.BORROWED and copy_borrowed:
+                value_kind = OwnershipKind.OWNED
+                transfer = OwnershipTransferKind.COPY
+        elif value_kind is OwnershipKind.OWNED:
+            transfer = OwnershipTransferKind.MOVE
         if not is_local:
             if value_kind is OwnershipKind.OWNED:
                 self.context.diagnostics.add(
@@ -401,52 +432,44 @@ class ExpressionMutationVisitorMixin(ClassMemberFormattingVisitorMixin):
             return
 
         target_ownership = symbol_resource_ownership(symbol)
-        if target_ownership is None:
-            self.context.diagnostics.add(
-                f"string target '{target_name}' is missing ownership metadata",
-                node=node,
-                code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
+        if target_ownership is None or not (
+            value_kind is not OwnershipKind.BORROWED
+            and (
+                target_ownership.kind is OwnershipKind.OWNED_OR_STATIC
+                or target_ownership.kind is value_kind
             )
-            return
-        if (
-            target_ownership.kind is OwnershipKind.STATIC
-            and value_kind is OwnershipKind.STATIC
-        ):
-            self._set_resource_ownership(
-                node,
-                string_resource_ownership(
-                    OwnershipKind.STATIC,
-                    owner_symbol_id=symbol.symbol_id,
-                ),
-            )
-            return
-        if (
-            target_ownership.kind is not OwnershipKind.OWNED
-            or value_kind is not OwnershipKind.OWNED
         ):
             self.context.diagnostics.add(
-                f"assignment to string '{target_name}' must preserve its "
-                "static or owned storage class; borrowed aliases and "
-                "static/owned replacement are not supported",
-                node=node,
+                f"assignment to string '{target_name}' requires a local "
+                "string or compatible static storage",
+                node=value,
                 code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
             )
             return
 
-        self._set_resource_ownership(
-            value,
-            transfer_resource_ownership(
-                value_ownership,
-                owner_symbol_id=symbol.symbol_id,
-                transfer_kind=OwnershipTransferKind.MOVE,
-            ),
+        if transfer is OwnershipTransferKind.MOVE:
+            self._set_resource_ownership(
+                value,
+                transfer_resource_ownership(
+                    value_ownership,
+                    owner_symbol_id=symbol.symbol_id,
+                    transfer_kind=transfer,
+                ),
+            )
+        self._semantic(
+            node
+        ).resolved_resource_store = string_resource_ownership(
+            value_kind,
+            owner_symbol_id=symbol.symbol_id,
+            source_symbol_id=source_id,
+            transfer_kind=transfer,
         )
         self._set_resource_ownership(
             node,
             string_resource_ownership(
-                OwnershipKind.OWNED,
+                OwnershipKind.BORROWED,
                 owner_symbol_id=symbol.symbol_id,
-                transfer_kind=OwnershipTransferKind.MOVE,
+                transfer_kind=OwnershipTransferKind.BORROW,
             ),
         )
 
@@ -457,6 +480,7 @@ class ExpressionMutationVisitorMixin(ClassMemberFormattingVisitorMixin):
         parameters:
           node: Syntax node to process.
         """
+        self._semantic(node).resolved_resource_store = None
         symbol = self.context.scopes.resolve(node.name)
         contextualize_literal(
             node.value, symbol.type_ if symbol is not None else None

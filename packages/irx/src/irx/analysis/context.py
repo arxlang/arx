@@ -47,6 +47,7 @@ class SemanticContext:
       check_constant_expressions: Whether to use check constant expressions.
       loop_depth: Loop depth.
       active_list_iteration_owners: Active list iteration owners.
+      local_list_moves: Number of resolved moves from named list bindings.
       exception_region_depth: Exception region depth.
       native_feature_names: Native feature names.
       native_bindings: Native bindings.
@@ -75,6 +76,7 @@ class SemanticContext:
     check_constant_expressions: bool = True
     loop_depth: int = 0
     active_list_iteration_owners: frozenset[str] = frozenset()
+    local_list_moves: int = 0
     exception_region_depth: int = 0
     native_feature_names: tuple[str, ...] = ()
     native_bindings: dict[int, tuple[str, ...]] = field(default_factory=dict)

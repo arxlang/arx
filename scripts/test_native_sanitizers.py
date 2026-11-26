@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """
-title: Exercise registered Arrow and Parquet native code under ASan and UBSan.
+title: Exercise native runtime code and generated resource cleanup under
+  ASan and UBSan.
 summary: Compile the runtime feature artifacts, not a separately maintained
   source list. Third-party Arrow libraries are not rebuilt or instrumented.
 """
@@ -13,9 +14,67 @@ import shutil
 import subprocess
 import tempfile
 
+from dataclasses import replace
 from pathlib import Path
 
+from llvmlite import binding as llvm
+
+from arx.codegen import ArxBuilder
+from arx.io import ArxIO
+from arx.lexer import Lexer
+from arx.parser import Parser
+from irx.builder.runtime.linking import link_executable
 from irx.builder.runtime.registry import get_default_runtime_feature_registry
+from irx.typecheck import typechecked
+
+
+@typechecked
+def check_generated_reassignment(
+    root: Path,
+    work: Path,
+    flags: list[str],
+    env: dict[str, str],
+    cc: str,
+    cxx: str,
+) -> None:
+    """
+    title: Run compiled Arx replacement cases with sanitizer allocation hooks.
+    parameters:
+      root: Repository root.
+      work: Directory for the generated program.
+      flags: Clang sanitizer flags.
+      env: Sanitizer execution environment.
+      cc: Clang executable.
+      cxx: Clang C++ executable.
+    """
+    fixture = root / "packages/arx/tests/arx/test_text.x"
+    ArxIO.string_to_buffer(
+        fixture.read_text(encoding="utf-8") + "\nfn main() -> i32:\n"
+        "  test_resource_reassignment()\n"
+        "  test_text_failures()\n"
+        "  return 0\n"
+    )
+    builder = ArxBuilder()
+    module = llvm.parse_assembly(
+        builder.translate(Parser().parse(Lexer().lex()))
+    )
+    module.verify()
+    primary = work / "reassignment.o"
+    primary.write_bytes(builder.translator.target_machine.emit_object(module))
+    features = builder.translator.runtime_features
+    executable = work / "reassignment"
+    link_executable(
+        primary,
+        executable,
+        tuple(
+            replace(artifact, compile_flags=(*artifact.compile_flags, *flags))
+            for artifact in features.native_artifacts()
+        ),
+        (*features.linker_flags(), *flags),
+        clang_binary=cc,
+        cxx_binary=cxx,
+    )
+    subprocess.run([str(executable)], cwd=work, env=env, check=True)
 
 
 def main() -> None:
@@ -102,6 +161,7 @@ def main() -> None:
             UBSAN_OPTIONS="halt_on_error=1:print_stacktrace=1",
         )
         subprocess.run([str(executable)], cwd=work, env=env, check=True)
+        check_generated_reassignment(root, work, flags, env, cc, cxx)
     suffix = " (leak detection disabled)" if args.no_leaks else ""
     print(f"Native ASan/UBSan smoke passed{suffix}")
 

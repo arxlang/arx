@@ -40,7 +40,6 @@ from irx.analysis.resolved_nodes import (
     ResourceKind,
     SemanticInfo,
 )
-from irx.analysis.types import is_string_type
 from irx.builder.core import (
     VisitorCore,
     semantic_assignment_key,
@@ -738,30 +737,7 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
         )
 
         llvm_lhs = self._lvalue_address(var_lhs)
-        if isinstance(
-            self._resolved_ast_type(node), (astx.ListType, astx.Bytes)
-        ):
-            if not isinstance(var_lhs, astx.Identifier):
-                raise_lowering_internal_error(
-                    "list field assignment reached lowering without an "
-                    "object-field ownership contract",
-                    node=node,
-                )
-            self._destroy_replaced_list(
-                node,
-                llvm_lhs,
-                target_name=lhs_name,
-            )
-        elif is_string_type(self._resolved_ast_type(node)) and isinstance(
-            var_lhs,
-            astx.Identifier,
-        ):
-            self._destroy_replaced_string(
-                node,
-                llvm_lhs,
-                target_name=lhs_name,
-            )
-        self._llvm.ir_builder.store(llvm_rhs, llvm_lhs)
+        llvm_rhs = self.store_local_resource(node, llvm_lhs, llvm_rhs)
         self.result_stack.append(llvm_rhs)
 
     @VisitorCore.visit.dispatch

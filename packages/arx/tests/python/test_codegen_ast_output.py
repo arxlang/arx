@@ -1787,6 +1787,55 @@ def test_owned_list_diagnostics(source: str, message: str) -> None:
         ArxBuilder().translate(Parser().parse(Lexer().lex()))
 
 
+@pytest.mark.parametrize(
+    ("body", "message"),
+    [
+        ("  dst = src\n  return len(src)\n", "after a move"),
+        (
+            "  if flag:\n    dst = src\n  return len(src)\n",
+            "after a move",
+        ),
+        (
+            "  while flag:\n    dst = src\n  return 0\n",
+            "after a move",
+        ),
+        (
+            '  try:\n    dst = src\n    raise ValueError("failed")\n'
+            "  except ValueError:\n    return len(src)\n  return 0\n",
+            "after a move",
+        ),
+        (
+            "  for item in src:\n    dst = src\n  return 0\n",
+            "while it is being iterated",
+        ),
+        (
+            "  data: bytes = bytes([1, 2])\n"
+            "  saved: bytes = bytes()\n"
+            "  for item in data:\n    saved = data\n  return 0\n",
+            "while it is being iterated",
+        ),
+    ],
+)
+def test_invalid_local_list_moves(body: str, message: str) -> None:
+    """
+    title: Report invalid moves and subsequent list reads during analysis.
+    parameters:
+      body: Source lines that exercise list ownership.
+      message: Expected ownership diagnostic.
+    """
+    ArxIO.string_to_buffer(
+        "fn consume(flag: bool) -> i64:\n"
+        "  src: list[i32] = [1]\n"
+        "  dst: list[i32] = [2]\n" + body
+    )
+    with pytest.raises(SemanticError, match=message) as failure:
+        ArxBuilder().translate(Parser().parse(Lexer().lex()))
+    assert any(
+        diagnostic.code == DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP
+        for diagnostic in failure.value.diagnostics.diagnostics
+    )
+
+
 @pytest.mark.parametrize("name", ["len", "int", "ord"])
 def test_text_builtins_can_be_shadowed_by_a_function(name: str) -> None:
     """
@@ -1830,6 +1879,8 @@ def text_operations_ir() -> tuple[ArxBuilder, str]:
         "\nfn main() -> i32:\n"
         "  test_text_parsing()\n"
         "  test_text_argument_order()\n"
+        "  test_text_queries_after_reassignment()\n"
+        "  test_resource_reassignment()\n"
         "  test_text_failures()\n"
         '  words: list[str] = words_from_file("input.txt")\n'
         '  assert words[0] == "L68"\n'
@@ -1896,7 +1947,10 @@ def test_text_operations_build_and_run(
         with passes.getModulePassManager() as manager:
             manager.run(module, passes)
     module.verify()
-    builder._build_from_ir(str(module), str(executable))
+    if sys.platform == "linux":
+        executable = build_audited_file_program(builder, str(module), tmp_path)
+    else:
+        builder._build_from_ir(str(module), str(executable))
     (tmp_path / "input.txt").write_text(" L68\nR-12\n", encoding="utf-8")
     result = subprocess.run(
         [str(executable)],
@@ -1907,7 +1961,10 @@ def test_text_operations_build_and_run(
         check=False,
     )
     assert result.returncode == 0, result.stderr
-    assert result.stdout == result.stderr == ""
+    assert result.stdout == ""
+    assert result.stderr == (
+        "AUDIT live=0 opened=1 released=1\n" if sys.platform == "linux" else ""
+    )
 
 
 def test_numeric_sequence_example(tmp_path: Path) -> None:

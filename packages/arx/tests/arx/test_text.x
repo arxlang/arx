@@ -109,7 +109,7 @@ fn test_text_queries_after_reassignment() -> none:
   ```
   title: Rebuild cached metadata on replacement and keep independent results
   ```
-  text: str = "a" + "bc"
+  text: str = "abc"
   at: i64 = 1
   first: str = text[at]
   assert len(text) == 3
@@ -119,7 +119,7 @@ fn test_text_queries_after_reassignment() -> none:
   assert text[0] == "é"
   assert first == "b"
   assert checked_text_width(text) == 2
-  text = "" + ""
+  text = ""
   assert len(text) == 0
   source: str = "aé" + "😀"
   for count in [1, 2, 3]:
@@ -132,6 +132,54 @@ fn test_text_queries_after_reassignment() -> none:
     if hits == 2:
       break
   assert hits == 1
+
+fn rebuilt_row(reset: bool) -> str:
+  ```
+  title: Return either a static or heap-backed string generation
+  ```
+  row: str = ""
+  row = row + "@"
+  if reset:
+    row = "reset"
+  return row
+
+fn count_until_update(replacement: str) -> i32:
+  ```
+  title: Copy a borrowed value into the count-loop binding
+  ```
+  count: i32 = 0
+  for item: str = "x"; len(item) < 2; replacement:
+    count += 1
+    if count == 2:
+      break
+  return count
+
+fn test_resource_reassignment() -> none:
+  ```
+  title: Replace owned strings and move rebuilt list storage repeatedly
+  ```
+  assert rebuilt_row(false) == "@"
+  assert rebuilt_row(true) == "reset"
+  assert count_until_update("xx") == 1
+  row: str = ""
+  grid: list[str] = "a\nb".split("\n")
+  next: list[str] = []
+  next.append("c")
+  count: i32 = 0
+  while count < 16:
+    row = row + "@"
+    saved: str = row
+    row = ""
+    assert saved == "@"
+    grid = next
+    grid = grid
+    moved: list[str] = grid
+    grid = moved
+    assert len(grid) == 1
+    assert grid[0] == "c"
+    next = []
+    next.append("c")
+    count += 1
 
 fn test_text_failures() -> none:
   ```

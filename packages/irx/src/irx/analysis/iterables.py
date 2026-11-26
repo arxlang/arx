@@ -35,9 +35,8 @@ from irx.typecheck import typechecked
 def list_iteration_owner(node: astx.AST) -> str | None:
     """
     title: Resolve the named storage owner of a list-valued iterable.
-    summary: Identifiers borrow their owner's storage; assignment expressions
-      also expose their destination's storage despite producing an owned
-      result. Fresh temporaries and static lists do not borrow a named owner.
+    summary: Named lists and bytes expose their owner's storage. Assignment
+      expressions expose their destination's storage.
     parameters:
       node: Syntax node to process.
     returns: Resolved the named storage owner of a list-valued iterable.
@@ -105,6 +104,11 @@ def resolve_iteration_capability(
             kind=IterationKind.SEQUENCE,
             order=IterationOrder.INDEX,
             sequence_access=adapter,
+            borrowed_owner_symbol_id=(
+                list_iteration_owner(iterable_node)
+                if isinstance(iterable_type, astx.Bytes)
+                else None
+            ),
             cursor_protocol=CursorProtocol.INDEXED,
         )
 

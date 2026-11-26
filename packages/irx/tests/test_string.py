@@ -1034,6 +1034,7 @@ def test_string_semantics_distinguish_static_owned_and_borrowed_storage() -> (
     owned_decl = astx.VariableDeclaration(
         "owned_value",
         astx.String(),
+        mutability=astx.MutabilityKind.mutable,
         value=concat,
     )
     identifier = astx.Identifier("owned_value")
@@ -1059,7 +1060,7 @@ def test_string_semantics_distinguish_static_owned_and_borrowed_storage() -> (
     assert concat_ownership.kind is OwnershipKind.OWNED
     assert concat_ownership.transfer_kind is OwnershipTransferKind.MOVE
     assert owned_ownership is not None
-    assert owned_ownership.kind is OwnershipKind.OWNED
+    assert owned_ownership.kind is OwnershipKind.OWNED_OR_STATIC
     assert identifier_ownership is not None
     assert identifier_ownership.kind is OwnershipKind.BORROWED
     assert identifier_ownership.source_symbol_id is not None
@@ -1238,21 +1239,31 @@ def test_printed_string_temporary_is_released_after_consumption() -> None:
 
 
 @pytest.mark.parametrize(
-    ("initializer", "replacement"),
+    ("initializer", "replacement", "expected"),
     [
-        (astx.LiteralString("static"), _string_concat("owned", " value")),
-        (_string_concat("owned", " value"), astx.LiteralString("static")),
+        (
+            astx.LiteralString("static"),
+            _string_concat("owned", " value"),
+            "owned value",
+        ),
+        (
+            _string_concat("owned", " value"),
+            astx.LiteralString("static"),
+            "static",
+        ),
     ],
 )
-def test_string_assignment_rejects_storage_class_changes(
+def test_string_assignment_releases_heap_across_storage_changes(
     initializer: astx.Expr,
     replacement: astx.DataType,
+    expected: str,
 ) -> None:
     """
-    title: Assignment should not mix static and heap string lifetimes.
+    title: Replacing a static or heap string releases only the owned value.
     parameters:
       initializer: Expression providing the initial value.
       replacement: Replacement.
+      expected: Value of the binding after replacement.
     """
     module = _string_main(
         astx.VariableDeclaration(
@@ -1266,13 +1277,11 @@ def test_string_assignment_rejects_storage_class_changes(
             astx.Identifier("message"),
             replacement,
         ),
+        PrintExpr(astx.Identifier("message")),
     )
 
-    with pytest.raises(
-        SemanticError,
-        match="must preserve its static or owned storage class",
-    ):
-        analyze(module)
+    assert_executed_string_frees(module, 1)
+    check_result("build", LLVMBuilder(), module, expected_output=expected)
 
 
 def test_borrowed_string_parameter_cannot_escape_as_owned_result() -> None:

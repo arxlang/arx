@@ -1193,6 +1193,32 @@ class FunctionVisitorMixin(ClassVisitorMixin):
             )
         ):
             retval = self._copy_string_to_heap(node, retval)
+        elif (
+            return_ownership is not None
+            and return_ownership.kind is OwnershipKind.OWNED_OR_STATIC
+        ):
+            # The result ABI always transfers a heap pointer. Reuse the
+            # current owner or copy a static generation before committing.
+            owner = require_semantic_metadata(
+                self.named_values.get(
+                    f"string.owner:{return_ownership.source_symbol_id}"
+                ),
+                node=node,
+                metadata="string owner slot",
+                context="return string local",
+            )
+            builder = self._llvm.ir_builder
+            heap_pointer = builder.load(owner)
+            is_static = builder.icmp_unsigned(
+                "==", heap_pointer, ir.Constant(retval.type, None)
+            )
+            result = self.create_entry_block_alloca(
+                "return.string", retval.type
+            )
+            builder.store(retval, result)
+            with builder.if_then(is_static):
+                builder.store(self._copy_string_to_heap(node, retval), result)
+            retval = builder.load(result)
         fn_return_type = self._llvm_type_for_ast_type(
             return_resolution.expected_type
         )

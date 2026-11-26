@@ -26,6 +26,7 @@ from irx.analysis.inference import resolve_initializer_type
 from irx.analysis.module_storage import resolve_module_storage
 from irx.analysis.ownership import (
     list_resource_ownership,
+    local_list_move_source,
     resource_ownership,
     string_resource_ownership,
     symbol_resource_ownership,
@@ -195,17 +196,33 @@ class DeclarationBlockVisitorMixin(SemanticVisitorMixinBase):
             )
             return
         if initializer_ownership.kind is OwnershipKind.BORROWED:
-            self.context.diagnostics.add(
-                f"list initializer for '{node.name}' would copy borrowed "
-                "storage; local list copies are not supported",
-                node=value,
-                code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
-                notes=(
-                    "create a new list or return a freshly owned list from a "
-                    "function",
-                ),
+            source = local_list_move_source(value)
+            if source is None:
+                self.context.diagnostics.add(
+                    f"list initializer for '{node.name}' would copy borrowed "
+                    "storage; local list copies are not supported",
+                    node=value,
+                    code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
+                    notes=("create a new list or move an owned local",),
+                )
+                return
+            if source.symbol_id in self.context.active_list_iteration_owners:
+                self.context.diagnostics.add(
+                    f"cannot move list '{source.name}' while it is "
+                    "being iterated",
+                    node=value,
+                    code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
+                )
+                return
+            self.context.local_list_moves += 1
+            self._semantic(
+                node
+            ).resolved_resource_store = list_resource_ownership(
+                OwnershipKind.OWNED,
+                owner_symbol_id=symbol.symbol_id,
+                source_symbol_id=source.symbol_id,
+                transfer_kind=OwnershipTransferKind.MOVE,
             )
-            return
         if initializer_ownership.kind is OwnershipKind.STATIC:
             self.context.diagnostics.add(
                 f"static list storage cannot initialize dynamic list local "
@@ -227,14 +244,15 @@ class DeclarationBlockVisitorMixin(SemanticVisitorMixinBase):
             )
             return
 
-        self._set_resource_ownership(
-            value,
-            transfer_resource_ownership(
-                initializer_ownership,
-                owner_symbol_id=symbol.symbol_id,
-                transfer_kind=OwnershipTransferKind.MOVE,
-            ),
-        )
+        if initializer_ownership.kind is OwnershipKind.OWNED:
+            self._set_resource_ownership(
+                value,
+                transfer_resource_ownership(
+                    initializer_ownership,
+                    owner_symbol_id=symbol.symbol_id,
+                    transfer_kind=OwnershipTransferKind.MOVE,
+                ),
+            )
         self._set_resource_ownership(
             node,
             list_resource_ownership(
@@ -254,12 +272,26 @@ class DeclarationBlockVisitorMixin(SemanticVisitorMixinBase):
           node: Syntax node to process.
           symbol: Resolved symbol for the operation.
         """
+        function = self.context.current_function
+        is_generator = function is not None and isinstance(
+            function.signature.metadata.get("generator"),
+            ResolvedGeneratorFunction,
+        )
+        tracks_storage = (
+            function is not None and not is_generator and symbol.is_mutable
+        )
+        static_binding = (
+            OwnershipKind.OWNED_OR_STATIC
+            if tracks_storage
+            else OwnershipKind.STATIC
+        )
+
         value = node.value
         if value is None or isinstance(value, astx.Undefined):
             self._set_resource_ownership(
                 node,
                 string_resource_ownership(
-                    OwnershipKind.STATIC,
+                    static_binding,
                     owner_symbol_id=symbol.symbol_id,
                 ),
             )
@@ -293,34 +325,40 @@ class DeclarationBlockVisitorMixin(SemanticVisitorMixinBase):
                 self._set_resource_ownership(
                     node,
                     string_resource_ownership(
-                        OwnershipKind.STATIC,
+                        static_binding,
                         owner_symbol_id=symbol.symbol_id,
                         source_symbol_id=source_symbol.symbol_id,
                     ),
                 )
                 return
-            self.context.diagnostics.add(
-                f"string initializer for '{node.name}' would alias borrowed "
-                "storage; borrowed string copies are not supported",
-                node=value,
-                code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
-                notes=(
-                    "initialize from a literal or a freshly allocated string",
-                ),
+            if source_ownership is None or source_ownership.kind not in {
+                OwnershipKind.OWNED,
+                OwnershipKind.OWNED_OR_STATIC,
+            }:
+                self.context.diagnostics.add(
+                    f"string initializer for '{node.name}' would alias "
+                    "borrowed storage",
+                    node=value,
+                    code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
+                    notes=("initialize from a literal or a local string",),
+                )
+                return
+            initializer_ownership = string_resource_ownership(
+                OwnershipKind.OWNED,
+                owner_symbol_id=symbol.symbol_id,
+                transfer_kind=OwnershipTransferKind.COPY,
             )
-            return
         if initializer_ownership.kind is OwnershipKind.STATIC:
             self._set_resource_ownership(
                 node,
                 string_resource_ownership(
-                    OwnershipKind.STATIC,
+                    static_binding,
                     owner_symbol_id=symbol.symbol_id,
                     source_symbol_id=initializer_ownership.source_symbol_id,
                 ),
             )
             return
 
-        function = self.context.current_function
         if function is None:
             self.context.diagnostics.add(
                 f"module-level owned string '{node.name}' requires module "
@@ -329,8 +367,7 @@ class DeclarationBlockVisitorMixin(SemanticVisitorMixinBase):
                 code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
             )
             return
-        generator = function.signature.metadata.get("generator")
-        if isinstance(generator, ResolvedGeneratorFunction):
+        if is_generator:
             self.context.diagnostics.add(
                 "owned string locals in generators require generator "
                 "lifecycle cleanup, which is not supported yet",
@@ -344,13 +381,22 @@ class DeclarationBlockVisitorMixin(SemanticVisitorMixinBase):
             transfer_resource_ownership(
                 initializer_ownership,
                 owner_symbol_id=symbol.symbol_id,
-                transfer_kind=OwnershipTransferKind.MOVE,
+                transfer_kind=(
+                    OwnershipTransferKind.COPY
+                    if initializer_ownership.transfer_kind
+                    is OwnershipTransferKind.COPY
+                    else OwnershipTransferKind.MOVE
+                ),
             ),
         )
         self._set_resource_ownership(
             node,
             string_resource_ownership(
-                OwnershipKind.OWNED,
+                (
+                    OwnershipKind.OWNED_OR_STATIC
+                    if tracks_storage
+                    else OwnershipKind.OWNED
+                ),
                 owner_symbol_id=symbol.symbol_id,
             ),
         )
@@ -388,6 +434,7 @@ class DeclarationBlockVisitorMixin(SemanticVisitorMixinBase):
           node: Syntax node to process.
         """
         analyzer = cast(SemanticAnalyzerCore, self)
+        self._semantic(node).resolved_resource_store = None
         resolved_type = resolve_initializer_type(analyzer, node)
         if resolved_type is None:
             return
