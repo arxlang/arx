@@ -152,6 +152,12 @@ C-string inputs: producers of length-delimited data must reject embedded NUL
 before conversion; the bounded native validator is provided for that boundary.
 The current pointer ABI cannot discover bytes after its terminating NUL.
 
+Repeated length and simple index queries on an ordinary local or parameter reuse
+UTF-8 metadata for that binding. ASCII indexing uses byte offsets, and multibyte
+indexing uses sparse code-point offsets. Replacement, scope exit, and calls that
+could expose borrowed text invalidate cached metadata. The C-string ABI and the
+independent ownership of an indexed result are unchanged.
+
 ## Cleanup control flow
 
 IRx has typed `cleanup_stack` actions used by context managers, list owners, and

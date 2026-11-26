@@ -1924,11 +1924,13 @@ class ResolvedTextOperation:
       kind: Kind of value or operation.
       evaluations: Evaluations.
       argument_indices: Argument indices.
+      cache_receiver: Whether the receiver can use its binding's query cache.
     """
 
     kind: TextOperationKind
     evaluations: tuple[astx.AST, ...]
     argument_indices: tuple[int | None, ...]
+    cache_receiver: bool = False
 
 
 @public
@@ -1993,6 +1995,8 @@ class SemanticInfo:
       collection_tensor: An explicitly tensor-contextualized collection
         expression.
       collection_length: Collection length.
+      text_query_cache: Whether this binding needs a scoped UTF-8 query
+        cache.
       resolved_text_operation: Resolved unshadowed len intrinsic using shared
         queries.
       lifecycle_self: Whether to use lifecycle self.
@@ -2058,6 +2062,7 @@ class SemanticInfo:
     tensor_temporary_owner: bool = False
     collection_tensor: astx.TensorLiteral | None = None
     collection_length: astx.CollectionLength | None = None
+    text_query_cache: bool = False
     resolved_text_operation: ResolvedTextOperation | None = None
     lifecycle_self: bool = False
     lifecycle_field_store: bool = False

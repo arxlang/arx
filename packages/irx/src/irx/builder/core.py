@@ -337,6 +337,7 @@ class VisitorCore(StringIRMixin, BuilderVisitor):
     title: Maintain shared LLVM visitor state.
     attributes:
       named_values: Named values.
+      text_query_slots: Per-function text caches keyed by binding storage.
       call_visitor: Call visitor.
       _llvm: LLVM.
       function_protos: Function protos.
@@ -381,6 +382,7 @@ class VisitorCore(StringIRMixin, BuilderVisitor):
     """
 
     named_values: NamedValueMap
+    text_query_slots: dict[ir.Function, dict[ir.Value, ir.Value]]
     call_visitor: CallLoweringVisitor
     _llvm: VariablesLLVM
     function_protos: dict[str, astx.FunctionPrototype]
@@ -438,6 +440,7 @@ class VisitorCore(StringIRMixin, BuilderVisitor):
 
         self.call_visitor = TableIOLoweringVisitor()
         self.named_values = {}
+        self.text_query_slots = {}
         self.const_vars = set()
         self.function_protos = {}
         self.llvm_functions_by_symbol_id = {}
@@ -600,10 +603,14 @@ class VisitorCore(StringIRMixin, BuilderVisitor):
         """
         new_actions = self.cleanup_stack[start_depth:]
         retained = [
-            item for item in new_actions if item.owner_symbol_id is not None
+            item
+            for item in new_actions
+            if item.owner_symbol_id is not None or item.lexical
         ]
         temporaries = [
-            item for item in new_actions if item.owner_symbol_id is None
+            item
+            for item in new_actions
+            if item.owner_symbol_id is None and not item.lexical
         ]
         self.cleanup_stack[start_depth:] = [*retained, *temporaries]
         self._emit_active_cleanups(start_depth + len(retained))

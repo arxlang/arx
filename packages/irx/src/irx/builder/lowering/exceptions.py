@@ -32,6 +32,7 @@ from irx.builder.state import (
     LoopTargets,
     PendingReturn,
 )
+from irx.builder.text_cache import clear_text_query_caches
 from irx.typecheck import typechecked
 
 
@@ -107,6 +108,7 @@ class ExceptionVisitorMixin(VisitorMixinBase):
           args: Arguments supplied to the operation.
         returns: Read an ABI result slot only on the successful status edge.
         """
+        clear_text_query_caches(cast(VisitorCore, self))
         if not signature.exception_abi:
             if any(
                 is_checked_native_facade(

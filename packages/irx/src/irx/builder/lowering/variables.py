@@ -28,6 +28,10 @@ from irx.builder.lowering.classes import ClassVisitorMixin
 from irx.builder.lowering.collection_access import lower_collection_access
 from irx.builder.runtime import safe_pop
 from irx.builder.state import CleanupAction
+from irx.builder.text_cache import (
+    bind_text_query_cache,
+    clear_text_query_caches,
+)
 from irx.builtins.collections.list import (
     LIST_DESTROY_SYMBOL,
     LIST_RUNTIME_FEATURE,
@@ -258,6 +262,7 @@ class VariableVisitorMixin(ClassVisitorMixin):
                 "metadata",
                 node=node,
             )
+        clear_text_query_caches(cast(VisitorCore, self), string_ptr)
         if ownership.kind is OwnershipKind.STATIC:
             return
         if (
@@ -600,6 +605,7 @@ class VariableVisitorMixin(ClassVisitorMixin):
         self._register_owned_list_cleanup(node, alloca)
         self.register_generator_cleanup(node, alloca)
         self._register_owned_string_cleanup(node, alloca)
+        bind_text_query_cache(cast(VisitorCore, self), node, alloca)
 
     @VisitorCore.visit.dispatch
     def visit(self, node: astx.InlineVariableDeclaration) -> None:
