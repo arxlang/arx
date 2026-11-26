@@ -154,12 +154,18 @@ class ControlFlowParserMixin(ParserMixinBase):
                 if same_line_statement:
                     continue
 
-                next_kind: TokenKind = self.tokens.cur_tok.kind
-                if next_kind not in {
-                    TokenKind.indent,
-                    TokenKind.docstring,
-                }:
+                token = self.tokens.cur_tok
+                if token.kind in {TokenKind.indent, TokenKind.docstring}:
+                    continue
+                # Unindented lines have no indentation marker.
+                if token.kind == TokenKind.eof or token.location.col == 1:
                     break
+                spelling = token.source_text or str(token.value)
+                raise ParserException(
+                    f"Unexpected token {spelling!r} after statement. "
+                    "Expected a newline or ';'.",
+                    token.location,
+                )
         finally:
             self._pop_value_scope()
             self.indent_level = prev_indent

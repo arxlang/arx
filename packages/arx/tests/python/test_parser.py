@@ -1613,6 +1613,35 @@ def test_parse_block_with_comment_and_blank_lines(suffix: str) -> None:
     assert isinstance(fn.body.nodes[2], astx.FunctionReturn)
 
 
+@pytest.mark.parametrize(
+    ("body", "token", "line", "column"),
+    [
+        ("  return 1 + 2 3", "3", 2, 16),
+        ("  x: i32 = 1 2\n  return x\n", "2", 2, 14),
+        ("  x: (\n    i32\n  ) = 1 2\n  return x\n", "2", 4, 9),
+    ],
+)
+def test_parse_block_rejects_trailing_statement_tokens(
+    body: str, token: str, line: int, column: int
+) -> None:
+    """
+    title: Report extra input at the token that follows a block statement.
+    parameters:
+      body: Function body with trailing input.
+      token: Unexpected token spelling.
+      line: Expected source line.
+      column: Expected source column.
+    """
+    with pytest.raises(
+        ParserException, match=f"Unexpected token '{token}' after statement"
+    ) as error:
+        _parse_module(f"fn main() -> i32:\n{body}")
+
+    location = error.value.location
+    assert location is not None
+    assert (location.line, location.col) == (line, column)
+
+
 @pytest.mark.parametrize("modifier", ["", "var :: ", "const :: "])
 def test_name_first_binding_modifiers(modifier: str) -> None:
     """
