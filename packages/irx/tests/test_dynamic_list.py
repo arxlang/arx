@@ -955,14 +955,23 @@ def test_list_call_argument_sidecar_records_borrow_and_escape() -> None:
 
 def test_list_local_rejects_borrowed_storage_copy() -> None:
     """
-    title: A local list binding must not copy another local's storage.
+    title: A local list cannot take ownership of a borrowed parameter.
     """
     list_type = _list_i32_type()
-    module = _module_with_main(
-        _mutable_decl("first", list_type, astx.ListCreate(astx.Int32())),
-        _mutable_decl("copy", list_type, astx.Identifier("first")),
-        astx.FunctionReturn(astx.LiteralInt32(0)),
+    module = astx.Module()
+    consume = astx.FunctionDef(
+        prototype=astx.FunctionPrototype(
+            "consume",
+            args=astx.Arguments(astx.Argument("values", list_type)),
+            return_type=astx.Int32(),
+        ),
+        body=astx.Block(),
     )
+    consume.body.append(
+        _mutable_decl("copy", list_type, astx.Identifier("values"))
+    )
+    consume.body.append(astx.FunctionReturn(astx.LiteralInt32(0)))
+    module.block.append(consume)
 
     with pytest.raises(
         SemanticError,

@@ -412,8 +412,8 @@ def test_read_string_can_return_after_lexical_file_release(
         ("bytes([1], [2])", "expects one input"),
         ("value: bytes = bytes([1])\nvalue.append(2)", "list|class"),
         (
-            "value: bytes = bytes([1])\nalias: bytes = value",
-            "borrowed storage",
+            "value: bytes = bytes([1])\nmoved: bytes = value\nlen(value)",
+            "cannot use list 'value' after a move",
         ),
         ("value: bytes = cast(bytes([1]), bytes)", "bytes casts"),
         ("value: list[bytes]", "nested ownership"),
@@ -436,7 +436,7 @@ def test_read_string_can_return_after_lexical_file_release(
 )
 def test_binary_semantic_restrictions(body: str, match: str) -> None:
     """
-    title: Reject unsafe coercion, mutation, aliases, and binary text options.
+    title: Reject unsafe coercion, mutation, moved reads, and binary options.
     parameters:
       body: Statements forming the body.
       match: Match.
