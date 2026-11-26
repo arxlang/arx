@@ -31,6 +31,50 @@ from llvmlite import ir
 from .test_file_class_native import build_audited_file_program
 
 
+@pytest.mark.skipif(shutil.which("clang") is None, reason="requires clang")
+def test_text_query_cache_handles_foreign_writes(tmp_path: Path) -> None:
+    """
+    title: Preserve snapshots and invalidate caches before native calls.
+    parameters:
+      tmp_path: Temporary directory for the linked test.
+    """
+    ArxIO.string_to_buffer(
+        "```\ntitle: Foreign text mutation\n```\n"
+        "extern erase_text(value: str) -> none\n"
+        "fn erase_and_index(value: str) -> i64:\n"
+        "  erase_text(value)\n"
+        "  return 1\n"
+        "fn main() -> i32:\n"
+        '  text: str = "e" + "value"\n'
+        "  assert len(text) == 6\n"
+        '  assert text[5] == "e"\n'
+        '  assert text[erase_and_index(text)] == "v"\n'
+        "  assert len(text) == 0\n"
+        "  return 0\n"
+    )
+    builder = ArxBuilder()
+    text = builder.translate(Parser().parse(Lexer().lex()))
+    for symbol in ("cached_len", "cached_index", "index"):
+        assert f'call i32 @"irx_text_{symbol}"' in text
+    module = llvm.parse_assembly(text)
+    module.verify()
+    object_path = tmp_path / "text.o"
+    object_path.write_bytes(
+        builder.translator.target_machine.emit_object(module)
+    )
+    helper = tmp_path / "erase.c"
+    helper.write_text("void erase_text(char *s) { s[0] = 0; }\n")
+    features = builder.translator.runtime_features
+    binary = tmp_path / "text"
+    link_executable(
+        object_path,
+        binary,
+        (*features.native_artifacts(), NativeArtifact("c_source", helper)),
+        features.linker_flags(),
+    )
+    subprocess.run([str(binary)], check=True, timeout=10)
+
+
 @pytest.fixture(scope="module")
 def compute_program(tmp_path_factory: pytest.TempPathFactory) -> Path:
     """

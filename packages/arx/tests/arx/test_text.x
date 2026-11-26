@@ -95,6 +95,44 @@ fn test_text_argument_order() -> none:
   assert fields[0] == "left"
   assert fields[1] == "right,tail"
 
+fn checked_text_width(text: str) -> i64:
+  ```
+  title: Check repeated queries on a borrowed function argument
+  ```
+  i: i64 = 0
+  while i < len(text):
+    assert text[i] != ""
+    i += 1
+  return i
+
+fn test_text_queries_after_reassignment() -> none:
+  ```
+  title: Rebuild cached metadata on replacement and keep independent results
+  ```
+  text: str = "a" + "bc"
+  at: i64 = 1
+  first: str = text[at]
+  assert len(text) == 3
+  text = "é" + "😀"
+  assert len(text) == 2
+  assert text[at] == "😀"
+  assert text[0] == "é"
+  assert first == "b"
+  assert checked_text_width(text) == 2
+  text = "" + ""
+  assert len(text) == 0
+  source: str = "aé" + "😀"
+  for count in [1, 2, 3]:
+    prefix: str = source[:count]
+    assert len(prefix) == cast(count, i64)
+    assert prefix[0] == "a"
+  hits: i32 = 0
+  for item: str = "a"; len(item) < 2; "bb":
+    hits += 1
+    if hits == 2:
+      break
+  assert hits == 1
+
 fn test_text_failures() -> none:
   ```
   title: Checked failures preserve owners and remain recoverable

@@ -15,7 +15,7 @@ from irx.analysis.types import (
     is_string_type,
     is_unsigned_type,
 )
-from irx.builder.core import VisitorCore
+from irx.builder.core import VisitorCore, semantic_symbol_key
 from irx.builder.diagnostics import (
     raise_lowering_error,
     require_lowered_value,
@@ -142,6 +142,15 @@ def lower_text_operation(visitor: VisitorCore, node: astx.AST) -> bool:
             code=DiagnosticCodes.LOWERING_TYPE_MISMATCH,
         )
     depth = len(visitor.cleanup_stack)
+    cache = None
+    if operation.cache_receiver:
+        receiver = cast(astx.Identifier, operation.evaluations[0])
+        storage = visitor.named_values.get(
+            semantic_symbol_key(receiver, receiver.name)
+        )
+        cache = visitor.text_query_slots.get(
+            visitor._llvm.ir_builder.function, {}
+        ).get(storage)
     values: list[ir.Value] = []
     for index, expression in enumerate(operation.evaluations):
         visitor.visit_child(expression)
@@ -155,7 +164,11 @@ def lower_text_operation(visitor: VisitorCore, node: astx.AST) -> bool:
             value = visitor._cast_value_to_type(
                 value, integer, unsigned=is_unsigned_type(type_)
             )
-        elif is_string_type(type_) and index + 1 < len(operation.evaluations):
+        elif (
+            is_string_type(type_)
+            and index + 1 < len(operation.evaluations)
+            and (index != 0 or cache is None)
+        ):
             value = visitor._copy_string_to_heap(expression, value)
             free = visitor.require_runtime_symbol("libc", "free")
 
@@ -197,10 +210,12 @@ def lower_text_operation(visitor: VisitorCore, node: astx.AST) -> bool:
             code=DiagnosticCodes.LOWERING_TYPE_MISMATCH,
         )
     output = visitor.create_entry_block_alloca("text.output", output_type)
+    symbol = f"irx_text_{operation.kind.value}"
+    if cache is not None:
+        symbol = f"irx_text_cached_{operation.kind.value}"
+        arguments.append(cache)
     status = visitor._llvm.ir_builder.call(
-        visitor.require_runtime_symbol(
-            "text", f"irx_text_{operation.kind.value}"
-        ),
+        visitor.require_runtime_symbol("text", symbol),
         [*arguments, output],
     )
     check_text_status(visitor, node, status, operation.kind)

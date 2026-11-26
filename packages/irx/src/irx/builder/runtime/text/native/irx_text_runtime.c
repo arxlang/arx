@@ -126,20 +126,106 @@ int32_t irx_text_slice(const char* text, int64_t start, int64_t stop,
   return text_copy(text, begin, offset, out);
 }
 
-int32_t irx_text_index(const char* text, int64_t index, char** out) {
-  if (!out) return IRX_TEXT_INVALID_ARGUMENT;
-  *out = NULL;
-  size_t bytes = 0, offset = 0, begin = 0;
-  int64_t count = 0;
-  int32_t status = text_measure(text, &bytes, &count);
-  if (status) return status;
-  if (index < 0 || index >= count) return IRX_TEXT_OUT_OF_RANGE;
+static int32_t text_index_from(const char* text, size_t bytes, size_t offset,
+                               int64_t index, char** out) {
+  size_t begin = offset;
   for (int64_t i = 0; i <= index; ++i) {
     uint32_t cp;
     begin = offset;
     text_decode(text, bytes, &offset, &cp);
   }
   return text_copy(text, begin, offset, out);
+}
+
+int32_t irx_text_index(const char* text, int64_t index, char** out) {
+  if (!out) return IRX_TEXT_INVALID_ARGUMENT;
+  *out = NULL;
+  size_t bytes = 0;
+  int64_t count = 0;
+  int32_t status = text_measure(text, &bytes, &count);
+  if (status) return status;
+  if (index < 0 || index >= count) return IRX_TEXT_OUT_OF_RANGE;
+  return text_index_from(text, bytes, 0, index, out);
+}
+
+struct irx_text_cache {
+  size_t bytes;
+  int64_t count;
+  size_t* checkpoints;
+};
+
+/* Multibyte lookups decode at most this many code points after preparation. */
+enum { TEXT_CHECKPOINT_STRIDE = 32 };
+
+void irx_text_cache_clear(irx_text_cache** slot) {
+  if (!slot || !*slot) return;
+  free((*slot)->checkpoints);
+  free(*slot);
+  *slot = NULL;
+}
+
+static int32_t text_cached_measure(const char* text, irx_text_cache** slot,
+                                   int64_t* count) {
+  if (!text || !slot) return IRX_TEXT_INVALID_ARGUMENT;
+  if (*slot) {
+    *count = (*slot)->count;
+    return IRX_TEXT_OK;
+  }
+  size_t bytes = 0;
+  int32_t status = text_measure(text, &bytes, count);
+  if (status) return status;
+  irx_text_cache* cache = malloc(sizeof(*cache));
+  if (cache) {
+    *cache = (irx_text_cache){bytes, *count, NULL};
+    *slot = cache;
+  }
+  return IRX_TEXT_OK;
+}
+
+static void text_prepare_checkpoints(const char* text, irx_text_cache* cache) {
+  size_t blocks = (size_t)(cache->count - 1) / TEXT_CHECKPOINT_STRIDE + 1;
+  if (blocks > SIZE_MAX / sizeof(size_t)) return;
+  size_t* checkpoints = malloc(blocks * sizeof(*checkpoints));
+  if (!checkpoints) return;
+  size_t offset = 0;
+  for (size_t block = 0; block < blocks; ++block) {
+    checkpoints[block] = offset;
+    if (block == blocks - 1) break;
+    for (int i = 0; i < TEXT_CHECKPOINT_STRIDE; ++i) {
+      uint32_t cp;
+      text_decode(text, cache->bytes, &offset, &cp); /* Already validated. */
+    }
+  }
+  cache->checkpoints = checkpoints;
+}
+
+int32_t irx_text_cached_len(const char* text, irx_text_cache** slot,
+                            int64_t* out) {
+  if (!out) return IRX_TEXT_INVALID_ARGUMENT;
+  *out = 0;
+  return text_cached_measure(text, slot, out);
+}
+
+int32_t irx_text_cached_index(const char* text, int64_t index,
+                              irx_text_cache** slot, char** out) {
+  if (!out) return IRX_TEXT_INVALID_ARGUMENT;
+  *out = NULL;
+  int64_t count = 0;
+  int32_t status = text_cached_measure(text, slot, &count);
+  if (status) return status;
+  if (index < 0 || index >= count) return IRX_TEXT_OUT_OF_RANGE;
+  irx_text_cache* cache = *slot;
+  if (!cache) return irx_text_index(text, index, out);
+  if ((uint64_t)count == cache->bytes)
+    return text_copy(text, (size_t)index, (size_t)index + 1, out);
+  if (index < TEXT_CHECKPOINT_STRIDE)
+    return text_index_from(text, cache->bytes, 0, index, out);
+  if (!cache->checkpoints) text_prepare_checkpoints(text, cache);
+  if (!cache->checkpoints)
+    return text_index_from(text, cache->bytes, 0, index, out);
+  size_t offset = cache->checkpoints[index / TEXT_CHECKPOINT_STRIDE];
+  return text_index_from(text, cache->bytes, offset,
+                         index % TEXT_CHECKPOINT_STRIDE, out);
 }
 
 static int text_member(uint32_t cp, const char* chars, size_t bytes) {

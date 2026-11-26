@@ -30,6 +30,17 @@ int32_t irx_text_validate(const char* data, int64_t bytes, int64_t* count);
 int32_t irx_text_len(const char* text, int64_t* out);
 int32_t irx_text_ord(const char* text, int64_t* out);
 int32_t irx_text_index(const char* text, int64_t index, char** out);
+/* A query cache is local to one binding. Start with a NULL slot and clear it
+ * before changing the text or releasing/moving the binding. While cached,
+ * the borrowed text must stay live and unchanged. Allocation failure for
+ * metadata falls back to the uncached query. Results have the same ownership
+ * and status contract as len/index. */
+typedef struct irx_text_cache irx_text_cache;
+int32_t irx_text_cached_len(const char* text, irx_text_cache** cache,
+                            int64_t* out);
+int32_t irx_text_cached_index(const char* text, int64_t index,
+                              irx_text_cache** cache, char** out);
+void irx_text_cache_clear(irx_text_cache** cache);
 /* Nonnegative, clipped half-open bounds; step must be 1. Omitted stop is
  * INT64_MAX. Inverted ranges return an owned empty string. */
 int32_t irx_text_slice(const char* text, int64_t start, int64_t stop,

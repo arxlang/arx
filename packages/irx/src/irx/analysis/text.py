@@ -32,6 +32,44 @@ from irx.typecheck import typechecked
 
 @private
 @typechecked
+def plan_text_query_cache(
+    analyzer: SemanticAnalyzerCore,
+    kind: TextOperationKind,
+    evaluations: tuple[astx.AST, ...],
+) -> bool:
+    """
+    title: Select bindings that can safely reuse UTF-8 query metadata.
+    summary: Keep snapshots for computed receivers and index expressions
+      that can call code or mutate the receiver.
+    parameters:
+      analyzer: Semantic analyzer resolving the operation.
+      kind: Resolved text operation.
+      evaluations: Operands in source evaluation order.
+    returns: Whether the receiver can be queried in place.
+    """
+    function = analyzer.context.current_function
+    if function is None or function.signature.metadata.get("generator"):
+        return False
+    if kind not in {TextOperationKind.LENGTH, TextOperationKind.INDEX}:
+        return False
+    if kind is TextOperationKind.INDEX and not isinstance(
+        evaluations[1], astx.Identifier | astx.LiteralInteger
+    ):
+        return False
+    receiver = evaluations[0]
+    if not isinstance(receiver, astx.Identifier):
+        return False
+    symbol = analyzer._semantic(receiver).resolved_symbol
+    if symbol is None or not isinstance(
+        symbol.declaration, astx.Argument | astx.VariableDeclaration
+    ):
+        return False
+    analyzer._semantic(symbol.declaration).text_query_cache = True
+    return True
+
+
+@private
+@typechecked
 def text_error(
     analyzer: SemanticAnalyzerCore, node: astx.AST, message: str
 ) -> None:
@@ -76,7 +114,10 @@ def set_text_operation(
         return
     info = analyzer._semantic(node)
     info.resolved_text_operation = ResolvedTextOperation(
-        kind, evaluations, indices
+        kind,
+        evaluations,
+        indices,
+        cache_receiver=plan_text_query_cache(analyzer, kind, evaluations),
     )
     info.resource_ownership = None
     result: astx.DataType = astx.Int64()

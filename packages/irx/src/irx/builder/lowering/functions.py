@@ -58,6 +58,7 @@ from irx.builder.state import (
     CleanupKind,
     PendingReturn,
 )
+from irx.builder.text_cache import bind_text_query_cache
 from irx.builder.types import is_int_type
 from irx.builtins.collections.list import (
     LIST_DESTROY_SYMBOL,
@@ -1037,6 +1038,7 @@ class FunctionVisitorMixin(ClassVisitorMixin):
                     argument = function.prototype.args.nodes[
                         idx - hidden_parameter_count
                     ]
+                    bind_text_query_cache(self, argument, alloca)
                     ownership = resource_ownership(argument)
                     if (
                         ownership is not None

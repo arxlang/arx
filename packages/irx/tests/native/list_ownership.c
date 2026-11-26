@@ -7,6 +7,12 @@
 static void* allocations[128];
 static int live = 0;
 static int fail_after = -1;
+static int text_measurements = 0;
+
+static size_t checked_strlen(const char* value) {
+  ++text_measurements;
+  return strlen(value);
+}
 
 static int should_fail(void) {
   if (fail_after < 0) return 0;
@@ -47,11 +53,13 @@ static void* checked_realloc(void* value, size_t size) {
 #define malloc checked_malloc
 #define realloc checked_realloc
 #define free checked_free
+#define strlen checked_strlen
 #include "irx_list_runtime.c"
 #include "irx_text_runtime.c"
 #undef malloc
 #undef realloc
 #undef free
+#undef strlen
 
 int main(void) {
   irx_list numbers = {0};
@@ -135,8 +143,32 @@ int main(void) {
     assert(live == 0);
   }
   assert(succeeded > 0);
-  fail_after = 0;
+  fail_after = -1;
+  irx_text_cache* cache = NULL;
+  int64_t count = 0;
   char* text = NULL;
+  char mixed[97];
+  for (size_t i = 0; i < 32; ++i) memcpy(mixed + i * 3, "\xc3\xa9x", 3);
+  mixed[96] = '\0';
+  text_measurements = 0;
+  assert(irx_text_cached_len(mixed, &cache, &count) == IRX_TEXT_OK);
+  assert(count == 64 && live == 1 && text_measurements == 1);
+  for (int64_t i = 31; i < 64; ++i) {
+    assert(irx_text_cached_index(mixed, i, &cache, &text) == IRX_TEXT_OK);
+    assert(strcmp(text, i % 2 ? "x" : "\xc3\xa9") == 0);
+    checked_free(text);
+  }
+  assert(live == 2 && text_measurements == 1);
+  assert(irx_text_cached_index(mixed, 64, &cache, &text) ==
+         IRX_TEXT_OUT_OF_RANGE && text == NULL);
+  irx_text_cache_clear(&cache);
+  irx_text_cache_clear(&cache);
+  assert(live == 0 && cache == NULL);
+  assert(irx_text_cached_len("\xff", &cache, &count) == IRX_TEXT_ENCODING);
+  assert(count == 0 && cache == NULL);
+  fail_after = 0;
+  assert(irx_text_cached_len("abc", &cache, &count) == IRX_TEXT_OK);
+  assert(count == 3 && cache == NULL);
   assert(irx_text_strip(" value ", NULL, &text) == IRX_TEXT_ALLOCATION_FAILED);
   assert(text == NULL && live == 0);
   assert(irx_text_index("value", 0, &text) == IRX_TEXT_ALLOCATION_FAILED);

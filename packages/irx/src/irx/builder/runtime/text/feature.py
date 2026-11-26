@@ -31,8 +31,11 @@ def build_text_runtime_feature() -> RuntimeFeature:
     for name in (
         "validate",
         "len",
+        "cached_len",
         "ord",
         "index",
+        "cached_index",
+        "cache_clear",
         "slice",
         "split",
         "strip",
@@ -62,6 +65,22 @@ def build_text_runtime_feature() -> RuntimeFeature:
                 parameters = [string, integer, integer.as_pointer()]
             elif operation == "index":
                 parameters = [string, integer, string.as_pointer()]
+            elif operation == "cached_len":
+                parameters = [
+                    string,
+                    string.as_pointer(),
+                    integer.as_pointer(),
+                ]
+            elif operation == "cached_index":
+                parameters = [
+                    string,
+                    integer,
+                    string.as_pointer(),
+                    string.as_pointer(),
+                ]
+            elif operation == "cache_clear":
+                parameters = [string.as_pointer()]
+                result = visitor._llvm.VOID_TYPE
             elif operation == "slice":
                 parameters = [
                     string,

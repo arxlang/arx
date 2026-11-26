@@ -727,24 +727,36 @@ def test_contextual_mutation_and_container_literals(tmp_path: Path) -> None:
 
 
 @pytest.mark.parametrize(
-    "body",
+    ("body", "message"),
     [
-        "value: i64 | f64 = 1",
-        "source: series[i8] = series[i8]([1])\n"
-        "target: series[i64] = cast(source, series[i64])",
+        (
+            "value: (i64 | f64) = 1",
+            "union has no lossless scalar storage; "
+            "use an explicit concrete type",
+        ),
+        (
+            "frame: dataframe[x:i8] = dataframe({x:[1]})\n"
+            "target: series[i64] = cast(frame.x, series[i64])",
+            "unsupported cast from SeriesType[Int8] to SeriesType[Int64]",
+        ),
     ],
 )
 def test_unsupported_storage_conversions_are_semantic_errors(
-    body: str,
+    body: str, message: str
 ) -> None:
     """
     title: Reject lossy union storage and unsupported collection casts before
       LLVM.
     parameters:
       body: Statements forming the body.
+      message: Expected semantic diagnostic.
     """
-    with pytest.raises(SemanticError):
+    with pytest.raises(SemanticError) as error:
         translate_numeric(numeric_program(body))
+    diagnostics = error.value.diagnostics.diagnostics
+    assert [(item.code, item.message) for item in diagnostics] == [
+        (DiagnosticCodes.SEMANTIC_TYPE_MISMATCH, message)
+    ]
 
 
 @pytest.mark.parametrize(
