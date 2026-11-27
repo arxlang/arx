@@ -37,7 +37,13 @@ def test_hook_registry_and_phase_metadata() -> None:
     """
     title: Only documented hooks participate in nondispatchable phases.
     """
-    assert set(CLASS_HOOKS) == {"__init__", "__del__", "__enter__", "__exit__"}
+    assert set(CLASS_HOOKS) == {
+        "__init__",
+        "__del__",
+        "__enter__",
+        "__exit__",
+        "__copy__",
+    }
     assert set(LIFECYCLE_HOOKS) == {"__init__", "__del__"}
     initializer = hook_method("__init__")
     finalizer = hook_method("__del__")
