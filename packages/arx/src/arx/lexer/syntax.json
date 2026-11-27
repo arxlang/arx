@@ -231,6 +231,17 @@
       "form": "(type)",
       "multiline": true
     },
+    "nullable_scalar_annotation": {
+      "forms": ["nullable[type]", "type | none", "none | type"],
+      "contexts": [
+        "variable",
+        "count_loop_initializer",
+        "field",
+        "parameter",
+        "return",
+        "type_alias"
+      ]
+    },
     "relative_imports": {
       "leading_dot_tokens": true
     },

@@ -444,6 +444,7 @@ class ParserMixinBase:
         *,
         allow_template_vars: bool = True,
         allow_union: bool = False,
+        allow_nullable_union: bool = True,
         type_context: TypeUseContext = TypeUseContext.GENERAL,
     ) -> astx.DataType:
         """
@@ -451,10 +452,16 @@ class ParserMixinBase:
         parameters:
           allow_template_vars: Whether to use allow template vars.
           allow_union: Whether to consume unparenthesized union members.
+          allow_nullable_union: Whether to consume nullable shorthand.
           type_context: Type context.
         returns: Parsed one type annotation.
         """
-        del allow_template_vars, allow_union, type_context
+        del (
+            allow_template_vars,
+            allow_union,
+            allow_nullable_union,
+            type_context,
+        )
         raise NotImplementedError
 
     def is_type_alias_decl_start(self) -> bool:

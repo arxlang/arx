@@ -35,7 +35,8 @@ fn test_nullable_series() -> none:
   promoted: series[i64 | none] = values + frame.y
   assert fill_null(promoted[0], 0) == 1
   assert is_null(promoted[1])
-  assert fill_null(series_sum(promoted), 0) == 10
+  sum: i64 | none = series_sum(promoted)
+  assert fill_null(sum, 0) == 10
   assert fill_null(series_min(promoted), 0) == 1
   assert fill_null(series_max(promoted), 0) == 9
   assert fill_null(series_mean(promoted), 0.0) == 5.0

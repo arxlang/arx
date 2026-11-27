@@ -216,10 +216,13 @@ RecordBatch IPC, and current interoperability details.
 
 ## Nullable scalars and Series expressions
 
-`nullable[T]` stores a fixed-width numeric or Boolean scalar plus a validity
-bit. A nullable column is spelled `series[T | none]`. Indexing a nullable column
-returns `nullable[T]`; indexing a non-nullable column returns `T`. Indices are
-zero-based; negative or out-of-range indices fail at runtime.
+Use `nullable[T]` or `T | none` to annotate a nullable scalar. Both forms store
+a fixed-width numeric or Boolean scalar plus a validity bit. The two spellings
+work in variable, field, parameter, return, and type alias annotations.
+`none | T` is equivalent. A nullable column is spelled `series[T | none]`.
+Indexing a nullable column returns `nullable[T]`; indexing a non-nullable column
+returns `T`. Indices are zero-based; negative or out-of-range indices fail at
+runtime.
 
 ````arx
 ```
@@ -228,7 +231,7 @@ title: Nullable column expressions
 fn main() -> i32:
   frame: dataframe[x:i32 | none] = dataframe({x:[1, none, 3]})
   doubled: series[i32 | none] = frame.x + frame.x
-  missing: nullable[i32] = doubled[1]
+  missing: i32 | none = doubled[1]
   assert is_null(missing)
   assert fill_null(doubled[2], 0) == 6
   filled: series[i32] = fill_null(doubled, 7)
