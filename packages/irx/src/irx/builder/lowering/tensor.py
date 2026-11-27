@@ -215,7 +215,7 @@ class TensorVisitorMixin(VisitorMixinBase):
         returns: Lowered one Tensor expression and require buffer-view
           storage.
         """
-        self.visit_child(node)
+        self.visit(node)
         value = safe_pop(self.result_stack)
         if value is None or value.type != self._llvm.BUFFER_VIEW_TYPE:
             raise Exception("tensor lowering requires a TensorType value")
@@ -308,7 +308,7 @@ class TensorVisitorMixin(VisitorMixinBase):
           value_node: Value node.
           element_type: Type of each element.
         """
-        self.visit_child(value_node)
+        self.visit(value_node)
         value = safe_pop(self.result_stack)
         if value is None:
             raise Exception("tensor literal expected a scalar value")
@@ -658,7 +658,7 @@ class TensorVisitorMixin(VisitorMixinBase):
             node=node,
         )
 
-        self.visit_child(node.value)
+        self.visit(node.value)
         value = safe_pop(self.result_stack)
         if value is None:
             raise Exception("tensor indexed store requires a value")

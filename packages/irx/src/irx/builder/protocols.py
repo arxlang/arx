@@ -858,14 +858,6 @@ class VisitorMixinTypingBase(ExceptionLoweringTypingBase):
         """
         raise NotImplementedError
 
-    def visit_child(self, _node: astx.AST) -> None:
-        """
-        title: Visit one child AST node.
-        parameters:
-          _node: Syntax node to process.
-        """
-        raise NotImplementedError
-
     def get_function(self, _name: str) -> ir.Function | None:
         """
         title: Get function.

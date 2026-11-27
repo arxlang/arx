@@ -380,7 +380,7 @@ class VariableVisitorMixin(ClassVisitorMixin):
                 node=expr,
             )
 
-        self.visit_child(expr.value)
+        self.visit(expr.value)
         llvm_value = safe_pop(self.result_stack)
         if llvm_value is None:
             raise Exception("codegen: Invalid value in VariableAssignment.")
@@ -435,7 +435,7 @@ class VariableVisitorMixin(ClassVisitorMixin):
             return
         namespace_value = self._namespace_value(node)
         if namespace_value is not None:
-            self.visit_child(node.value)
+            self.visit(node.value)
             _ = safe_pop(self.result_stack)
             self.result_stack.append(namespace_value)
             return
@@ -536,7 +536,7 @@ class VariableVisitorMixin(ClassVisitorMixin):
         if node.value is not None and not isinstance(
             node.value, astx.Undefined
         ):
-            self.visit_child(node.value)
+            self.visit(node.value)
             init_val = safe_pop(self.result_stack)
             if init_val is None:
                 raise Exception("Initializer code generation failed.")
@@ -700,7 +700,7 @@ class VariableVisitorMixin(ClassVisitorMixin):
                 f"'{node.name}'."
             )
         if node.value is not None:
-            self.visit_child(node.value)
+            self.visit(node.value)
             init_val = safe_pop(self.result_stack)
             if init_val is None:
                 raise Exception("Initializer code generation failed.")

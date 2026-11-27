@@ -347,7 +347,7 @@ def lower_sequence_query(
                 context="numeric sequence query",
             )
         return False
-    visitor.visit_child(base)
+    visitor.visit(base)
     value = require_lowered_value(
         safe_pop(visitor.result_stack), node=base, context="sequence source"
     )
@@ -355,7 +355,7 @@ def lower_sequence_query(
     if isinstance(node, astx.CollectionLength):
         result = visitor._llvm.ir_builder.extract_value(view, 1)
     else:
-        visitor.visit_child(node.index)
+        visitor.visit(node.index)
         index = require_lowered_value(
             safe_pop(visitor.result_stack),
             node=node.index,

@@ -235,7 +235,7 @@ class ListVisitorMixin(VisitorMixinBase):
         ):
             return self._lvalue_address(node)
 
-        self.visit_child(node)
+        self.visit(node)
         value = safe_pop(self.result_stack)
         llvm_list_type = self._llvm_list_type()
         if value is None or value.type != llvm_list_type:
@@ -283,7 +283,7 @@ class ListVisitorMixin(VisitorMixinBase):
           list_ptr: List ptr.
           index_node: Index node.
         """
-        self.visit_child(index_node)
+        self.visit(index_node)
         index = safe_pop(self.result_stack)
         if index is None:
             raise Exception("dynamic list subscript requires an index value")
@@ -476,7 +476,7 @@ class ListVisitorMixin(VisitorMixinBase):
         )
         tensor = info.collection_tensor
         if tensor is not None:
-            self.visit_child(tensor)
+            self.visit(tensor)
             return
         element_type = require_semantic_metadata(
             list_element_type(info.resolved_type),
@@ -497,7 +497,7 @@ class ListVisitorMixin(VisitorMixinBase):
         )
         for item in node.elements:
             element_depth = len(self.cleanup_stack)
-            self.visit_child(item)
+            self.visit(item)
             value = safe_pop(self.result_stack)
             if value is None:
                 raise_lowering_error(
@@ -535,7 +535,7 @@ class ListVisitorMixin(VisitorMixinBase):
           base: Base value or declaration.
           index_node: Index node.
         """
-        self.visit_child(base)
+        self.visit(base)
         literal_value = safe_pop(self.result_stack)
         if literal_value is None:
             raise Exception("literal list indexing requires a lowered value")
@@ -561,7 +561,7 @@ class ListVisitorMixin(VisitorMixinBase):
         returns: An addressable list value and Int64 length for iteration.
         """
         if isinstance(base, astx.LiteralList):
-            self.visit_child(base)
+            self.visit(base)
             literal_value = safe_pop(self.result_stack)
             if literal_value is None:
                 raise Exception("literal list iteration requires a value")
@@ -680,12 +680,12 @@ class ListVisitorMixin(VisitorMixinBase):
           base: Base value or declaration.
           index_node: Index node.
         """
-        self.visit_child(base)
+        self.visit(base)
         literal_value = safe_pop(self.result_stack)
         if literal_value is None:
             raise Exception("literal list indexing requires a lowered value")
 
-        self.visit_child(index_node)
+        self.visit(index_node)
         index = safe_pop(self.result_stack)
         if index is None:
             raise Exception("literal list indexing requires an index value")
@@ -747,7 +747,7 @@ class ListVisitorMixin(VisitorMixinBase):
           element_type: Type of each element.
         """
         element_depth = len(self.cleanup_stack)
-        self.visit_child(node.element)
+        self.visit(node.element)
         value = safe_pop(self.result_stack)
         if value is None:
             raise Exception("list comprehension element did not lower")
@@ -823,7 +823,7 @@ class ListVisitorMixin(VisitorMixinBase):
             f"list.comp.{clause_index}.filter.{condition_index}.pass"
         )
         condition_depth = len(self.cleanup_stack)
-        self.visit_child(condition)
+        self.visit(condition)
         condition_value = cast(Any, self)._lower_boolean_condition(
             safe_pop(self.result_stack),
             node=condition,
@@ -1161,7 +1161,7 @@ class ListVisitorMixin(VisitorMixinBase):
         )
         list_ptr = self._lvalue_address(node.base)
 
-        self.visit_child(node.value)
+        self.visit(node.value)
         value = safe_pop(self.result_stack)
         if value is None:
             raise Exception("dynamic list append requires a value")

@@ -743,7 +743,7 @@ class SemanticVisitorMixinTypingBase:
         """
         raise NotImplementedError
 
-    def _visit_module(
+    def analyze_module_contents(
         self,
         module: astx.Module,
         *,
@@ -896,7 +896,9 @@ class SemanticAnalyzerCore(BaseVisitor):
             if callable(reset_templates):
                 reset_templates(parsed_module.ast)
         with self.context.in_module(parsed_module.key):
-            self._visit_module(parsed_module.ast, predeclared=predeclared)
+            self.analyze_module_contents(
+                parsed_module.ast, predeclared=predeclared
+            )
         from irx.analysis.class_lifecycle import (  # noqa: PLC0415
             validate_class_graph,
         )
@@ -1916,7 +1918,7 @@ class SemanticAnalyzerCore(BaseVisitor):
                 self.bindings.bind_class(node.name, class_, node=node)
                 self._set_class(node, class_)
 
-    def _visit_module(
+    def analyze_module_contents(
         self,
         module: astx.Module,
         *,

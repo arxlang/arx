@@ -342,9 +342,9 @@ class _SubsetValidator:
             return "a module-level name"
         return None
 
-    def visit_all(self, statements: list[ast.stmt]) -> None:
+    def validate_statements(self, statements: list[ast.stmt]) -> None:
         """
-        title: Visit each statement in a block in order.
+        title: Validate each statement in a block in source order.
         parameters:
           statements: Statements in source order.
         """
@@ -399,8 +399,8 @@ class _SubsetValidator:
           node: Syntax node to process.
         """
         self.visit(node.test)
-        self.visit_all(node.body)
-        self.visit_all(node.orelse)
+        self.validate_statements(node.body)
+        self.validate_statements(node.orelse)
 
     @dispatch
     def visit(self, node: ast.While) -> None:
@@ -417,7 +417,7 @@ class _SubsetValidator:
             self._reject(
                 node.orelse[0], "while-else clauses are not supported"
             )
-        self.visit_all(node.body)
+        self.validate_statements(node.body)
 
     @dispatch
     def visit(self, node: ast.For) -> None:
@@ -434,12 +434,12 @@ class _SubsetValidator:
                 node.target,
                 "for-loop targets must be a single local variable",
             )
-        self._visit_for_iter(node.iter)
+        self.validate_for_iterator(node.iter)
         if node.orelse:
             self._reject(node.orelse[0], "for-else clauses are not supported")
-        self.visit_all(node.body)
+        self.validate_statements(node.body)
 
-    def _visit_for_iter(self, iterable: ast.expr) -> None:
+    def validate_for_iterator(self, iterable: ast.expr) -> None:
         """
         title: Validate a for loop's iterable as a builtin range() call.
         summary: The callee must resolve to builtins.range, so it is rejected
@@ -605,9 +605,9 @@ class _SubsetValidator:
     def visit(self, node: ast.Call) -> None:
         """
         title: Reject a function call.
-        summary: Only reachable for calls that are not a for loop's range(...)
-          iterator, which _visit_for_iter special-cases before it ever reaches
-          the generic expression walk.
+        summary: For-loop range(...) iterators are handled
+          by validate_for_iterator before the generic expression
+          walk.
         parameters:
           node: Syntax node to process.
         """
@@ -724,7 +724,7 @@ def validate(extracted: ExtractedSource) -> None:
     diagnostics.extend(_validate_arguments(extracted, node.args))
 
     visitor = _SubsetValidator(extracted, _bound_names(node))
-    visitor.visit_all(node.body)
+    visitor.validate_statements(node.body)
     diagnostics.extend(visitor.diagnostics)
 
     if diagnostics:

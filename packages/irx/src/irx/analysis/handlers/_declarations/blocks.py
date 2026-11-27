@@ -410,7 +410,7 @@ class DeclarationBlockVisitorMixin(SemanticVisitorMixinBase):
           module: Module to process.
         """
         with self.context.in_module(module.name):
-            self._visit_module(module, predeclared=False)
+            self.analyze_module_contents(module, predeclared=False)
 
     @SemanticAnalyzerCore.visit.dispatch
     def visit(self, block: astx.Block) -> None:

@@ -384,7 +384,7 @@ class LiteralVisitorMixin(ClassVisitorMixin):
         parameters:
           expr: Expression to process.
         """
-        self.visit_child(astx.LiteralUTF8String(value=expr.value))
+        self.visit(astx.LiteralUTF8String(value=expr.value))
 
     @VisitorCore.visit.dispatch
     def visit(self, node: astx.LiteralList) -> None:
@@ -395,7 +395,7 @@ class LiteralVisitorMixin(ClassVisitorMixin):
         """
         llvm_elems: list[ir.Value] = []
         for elem in node.elements:
-            self.visit_child(elem)
+            self.visit(elem)
             value = self.result_stack.pop()
             if value is None:
                 raise Exception("LiteralList: invalid element lowering.")
@@ -457,7 +457,7 @@ class LiteralVisitorMixin(ClassVisitorMixin):
         elems_sorted = sorted(node.elements, key=sort_key)
         llvm_elems: list[ir.Value] = []
         for elem in elems_sorted:
-            self.visit_child(elem)
+            self.visit(elem)
             value = self.result_stack.pop()
             if value is None:
                 raise Exception("LiteralSet: invalid element lowering.")
@@ -508,7 +508,7 @@ class LiteralVisitorMixin(ClassVisitorMixin):
         """
         llvm_elems: list[ir.Value] = []
         for elem in node.elements:
-            self.visit_child(elem)
+            self.visit(elem)
             value = self.result_stack.pop()
             if value is None:
                 raise Exception("LiteralTuple: invalid element lowering.")
@@ -544,12 +544,12 @@ class LiteralVisitorMixin(ClassVisitorMixin):
         """
         llvm_pairs: list[tuple[ir.Value, ir.Value]] = []
         for key_node, value_node in node.elements.items():
-            self.visit_child(key_node)
+            self.visit(key_node)
             key_val = self.result_stack.pop()
             if key_val is None:
                 raise Exception("LiteralDict: failed to lower key.")
 
-            self.visit_child(value_node)
+            self.visit(value_node)
             val_val = self.result_stack.pop()
             if val_val is None:
                 raise Exception("LiteralDict: failed to lower value.")
@@ -606,7 +606,7 @@ class LiteralVisitorMixin(ClassVisitorMixin):
             return
         info = getattr(node, "semantic", None)
         if isinstance(info, SemanticInfo) and info.tensor_index is not None:
-            self.visit_child(info.tensor_index)
+            self.visit(info.tensor_index)
             return
         if (
             lower_range_query(cast(VisitorCore, self), node)
@@ -625,7 +625,7 @@ class LiteralVisitorMixin(ClassVisitorMixin):
             return
 
         dict_pair_fields = 2
-        self.visit_child(node.value)
+        self.visit(node.value)
         dict_val = self.result_stack.pop()
 
         if not (
@@ -639,7 +639,7 @@ class LiteralVisitorMixin(ClassVisitorMixin):
                 "is supported in this version"
             )
 
-        self.visit_child(node.index)
+        self.visit(node.index)
         key_val = self.result_stack.pop()
         if key_val is None:
             raise Exception("SubscriptExpr: invalid index lowering.")

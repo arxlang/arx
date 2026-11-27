@@ -238,7 +238,7 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
                 name_hint="assert_message",
             )
 
-        self.visit_child(node.message)
+        self.visit(node.message)
         message_value = require_lowered_value(
             safe_pop(self.result_stack),
             node=node.message,
@@ -290,7 +290,7 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
           node: Syntax node to process.
         """
         stack_size_before = len(self.result_stack)
-        self.visit_child(node)
+        self.visit(node)
         del self.result_stack[stack_size_before:]
 
     @contextmanager
@@ -399,7 +399,7 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
           target_type: Destination type for the conversion.
         returns: Lowered one value and cast it to one target semantic type.
         """
-        self.visit_child(node)
+        self.visit(node)
         lowered = require_lowered_value(
             safe_pop(self.result_stack),
             node=node,
@@ -469,7 +469,7 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
                 context="sequence iteration",
             )
         if sequence is not None:
-            self.visit_child(node.iterable)
+            self.visit(node.iterable)
             source = require_lowered_value(
                 safe_pop(self.result_stack),
                 node=node.iterable,
@@ -804,7 +804,7 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
         try:
             for node in block.nodes:
                 if isinstance(node, (astx.StructDefStmt, astx.ClassDefStmt)):
-                    self.visit_child(node)
+                    self.visit(node)
 
             result = None
             for node in block.nodes:
@@ -813,7 +813,7 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
 
                 stack_size_before = len(self.result_stack)
                 statement_cleanup_depth = len(self.cleanup_stack)
-                self.visit_child(node)
+                self.visit(node)
                 if len(self.result_stack) > stack_size_before:
                     result = self.result_stack.pop()
 
@@ -842,7 +842,7 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
           node: Syntax node to process.
         """
         condition_cleanup_depth = len(self.cleanup_stack)
-        self.visit_child(node.condition)
+        self.visit(node.condition)
         condition_value = self._lower_boolean_condition(
             safe_pop(self.result_stack),
             node=node.condition,
@@ -872,7 +872,7 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
           node: Syntax node to process.
         """
         condition_cleanup_depth = len(self.cleanup_stack)
-        self.visit_child(node.condition)
+        self.visit(node.condition)
         cond_v = self._lower_boolean_condition(
             safe_pop(self.result_stack),
             node=node.condition,
@@ -893,7 +893,7 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
 
         self._llvm.ir_builder.position_at_start(then_bb)
         then_stack_size = len(self.result_stack)
-        self.visit_child(node.then)
+        self.visit(node.then)
         then_terminated = self._llvm.ir_builder.block.terminator is not None
         then_v = None
         if len(self.result_stack) > then_stack_size:
@@ -905,7 +905,7 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
         self._llvm.ir_builder.position_at_start(else_bb)
         else_stack_size = len(self.result_stack)
         if node.else_ is not None:
-            self.visit_child(node.else_)
+            self.visit(node.else_)
         else_terminated = self._llvm.ir_builder.block.terminator is not None
         else_v = None
         if len(self.result_stack) > else_stack_size:
@@ -967,7 +967,7 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
 
         self._llvm.ir_builder.position_at_start(cond_bb)
         condition_cleanup_depth = len(self.cleanup_stack)
-        self.visit_child(expr.condition)
+        self.visit(expr.condition)
         cond_val = self._lower_boolean_condition(
             safe_pop(self.result_stack),
             node=expr.condition,
@@ -1003,7 +1003,7 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
         had_const = initializer_key in self.const_vars
 
         initializer_stack_size = len(self.result_stack)
-        self.visit_child(node.initializer)
+        self.visit(node.initializer)
         del self.result_stack[initializer_stack_size:]
 
         var_addr = self.named_values.get(initializer_key)
@@ -1025,7 +1025,7 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
         try:
             self._llvm.ir_builder.position_at_start(cond_bb)
             condition_cleanup_depth = len(self.cleanup_stack)
-            self.visit_child(node.condition)
+            self.visit(node.condition)
             cond_val = self._lower_boolean_condition(
                 safe_pop(self.result_stack),
                 node=node.condition,

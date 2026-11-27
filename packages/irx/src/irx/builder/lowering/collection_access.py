@@ -28,5 +28,5 @@ def lower_collection_access(visitor: VisitorCore, node: astx.AST) -> bool:
         or info.normalized_collection is None
     ):
         return False
-    visitor.visit_child(info.normalized_collection)
+    visitor.visit(info.normalized_collection)
     return True

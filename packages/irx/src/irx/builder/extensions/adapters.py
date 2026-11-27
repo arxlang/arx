@@ -66,7 +66,7 @@ class VisitorCallServices:
         returns: 'Result of this operation: evaluate and pin one argument
           without leaking stack entries.'
         """
-        self.owner.visit_child(node)
+        self.owner.visit(node)
         value = require_lowered_value(
             safe_pop(self.owner.result_stack),
             node=node,

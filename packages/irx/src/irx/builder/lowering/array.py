@@ -56,7 +56,7 @@ class ArrayVisitorMixin(VisitorMixinBase):
         )
 
         for item in node.values:
-            self.visit_child(item)
+            self.visit(item)
             value = safe_pop(self.result_stack)
             if value is None:
                 raise Exception("Array helper expected an integer value")

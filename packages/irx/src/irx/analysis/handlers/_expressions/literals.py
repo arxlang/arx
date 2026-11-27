@@ -191,7 +191,7 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
             string_resource_ownership(OwnershipKind.STATIC),
         )
 
-    def _visit_comprehension_clause(
+    def analyze_comprehension_clause(
         self,
         clause: astx.ComprehensionClause,
         borrows: ExitStack,
@@ -246,7 +246,7 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
 
     @contextmanager
     @typechecked
-    def _visit_comprehension_clauses(
+    def borrow_comprehension_clauses(
         self,
         clauses: list[astx.ComprehensionClause],
     ) -> Iterator[None]:
@@ -259,7 +259,7 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
         """
         with ExitStack() as borrows:
             for clause in clauses:
-                self._visit_comprehension_clause(clause, borrows)
+                self.analyze_comprehension_clause(clause, borrows)
             yield
 
     @SemanticAnalyzerCore.visit.dispatch
@@ -271,9 +271,16 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
         """
         self._set_type(node, None)
 
-    def _visit_temporal_literal(self, node: astx.AST) -> None:
+    @SemanticAnalyzerCore.visit.dispatch
+    def visit(
+        self,
+        node: astx.LiteralDate
+        | astx.LiteralTime
+        | astx.LiteralTimestamp
+        | astx.LiteralDateTime,
+    ) -> None:
         """
-        title: Visit one temporal literal.
+        title: Validate a temporal literal and resolve its epoch value.
         parameters:
           node: Syntax node to process.
         """
@@ -313,42 +320,6 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
             self.context.diagnostics.add(str(exc), node=node)
         self._set_type(node, getattr(node, "type_", None))
 
-    @SemanticAnalyzerCore.visit.dispatch
-    def visit(self, node: astx.LiteralDate) -> None:
-        """
-        title: Validate calendar dates and resolve their epoch representation.
-        parameters:
-          node: Syntax node to process.
-        """
-        self._visit_temporal_literal(node)
-
-    @SemanticAnalyzerCore.visit.dispatch
-    def visit(self, node: astx.LiteralTime) -> None:
-        """
-        title: Visit LiteralTime nodes.
-        parameters:
-          node: Syntax node to process.
-        """
-        self._visit_temporal_literal(node)
-
-    @SemanticAnalyzerCore.visit.dispatch
-    def visit(self, node: astx.LiteralTimestamp) -> None:
-        """
-        title: Visit LiteralTimestamp nodes.
-        parameters:
-          node: Syntax node to process.
-        """
-        self._visit_temporal_literal(node)
-
-    @SemanticAnalyzerCore.visit.dispatch
-    def visit(self, node: astx.LiteralDateTime) -> None:
-        """
-        title: Visit LiteralDateTime nodes.
-        parameters:
-          node: Syntax node to process.
-        """
-        self._visit_temporal_literal(node)
-
     def reject_class_element(self, node: astx.AST) -> None:
         """
         title: Reject class references in aggregate storage without ownership.
@@ -365,9 +336,9 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
                 code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
             )
 
-    def _visit_element_sequence_literal(self, node: astx.AST) -> None:
+    def analyze_element_sequence_literal(self, node: astx.AST) -> None:
         """
-        title: Visit one element-sequence literal.
+        title: Analyze the elements of a sequence literal.
         parameters:
           node: Syntax node to process.
         """
@@ -876,7 +847,7 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
         parameters:
           node: Syntax node to process.
         """
-        self._visit_element_sequence_literal(node)
+        self.analyze_element_sequence_literal(node)
         self._set_resource_ownership(
             node,
             list_resource_ownership(OwnershipKind.STATIC),
@@ -889,7 +860,7 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
         parameters:
           node: Syntax node to process.
         """
-        self._visit_element_sequence_literal(node)
+        self.analyze_element_sequence_literal(node)
 
     @SemanticAnalyzerCore.visit.dispatch
     def visit(self, node: astx.LiteralSet) -> None:
@@ -969,7 +940,7 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
             self.context.scope("comprehension-clause"),
             ExitStack() as borrows,
         ):
-            self._visit_comprehension_clause(node, borrows)
+            self.analyze_comprehension_clause(node, borrows)
 
     @SemanticAnalyzerCore.visit.dispatch
     def visit(self, node: astx.ListComprehension) -> None:
@@ -980,7 +951,7 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
         """
         with (
             self.context.scope("list-comprehension"),
-            self._visit_comprehension_clauses(list(node.generators.nodes)),
+            self.borrow_comprehension_clauses(list(node.generators.nodes)),
         ):
             self.visit(node.element)
             self.reject_class_element(node.element)
@@ -1019,7 +990,7 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
         """
         with (
             self.context.scope("generator-expression"),
-            self._visit_comprehension_clauses(list(node.generators.nodes)),
+            self.borrow_comprehension_clauses(list(node.generators.nodes)),
         ):
             self.visit(node.element)
             self.reject_class_element(node.element)
@@ -1038,7 +1009,7 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
         """
         with (
             self.context.scope("set-comprehension"),
-            self._visit_comprehension_clauses(list(node.generators.nodes)),
+            self.borrow_comprehension_clauses(list(node.generators.nodes)),
         ):
             self.visit(node.element)
             self.reject_class_element(node.element)
@@ -1057,7 +1028,7 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
         """
         with (
             self.context.scope("dict-comprehension"),
-            self._visit_comprehension_clauses(list(node.generators.nodes)),
+            self.borrow_comprehension_clauses(list(node.generators.nodes)),
         ):
             self.visit(node.key)
             self.visit(node.value)

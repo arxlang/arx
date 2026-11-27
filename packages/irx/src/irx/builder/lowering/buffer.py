@@ -155,7 +155,7 @@ class BufferVisitorMixin(VisitorMixinBase):
           name: Name identifying the declaration or operation.
         returns: Lowered a buffer view expression to a temporary call pointer.
         """
-        self.visit_child(view)
+        self.visit(view)
         value = safe_pop(self.result_stack)
         if value is None:
             raise Exception("buffer helper expected a view value")
@@ -437,7 +437,7 @@ class BufferVisitorMixin(VisitorMixinBase):
         """
         lowered_indices: list[ir.Value] = []
         for index in indices:
-            self.visit_child(index)
+            self.visit(index)
             value = safe_pop(self.result_stack)
             if value is None or not is_int_type(value.type):
                 raise Exception(
@@ -469,7 +469,7 @@ class BufferVisitorMixin(VisitorMixinBase):
         parameters:
           node: Syntax node to process.
         """
-        self.visit_child(node.base)
+        self.visit(node.base)
         view = safe_pop(self.result_stack)
         if view is None or view.type != self._llvm.BUFFER_VIEW_TYPE:
             raise Exception(
@@ -497,7 +497,7 @@ class BufferVisitorMixin(VisitorMixinBase):
         parameters:
           node: Syntax node to process.
         """
-        self.visit_child(node.base)
+        self.visit(node.base)
         view = safe_pop(self.result_stack)
         if view is None or view.type != self._llvm.BUFFER_VIEW_TYPE:
             raise Exception(
@@ -513,7 +513,7 @@ class BufferVisitorMixin(VisitorMixinBase):
             node=node,
         )
 
-        self.visit_child(node.value)
+        self.visit(node.value)
         value = safe_pop(self.result_stack)
         if value is None:
             raise Exception("buffer view indexed store requires a value")
@@ -532,14 +532,14 @@ class BufferVisitorMixin(VisitorMixinBase):
         parameters:
           node: Syntax node to process.
         """
-        self.visit_child(node.view)
+        self.visit(node.view)
         view = safe_pop(self.result_stack)
         if view is None or view.type != self._llvm.BUFFER_VIEW_TYPE:
             raise Exception(
                 "buffer view write requires a BufferViewType value"
             )
 
-        self.visit_child(node.value)
+        self.visit(node.value)
         value = safe_pop(self.result_stack)
         if value is None or not is_int_type(value.type):
             raise Exception("buffer view write requires an integer byte value")
