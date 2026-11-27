@@ -11,12 +11,14 @@ from typing import cast
 
 import astx
 
+from irx.analysis.borrows import check_list_call_borrows
 from irx.analysis.call_arguments import argument_slots, call_evaluations
 from irx.analysis.resolved_nodes import (
     CallableResolution,
     CallResolution,
     FailedInferenceType,
     ImplicitConversion,
+    ParameterPassingKind,
     ResolvedCallArguments,
     ResolvedDefaultArgument,
     ResolvedSequenceAccess,
@@ -215,6 +217,10 @@ def validate_call(
     signature = function.signature
     slots = argument_slots(function, node, diagnostics)
     evaluations = call_evaluations(node)
+    operands: tuple[astx.AST, ...] = evaluations
+    if isinstance(node, (astx.MethodCall, astx.BaseMethodCall)):
+        operands = (node.receiver, *evaluations)
+    check_list_call_borrows(diagnostics, operands)
     if signature.is_extern:
         for value in evaluations:
             if isinstance(value, astx.LiteralString) and "\x00" in value.value:
@@ -234,9 +240,50 @@ def validate_call(
             implicit_conversions.append(None)
             sequence_arguments.append(None)
             continue
-        if slot < len(signature.parameters):
-            target: astx.DataType | None = signature.parameters[slot].type_
-            if not is_assignable(target, arg_type):
+        argument = evaluations[source_index]
+        parameter = (
+            signature.parameters[slot]
+            if slot < len(signature.parameters)
+            else None
+        )
+        passing = (
+            parameter.passing_kind
+            if parameter is not None
+            else ParameterPassingKind.BY_VALUE
+        )
+        if passing is ParameterPassingKind.BY_VALUE:
+            if isinstance(argument, astx.BorrowArgument):
+                diagnostics.add(
+                    f"argument {source_index + 1} of call to "
+                    f"'{function.name}' does not accept a borrow",
+                    node=argument,
+                    code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
+                )
+        else:
+            mode, prefix = (
+                (astx.BorrowAccess.read_only, "&")
+                if passing is ParameterPassingKind.READ_ONLY_BORROW
+                else (astx.BorrowAccess.exclusive, "&&")
+            )
+            if (
+                not isinstance(argument, astx.BorrowArgument)
+                or argument.access is not mode
+            ):
+                diagnostics.add(
+                    f"argument {source_index + 1} of call to "
+                    f"'{function.name}' requires an explicit "
+                    f"'{prefix}' borrow",
+                    node=argument,
+                    code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
+                )
+        if parameter is not None:
+            target: astx.DataType | None = parameter.type_
+            compatible = (
+                is_assignable(target, arg_type)
+                if passing is ParameterPassingKind.BY_VALUE
+                else same_type(target, arg_type)
+            )
+            if not compatible:
                 diagnostics.add(
                     f"argument {source_index + 1} of call to "
                     f"'{function.name}' expects "

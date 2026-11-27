@@ -122,6 +122,7 @@ class ASTKind(Enum):
     DeleteStmtKind = -207
     BorrowDeclarationKind = -208
     BorrowRetargetKind = -209
+    BorrowArgumentKind = -210
 
     # operators
     UnaryOpKind = -300

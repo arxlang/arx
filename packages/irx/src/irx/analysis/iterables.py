@@ -35,8 +35,9 @@ from irx.typecheck import typechecked
 def list_iteration_owner(node: astx.AST) -> str | None:
     """
     title: Resolve the named storage owner of a list-valued iterable.
-    summary: Named lists and bytes expose their owner's storage. Assignment
-      expressions expose their destination's storage.
+    summary: Named lists and bytes expose their storage. Assignment expressions
+      expose the destination, and a borrowed parameter uses its binding
+      as the storage identity within the callee.
     parameters:
       node: Syntax node to process.
     returns: Resolved the named storage owner of a list-valued iterable.
@@ -44,7 +45,7 @@ def list_iteration_owner(node: astx.AST) -> str | None:
     ownership = resource_ownership(node)
     if ownership is None or ownership.resource_kind is not ResourceKind.LIST:
         return None
-    return ownership.owner_symbol_id
+    return ownership.owner_symbol_id or ownership.source_symbol_id
 
 
 @private

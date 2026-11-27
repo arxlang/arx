@@ -1213,7 +1213,11 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
                 node=node.base,
                 code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
             )
-        elif target_ownership.kind is not OwnershipKind.OWNED:
+        elif target_ownership.kind is not OwnershipKind.OWNED and not (
+            isinstance(assignment_symbol.declaration, astx.Argument)
+            and assignment_symbol.declaration.borrow_access
+            is astx.BorrowAccess.exclusive
+        ):
             self.context.diagnostics.add(
                 "list append requires locally owned dynamic storage; got "
                 f"{target_ownership.kind.value} storage",

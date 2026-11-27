@@ -20,6 +20,7 @@ from astx.base import (
     Undefined,
 )
 from astx.blocks import Block
+from astx.borrows import BorrowAccess
 from astx.data import Variable
 from astx.modifiers import MutabilityKind, ScopeKind, VisibilityKind
 from astx.tools.typing import typechecked
@@ -39,6 +40,7 @@ class Argument(Variable):
       name: Name identifying this declaration.
       type_: Type associated with this expression.
       default: Default used when no value is supplied.
+      borrow_access: Access mode for an explicitly borrowed parameter.
     """
 
     kind: ASTKind
@@ -47,6 +49,7 @@ class Argument(Variable):
     name: str
     type_: DataType
     default: Expr
+    borrow_access: BorrowAccess | None
 
     def __init__(
         self,
@@ -56,6 +59,8 @@ class Argument(Variable):
         default: Expr = UNDEFINED,
         loc: SourceLocation = NO_SOURCE_LOCATION,
         parent: Optional[ASTNodes] = None,
+        *,
+        borrow_access: BorrowAccess | None = None,
     ) -> None:
         """
         title: Initialize the VarExprAST instance.
@@ -66,11 +71,13 @@ class Argument(Variable):
           default: Default used when no value is supplied.
           loc: Source coordinates associated with the node.
           parent: Parent node or enclosing scope.
+          borrow_access: Access mode for an explicitly borrowed parameter.
         """
         super().__init__(name=name, loc=loc, parent=parent)
         self.mutability = mutability
         self.type_ = type_
         self.default = default
+        self.borrow_access = borrow_access
         self.kind = ASTKind.ArgumentKind
 
     def __str__(self) -> str:
@@ -88,7 +95,12 @@ class Argument(Variable):
           simplified: Whether to request the compact representation.
         returns: Structured representation of this node.
         """
-        key = f"Argument[{self.name}, {self.type_}] = {self.default}"
+        type_name = str(self.type_)
+        if self.borrow_access is BorrowAccess.read_only:
+            type_name = "&" + type_name
+        elif self.borrow_access is BorrowAccess.exclusive:
+            type_name = "&&" + type_name
+        key = f"Argument[{self.name}, {type_name}] = {self.default}"
         value = self.default.get_struct()
         return self._prepare_struct(key, value, simplified)
 

@@ -28,7 +28,7 @@ fn column_first(values: series[T]) -> T:
   return first(values)
 
 @<T: i32 | i64 | f64>
-fn list_first(values: list[T]) -> T:
+fn list_first(values: &list[T]) -> T:
   ```
   title: Infer template variables nested in owned list declarations.
   ```
@@ -57,7 +57,7 @@ fn main() -> i32:
   assert first<i64>(values) == first(tensor_values)
   assert first<i64>(tensor_values) == first(frame.id)
   assert first<i64>(frame.id) == column_first(frame.id)
-  assert list_first(values) == first(values)
+  assert list_first(&values) == first(values)
   assert first([3, 5]) == 3
   assert first<i64>([3, 5]) == 3
   assert first(list(range(3, 5))) == 3

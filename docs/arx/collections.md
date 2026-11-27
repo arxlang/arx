@@ -30,9 +30,34 @@ Dynamic lists are move-only: owned locals and non-transferred temporaries are
 released on normal and exceptional lexical exits and replacement; returning an
 owned list moves it to the caller. A list moved into a pending return cannot be
 read or reassigned through that binding in `finally`; a separate fresh owned
-return value is allowed. Parameters borrow storage and cannot append or return
-that borrow. Borrowed lists keep their exact element type: passing `list[i32]`
-to a `list[i64]` parameter does not convert the existing storage.
+return value is allowed.
+
+Free functions take lists through an explicit call-scoped borrow. Use `&list[T]`
+with `&values` to read, or `&&list[T]` with `&&values` to read and append.
+Migrate a plain `list[T]` parameter to `&list[T]` and add `&` to its call
+operands. Bind temporary lists to a local before borrowing them.
+
+```arx
+fn grow(values: &&list[i32]) -> none:
+  values.append(42)
+
+fn edit() -> i64:
+  values: list[i32] = [1]
+  grow(&&values)
+  return len(values)
+```
+
+The caller keeps ownership and sees growth even if the callee raises. A borrowed
+parameter has a fixed target and cannot be returned as an owned list. The
+parameter and source must have exactly the same element type. A named borrowed
+parameter can be borrowed again for a nested call with compatible access.
+Multiple read-only loans to one list can coexist in a call. Other operands in
+the same call must use independent storage when they access lists. Exclusive
+call borrows require writable storage outside active iteration. Borrow sources
+are named locals or borrowed parameters. Functions with borrow parameters
+require explicit operands and cannot have default arguments or return
+generators. Class method list parameters use the implicit read-only borrowing
+contract.
 
 While a `for ... in` loop borrows a list, replacing that owner binding anywhere
 in the body is a compile-time ownership error (`IRX-S013`), including nested

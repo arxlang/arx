@@ -11,12 +11,18 @@ summary: Resolve module namespaces, namespace member access, and
 from __future__ import annotations
 
 from dataclasses import replace
+from functools import partial
 from typing import cast
 
 import astx
 
+from public import private
+
 from irx.analysis.arrow_conversion import arrow_ownership
-from irx.analysis.borrows import check_borrow_access
+from irx.analysis.borrows import (
+    check_borrow_access,
+    resolve_list_call_borrow,
+)
 from irx.analysis.call_arguments import (
     analyze_numeric_arguments,
     argument_slots,
@@ -73,6 +79,73 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
     """
 
     call_visitor: CallAnalysisVisitor
+
+    @private
+    def analyze_function_arguments(
+        self, node: astx.AST, function: SemanticFunction | None
+    ) -> list[astx.DataType | None]:
+        """
+        title: Analyze named list loans at direct and namespace calls.
+        parameters:
+          node: Call being analyzed.
+          function: Resolved function declaration, if available.
+        returns: Types in source operand order.
+        """
+        evaluations = call_evaluations(node)
+        if not any(
+            isinstance(arg, astx.BorrowArgument) for arg in evaluations
+        ):
+            return analyze_numeric_arguments(
+                node, function, self.visit, self._expr_type
+            )
+
+        return analyze_numeric_arguments(
+            node,
+            function,
+            partial(self.analyze_function_operand, function=function),
+            self._expr_type,
+        )
+
+    @private
+    def analyze_function_operand(
+        self, value: astx.AST, *, function: SemanticFunction | None
+    ) -> None:
+        """
+        title: Resolve a borrow only at an ordinary function call.
+        parameters:
+          value: Explicit call operand.
+          function: Resolved declaration, if available.
+        """
+        if (
+            not isinstance(value, astx.BorrowArgument)
+            or function is None
+            or function.definition is None
+        ):
+            self.visit(value)
+            return
+        self.visit(value.source)
+        source = resolve_list_call_borrow(self.context, value)
+        self._semantic(value).resolved_symbol = None
+        if source is None:
+            self._set_type(value, FailedInferenceType())
+            return
+        self._set_symbol(value, source)
+        self._set_type(value, source.type_)
+
+    @SemanticAnalyzerCore.visit.dispatch
+    def visit(self, node: astx.BorrowArgument) -> None:
+        """
+        title: Reject a borrow operand outside a resolved Arx function call.
+        parameters:
+          node: Unsupported borrow operand.
+        """
+        self._semantic(node).resolved_symbol = None
+        self._set_type(node, FailedInferenceType())
+        self.context.diagnostics.add(
+            "borrow operands require an Arx function with a borrow parameter",
+            node=node,
+            code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
+        )
 
     def _resolve_call_resource_ownership(
         self,
@@ -368,9 +441,7 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
         ):
             return
         arg_types.extend(
-            analyze_numeric_arguments(
-                node, binding.function, self.visit, self._expr_type
-            )
+            self.analyze_function_arguments(node, binding.function)
         )
         function = binding.function
         if function is None:
@@ -768,11 +839,8 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
             if self.analyze_operation(node, binding.function):
                 return
             contextualize_null_arguments(node, binding.function)
-        arg_types = analyze_numeric_arguments(
-            node,
-            binding.function if binding is not None else None,
-            self.visit,
-            self._expr_type,
+        arg_types = self.analyze_function_arguments(
+            node, binding.function if binding is not None else None
         )
         binding = self.bindings.resolve(node.fn)
         if binding is None:

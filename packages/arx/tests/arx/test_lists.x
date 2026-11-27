@@ -24,19 +24,19 @@ fn make(log: Trace) -> list[i32]:
   ```
   return [record(log, 1), record(log, 2) + 1, cast(4, i32)]
 
-fn count(values: list[i32]) -> i64:
+fn count(values: &list[i32]) -> i64:
   ```
   title: Borrow a list through a call
   ```
   return len(values)
 
-fn first_word(values: list[str]) -> str:
+fn first_word(values: &list[str]) -> str:
   ```
   title: Return an independent copy of a list element
   ```
   return values[0]
 
-fn first_iteration(values: list[str]) -> str:
+fn first_iteration(values: &list[str]) -> str:
   ```
   title: Copy a string iteration value out of a borrowed list
   ```
@@ -53,7 +53,8 @@ fn test_owned_lists() -> none:
   assert log.value == 12
   assert values[1] == 3
   assert values[2] == 4
-  assert count([5, 6]) == 2
+  more: list[i32] = [5, 6]
+  assert count(&more) == 2
   values = [values[0] + 6]
   assert values[0] == 7
   values = []
@@ -85,13 +86,14 @@ fn test_owned_string_elements() -> none:
   source: str = "owned" + " word"
   values: list[str] = [source, "other"]
   source = "replacement" + "!"
-  first: str = first_word(values)
+  first: str = first_word(&values)
   values.append(first)
   values = []
   assert first == "owned word"
-  assert first_iteration(["first", "second"]) == "first"
+  words: list[str] = ["first", "second"]
+  assert first_iteration(&words) == "first"
   values = ["stable"]
-  retained: str = first_iteration(values)
+  retained: str = first_iteration(&values)
   values = []
   assert retained == "stable"
 
@@ -137,3 +139,39 @@ fn test_iteration_owner_boundaries() -> none:
   except ValueError:
     values = [2]
   assert values[0] == 2
+
+
+fn grow(values: &&list[i32], fail: bool) -> none:
+  ```
+  title: Grow borrowed storage and optionally raise after growth
+  ```
+  before: i64 = count(&values)
+  for index in range(0, 24):
+    values.append(cast(index, i32))
+  assert count(&values) == before + 24
+  if fail:
+    raise ValueError("after growth")
+
+fn combined_length(left: &list[i32], right: &list[i32]) -> i64:
+  ```
+  title: Read independently through compatible shared borrows
+  ```
+  return len(left) + len(right)
+
+fn test_call_scoped_list_borrows() -> none:
+  ```
+  title: Commit growth through a borrow and release the loan on return or raise
+  ```
+  values: list[i32] = [99]
+  grow(fail=false, values=&&values)
+  assert values[24] == 23
+  assert combined_length(&values, &values) == 50
+
+  try:
+    grow(&&values, true)
+    assert false
+  except ValueError:
+    assert count(&values) == 49
+    assert values[48] == 23
+  values.append(4)
+  assert values[49] == 4

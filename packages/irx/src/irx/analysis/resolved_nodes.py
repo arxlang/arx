@@ -254,6 +254,8 @@ class ParameterPassingKind(str, Enum):
     """
 
     BY_VALUE = "by_value"
+    READ_ONLY_BORROW = "read_only_borrow"
+    EXCLUSIVE_BORROW = "exclusive_borrow"
 
 
 @public

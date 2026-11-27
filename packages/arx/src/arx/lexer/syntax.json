@@ -163,6 +163,7 @@
     "declarations": {
       "variable": "name: [modifiers ::] type [= initializer]",
       "local_alias": "name: [modifiers ::] (&type | &&type | auto) = (&place | &&place)",
+      "list_parameter": "name: (&list[T] | &&list[T])",
       "function": "fn name(parameters) -> [modifiers ::] type: body",
       "extern": "extern name(parameters) -> [public|private ::] type",
       "function_modifiers": ["public", "private"],

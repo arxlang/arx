@@ -1,5 +1,5 @@
 """
-title: Local borrow declarations and retargeting statements.
+title: Borrow declarations, retargeting, and call arguments.
 """
 
 from enum import Enum
@@ -129,6 +129,54 @@ class BorrowRetarget(StatementType):
         """
         return self._prepare_struct(
             f"BorrowRetarget[{self.target.name}, {self.access.value}]",
+            self.source.get_struct(simplified),
+            simplified,
+        )
+
+
+@public
+@typechecked
+class BorrowArgument(DataType):
+    """
+    title: Borrow a place for a call.
+    attributes:
+      kind: Kind of syntax node.
+      source: Place whose storage is borrowed.
+      access: Access required for the call.
+    """
+
+    kind: ASTKind
+    source: DataType
+    access: BorrowAccess
+
+    def __init__(
+        self,
+        source: DataType,
+        access: BorrowAccess,
+        *,
+        loc: SourceLocation = NO_SOURCE_LOCATION,
+    ) -> None:
+        """
+        title: Initialize a borrow operand.
+        parameters:
+          source: Place whose storage is borrowed.
+          access: Access required for the call.
+          loc: Source coordinates.
+        """
+        super().__init__(loc=loc)
+        self.kind = ASTKind.BorrowArgumentKind
+        self.source = source
+        self.access = access
+
+    def get_struct(self, simplified: bool = False) -> ReprStruct:
+        """
+        title: Represent a borrow operand with its access mode.
+        parameters:
+          simplified: Whether to emit the compact representation.
+        returns: Structured representation.
+        """
+        return self._prepare_struct(
+            f"BorrowArgument[{self.access.value}]",
             self.source.get_struct(simplified),
             simplified,
         )

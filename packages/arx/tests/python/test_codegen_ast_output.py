@@ -75,6 +75,96 @@ def test_local_borrows_reject_invalid_access(body: str, message: str) -> None:
         ArxBuilder().translate(Parser().parse(Lexer().lex()))
 
 
+@pytest.mark.parametrize(
+    ("body", "message"),
+    [
+        ("grow(values)", "requires an explicit '&&' borrow"),
+        ("grow(&values)", "requires an explicit '&&' borrow"),
+        ("size(&&values)", "requires an explicit '&' borrow"),
+        ("size(&[1])", "requires a named local list"),
+        ("len(&values)", "borrow operands require an Arx function"),
+        ("pair(&&values, &values)", "call operands overlap"),
+        ("mixed(&values, size(&values))", "call operands overlap"),
+        ("view(values, grow_and_count(&&values))", "call operands overlap"),
+        (
+            "next: list[i32] = list(values, "
+            "max_items=grow_and_count(&&values))",
+            "call operands overlap",
+        ),
+        (
+            "for item in values:\n  grow(&&values)",
+            "outside active iteration",
+        ),
+        (
+            "next: list[i32] = values\nsize(&values)",
+            "after a move",
+        ),
+    ],
+)
+def test_call_list_borrows_reject_invalid_operands(
+    body: str, message: str
+) -> None:
+    """
+    title: Reject invalid or overlapping call loans before LLVM lowering.
+    parameters:
+      body: Borrow operations to analyze.
+      message: Expected semantic diagnostic.
+    """
+    ArxIO.string_to_buffer(
+        "fn grow(values: &&list[i32]) -> none:\n"
+        "  values.append(2)\n"
+        "fn size(values: &list[i32]) -> i64:\n"
+        "  return len(values)\n"
+        "fn pair(left: &&list[i32], right: &list[i32]) -> none:\n"
+        "  return none\n"
+        "fn mixed(values: &list[i32], n: i64) -> none:\n"
+        "  return none\n"
+        "fn grow_and_count(values: &&list[i32]) -> i64:\n"
+        "  grow(&&values)\n"
+        "  return len(values)\n"
+        "fn view(values: sequence[i32], n: i64) -> none:\n"
+        "  return none\n"
+        "fn main() -> i32:\n"
+        "  values: list[i32] = [1]\n" + indent(body, "  ") + "\n  return 0\n"
+    )
+    with pytest.raises(SemanticError, match=message):
+        ArxBuilder().translate(Parser().parse(Lexer().lex()))
+
+
+@pytest.mark.parametrize(
+    ("signature", "body", "message"),
+    [
+        ("&list[i32]", "values.append(2)", "read-only borrow"),
+        ("&&list[i32]", "values = [2]", "constant"),
+        ("&list[i32]", "grow(&&values)", "cannot exclusively borrow"),
+        (
+            "&&list[i32]",
+            "for value in values:\n  grow(&&values)",
+            "outside active iteration",
+        ),
+    ],
+)
+def test_borrowed_list_parameters_preserve_access(
+    signature: str, body: str, message: str
+) -> None:
+    """
+    title: Preserve borrowing permissions in the callee.
+    parameters:
+      signature: Borrowed parameter type syntax.
+      body: Function body.
+      message: Expected semantic diagnostic.
+    """
+    ArxIO.string_to_buffer(
+        "fn grow(values: &&list[i32]) -> none:\n"
+        "  values.append(1)\n"
+        f"fn check(values: {signature}) -> none:\n"
+        + indent(body, "  ")
+        + "\nfn main() -> i32:\n  return 0\n"
+    )
+    with pytest.raises(SemanticError, match=message):
+        ArxBuilder().translate(Parser().parse(Lexer().lex()))
+
+
 @pytest.mark.skipif(shutil.which("clang") is None, reason="requires clang")
 def test_text_query_cache_handles_foreign_writes(tmp_path: Path) -> None:
     """
@@ -1900,13 +1990,13 @@ def test_owned_lists_build_and_run(
             "does not resolve to a function",
         ),
         (
-            "fn use(x: list[i64]) -> none:\n  return none\n"
+            "fn use(x: &list[i64]) -> none:\n  return none\n"
             "fn main() -> i32:\n  x: list[i32] = [1]\n"
-            "  use(x)\n  return 0\n",
+            "  use(&x)\n  return 0\n",
             "ListType",
         ),
         (
-            "fn escape(x: list[i32]) -> list[i32]:\n  return x\n"
+            "fn escape(x: &list[i32]) -> list[i32]:\n  return x\n"
             "fn main() -> i32:\n  return 0\n",
             "borrowed",
         ),
@@ -2272,23 +2362,24 @@ def test_numeric_bounds_are_recoverable(
     assert result.returncode == expected, result.stderr
 
 
-@pytest.mark.parametrize("arguments", ["[1], typed", "typed, [1]"])
-def test_nested_template_literal_context(arguments: str) -> None:
+@pytest.mark.parametrize("arguments", ["&values, typed", "typed, &values"])
+def test_nested_template_list_borrow_inference(arguments: str) -> None:
     """
-    title: Concrete siblings and explicit arguments contextualize list[T].
+    title: Infer the exact element domain of a named list borrow.
     parameters:
       arguments: Arguments supplied to the call.
     """
     parameters = (
-        "values: list[T], seed: T"
-        if arguments.startswith("[")
-        else "seed: T, values: list[T]"
+        "values: &list[T], seed: T"
+        if arguments.startswith("&")
+        else "seed: T, values: &list[T]"
     )
     ArxIO.string_to_buffer(
         f"@<T: i32 | i64>\nfn pick({parameters}) -> T:\n"
         "  return values[0]\n"
         "fn main() -> i32:\n"
         "  typed: i64 = 7\n"
+        "  values: list[i64] = [1]\n"
         f"  assert pick({arguments}) == 1\n"
         f"  assert pick<i64>({arguments}) == 1\n"
         "  return 0\n"
