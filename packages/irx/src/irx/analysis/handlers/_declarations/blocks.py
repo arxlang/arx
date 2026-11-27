@@ -23,6 +23,7 @@ from irx.analysis.handlers.base import (
     SemanticVisitorMixinBase,
 )
 from irx.analysis.inference import resolve_initializer_type
+from irx.analysis.local_moves import ListMoveCheck
 from irx.analysis.module_storage import resolve_module_storage
 from irx.analysis.ownership import (
     list_resource_ownership,
@@ -415,14 +416,24 @@ class DeclarationBlockVisitorMixin(SemanticVisitorMixinBase):
     def visit(self, block: astx.Block) -> None:
         """
         title: Visit Block nodes.
+        summary: Check resolved list moves on the complete function body.
         parameters:
           block: Block of statements.
         """
+        function = self.context.current_function
+        definition = function.definition if function is not None else None
+        moves = self.context.local_list_moves
         self._set_type(block, None)
         self._predeclare_block_structs(block)
         for node in block.nodes:
             self.visit(node)
         self._semantic(block).flow_outcomes = flow_outcomes(block)
+        if (
+            definition is not None
+            and definition.body is block
+            and self.context.local_list_moves != moves
+        ):
+            ListMoveCheck(self.context.diagnostics).visit(block, frozenset())
 
     @SemanticAnalyzerCore.visit.dispatch
     def visit(

@@ -332,7 +332,7 @@ class DeclarationFunctionVisitorMixin(SemanticVisitorMixinBase):
                     resolve_parameter_ownership(
                         cast(SemanticAnalyzerCore, self), arg_node, arg_symbol
                     )
-                cast(SemanticAnalyzerCore, self).visit_function_body(node.body)
+                self.visit(node.body)
         if (
             not isinstance(function.return_type, astx.NoneType)
             and generator is None

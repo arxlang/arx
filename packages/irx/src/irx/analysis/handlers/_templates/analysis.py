@@ -144,9 +144,7 @@ class TemplateAnalysisVisitorMixin(TemplateResolutionVisitorMixin):
                     resolve_parameter_ownership(
                         cast(SemanticAnalyzerCore, self), arg_node, arg_symbol
                     )
-                cast(SemanticAnalyzerCore, self).visit_function_body(
-                    definition.body
-                )
+                self.visit(definition.body)
         if not isinstance(
             function.return_type, astx.NoneType
         ) and not self._guarantees_return(definition.body):

@@ -1836,6 +1836,41 @@ def test_invalid_local_list_moves(body: str, message: str) -> None:
     )
 
 
+@pytest.mark.parametrize(
+    "source",
+    [
+        (
+            "class Consumer:\n"
+            "  fn consume(self) -> i64:\n"
+            "    src: list[i32] = [1]\n"
+            "    dst: list[i32] = src\n"
+            "    return len(src)\n"
+        ),
+        (
+            "@<T: i32>\n"
+            "fn consume(value: T) -> i64:\n"
+            "  src: list[T] = [value]\n"
+            "  dst: list[T] = src\n"
+            "  return len(src)\n"
+            "fn main() -> i32:\n"
+            "  return cast(consume<i32>(1), i32)\n"
+        ),
+    ],
+    ids=["method", "template-specialization"],
+)
+def test_local_list_moves_in_methods_and_templates(source: str) -> None:
+    """
+    title: Validate list moves in method and concrete template bodies.
+    parameters:
+      source: Callable definition that reads a moved source.
+    """
+    ArxIO.string_to_buffer(source)
+    with pytest.raises(
+        SemanticError, match="cannot use list 'src' after a move"
+    ):
+        ArxBuilder().translate(Parser().parse(Lexer().lex()))
+
+
 @pytest.mark.parametrize("name", ["len", "int", "ord"])
 def test_text_builtins_can_be_shadowed_by_a_function(name: str) -> None:
     """
