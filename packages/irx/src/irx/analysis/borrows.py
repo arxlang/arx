@@ -9,7 +9,7 @@ import astx
 from public import private
 
 from irx.analysis.class_lifecycle import lifecycle_children
-from irx.analysis.context import SemanticContext
+from irx.analysis.context import BorrowAccessCheck, SemanticContext
 from irx.analysis.handlers.base import SemanticAnalyzerCore
 from irx.analysis.numeric_literals import numeric_constant
 from irx.analysis.ownership import symbol_resource_ownership
@@ -17,7 +17,6 @@ from irx.analysis.resolved_nodes import (
     FailedInferenceType,
     OwnershipKind,
     ParameterPassingKind,
-    ResolvedBorrow,
     ResolvedBorrowPlace,
     SemanticInfo,
     SemanticSymbol,
@@ -122,33 +121,41 @@ def positions_may_overlap(left: int | None, right: int | None) -> bool:
 
 @private
 @typechecked
-def conflicting_borrow(
+def record_borrow_access(
     context: SemanticContext,
     root: SemanticSymbol,
+    node: astx.AST,
     *,
     write: bool,
     position: int | None,
+    read_checked: bool = False,
+    formation: bool = False,
     retarget: SemanticSymbol | None = None,
-) -> ResolvedBorrow | None:
+) -> None:
     """
-    title: Find a live loan of storage that may overlap the requested access.
+    title: Record an access wherever a lexical loan may be live.
     parameters:
       context: Active semantic context.
       root: Binding that owns or pins the storage.
+      node: Syntax designating the accessed place.
       write: Whether the new access needs exclusive permission.
       position: Known index, or unknown or whole-place access.
+      read_checked: Whether the same target already checked a read.
+      formation: Whether this access creates a borrow.
       retarget: Existing loan released after the new place is prepared.
-    returns: First conflicting loan, if any.
     """
-    for scope in context.scopes.function_scopes:
-        for borrow in scope.borrows.values():
-            if borrow.target is retarget or borrow.place.root is not root:
-                continue
-            if positions_may_overlap(
-                position, borrow.place.constant_index
-            ) and (write or borrow.access is astx.BorrowAccess.exclusive):
-                return borrow
-    return None
+    if any(scope.borrows for scope in context.scopes.function_scopes):
+        context.borrow_accesses.setdefault(id(node), []).append(
+            BorrowAccessCheck(
+                node,
+                root,
+                position,
+                write,
+                read_checked=read_checked,
+                formation=formation,
+                retarget=retarget,
+            )
+        )
 
 
 @private
@@ -216,9 +223,27 @@ def resolve_borrow_source(
             code=DiagnosticCodes.SEMANTIC_UNRESOLVED_NAME,
         )
         return None
-    if not any(scope.symbols.get(root.name) is source for scope in scopes):
+    depth = next(
+        (
+            index
+            for index, scope in enumerate(scopes)
+            if scope.symbols.get(root.name) is source
+        ),
+        None,
+    )
+    if depth is None:
         context.diagnostics.add(
             "a local borrow requires storage declared in this function",
+            node=root,
+            code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
+        )
+        return None
+    if retarget is not None and not any(
+        scope.symbols.get(retarget.name) is retarget
+        for scope in scopes[: depth + 1]
+    ):
+        context.diagnostics.add(
+            f"'{source.name}' must outlive borrow binding '{retarget.name}'",
             node=root,
             code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
         )
@@ -259,21 +284,15 @@ def resolve_borrow_source(
         context, resolved, place
     ):
         return None
-    conflict = conflicting_borrow(
+    record_borrow_access(
         context,
         source,
+        place,
         write=exclusive,
         position=resolved.constant_index,
+        formation=True,
         retarget=retarget,
     )
-    if conflict is not None:
-        context.diagnostics.add(
-            f"cannot borrow '{source.name}' while "
-            f"'{conflict.target.name}' has a conflicting borrow",
-            node=place,
-            code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
-        )
-        return None
     return resolved
 
 
@@ -427,7 +446,7 @@ def check_borrow_access(
     index: astx.AST | None = None,
 ) -> bool:
     """
-    title: Enforce exclusive access and forbid writes through shared borrows.
+    title: Check borrow mode and register access for ownership flow analysis.
     parameters:
       context: Active semantic context.
       symbol: Binding being read or written.
@@ -435,7 +454,7 @@ def check_borrow_access(
       write: Whether the access can mutate storage.
       read_checked: Whether the same target already performed a read check.
       index: Evaluated list projection index, if this is an element access.
-    returns: Whether the access is allowed.
+    returns: Whether the access is permitted by the binding's declared mode.
     """
     if write and (
         (symbol.kind == "borrow" and not symbol.is_mutable)
@@ -450,20 +469,15 @@ def check_borrow_access(
             code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
         )
         return False
-    borrow = conflicting_borrow(
-        context, symbol, write=write, position=known_list_position(index)
+    record_borrow_access(
+        context,
+        symbol,
+        node,
+        write=write,
+        position=known_list_position(index),
+        read_checked=read_checked,
     )
-    if borrow is None:
-        return True
-    if not (borrow.access is astx.BorrowAccess.exclusive and read_checked):
-        action = "write" if write else "read"
-        context.diagnostics.add(
-            f"cannot {action} '{symbol.name}' while it is borrowed "
-            f"by '{borrow.target.name}'",
-            node=node,
-            code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
-        )
-    return False
+    return True
 
 
 @private

@@ -146,8 +146,10 @@ fn edit() -> i32:
 The alias name reads its current target directly. Assigning an ordinary value to
 an exclusive alias writes to its target. Assigning an explicit borrow retargets
 a mutable alias with the same access mode and type. A borrow ends when its alias
-leaves scope or retargets. Retargeting must take place in the alias's declaring
-scope.
+leaves scope or successfully retargets. A nested block can retarget an outer
+alias to storage that lives at least as long as the alias. At a branch join or
+loop exit, direct access must be compatible with every target the alias may
+still hold. If evaluating the new target raises, the alias keeps its old target.
 
 Several read-only aliases may borrow the same variable. The owner remains
 readable while read-only aliases are active. An exclusive alias is the only way

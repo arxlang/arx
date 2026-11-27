@@ -293,6 +293,19 @@ fn test_list_element_borrows() -> none:
     assert values[1] == 42
   values.append(6)
 
+  backup: list[i32] = [8]
+  item = &&values[1]
+  try:
+    item = &&backup[99]
+    assert false
+  except IndexError:
+    assert item == 42
+    item = 43
+  finally:
+    item = &&scalar
+  assert values[1] == 43
+  values.append(7)
+
   try:
     overflow: u64 = 18446744073709551615
     missing: auto = &values[overflow]

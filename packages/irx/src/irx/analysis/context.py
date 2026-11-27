@@ -12,7 +12,7 @@ from typing import Iterator
 
 import astx
 
-from public import public
+from public import private, public
 
 from irx.analysis.module_interfaces import ModuleKey
 from irx.analysis.resolved_nodes import (
@@ -20,11 +20,37 @@ from irx.analysis.resolved_nodes import (
     SemanticClass,
     SemanticFunction,
     SemanticStruct,
+    SemanticSymbol,
 )
 from irx.analysis.scopes import ScopeStack
 from irx.diagnostics import DiagnosticBag
 from irx.native import ComputeKernel, TableIOOperation
 from irx.typecheck import typechecked
+
+
+@private
+@typechecked
+@dataclass(frozen=True)
+class BorrowAccessCheck:
+    """
+    title: Record access to resolved storage for ownership flow analysis.
+    attributes:
+      node: Source syntax for the access and any diagnostic.
+      root: Binding that owns or pins the storage.
+      position: Known list element, or unknown or whole-place access.
+      write: Whether the access requires exclusivity.
+      read_checked: Whether the same access already checked reads.
+      formation: Whether the operation requests a new loan.
+      retarget: Borrow binding whose previous place is excluded from overlap.
+    """
+
+    node: astx.AST
+    root: SemanticSymbol
+    position: int | None
+    write: bool
+    read_checked: bool = False
+    formation: bool = False
+    retarget: SemanticSymbol | None = None
 
 
 @public
@@ -48,6 +74,7 @@ class SemanticContext:
       loop_depth: Loop depth.
       active_list_iteration_owners: Active list iteration owners.
       list_index_base: Receiver currently visited for projected list access.
+      borrow_accesses: Resolved accesses in the current callable.
       local_list_moves: Number of resolved moves from named list bindings.
       exception_region_depth: Exception region depth.
       native_feature_names: Native feature names.
@@ -78,6 +105,9 @@ class SemanticContext:
     loop_depth: int = 0
     active_list_iteration_owners: frozenset[str] = frozenset()
     list_index_base: astx.Identifier | None = None
+    borrow_accesses: dict[int, list[BorrowAccessCheck]] = field(
+        default_factory=dict
+    )
     local_list_moves: int = 0
     exception_region_depth: int = 0
     native_feature_names: tuple[str, ...] = ()
@@ -259,11 +289,14 @@ class SemanticContext:
         returns: 'Result of this operation: temporarily set current_function.'
         """
         previous = self.current_function
+        previous_accesses = self.borrow_accesses
         self.current_function = function
+        self.borrow_accesses = {}
         try:
             yield
         finally:
             self.current_function = previous
+            self.borrow_accesses = previous_accesses
 
     @contextmanager
     def in_class(self, class_: SemanticClass) -> Iterator[None]:

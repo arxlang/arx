@@ -24,7 +24,7 @@ from irx.analysis.handlers.base import (
     SemanticVisitorMixinBase,
 )
 from irx.analysis.inference import resolve_initializer_type
-from irx.analysis.local_moves import ListMoveCheck
+from irx.analysis.local_moves import LocalOwnershipCheck, OwnershipState
 from irx.analysis.module_storage import resolve_module_storage
 from irx.analysis.ownership import (
     list_resource_ownership,
@@ -424,7 +424,7 @@ class DeclarationBlockVisitorMixin(SemanticVisitorMixinBase):
     def visit(self, block: astx.Block) -> None:
         """
         title: Visit Block nodes.
-        summary: Check resolved list moves on the complete function body.
+        summary: Check resolved ownership operations on the function body.
         parameters:
           block: Block of statements.
         """
@@ -434,14 +434,23 @@ class DeclarationBlockVisitorMixin(SemanticVisitorMixinBase):
         self._set_type(block, None)
         self._predeclare_block_structs(block)
         for node in block.nodes:
-            self.visit(node)
+            if isinstance(node, astx.Block):
+                with self.context.scope("block"):
+                    self.visit(node)
+            else:
+                self.visit(node)
         self._semantic(block).flow_outcomes = flow_outcomes(block)
         if (
             definition is not None
             and definition.body is block
-            and self.context.local_list_moves != moves
+            and (
+                self.context.local_list_moves != moves
+                or self.context.borrow_accesses
+            )
         ):
-            ListMoveCheck(self.context.diagnostics).visit(block, frozenset())
+            LocalOwnershipCheck(
+                self.context.diagnostics, self.context.borrow_accesses
+            ).visit(block, OwnershipState())
 
     @SemanticAnalyzerCore.visit.dispatch
     def visit(self, node: astx.BorrowDeclaration) -> None:
@@ -478,7 +487,7 @@ class DeclarationBlockVisitorMixin(SemanticVisitorMixinBase):
         assert scope is not None
         if scope.symbols.get(node.name) is target:
             borrow = ResolvedBorrow(target, place, node.access)
-            scope.borrows[target.symbol_id] = borrow
+            scope.borrows.add(target.symbol_id)
             info.resolved_borrow = borrow
             self._set_symbol(node, target)
 
@@ -502,20 +511,19 @@ class DeclarationBlockVisitorMixin(SemanticVisitorMixinBase):
                 code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
             )
             return
-        scope = self.context.scopes.current
-        assert scope is not None
-        old = scope.borrows.get(target.symbol_id)
-        if old is None:
+        if not any(
+            target.symbol_id in scope.borrows
+            for scope in self.context.scopes.function_scopes
+        ):
             self.context.diagnostics.add(
-                "retarget a borrow in the same lexical scope as its "
-                "declaration",
+                "retargeting requires a borrow declared in this function",
                 node=node.target,
                 code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
             )
             return
         if (
             target.declaration.mutability is astx.MutabilityKind.constant
-            or old.access is not node.access
+            or target.declaration.access is not node.access
         ):
             self.context.diagnostics.add(
                 "retargeting requires a mutable binding and the original "
@@ -540,7 +548,6 @@ class DeclarationBlockVisitorMixin(SemanticVisitorMixinBase):
             )
             return
         borrow = ResolvedBorrow(target, place, node.access)
-        scope.borrows[target.symbol_id] = borrow
         info.resolved_borrow = borrow
         self._set_symbol(node.target, target)
 

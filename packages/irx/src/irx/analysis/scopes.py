@@ -10,7 +10,7 @@ from dataclasses import dataclass, field
 
 from public import public
 
-from irx.analysis.resolved_nodes import ResolvedBorrow, SemanticSymbol
+from irx.analysis.resolved_nodes import SemanticSymbol
 from irx.typecheck import typechecked
 
 
@@ -25,12 +25,12 @@ class Scope:
     attributes:
       kind: Kind of value or operation.
       symbols: Symbols.
-      borrows: Active lexical borrows declared in this scope.
+      borrows: IDs of lexical borrow bindings declared in this scope.
     """
 
     kind: str
     symbols: dict[str, SemanticSymbol] = field(default_factory=dict)
-    borrows: dict[str, ResolvedBorrow] = field(default_factory=dict)
+    borrows: set[str] = field(default_factory=set)
 
 
 @public

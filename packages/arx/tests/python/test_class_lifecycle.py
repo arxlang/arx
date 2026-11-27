@@ -448,6 +448,29 @@ fn consume(key: &&i32) -> none:
         analyze(parsed(declarations, "owner: Tagged = Tagged()\n" + body))
 
 
+def test_field_borrow_survives_exception_from_scope_cleanup() -> None:
+    """
+    title: Reject replacing a retargeted field receiver after cleanup raises.
+    """
+    declarations = """class Resource:
+  key: const :: i32 = 5
+  fn __del__(self) -> none:
+    raise ValueError("cleanup")
+"""
+    body = """first: Resource = Resource()
+next: Resource = Resource()
+key: &i32 = &first.key
+try:
+  if true:
+    scoped: Resource = Resource()
+    key = &next.key
+except ValueError:
+  next = Resource()
+"""
+    with pytest.raises(SemanticError, match="cannot write 'next'"):
+        analyze(parsed(declarations, body))
+
+
 def test_ordinary_keyword_calls_parse() -> None:
     """
     title: Ordinary method keywords preserve their value expressions.
