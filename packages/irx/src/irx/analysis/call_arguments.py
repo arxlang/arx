@@ -17,7 +17,7 @@ from irx.analysis.numeric_literals import (
     floating_literal_expression,
 )
 from irx.analysis.numeric_policy import FLOAT_PRECISIONS, integer_bounds
-from irx.analysis.resolved_nodes import SemanticFunction
+from irx.analysis.resolved_nodes import FailedInferenceType, SemanticFunction
 from irx.analysis.types import (
     same_type,
     sequence_element_type,
@@ -284,7 +284,8 @@ def analyze_numeric_arguments(
         if slot < len(function.signature.parameters):
             expected = function.signature.parameters[slot].type_
             actual = type_of(value)
-            collect_literal_context(expected, actual, selected)
+            if not isinstance(actual, FailedInferenceType):
+                collect_literal_context(expected, actual, selected)
     for value, slot in zip(values, slots):
         if not (
             is_numeric_literal_argument(value)

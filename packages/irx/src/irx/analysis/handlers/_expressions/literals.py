@@ -46,6 +46,7 @@ from irx.analysis.ownership import (
 from irx.analysis.ranges import resolve_range_index
 from irx.analysis.resolved_nodes import (
     CollectionMethodKind,
+    FailedInferenceType,
     OwnershipKind,
     ResolvedCollectionMethod,
     ResolvedGeneratorFunction,
@@ -1232,7 +1233,19 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
             info.resource_ownership = None
         info.resolved_text_operation = None
         self.visit(node.value)
-        if isinstance(self._expr_type(node.value), astx.RangeType):
+        value_type = self._expr_type(node.value)
+        if isinstance(value_type, FailedInferenceType):
+            indices = (
+                (node.lower, node.upper, node.step)
+                if node.is_slice
+                else (node.index,)
+            )
+            for index in indices:
+                if not isinstance(index, astx.LiteralNone):
+                    self.visit(index)
+            self._set_type(node, value_type)
+            return
+        if isinstance(value_type, astx.RangeType):
             resolve_range_index(cast(SemanticAnalyzerCore, self), node)
             return
         if resolve_collection_access(cast(SemanticAnalyzerCore, self), node):
@@ -1255,6 +1268,10 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
             self._expr_type(node.value), (astx.SequenceType, astx.Bytes)
         ):
             self.visit(node.index)
+            index_type = self._expr_type(node.index)
+            if isinstance(index_type, FailedInferenceType):
+                self._set_type(node, index_type)
+                return
             info.sequence_access = resolve_sequence_access(
                 self._expr_type(node.value)
             )
@@ -1277,7 +1294,6 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
             return
         if not node.is_slice:
             self.visit(node.index)
-        value_type = self._expr_type(node.value)
         if resolve_column_index(cast(SemanticAnalyzerCore, self), node):
             return
         if isinstance(value_type, astx.ListType):
@@ -1290,6 +1306,9 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
                 self._set_type(node, None)
                 return
             index_type = self._expr_type(node.index)
+            if isinstance(index_type, FailedInferenceType):
+                self._set_type(node, index_type)
+                return
             if not is_integer_type(index_type):
                 self.context.diagnostics.add(
                     "list indexing requires an integer index",

@@ -15,6 +15,7 @@ from irx.analysis.call_arguments import argument_slots, call_evaluations
 from irx.analysis.resolved_nodes import (
     CallableResolution,
     CallResolution,
+    FailedInferenceType,
     ImplicitConversion,
     ResolvedCallArguments,
     ResolvedDefaultArgument,
@@ -228,6 +229,11 @@ def validate_call(
     for source_index, (slot, arg_type) in enumerate(
         zip(slots or (), arg_types)
     ):
+        if isinstance(arg_type, FailedInferenceType):
+            resolved_argument_types.append(None)
+            implicit_conversions.append(None)
+            sequence_arguments.append(None)
+            continue
         if slot < len(signature.parameters):
             target: astx.DataType | None = signature.parameters[slot].type_
             if not is_assignable(target, arg_type):

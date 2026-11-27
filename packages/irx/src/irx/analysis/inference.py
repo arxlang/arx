@@ -8,6 +8,7 @@ from public import private
 
 from irx.analysis.handlers.base import SemanticAnalyzerCore
 from irx.analysis.numeric_literals import contextualize_literal
+from irx.analysis.resolved_nodes import FailedInferenceType
 from irx.analysis.types import clone_type, is_none_type
 from irx.analysis.validation import validate_assignment
 from irx.diagnostics import DiagnosticCodes
@@ -21,16 +22,15 @@ def resolve_initializer_type(
     node: astx.VariableDeclaration | astx.InlineVariableDeclaration,
 ) -> astx.DataType | None:
     """
-    title: Resolve an initialized declaration to one concrete storage type.
+    title: Resolve a declaration initializer for storage or error recovery.
     summary: Analyze each initializer once per visit. Explicit annotations
       provide contextual literal types; inference supplies no expected type.
       Neither path changes the original annotation. Missing, ambiguous, and
-      non-value inference fails before symbol publication, layout, or lowering.
+      non-value inference reserves the declaration with a recovery type.
     parameters:
       analyzer: Semantic analyzer resolving the operation.
       node: Syntax node to process.
-    returns: Resolved an initialized declaration to one concrete storage
-      type.
+    returns: Concrete storage type, recovery type, or no type.
     """
     info = analyzer._semantic(node)
     info.resolved_type = None
@@ -49,7 +49,7 @@ def resolve_initializer_type(
             node=node,
             code=DiagnosticCodes.SEMANTIC_INVALID_ASSIGNMENT_TARGET,
         )
-        return None
+        return FailedInferenceType() if inferred else None
     if missing:
         return node.type_
     value = node.value
@@ -63,7 +63,14 @@ def resolve_initializer_type(
         value.loc = node.value.loc
         node.value = value
     contextualize_literal(value, None if inferred else node.type_)
+    diagnostics = analyzer.context.diagnostics
+    checkpoint = diagnostics.checkpoint()
     analyzer.visit(value)
+    value_type = analyzer._expr_type(value)
+    if isinstance(value_type, FailedInferenceType):
+        return value_type if inferred else node.type_
+    if inferred and diagnostics.has_errors_since(checkpoint):
+        return FailedInferenceType()
     if inferred and isinstance(value, astx.LiteralNone):
         analyzer.context.diagnostics.add(
             f"Cannot infer a concrete type for '{node.name}' from none; "
@@ -71,12 +78,11 @@ def resolve_initializer_type(
             node=node,
             code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
         )
-        return None
+        return FailedInferenceType()
     if not analyzer._require_value_expression(
         value, context=f"Initializer for '{node.name}'"
     ):
-        return None
-    value_type = analyzer._expr_type(value)
+        return FailedInferenceType() if inferred else None
     if inferred:
         if (
             value_type is None
@@ -90,7 +96,7 @@ def resolve_initializer_type(
                 node=node,
                 code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
             )
-            return None
+            return FailedInferenceType()
         analyzer._resolve_declared_type(value_type, node=node)
         return clone_type(value_type)
     validate_assignment(

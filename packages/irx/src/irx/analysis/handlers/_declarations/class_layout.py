@@ -36,6 +36,7 @@ from irx.analysis.resolved_nodes import (
     ClassHeaderFieldKind,
     ClassMemberKind,
     ClassObjectRepresentationKind,
+    FailedInferenceType,
     SemanticClass,
     SemanticClassFieldInitializer,
     SemanticClassHeaderField,
@@ -119,6 +120,8 @@ class DeclarationClassLayoutVisitorMixin(SemanticVisitorMixinBase):
             ),
         ):
             for member in owner_members:
+                if isinstance(member.type_, FailedInferenceType):
+                    continue
                 logical_index = len(instance_fields)
                 slot = SemanticClassLayoutField(
                     member=member,
@@ -144,7 +147,9 @@ class DeclarationClassLayoutVisitorMixin(SemanticVisitorMixinBase):
                 owner_qualified_name=class_.qualified_name,
             )
             for member in declared_members
-            if member.kind is ClassMemberKind.ATTRIBUTE and member.is_static
+            if member.kind is ClassMemberKind.ATTRIBUTE
+            and member.is_static
+            and not isinstance(member.type_, FailedInferenceType)
         )
         static_storage = {
             storage.member.qualified_name: storage for storage in static_fields
