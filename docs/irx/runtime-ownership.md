@@ -84,9 +84,9 @@ expressions, declarations, arguments, calls, assignments, and returns.
 
 - `ListExpr`, `ListCreate`, list comprehensions, and list-returning calls
   produce owned values;
-- `clone` borrows a dynamic list and publishes a fresh owner with the same
-  element type. The native operation destroys every initialized element and
-  frees partial storage before returning a failure;
+- `stdlib.memory.copy` borrows a dynamic list and publishes a fresh owner with
+  the same element type. The native operation destroys every initialized element
+  and frees partial storage before returning a failure;
 - declarations and simple assignments can take a fresh owned value or move a
   named local owner. A moved binding must be reinitialized before use. Other
   reads of a list identifier and list parameters borrow its storage;

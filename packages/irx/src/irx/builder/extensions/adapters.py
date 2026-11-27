@@ -137,6 +137,15 @@ class VisitorCallServices:
         """
         self.owner.lower_compute(node, plan)
 
+    def copy_list(self, node: astx.AST, source: astx.DataType) -> None:
+        """
+        title: Reuse the checked native list copy and rollback implementation.
+        parameters:
+          node: Copy call to lower.
+          source: Resolved dynamic list operand.
+        """
+        self.owner.lower_list_clone(node, source)
+
     def track(
         self, node: astx.AST, feature: str, destroy: str, value: ir.Value
     ) -> CleanupAction:

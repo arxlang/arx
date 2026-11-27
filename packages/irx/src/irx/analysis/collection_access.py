@@ -10,81 +10,9 @@ from plum import dispatch
 from public import private
 
 from irx.analysis.handlers.base import SemanticAnalyzerCore
-from irx.analysis.ownership import list_resource_ownership, resource_ownership
-from irx.analysis.resolved_nodes import (
-    FailedInferenceType,
-    OwnershipKind,
-    ResourceKind,
-)
-from irx.builtins.collections.list import (
-    list_element_type,
-    list_supports_owned_element,
-)
+from irx.analysis.ownership import resource_ownership
 from irx.diagnostics import DiagnosticCodes
 from irx.typecheck import typechecked
-
-
-@private
-@typechecked
-def resolve_clone(
-    analyzer: SemanticAnalyzerCore, node: astx.FunctionCall
-) -> None:
-    """
-    title: Resolve a read-only copy into a fresh owner of the same list type.
-    parameters:
-      analyzer: Semantic analyzer resolving the builtin call.
-      node: Clone call whose builtin identity is already resolved.
-    """
-    analyzer._set_type(node, FailedInferenceType())
-    operands = tuple(node.args)
-    diagnostics = analyzer.context.diagnostics
-    if len(operands) != 1 or node.keywords or astx.get_template_args(node):
-        diagnostics.add(
-            "clone expects one positional list value and no templates",
-            node=node,
-            code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
-        )
-        return
-    source = operands[0]
-    analyzer.visit(source)
-    source_type = analyzer._expr_type(source)
-    if isinstance(source_type, FailedInferenceType):
-        return
-    if not list_supports_owned_element(list_element_type(source_type)):
-        diagnostics.add(
-            "clone requires a list of numeric, Boolean, or string values",
-            node=source,
-            code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
-        )
-        return
-    ownership = resource_ownership(source)
-    if (
-        ownership is None
-        or ownership.resource_kind is not ResourceKind.LIST
-        or ownership.kind not in {OwnershipKind.OWNED, OwnershipKind.BORROWED}
-    ):
-        diagnostics.add(
-            "clone requires a dynamic list value",
-            node=source,
-            code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
-        )
-        return
-    function = analyzer.context.current_function
-    if (
-        function is None
-        or function.signature.metadata.get("generator") is not None
-    ):
-        diagnostics.add(
-            "clone requires a non-generator function with list cleanup",
-            node=node,
-            code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
-        )
-        return
-    analyzer._semantic(node).list_clone_source = source
-    analyzer._set_type(node, source_type)
-    analyzer._set_resource_ownership(
-        node, list_resource_ownership(OwnershipKind.OWNED)
-    )
 
 
 @private

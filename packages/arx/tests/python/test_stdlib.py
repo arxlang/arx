@@ -273,6 +273,7 @@ def test_bundled_stdlib_package_data_is_present() -> None:
     )
     assert (stdlib_root / "__init__.x").is_file()
     assert (stdlib_root / "math.x").is_file()
+    assert (stdlib_root / "memory.x").is_file()
 
     pyproject = tomllib.loads(
         Path("packages/arx/pyproject.toml").read_text("utf-8")

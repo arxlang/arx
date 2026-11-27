@@ -24,7 +24,7 @@ from irx.analysis.resolved_nodes import (
 )
 from irx.analysis.scopes import ScopeStack
 from irx.diagnostics import DiagnosticBag
-from irx.native import ComputeKernel, TableIOOperation
+from irx.native import ComputeKernel, MemoryOperation, TableIOOperation
 from irx.typecheck import typechecked
 
 
@@ -81,6 +81,7 @@ class SemanticContext:
       native_bindings: Native bindings.
       native_table_io: Native table I/O.
       native_compute: Native compute.
+      native_memory: Trusted memory operations by declaration identity.
       exception_declarations: Exception declarations.
       runtime_exception_types: Types of runtime exception.
       _symbol_counter: Symbol counter.
@@ -114,6 +115,7 @@ class SemanticContext:
     native_bindings: dict[int, tuple[str, ...]] = field(default_factory=dict)
     native_table_io: dict[int, TableIOOperation] = field(default_factory=dict)
     native_compute: dict[int, ComputeKernel] = field(default_factory=dict)
+    native_memory: dict[int, MemoryOperation] = field(default_factory=dict)
     exception_declarations: tuple[astx.ClassDefStmt, ...] = ()
     runtime_exception_types: dict[str, ResolvedExceptionType] = field(
         default_factory=dict

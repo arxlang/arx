@@ -47,7 +47,6 @@ from irx.builder.extensions.calls import (
 )
 from irx.builder.lowering.classes import ClassVisitorMixin
 from irx.builder.lowering.collection_access import lower_collection_access
-from irx.builder.lowering.list import ListVisitorMixin
 from irx.builder.lowering.materialization import lower_materialization
 from irx.builder.lowering.ranges import lower_range_call
 from irx.builder.lowering.sequences import adapt_sequence
@@ -730,14 +729,6 @@ class FunctionVisitorMixin(ClassVisitorMixin):
         if isinstance(info, SemanticInfo) and info.materialization is not None:
             lower_materialization(
                 cast(VisitorCore, self), node, info.materialization
-            )
-            return
-        if (
-            isinstance(info, SemanticInfo)
-            and info.list_clone_source is not None
-        ):
-            cast(ListVisitorMixin, self).lower_list_clone(
-                node, info.list_clone_source
             )
             return
         if (

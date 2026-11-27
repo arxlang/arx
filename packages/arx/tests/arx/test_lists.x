@@ -3,6 +3,9 @@ title: Owned list expressions
 summary: Exercise expression order, ownership, element copies, and length.
 ```
 
+import (copy, copy as copy_list) from stdlib.memory
+import stdlib.memory as memory
+
 class Trace:
   ```
   title: Mutable evaluation order recorder
@@ -106,13 +109,13 @@ fn return_iterated_list() -> list[i32]:
     return values
   return values
 
-fn clone_words(words: &list[str]) -> list[str]:
+fn copy_words(words: &list[str]) -> list[str]:
   ```
   title: Return a new owner copied from a read-only list parameter
   ```
-  return clone(words)
+  return copy_list(words)
 
-fn test_list_clone() -> none:
+fn test_list_copy() -> none:
   ```
   title: Copy list storage and elements without consuming the source
   ```
@@ -120,7 +123,7 @@ fn test_list_clone() -> none:
   backup: list[i32] = []
   if true:
     first: auto = &values[0]
-    backup = clone(values)
+    backup = copy(values)
     assert first == 10
   if true:
     editor: auto = &&backup[0]
@@ -129,42 +132,43 @@ fn test_list_clone() -> none:
   assert values[0] == 10
   assert backup[0] == 11
   assert len(backup) == 2
-  backup = clone(backup)
+  backup = memory.copy(backup)
   assert backup[1] == 20
 
   empty: list[bool] = []
-  flags: auto = clone(empty)
+  flags: auto = copy(empty)
   flags.append(true)
   assert len(empty) == 0
   assert flags[0]
 
   log: Trace = Trace()
-  assert clone(make(log))[1] == 3
+  assert copy(make(log))[1] == 3
+  assert copy(["literal"])[0] == "literal"
   assert log.value == 12
   source: list[str] = ["", "copied" + " text"]
-  words: auto = clone_words(&source)
+  words: auto = copy_words(&source)
   source = []
   assert words[0] == ""
   assert words[1] == "copied text"
 
-class FallibleCloneSource:
+class FallibleCopySource:
   ```
-  title: Leave a fallible temporary in a clone operand
+  title: Leave a fallible temporary in a copy operand
   ```
 
   fn words(self) -> list[str]:
     return ["new"]
 
   fn __del__(self) -> none:
-    raise ValueError("clone operand cleanup")
+    raise ValueError("copy operand cleanup")
 
-fn test_list_clone_cleanup() -> none:
+fn test_list_copy_cleanup() -> none:
   ```
   title: Drop an unpublished copy if cleaning up its operand raises
   ```
   destination: list[str] = ["old"]
   try:
-    destination = clone(FallibleCloneSource().words())
+    destination = copy(FallibleCopySource().words())
     assert false
   except ValueError:
     assert destination[0] == "old"

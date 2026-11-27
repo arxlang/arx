@@ -506,9 +506,7 @@ class ListVisitorMixin(VisitorMixinBase):
         return action
 
     @private
-    def lower_list_clone(
-        self, node: astx.FunctionCall, source: astx.AST
-    ) -> None:
+    def lower_list_clone(self, node: astx.AST, source: astx.DataType) -> None:
         """
         title: Copy a borrowed descriptor and publish its independent owner.
         parameters:

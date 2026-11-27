@@ -15,6 +15,7 @@ from public import private, public
 
 from irx.analysis.compute import ComputePlan
 from irx.analysis.extensions.records import CallPlan
+from irx.analysis.memory import ListCopyPlan
 from irx.analysis.resolved_nodes import ResolvedClassConstruction
 from irx.builder.diagnostics import (
     raise_lowering_internal_error,
@@ -107,6 +108,17 @@ class CallLoweringServices(Protocol):
           plan: Resolved semantic execution plan.
         """
         del node, plan
+        raise NotImplementedError
+
+    @abstractmethod
+    def copy_list(self, node: astx.AST, source: astx.DataType) -> None:
+        """
+        title: Read one resolved list operand and produce a new owner.
+        parameters:
+          node: Copy call to lower.
+          source: Resolved dynamic list operand.
+        """
+        del node, source
         raise NotImplementedError
 
     @abstractmethod
@@ -232,6 +244,16 @@ class CallLoweringVisitor:
           call: Call being processed.
         """
         call.services.compute(call.node, plan)
+
+    @dispatch
+    def visit(self, plan: ListCopyPlan, call: LoweringCall) -> None:
+        """
+        title: Emit a resolved list copy through existing ownership services.
+        parameters:
+          plan: Resolved list copy operand.
+          call: Call being processed.
+        """
+        call.services.copy_list(call.node, plan.source)
 
     @dispatch
     def visit(self, plan: CallPlan, call: LoweringCall) -> None:

@@ -30,7 +30,6 @@ from irx.analysis.call_arguments import (
     contextualize_null_arguments,
 )
 from irx.analysis.class_lifecycle import LIFECYCLE_HOOKS, class_ownership
-from irx.analysis.collection_access import resolve_clone
 from irx.analysis.extensions.calls import (
     AnalysisCall,
     AnalysisServices,
@@ -726,15 +725,11 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
         info.resolved_file_open = None
         info.resolved_class_construction = None
         info.collection_length = None
-        if (
-            info.materialization is not None
-            or info.list_clone_source is not None
-        ):
+        if info.materialization is not None:
             info.resource_ownership = None
         info.materialization = None
-        info.list_clone_source = None
         if (
-            node.fn in {"list", "bytes", "clone"}
+            node.fn in {"list", "bytes"}
             and self.bindings.resolve(node.fn) is None
         ):
             info.resolved_call = None
@@ -747,10 +742,7 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
                     code=DiagnosticCodes.SEMANTIC_UNRESOLVED_NAME,
                 )
                 return
-            if node.fn == "clone":
-                resolve_clone(cast(SemanticAnalyzerCore, self), node)
-            else:
-                resolve_materialization(cast(SemanticAnalyzerCore, self), node)
+            resolve_materialization(cast(SemanticAnalyzerCore, self), node)
             return
         if info.resolved_text_operation is not None:
             info.resource_ownership = None

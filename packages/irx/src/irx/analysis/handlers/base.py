@@ -816,11 +816,11 @@ class SemanticAnalyzerCore(BaseVisitor):
           context: Context for the operation.
           session: Compilation session owning the semantic facts.
         """
-        from irx.analysis.compute import (  # noqa: PLC0415
-            ComputeAnalysisVisitor,
+        from irx.analysis.memory import (  # noqa: PLC0415
+            MemoryAnalysisVisitor,
         )
 
-        self.call_visitor = ComputeAnalysisVisitor()
+        self.call_visitor = MemoryAnalysisVisitor()
         self.session = session
         self.context = context or SemanticContext()
         if session is not None:
@@ -829,6 +829,7 @@ class SemanticAnalyzerCore(BaseVisitor):
             self.context.native_bindings = dict(session.native_bindings)
             self.context.native_table_io = dict(session.native_table_io)
             self.context.native_compute = dict(session.native_compute)
+            self.context.native_memory = dict(session.native_memory)
             self.context.exception_declarations = tuple(
                 declaration
                 for module in session.modules.values()

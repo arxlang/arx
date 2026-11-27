@@ -362,7 +362,6 @@
     "functions": [
       "bytes",
       "cast",
-      "clone",
       "wrapping_cast",
       "wrapping_add",
       "wrapping_sub",

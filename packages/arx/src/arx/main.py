@@ -22,6 +22,7 @@ from arx.codegen import ArxBuilder
 from arx.exceptions import ArxError
 from arx.io import ArxIO
 from arx.lexer import Lexer
+from arx.memory_stdlib import prepare_memory_module
 from arx.parser import Parser
 
 BUILTIN_NAMESPACE = arx_builtins.BUILTIN_NAMESPACE
@@ -801,15 +802,16 @@ class FileImportResolver:
             else None,
         )
         module_ast = inject_ambient_builtin_imports(module_ast)
-        parsed_module = (
-            arrow_stdlib.prepare_module(
+        if resolved_specifier in arrow_stdlib.MODULE_NAMES:
+            parsed_module = arrow_stdlib.prepare_module(
                 module_ast, str(module_file), resolved_specifier
             )
-            if resolved_specifier in arrow_stdlib.MODULE_NAMES
-            else self.prepare_module(
+        elif resolved_specifier == "stdlib.memory":
+            parsed_module = prepare_memory_module(module_ast, str(module_file))
+        else:
+            parsed_module = self.prepare_module(
                 module_ast, resolved_specifier, str(module_file)
             )
-        )
         self.cache[resolved_specifier] = parsed_module
         return parsed_module
 
