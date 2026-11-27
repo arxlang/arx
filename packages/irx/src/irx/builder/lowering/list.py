@@ -31,6 +31,7 @@ from irx.builder.state import CleanupAction
 from irx.builtins.collections.list import (
     LIST_APPEND_SYMBOL,
     LIST_AT_SYMBOL,
+    LIST_CLONE_SYMBOL,
     LIST_DESTROY_SYMBOL,
     LIST_FIELD_INDICES,
     LIST_RUNTIME_FEATURE,
@@ -476,11 +477,15 @@ class ListVisitorMixin(VisitorMixinBase):
         return list_slot
 
     @private
-    def track_list_construction(self, output: ir.Value) -> CleanupAction:
+    def track_list_construction(
+        self, output: ir.Value, *, keep_during_temporary_cleanup: bool = False
+    ) -> CleanupAction:
         """
         title: Roll back initialized elements even for a pending move.
         parameters:
           output: Output destination or generated result.
+          keep_during_temporary_cleanup: Keep rollback active while source
+            temporaries are cleaned up.
         returns: 'Result of this operation: roll back initialized elements
           even for a pending move.'
         """
@@ -494,9 +499,42 @@ class ListVisitorMixin(VisitorMixinBase):
             """
             self._llvm.ir_builder.call(destroy, [output])
 
-        action = CleanupAction(release, fallible=False)
+        action = CleanupAction(
+            release, fallible=False, lexical=keep_during_temporary_cleanup
+        )
         self.cleanup_stack.append(action)
         return action
+
+    @private
+    def lower_list_clone(
+        self, node: astx.FunctionCall, source: astx.AST
+    ) -> None:
+        """
+        title: Copy a borrowed descriptor and publish its independent owner.
+        parameters:
+          node: List clone call producing the new owner.
+          source: Resolved dynamic list expression to evaluate once.
+        """
+        depth = len(self.cleanup_stack)
+        original = self._list_pointer_for_call(source, name="list.clone.input")
+        list_type = self._llvm_list_type()
+        output = self.create_entry_block_alloca("list.clone.output", list_type)
+        builder = self._llvm.ir_builder
+        builder.store(ir.Constant(list_type, None), output)
+        status = builder.call(
+            self.require_runtime_symbol(
+                LIST_RUNTIME_FEATURE, LIST_CLONE_SYMBOL
+            ),
+            [original, output],
+        )
+        self.check_list_status(node, status)
+        rollback = self.track_list_construction(
+            output, keep_during_temporary_cleanup=True
+        )
+        self._emit_temporary_cleanups(depth)
+        self.cleanup_stack.remove(rollback)
+        self._register_owned_list_temporary(node, output)
+        self.result_stack.append(builder.load(output))
 
     # Plum adds dispatch dynamically; keep it visible to static API discovery.
     @VisitorCore.visit.dispatch  # type: ignore[attr-defined, untyped-decorator]

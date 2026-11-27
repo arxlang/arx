@@ -72,20 +72,21 @@ handles or values in caller-owned output slots. The required rule is:
 4. translate the native error into a structured diagnostic or API exception;
 5. on success, immediately record the resulting ownership obligation.
 
-Dynamic list append and indexing return checked statuses. Indexing publishes its
-borrowed element pointer through an output slot only on success; lowering turns
-failures into typed exceptions before reading that slot. The
-`irx_list_status_message` accessor supplies diagnostic text, not error
-categories.
+Dynamic list append, clone, and indexing return checked statuses. Clone and
+indexing publish through output slots on success. Lowering turns failures into
+typed exceptions before reading those slots. The `irx_list_status_message`
+accessor supplies diagnostic text, not error categories.
 
 ## Enforced scalar dynamic-list contract
 
 IRx semantic analysis attaches a typed `ResourceOwnership` sidecar to list
-expressions, declarations, arguments, calls, assignments, and returns. The
-current contract is deliberately move-only:
+expressions, declarations, arguments, calls, assignments, and returns.
 
 - `ListExpr`, `ListCreate`, list comprehensions, and list-returning calls
   produce owned values;
+- `clone` borrows a dynamic list and publishes a fresh owner with the same
+  element type. The native operation destroys every initialized element and
+  frees partial storage before returning a failure;
 - declarations and simple assignments can take a fresh owned value or move a
   named local owner. A moved binding must be reinitialized before use. Other
   reads of a list identifier and list parameters borrow its storage;
@@ -99,10 +100,10 @@ current contract is deliberately move-only:
   data pointer. The callee borrows storage and registers no owner cleanup;
 - the lower-level ASTx `LiteralList` remains literal-only, static storage; Arx
   bracket expressions use `ListExpr`, not this non-owning representation; and
-- local aliases, borrowed/static-to-owned copies, static list call arguments or
+- whole-list local aliases, implicit copies, static list call arguments or
   defaults, owned list locals in generators, and nested owning containers remain
-  unsupported and fail closed. Numeric, Boolean, and string elements are
-  supported; other element representations require explicit copy/drop plans.
+  unsupported. Numeric, Boolean, and string elements have defined copy and drop
+  behavior.
 
 Lowering consumes these sidecars. It registers `irx_list_destroy` for owned
 locals and non-transferred temporaries, emits cleanup on normal block

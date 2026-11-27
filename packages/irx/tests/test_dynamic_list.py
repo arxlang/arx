@@ -520,6 +520,18 @@ def test_dynamic_list_native_status_and_destroy_are_safe(
     assert run_result.returncode == 0, run_result.stderr
 
 
+@pytest.mark.skipif(not HAS_LITERAL_LIST, reason="requires ASTx LiteralList")
+def test_clone_rejects_static_list_storage() -> None:
+    """
+    title: Reject static ASTx storage at the clone semantic boundary.
+    """
+    call = astx.FunctionCall(
+        "clone", [astx.LiteralList(elements=[astx.LiteralInt32(1)])]
+    )
+    with pytest.raises(SemanticError, match="clone requires a dynamic list"):
+        analyze(_module_with_main(call))
+
+
 def test_direct_list_length_from_temporary_list_create() -> None:
     """
     title: Direct list length should work for a non-lvalue ListCreate node.

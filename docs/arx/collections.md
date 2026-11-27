@@ -26,11 +26,24 @@ fn sum_values() -> i32:
   return total
 ```
 
-Dynamic lists are move-only: owned locals and non-transferred temporaries are
-released on normal and exceptional lexical exits and replacement; returning an
-owned list moves it to the caller. A list moved into a pending return cannot be
-read or reassigned through that binding in `finally`; a separate fresh owned
-return value is allowed.
+Ordinary list assignment moves ownership. Owned locals and non-transferred
+temporaries are released on normal and exceptional lexical exits and
+replacement. Returning an owned list moves it to the caller. A list moved into a
+pending return cannot be read or reassigned through that binding in `finally`.
+The finalizer can return a fresh owner.
+
+Use `clone(values)` for an independent list of the same type. It reads an owned
+list or a borrowed list parameter and copies numeric and Boolean values inline.
+Each string in the copy owns its own bytes. The source remains usable and
+assignment replaces its destination only after the clone succeeds. Bind an empty
+literal to a typed list before cloning it.
+
+```arx
+values: list[i32] = [10, 20]
+backup: list[i32] = clone(values)
+values.append(30)
+assert len(backup) == 2
+```
 
 Function and method parameters take lists through an explicit call-scoped
 borrow. Use `&list[T]` with `&values` to read, or `&&list[T]` with `&&values` to

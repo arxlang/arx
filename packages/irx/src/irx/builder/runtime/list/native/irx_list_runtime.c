@@ -25,14 +25,9 @@ static int32_t irx_list_next_capacity(
   return IRX_LIST_OK;
 }
 
-int32_t irx_list_append(irx_list* list, const void* value) {
-  if (list == NULL) {
-    return IRX_LIST_INVALID_ARGUMENT;
-  }
-  if (value == NULL) {
-    return IRX_LIST_INVALID_ARGUMENT;
-  }
-  if (list->element_size <= 0 || list->length < 0 || list->capacity < 0 ||
+static int32_t irx_list_validate(const irx_list* list) {
+  if (!list || list->element_size <= 0 || list->length < 0 ||
+      list->capacity < 0 ||
       list->length > list->capacity || (list->capacity && !list->data) ||
       list->element_kind < 0 || list->element_kind > 1 ||
       (list->element_kind == 1 && list->element_size != (int64_t)sizeof(char*))) {
@@ -42,6 +37,13 @@ int32_t irx_list_append(irx_list* list, const void* value) {
       (uint64_t)SIZE_MAX / (uint64_t)list->element_size) {
     return IRX_LIST_CAPACITY_OVERFLOW;
   }
+  return IRX_LIST_OK;
+}
+
+int32_t irx_list_append(irx_list* list, const void* value) {
+  if (!value) return IRX_LIST_INVALID_ARGUMENT;
+  int32_t status = irx_list_validate(list);
+  if (status != IRX_LIST_OK) return status;
   char* owned_string = NULL;
   if (list->element_kind == 1) {
     const char* source = NULL;
@@ -84,6 +86,36 @@ int32_t irx_list_append(irx_list* list, const void* value) {
       value,
       (size_t)list->element_size);
   list->length += 1;
+  return IRX_LIST_OK;
+}
+
+int32_t irx_list_clone(const irx_list* source, irx_list* out) {
+  if (!out || out == source || out->data || out->length || out->capacity)
+    return IRX_LIST_INVALID_ARGUMENT;
+  int32_t status = irx_list_validate(source);
+  if (status != IRX_LIST_OK) return status;
+
+  irx_list result = {NULL, 0, 0, source->element_size, source->element_kind};
+  if (source->length != 0) {
+    size_t bytes = (size_t)source->length * (size_t)source->element_size;
+    result.data = (uint8_t*)malloc(bytes);
+    if (!result.data) return IRX_LIST_ALLOCATION_FAILED;
+    result.capacity = source->length;
+    if (source->element_kind == 1) {
+      for (int64_t i = 0; i < source->length; ++i) {
+        status = irx_list_append(
+            &result, source->data + (size_t)i * sizeof(char*));
+        if (status != IRX_LIST_OK) {
+          irx_list_destroy(&result);
+          return status;
+        }
+      }
+    } else {
+      memcpy(result.data, source->data, bytes);
+      result.length = source->length;
+    }
+  }
+  *out = result;
   return IRX_LIST_OK;
 }
 

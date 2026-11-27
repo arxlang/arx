@@ -2370,6 +2370,51 @@ def test_text_builtins_can_be_shadowed_by_a_function(name: str) -> None:
     assert "irx_text_" not in text
 
 
+@pytest.mark.parametrize(
+    ("body", "message"),
+    [
+        ("clone()", "clone expects one positional list value"),
+        ("clone(values, values)", "clone expects one positional list value"),
+        ("clone(value=values)", "clone expects one positional list value"),
+        ("clone(1)", "clone requires a list of numeric, Boolean, or string"),
+        ("clone([[1]])", "nested"),
+        (
+            "editor: auto = &&values[0]\nclone(values)",
+            "cannot read 'values' while it is borrowed",
+        ),
+        ("moved: list[i32] = values\nclone(values)", "after a move"),
+        ("clone: i32 = 0\nclone(values)", "does not resolve to a function"),
+    ],
+)
+def test_list_clone_invalid_calls(body: str, message: str) -> None:
+    """
+    title: Validate clone inputs and ordinary read permissions before lowering.
+    parameters:
+      body: Clone operation under test.
+      message: Expected semantic diagnostic.
+    """
+    ArxIO.string_to_buffer(
+        "fn main() -> i32:\n  values: list[i32] = [1]\n"
+        + indent(body, "  ")
+        + "\n  return 0\n"
+    )
+    with pytest.raises(SemanticError, match=message):
+        ArxBuilder().translate(Parser().parse(Lexer().lex()))
+
+
+def test_function_shadows_clone_builtin() -> None:
+    """
+    title: Resolve a user callable named clone through ordinary bindings.
+    """
+    ArxIO.string_to_buffer(
+        "fn clone(value: i32) -> i32:\n  return value\n"
+        "fn main() -> i32:\n  return clone(7)\n"
+    )
+    text = ArxBuilder().translate(Parser().parse(Lexer().lex()))
+    llvm.parse_assembly(text).verify()
+    assert "irx_list_clone" not in text
+
+
 @pytest.mark.parametrize("name", ["len", "int", "ord"])
 def test_local_text_builtin_shadow_is_not_callable(name: str) -> None:
     """

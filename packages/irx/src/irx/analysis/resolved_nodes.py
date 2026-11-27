@@ -2028,6 +2028,7 @@ class SemanticInfo:
       range_construction: Range construction.
       range_access: Whether to use range access.
       materialization: Materialization.
+      list_clone_source: Resolved dynamic list read to copy into a new owner.
       sequence_access: Sequence access.
       normalized_collection: Normalized collection.
       tensor_index: Index selecting tensor.
@@ -2097,6 +2098,7 @@ class SemanticInfo:
     range_construction: CallResolution | None = None
     range_access: bool = False
     materialization: ResolvedMaterialization | None = None
+    list_clone_source: astx.AST | None = None
     sequence_access: ResolvedSequenceAccess | None = None
     normalized_collection: astx.Expr | None = None
     tensor_index: astx.TensorIndex | None = None

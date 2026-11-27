@@ -27,6 +27,10 @@ typedef enum irx_list_status {
 /* Borrows value; string elements are copied. Failure never publishes an item.
    Destroy drops every initialized string, then the backing allocation. */
 int32_t irx_list_append(irx_list* list, const void* value);
+/* Borrows source and initializes a distinct, empty output descriptor.
+   Success publishes independently owned storage. Failure leaves both
+   descriptors unchanged and releases all partially copied elements. */
+int32_t irx_list_clone(const irx_list* source, irx_list* out);
 /* Output remains NULL on failure; callers may dereference only on success. */
 int32_t irx_list_at(const irx_list* list, int64_t index, void** out);
 /* Borrowed sequence callback: size is the exact scalar byte width (1..8).
