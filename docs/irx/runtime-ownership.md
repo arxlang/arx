@@ -86,10 +86,11 @@ current contract is deliberately move-only:
 
 - `ListExpr`, `ListCreate`, list comprehensions, and list-returning calls
   produce owned values;
-- a local declaration consumes a fresh owned value, while a list parameter and
-  an identifier expression are borrows;
-- a list-valued assignment consumes a fresh owner and destroys the target's
-  previous storage before replacement;
+- declarations and simple assignments can take a fresh owned value or move a
+  named local owner. A moved binding must be reinitialized before use. Other
+  reads of a list identifier and list parameters borrow its storage;
+- assignment prepares the incoming value before destroying the previous storage.
+  Moving or replacing the active owner of an iteration is rejected;
 - returning a fresh owner or an owned local moves it to the caller; returning a
   borrowed parameter or static literal storage is rejected with `IRX-S013`;
 - append is allowed only through a locally owned list binding;
@@ -132,16 +133,18 @@ and defined Arx string-returning calls are owners; literals, empty defaults, and
 type names are static; function parameters and identifier expressions borrow.
 
 Owned locals and temporaries call `free` on all ordinary control-flow exits.
-Owned replacement frees the old generation first. Returning an owner moves it to
-the caller, while returning static storage performs a checked copy so the call
-result has one unambiguous release obligation. Allocation and formatting failure
-emit structured `ARX-RUNTIME-STRING-001` or `ARX-RUNTIME-STRING-002` records and
-terminate before a null pointer is used.
+Mutable string locals can switch between static and heap storage. Assignment
+prepares the new value before reclaiming the previous heap generation. A named
+local source that can hold a heap value is copied so both bindings remain
+usable. Returning an owner moves it to the caller, while returning static
+storage performs a checked copy so the call result has one release obligation.
+Allocation and formatting failure emit structured `ARX-RUNTIME-STRING-001` or
+`ARX-RUNTIME-STRING-002` records and terminate before a null pointer is used.
 
-Bindings cannot change between static and owned storage. Borrowed parameters
-cannot initialize owned locals or escape through returns. Owning struct fields,
-generator locals, external string results without an ownership ABI, and identity
-casts that would obscure an owner fail closed with `IRX-S013`.
+Borrowed parameters cannot initialize owned locals or escape through returns.
+Owning struct fields, generator locals, external string results without an
+ownership ABI, and identity casts that would obscure an owner fail closed with
+`IRX-S013`.
 
 The registered `text` runtime validates UTF-8 before operating on code points.
 Splitting publishes an owned string list only after all fields succeed; failure

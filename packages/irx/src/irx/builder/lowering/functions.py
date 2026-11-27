@@ -281,7 +281,7 @@ class FunctionVisitorMixin(ClassVisitorMixin):
         """
         llvm_args: list[ir.Value] = []
         for index, arg in enumerate(args):
-            self.visit_child(arg)
+            self.visit(arg)
             llvm_arg = require_lowered_value(
                 safe_pop(self.result_stack),
                 node=arg,
@@ -401,7 +401,7 @@ class FunctionVisitorMixin(ClassVisitorMixin):
             for index in range(len(resolution.signature.parameters)):
                 default = defaults.get(index)
                 if default is not None:
-                    self.visit_child(default.expression)
+                    self.visit(default.expression)
                     value = require_lowered_value(
                         safe_pop(self.result_stack),
                         node=default.expression,
@@ -727,7 +727,7 @@ class FunctionVisitorMixin(ClassVisitorMixin):
             isinstance(info, SemanticInfo)
             and info.collection_length is not None
         ):
-            self.visit_child(info.collection_length)
+            self.visit(info.collection_length)
             return
         if self.emit_operation(node):
             return
@@ -816,7 +816,7 @@ class FunctionVisitorMixin(ClassVisitorMixin):
                 ),
             )
             callee = self._declare_semantic_function(function)
-            self.visit_child(node.receiver)
+            self.visit(node.receiver)
             _ = safe_pop(self.result_stack)
             llvm_args = self.lower_bound_call_arguments(resolution)
             self._apply_calling_convention(function.signature)
@@ -830,7 +830,7 @@ class FunctionVisitorMixin(ClassVisitorMixin):
             return
 
         method_resolution = self._semantic_method_call(node)
-        self.visit_child(node.receiver)
+        self.visit(node.receiver)
         receiver_value = require_lowered_value(
             safe_pop(self.result_stack),
             node=node.receiver,
@@ -881,7 +881,7 @@ class FunctionVisitorMixin(ClassVisitorMixin):
           node: Syntax node to process.
         """
         method_resolution = self._semantic_method_call(node)
-        self.visit_child(node.receiver)
+        self.visit(node.receiver)
         receiver_value = require_lowered_value(
             safe_pop(self.result_stack),
             node=node.receiver,
@@ -1053,7 +1053,7 @@ class FunctionVisitorMixin(ClassVisitorMixin):
                 if idx == 0 and signature.metadata.get("is_class_initializer"):
                     self.class_construction_stack = [llvm_arg]
 
-            self.visit_child(node.body)
+            self.visit(node.body)
             if not self._llvm.ir_builder.block.is_terminated:
                 if isinstance(signature.return_type, astx.NoneType):
                     self._emit_active_cleanups()
@@ -1112,7 +1112,7 @@ class FunctionVisitorMixin(ClassVisitorMixin):
                 node.value, astx.LiteralNone
             ):
                 depth = len(self.result_stack)
-                self.visit_child(node.value)
+                self.visit(node.value)
                 del self.result_stack[depth:]
             cast(Any, self)._emit_generator_stop(node)
             return
@@ -1122,7 +1122,7 @@ class FunctionVisitorMixin(ClassVisitorMixin):
                 node.value, astx.LiteralNone
             ):
                 depth = len(self.result_stack)
-                self.visit_child(node.value)
+                self.visit(node.value)
                 del self.result_stack[depth:]
             self._emit_active_cleanups()
             if not self._llvm.ir_builder.block.is_terminated:
@@ -1136,7 +1136,7 @@ class FunctionVisitorMixin(ClassVisitorMixin):
             return
 
         if node.value is not None:
-            self.visit_child(node.value)
+            self.visit(node.value)
             retval = require_lowered_value(
                 safe_pop(self.result_stack),
                 node=node.value,
@@ -1193,6 +1193,32 @@ class FunctionVisitorMixin(ClassVisitorMixin):
             )
         ):
             retval = self._copy_string_to_heap(node, retval)
+        elif (
+            return_ownership is not None
+            and return_ownership.kind is OwnershipKind.OWNED_OR_STATIC
+        ):
+            # The result ABI always transfers a heap pointer. Reuse the
+            # current owner or copy a static generation before committing.
+            owner = require_semantic_metadata(
+                self.named_values.get(
+                    f"string.owner:{return_ownership.source_symbol_id}"
+                ),
+                node=node,
+                metadata="string owner slot",
+                context="return string local",
+            )
+            builder = self._llvm.ir_builder
+            heap_pointer = builder.load(owner)
+            is_static = builder.icmp_unsigned(
+                "==", heap_pointer, ir.Constant(retval.type, None)
+            )
+            result = self.create_entry_block_alloca(
+                "return.string", retval.type
+            )
+            builder.store(retval, result)
+            with builder.if_then(is_static):
+                builder.store(self._copy_string_to_heap(node, retval), result)
+            retval = builder.load(result)
         fn_return_type = self._llvm_type_for_ast_type(
             return_resolution.expected_type
         )

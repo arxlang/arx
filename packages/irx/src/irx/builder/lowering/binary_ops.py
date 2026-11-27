@@ -40,7 +40,6 @@ from irx.analysis.resolved_nodes import (
     ResourceKind,
     SemanticInfo,
 )
-from irx.analysis.types import is_string_type
 from irx.builder.core import (
     VisitorCore,
     semantic_assignment_key,
@@ -153,7 +152,7 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
                 "compound assignment target has no resolved storage", node=node
             )
         old = self._llvm.ir_builder.load(address)
-        self.visit_child(node.value)
+        self.visit(node.value)
         rhs = require_lowered_value(
             safe_pop(self.result_stack),
             node=node.value,
@@ -217,9 +216,9 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
           unify_numeric: Whether to use unify numeric.
         returns: Loaded binary operands.
         """
-        self.visit_child(node.lhs)
+        self.visit(node.lhs)
         llvm_lhs = safe_pop(self.result_stack)
-        self.visit_child(node.rhs)
+        self.visit(node.rhs)
         llvm_rhs = safe_pop(self.result_stack)
 
         if llvm_lhs is None or llvm_rhs is None:
@@ -370,7 +369,7 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
           short_circuit_value: Whether to use short circuit value.
           name: Name identifying the declaration or operation.
         """
-        self.visit_child(node.lhs)
+        self.visit(node.lhs)
         llvm_lhs = safe_pop(self.result_stack)
         if (
             llvm_lhs is None
@@ -400,7 +399,7 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
             )
 
         self._llvm.ir_builder.position_at_start(rhs_block)
-        self.visit_child(node.rhs)
+        self.visit(node.rhs)
         llvm_rhs = safe_pop(self.result_stack)
         if (
             llvm_rhs is None
@@ -548,7 +547,7 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
             fma_rhs_node = semantic_fma_rhs(node)
             if fma_rhs_node is None:
                 raise Exception("FMA requires a third operand (fma_rhs)")
-            self.visit_child(fma_rhs_node)
+            self.visit(fma_rhs_node)
             llvm_fma_rhs = safe_pop(self.result_stack)
             if llvm_fma_rhs is None:
                 raise Exception("FMA requires a valid third operand")
@@ -640,7 +639,7 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
         specialized = self._resolved_binary_variant(node)
         if specialized is node:
             raise Exception(f"Binary op {node.op_code} not implemented yet.")
-        self.visit_child(specialized)
+        self.visit(specialized)
 
     @VisitorCore.visit.dispatch
     def visit(self, node: AssignmentBinOp) -> None:
@@ -684,7 +683,7 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
             in {ResourceKind.CLASS, ResourceKind.FILE, *ARROW_RESOURCES}
         ) or (semantic is not None and semantic.lifecycle_field_store):
             address = self._lvalue_address(var_lhs)
-            self.visit_child(node.rhs)
+            self.visit(node.rhs)
             value = require_lowered_value(
                 safe_pop(self.result_stack),
                 node=node.rhs,
@@ -727,7 +726,7 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
                 self._llvm.ir_builder.store(value, address)
             self.result_stack.append(value)
             return
-        self.visit_child(node.rhs)
+        self.visit(node.rhs)
         llvm_rhs = safe_pop(self.result_stack)
         if llvm_rhs is None:
             raise Exception("codegen: Invalid rhs expression.")
@@ -738,30 +737,7 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
         )
 
         llvm_lhs = self._lvalue_address(var_lhs)
-        if isinstance(
-            self._resolved_ast_type(node), (astx.ListType, astx.Bytes)
-        ):
-            if not isinstance(var_lhs, astx.Identifier):
-                raise_lowering_internal_error(
-                    "list field assignment reached lowering without an "
-                    "object-field ownership contract",
-                    node=node,
-                )
-            self._destroy_replaced_list(
-                node,
-                llvm_lhs,
-                target_name=lhs_name,
-            )
-        elif is_string_type(self._resolved_ast_type(node)) and isinstance(
-            var_lhs,
-            astx.Identifier,
-        ):
-            self._destroy_replaced_string(
-                node,
-                llvm_lhs,
-                target_name=lhs_name,
-            )
-        self._llvm.ir_builder.store(llvm_rhs, llvm_lhs)
+        llvm_rhs = self.store_local_resource(node, llvm_lhs, llvm_rhs)
         self.result_stack.append(llvm_rhs)
 
     @VisitorCore.visit.dispatch

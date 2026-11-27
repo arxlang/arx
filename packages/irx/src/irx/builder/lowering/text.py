@@ -153,7 +153,7 @@ def lower_text_operation(visitor: VisitorCore, node: astx.AST) -> bool:
         ).get(storage)
     values: list[ir.Value] = []
     for index, expression in enumerate(operation.evaluations):
-        visitor.visit_child(expression)
+        visitor.visit(expression)
         value = require_lowered_value(
             safe_pop(visitor.result_stack),
             node=expression,

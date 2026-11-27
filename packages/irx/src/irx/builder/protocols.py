@@ -449,35 +449,16 @@ class VisitorProtocol(BaseVisitorProtocol, Protocol):
         """
         ...
 
-    def _destroy_replaced_list(
-        self,
-        _node: astx.AST,
-        _list_ptr: ir.Value,
-        *,
-        target_name: str,
-    ) -> None:
+    def store_local_resource(
+        self, _node: astx.AST, _address: ir.Value, _value: ir.Value
+    ) -> ir.Value:
         """
-        title: Destroy owned list storage before a validated replacement.
+        title: Commit an analyzed local store and return its value.
         parameters:
           _node: Syntax node to process.
-          _list_ptr: List ptr.
-          target_name: Name of target.
-        """
-        ...
-
-    def _destroy_replaced_string(
-        self,
-        _node: astx.AST,
-        _string_ptr: ir.Value,
-        *,
-        target_name: str,
-    ) -> None:
-        """
-        title: Destroy owned string storage before a validated replacement.
-        parameters:
-          _node: Syntax node to process.
-          _string_ptr: String ptr.
-          target_name: Name of target.
+          _address: Address of the destination binding.
+          _value: Evaluated and converted value.
+        returns: The value stored in the destination.
         """
         ...
 
@@ -877,14 +858,6 @@ class VisitorMixinTypingBase(ExceptionLoweringTypingBase):
         """
         raise NotImplementedError
 
-    def visit_child(self, _node: astx.AST) -> None:
-        """
-        title: Visit one child AST node.
-        parameters:
-          _node: Syntax node to process.
-        """
-        raise NotImplementedError
-
     def get_function(self, _name: str) -> ir.Function | None:
         """
         title: Get function.
@@ -971,37 +944,18 @@ class VisitorMixinTypingBase(ExceptionLoweringTypingBase):
         """
         return cast(ir.Value, None)
 
-    def _destroy_replaced_list(
-        self,
-        _node: astx.AST,
-        _list_ptr: ir.Value,
-        *,
-        target_name: str,
-    ) -> None:
+    def store_local_resource(
+        self, _node: astx.AST, _address: ir.Value, _value: ir.Value
+    ) -> ir.Value:
         """
-        title: Destroy owned list storage before a validated replacement.
+        title: Commit an analyzed local store and return its value.
         parameters:
           _node: Syntax node to process.
-          _list_ptr: List ptr.
-          target_name: Name of target.
+          _address: Address of the destination binding.
+          _value: Evaluated and converted value.
+        returns: The value stored in the destination.
         """
-        _ = (_node, _list_ptr, target_name)
-
-    def _destroy_replaced_string(
-        self,
-        _node: astx.AST,
-        _string_ptr: ir.Value,
-        *,
-        target_name: str,
-    ) -> None:
-        """
-        title: Destroy owned string storage before a validated replacement.
-        parameters:
-          _node: Syntax node to process.
-          _string_ptr: String ptr.
-          target_name: Name of target.
-        """
-        _ = (_node, _string_ptr, target_name)
+        return _value
 
     def _llvm_function_type_for_signature(
         self,

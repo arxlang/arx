@@ -21,11 +21,3 @@ class BaseVisitorProtocol(Protocol):
           _node: Syntax node to process.
         """
         ...
-
-    def visit_child(self, _node: astx.AST) -> None:
-        """
-        title: Visit one child AST node.
-        parameters:
-          _node: Syntax node to process.
-        """
-        ...

@@ -10,7 +10,7 @@ from dataclasses import replace
 
 import astx
 
-from public import public
+from public import private, public
 
 from irx.analysis.resolved_nodes import (
     OwnershipEscapeKind,
@@ -56,6 +56,31 @@ def symbol_resource_ownership(
     if symbol is None or symbol.declaration is None:
         return None
     return resource_ownership(symbol.declaration)
+
+
+@private
+@typechecked
+def local_list_move_source(value: astx.AST) -> SemanticSymbol | None:
+    """
+    title: Identify a list value that can be moved from a lexical binding.
+    parameters:
+      value: Candidate source expression.
+    returns: The owning source symbol, if the expression names it directly.
+    """
+    if not isinstance(value, astx.Identifier):
+        return None
+    info = getattr(value, "semantic", None)
+    if not isinstance(info, SemanticInfo):
+        return None
+    symbol = info.resolved_symbol
+    ownership = symbol_resource_ownership(symbol)
+    if (
+        ownership is not None
+        and ownership.resource_kind is ResourceKind.LIST
+        and ownership.kind is OwnershipKind.OWNED
+    ):
+        return symbol
+    return None
 
 
 @public

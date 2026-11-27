@@ -184,7 +184,7 @@ class FileVisitorMixin(VisitorMixinBase):
         )
         values: list[ir.Value] = []
         for expression in resolution.evaluations:
-            self.visit_child(expression)
+            self.visit(expression)
             values.append(
                 require_lowered_value(
                     safe_pop(self.result_stack),
@@ -269,7 +269,7 @@ class FileVisitorMixin(VisitorMixinBase):
             metadata="resolved_file_operation",
             context="file method",
         )
-        self.visit_child(node.receiver)
+        self.visit(node.receiver)
         handle = require_lowered_value(
             safe_pop(self.result_stack),
             node=node.receiver,
@@ -313,7 +313,7 @@ class FileVisitorMixin(VisitorMixinBase):
             )
         else:
             for expression in node.args:
-                self.visit_child(expression)
+                self.visit(expression)
                 arguments.append(
                     require_lowered_value(
                         safe_pop(self.result_stack),

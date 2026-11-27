@@ -118,6 +118,7 @@ class OwnershipKind(str, Enum):
     OWNED = "owned"
     BORROWED = "borrowed"
     STATIC = "static"
+    OWNED_OR_STATIC = "owned_or_static"
 
 
 @public

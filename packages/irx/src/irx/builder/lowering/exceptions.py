@@ -736,7 +736,7 @@ class ExceptionVisitorMixin(VisitorMixinBase):
                     code="ARX-RUNTIME-EXCEPTION-002",
                 )
         else:
-            self.visit_child(node.exception)
+            self.visit(node.exception)
             value = require_lowered_value(
                 safe_pop(self.result_stack), node=node, context="raise operand"
             )
@@ -759,7 +759,7 @@ class ExceptionVisitorMixin(VisitorMixinBase):
                     node.cause is not None
                     and resolution.cause_type is not None
                 )
-                self.visit_child(node.cause)
+                self.visit(node.cause)
                 cause_value = require_lowered_value(
                     safe_pop(self.result_stack),
                     node=node.cause,

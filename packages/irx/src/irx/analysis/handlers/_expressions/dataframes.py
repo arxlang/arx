@@ -164,12 +164,13 @@ class ExpressionDataFrameVisitorMixin(SemanticVisitorMixinBase):
         if schema is not None:
             self._semantic(node).extras[DATAFRAME_SCHEMA_EXTRA] = schema
 
-    def _visit_dataframe_column_access(
+    @SemanticAnalyzerCore.visit.dispatch
+    def visit(
         self,
         node: astx.DataFrameColumnAccess,
     ) -> None:
         """
-        title: Visit shared DataFrame column access semantics.
+        title: Resolve DataFrame column access.
         parameters:
           node: Syntax node to process.
         """
@@ -373,24 +374,6 @@ class ExpressionDataFrameVisitorMixin(SemanticVisitorMixinBase):
         self._set_resource_ownership(
             node, arrow_ownership(node.type_, OwnershipKind.OWNED)
         )
-
-    @SemanticAnalyzerCore.visit.dispatch
-    def visit(self, node: astx.DataFrameColumnAccess) -> None:
-        """
-        title: Visit DataFrameColumnAccess nodes.
-        parameters:
-          node: Syntax node to process.
-        """
-        self._visit_dataframe_column_access(node)
-
-    @SemanticAnalyzerCore.visit.dispatch
-    def visit(self, node: astx.DataFrameStringColumnAccess) -> None:
-        """
-        title: Visit DataFrameStringColumnAccess nodes.
-        parameters:
-          node: Syntax node to process.
-        """
-        self._visit_dataframe_column_access(node)
 
     @SemanticAnalyzerCore.visit.dispatch
     def visit(self, node: astx.DataFrameRowCount) -> None:

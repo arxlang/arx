@@ -188,7 +188,7 @@ class DataFrameVisitorMixin(ClassVisitorMixin):
           value_node: Value node.
           target_type: Destination type for the conversion.
         """
-        self.visit_child(value_node)
+        self.visit(value_node)
         value = safe_pop(self.result_stack)
         if value is None:
             raise Exception("dataframe column value lowering failed")
@@ -337,7 +337,7 @@ class DataFrameVisitorMixin(ClassVisitorMixin):
         parameters:
           node: Syntax node to process.
         """
-        self.visit_child(node.base)
+        self.visit(node.base)
         table_handle = safe_pop(self.result_stack)
         if table_handle is None:
             raise Exception("dataframe column access requires a table")
@@ -495,7 +495,7 @@ class DataFrameVisitorMixin(ClassVisitorMixin):
                     )
                     value = ir.Constant(ir.IntType(64), physical)
                 else:
-                    self.visit_child(value_node)
+                    self.visit(value_node)
                     value = safe_pop(self.result_stack)
                     if value is None:
                         raise_lowering_internal_error(
@@ -733,7 +733,7 @@ class DataFrameVisitorMixin(ClassVisitorMixin):
         parameters:
           node: Syntax node to process.
         """
-        self.visit_child(node.base)
+        self.visit(node.base)
         table_handle = safe_pop(self.result_stack)
         if table_handle is None:
             raise Exception("dataframe nrows requires a table")
@@ -752,7 +752,7 @@ class DataFrameVisitorMixin(ClassVisitorMixin):
         parameters:
           node: Syntax node to process.
         """
-        self.visit_child(node.base)
+        self.visit(node.base)
         table_handle = safe_pop(self.result_stack)
         if table_handle is None:
             raise Exception("dataframe ncols requires a table")
@@ -771,7 +771,7 @@ class DataFrameVisitorMixin(ClassVisitorMixin):
         parameters:
           node: Syntax node to process.
         """
-        self.visit_child(node.base)
+        self.visit(node.base)
         table_handle = safe_pop(self.result_stack)
         retain = self.require_runtime_symbol(
             "dataframe",
@@ -789,7 +789,7 @@ class DataFrameVisitorMixin(ClassVisitorMixin):
         parameters:
           node: Syntax node to process.
         """
-        self.visit_child(node.base)
+        self.visit(node.base)
         table_handle = safe_pop(self.result_stack)
         release = self.require_runtime_symbol(
             "dataframe",
@@ -806,7 +806,7 @@ class DataFrameVisitorMixin(ClassVisitorMixin):
         parameters:
           node: Syntax node to process.
         """
-        self.visit_child(node.base)
+        self.visit(node.base)
         column_handle = safe_pop(self.result_stack)
         retain = self.require_runtime_symbol(
             "dataframe",
@@ -824,7 +824,7 @@ class DataFrameVisitorMixin(ClassVisitorMixin):
         parameters:
           node: Syntax node to process.
         """
-        self.visit_child(node.base)
+        self.visit(node.base)
         column_handle = safe_pop(self.result_stack)
         release = self.require_runtime_symbol(
             "dataframe",

@@ -242,11 +242,12 @@ class ControlFlowVisitorMixin(SemanticVisitorMixinBase):
             elif (
                 isinstance(source_symbol, SemanticSymbol)
                 and source_ownership is not None
-                and source_ownership.kind is OwnershipKind.OWNED
+                and source_ownership.kind
+                in {OwnershipKind.OWNED, OwnershipKind.OWNED_OR_STATIC}
             ):
                 source_symbol_id = source_symbol.symbol_id
                 moved = string_resource_ownership(
-                    OwnershipKind.OWNED,
+                    source_ownership.kind,
                     owner_symbol_id=source_symbol_id,
                     source_symbol_id=source_symbol_id,
                     transfer_kind=OwnershipTransferKind.MOVE,
@@ -281,7 +282,7 @@ class ControlFlowVisitorMixin(SemanticVisitorMixinBase):
         self._set_resource_ownership(
             node,
             string_resource_ownership(
-                OwnershipKind.OWNED,
+                moved.kind,
                 source_symbol_id=source_symbol_id,
                 transfer_kind=moved.transfer_kind,
                 escape_kind=OwnershipEscapeKind.RETURN,
@@ -669,6 +670,7 @@ class ControlFlowVisitorMixin(SemanticVisitorMixinBase):
         parameters:
           node: Syntax node to process.
         """
+        self._semantic(node).resolved_resource_store = None
         with self.context.scope("for-count"):
             self.visit(node.initializer)
             symbol = self._semantic(node.initializer).resolved_symbol
@@ -681,6 +683,38 @@ class ControlFlowVisitorMixin(SemanticVisitorMixinBase):
             )
             with self.context.constant_diagnostics(False):
                 self.visit(node.update)
+            update_assignment = self._semantic(node.update).resolved_assignment
+            if (
+                update_assignment is None
+                or update_assignment.target.symbol_id != symbol.symbol_id
+            ) and (
+                isinstance(symbol.type_, (astx.ListType, astx.Bytes))
+                or is_string_type(symbol.type_)
+            ):
+                validate_assignment(
+                    self.context.diagnostics,
+                    target_name=symbol.name,
+                    target_type=symbol.type_,
+                    value_type=self._expr_type(node.update),
+                    node=node.update,
+                )
+                self._resolve_list_assignment_ownership(
+                    node,
+                    node.update,
+                    symbol,
+                    target_name=symbol.name,
+                    target_type=symbol.type_,
+                    is_local=True,
+                )
+                self._resolve_string_assignment_ownership(
+                    node,
+                    node.update,
+                    symbol,
+                    target_name=symbol.name,
+                    target_type=symbol.type_,
+                    is_local=True,
+                    copy_borrowed=True,
+                )
             if isinstance(node.update, astx.AugAssign):
                 plan = self._semantic(node.update).resolved_aug_assignment
                 if (

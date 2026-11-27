@@ -111,7 +111,7 @@ def lower_range_query(
                 None, node=node, metadata="range_access", context="range query"
             )
         return False
-    visitor.visit_child(base)
+    visitor.visit(base)
     value = require_lowered_value(
         safe_pop(visitor.result_stack), node=base, context="range value"
     )
@@ -120,7 +120,7 @@ def lower_range_query(
     if isinstance(node, astx.CollectionLength):
         visitor.result_stack.append(length)
         return True
-    visitor.visit_child(node.index)
+    visitor.visit(node.index)
     index = require_lowered_value(
         safe_pop(visitor.result_stack), node=node.index, context="range index"
     )

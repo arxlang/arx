@@ -59,7 +59,7 @@ class SystemVisitorMixin(ClassVisitorMixin):
             )
             self.result_stack.append(ir.Constant(storage, None))
             return
-        self.visit_child(node.value)
+        self.visit(node.value)
         value = safe_pop(self.result_stack)
         if value is None:
             raise Exception("Invalid value in Cast")
@@ -168,7 +168,7 @@ class SystemVisitorMixin(ClassVisitorMixin):
         parameters:
           node: Syntax node to process.
         """
-        self.visit_child(node.value)
+        self.visit(node.value)
         _ = safe_pop(self.result_stack)
         static_result = cast(bool, getattr(node, "static_result", False))
         self.result_stack.append(
@@ -182,7 +182,7 @@ class SystemVisitorMixin(ClassVisitorMixin):
         parameters:
           node: Syntax node to process.
         """
-        self.visit_child(node.message)
+        self.visit(node.message)
         message_value = safe_pop(self.result_stack)
         if message_value is None:
             raise Exception("Invalid message in PrintExpr")
@@ -236,7 +236,7 @@ class SystemVisitorMixin(ClassVisitorMixin):
         parameters:
           node: Syntax node to process.
         """
-        self.visit_child(node.value)
+        self.visit(node.value)
         _ = safe_pop(self.result_stack)
         type_name = display_type_name(self._resolved_ast_type(node.value))
         pointer = cast(Any, self)._constant_c_string_pointer(

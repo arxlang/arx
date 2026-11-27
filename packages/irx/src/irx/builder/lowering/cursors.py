@@ -86,7 +86,7 @@ class LoweredCursor:
             metadata="cursor_protocol",
             context="cursor acquisition",
         )
-        visitor.visit_child(plan.iterable_node)
+        visitor.visit(plan.iterable_node)
         self.source: ir.Value = require_lowered_value(
             safe_pop(visitor.result_stack),
             node=plan.iterable_node,

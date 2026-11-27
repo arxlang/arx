@@ -417,7 +417,7 @@ class GeneratorVisitorMixin(VisitorMixinBase):
             )
 
         if value is not None:
-            self.visit_child(value)
+            self.visit(value)
             yielded = require_lowered_value(
                 safe_pop(self.result_stack),
                 node=value,
@@ -466,13 +466,13 @@ class GeneratorVisitorMixin(VisitorMixinBase):
                 if yielded_seen < state_index:
                     yielded_seen += 1
                     continue
-                self.visit_child(node)
+                self.visit(node)
                 return
             if yielded_seen < state_index:
                 continue
             stack_size_before = len(self.result_stack)
             cleanup_depth = len(self.cleanup_stack)
-            self.visit_child(node)
+            self.visit(node)
             del self.result_stack[stack_size_before:]
             if self._llvm.ir_builder.block.is_terminated:
                 return

@@ -467,7 +467,7 @@ class ClassVisitorMixin(FileVisitorMixin):
         assert isinstance(llvm_type, ir.PointerType)
         values: list[ir.Value] = []
         for expression in resolution.evaluations:
-            self.visit_child(expression)
+            self.visit(expression)
             value = require_lowered_value(
                 safe_pop(self.result_stack),
                 node=expression,
@@ -590,7 +590,7 @@ class ClassVisitorMixin(FileVisitorMixin):
                             self.named_values[receiver.symbol_id] = (
                                 receiver_slot
                             )
-                        self.visit_child(item.value)
+                        self.visit(item.value)
                         if receiver is not None:
                             if previous_receiver is None:
                                 self.named_values.pop(receiver.symbol_id, None)
@@ -664,7 +664,7 @@ class ClassVisitorMixin(FileVisitorMixin):
                         for (
                             parameter
                         ) in phase.initializer.prototype.args.nodes:
-                            self.visit_child(parameter.default)
+                            self.visit(parameter.default)
                             arguments.append(
                                 self._cast_ast_value(
                                     require_lowered_value(

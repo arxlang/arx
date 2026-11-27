@@ -54,7 +54,7 @@ def lower_materialization(
     length = cursor.length
     limit = length
     if plan.max_items is not None:
-        visitor.visit_child(plan.max_items)
+        visitor.visit(plan.max_items)
         raw_limit = require_lowered_value(
             safe_pop(visitor.result_stack), node=node, context="max_items"
         )

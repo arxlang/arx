@@ -40,7 +40,7 @@ class NullableVisitorMixin(DataFrameVisitorMixin):
           target: Destination of the operation.
         returns: Encoded either an opaque column or fixed-width scalar bits.
         """
-        self.visit_child(node)
+        self.visit(node)
         value = require_lowered_value(
             safe_pop(self.result_stack), node=node, context="column operand"
         )
@@ -275,7 +275,7 @@ class NullableVisitorMixin(DataFrameVisitorMixin):
                 "column_valid", ir.IntType(32)
             )
             operand = self.column_operand(node.value)
-            self.visit_child(node.index)
+            self.visit(node.index)
             index = require_lowered_value(
                 safe_pop(self.result_stack),
                 node=node.index,
@@ -355,7 +355,7 @@ class NullableVisitorMixin(DataFrameVisitorMixin):
                 values.append(ir.Constant(ir.IntType(64), default))
                 continue
             bounds |= 1 << index
-            self.visit_child(bound)
+            self.visit(bound)
             value = require_lowered_value(
                 safe_pop(self.result_stack), node=bound, context="slice bound"
             )
@@ -404,7 +404,7 @@ class NullableVisitorMixin(DataFrameVisitorMixin):
         """
         assert isinstance(node.lhs, astx.SubscriptExpr)
         column = self.column_operand(node.lhs.value)[0]
-        self.visit_child(node.lhs.index)
+        self.visit(node.lhs.index)
         index = require_lowered_value(
             safe_pop(self.result_stack),
             node=node,

@@ -36,7 +36,7 @@ class UnaryOpVisitorMixin(VisitorMixinBase):
         if cast(NullableVisitorMixin, self).lower_column_operation(node):
             return
         if node.op_code in {"+", "-"}:
-            self.visit_child(node.operand)
+            self.visit(node.operand)
             value = require_lowered_value(
                 safe_pop(self.result_stack),
                 node=node.operand,
@@ -79,7 +79,7 @@ class UnaryOpVisitorMixin(VisitorMixinBase):
             return
 
         if node.op_code == "!":
-            self.visit_child(node.operand)
+            self.visit(node.operand)
             val = safe_pop(self.result_stack)
             if val is None:
                 raise Exception("codegen: Invalid unary operand.")

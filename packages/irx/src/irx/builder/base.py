@@ -157,14 +157,6 @@ class BuilderVisitor(BaseVisitor):
         """
         super().visit(node)
 
-    def visit_child(self, node: astx.AST) -> None:
-        """
-        title: Forward a child AST node through the public visit dispatcher.
-        parameters:
-          node: Syntax node to process.
-        """
-        self.visit(node)
-
     def translate(self, expr: astx.AST) -> str:
         """
         title: Translate an ASTx expression to string.

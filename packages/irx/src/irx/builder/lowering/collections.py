@@ -265,7 +265,7 @@ class CollectionVisitorMixin(VisitorMixinBase):
         if not entries:
             return ir.Constant(self._llvm.BOOLEAN_TYPE, 0)
 
-        self.visit_child(value)
+        self.visit(value)
         needle = safe_pop(self.result_stack)
         if needle is None:
             raise TypeError("collection containment requires a value")
@@ -278,7 +278,7 @@ class CollectionVisitorMixin(VisitorMixinBase):
                 entry_type, probe_type, resolution
             ):
                 continue
-            self.visit_child(entry)
+            self.visit(entry)
             candidate = safe_pop(self.result_stack)
             if candidate is None:
                 raise TypeError("collection containment entry is not a value")
@@ -327,7 +327,7 @@ class CollectionVisitorMixin(VisitorMixinBase):
             base,
         )
         guard_collection_length(cast(VisitorCore, self), base, length)
-        self.visit_child(value)
+        self.visit(value)
         needle = safe_pop(self.result_stack)
         if needle is None:
             raise TypeError("list search requires a value")
@@ -570,7 +570,7 @@ class CollectionVisitorMixin(VisitorMixinBase):
         if not entries:
             return self._initial_list_search_result(method)
 
-        self.visit_child(value)
+        self.visit(value)
         needle = safe_pop(self.result_stack)
         if needle is None:
             raise TypeError("collection search requires a value")
@@ -583,7 +583,7 @@ class CollectionVisitorMixin(VisitorMixinBase):
                 entry_type, probe_type, resolution
             ):
                 continue
-            self.visit_child(entry)
+            self.visit(entry)
             candidate = safe_pop(self.result_stack)
             if candidate is None:
                 raise TypeError("collection search entry is not a value")

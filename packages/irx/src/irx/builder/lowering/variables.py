@@ -12,7 +12,12 @@ from llvmlite import ir
 from public import private
 
 from irx.analysis.ownership import resource_ownership
-from irx.analysis.resolved_nodes import OwnershipKind, ResourceKind
+from irx.analysis.resolved_nodes import (
+    OwnershipKind,
+    OwnershipTransferKind,
+    ResourceKind,
+    SemanticInfo,
+)
 from irx.analysis.types import is_string_type
 from irx.builder.core import (
     VisitorCore,
@@ -153,33 +158,6 @@ class VariableVisitorMixin(ClassVisitorMixin):
             )
         )
 
-    def _destroy_replaced_list(
-        self,
-        node: astx.AST,
-        list_ptr: ir.Value,
-        *,
-        target_name: str,
-    ) -> None:
-        """
-        title: Destroy owned list storage immediately before replacement.
-        parameters:
-          node: Syntax node to process.
-          list_ptr: List ptr.
-          target_name: Name of target.
-        """
-        ownership = resource_ownership(node)
-        if ownership is None or ownership.kind is not OwnershipKind.OWNED:
-            raise_lowering_internal_error(
-                f"list assignment to '{target_name}' is missing a validated "
-                "ownership transfer",
-                node=node,
-            )
-        destroy_fn = self.require_runtime_symbol(
-            LIST_RUNTIME_FEATURE,
-            LIST_DESTROY_SYMBOL,
-        )
-        self._llvm.ir_builder.call(destroy_fn, [list_ptr])
-
     def _register_owned_string_cleanup(
         self,
         node: astx.VariableDeclaration
@@ -206,7 +184,8 @@ class VariableVisitorMixin(ClassVisitorMixin):
             return
         if (
             ownership.resource_kind is not ResourceKind.STRING
-            or ownership.kind is not OwnershipKind.OWNED
+            or ownership.kind
+            not in {OwnershipKind.OWNED, OwnershipKind.OWNED_OR_STATIC}
             or ownership.owner_symbol_id is None
         ):
             raise_lowering_internal_error(
@@ -221,17 +200,40 @@ class VariableVisitorMixin(ClassVisitorMixin):
                 node=node,
             )
 
+        cleanup_ptr = string_ptr
+        if ownership.kind is OwnershipKind.OWNED_OR_STATIC:
+            # This slot contains only heap storage. A null entry means the
+            # binding currently points to a literal or other static data.
+            pointee = self._llvm.INT8_TYPE.as_pointer()
+            cleanup_ptr = self.create_entry_block_alloca(
+                f"{node.name}.owned_string", pointee
+            )
+            info = resource_ownership(
+                node.value if not isinstance(node, astx.Identifier) else None
+            )
+            owned = (
+                self._llvm.ir_builder.load(string_ptr)
+                if info is not None and info.kind is OwnershipKind.OWNED
+                else ir.Constant(pointee, None)
+            )
+            self._llvm.ir_builder.store(owned, cleanup_ptr)
+            self.named_values[f"string.owner:{ownership.owner_symbol_id}"] = (
+                cleanup_ptr
+            )
+
         free_fn = self.require_runtime_symbol("libc", "free")
 
         def destroy_string() -> None:
             """
-            title: Destroy the currently stored string pointer.
+            title: Release the current heap generation of the local string.
             """
             pointer = self._llvm.ir_builder.load(
-                string_ptr,
-                name=f"{node.name}_string_cleanup",
+                cleanup_ptr, name=f"{node.name}_string_cleanup"
             )
-            self._llvm.ir_builder.call(free_fn, [pointer])
+            if ownership.kind is OwnershipKind.OWNED_OR_STATIC:
+                self.release_string_generation(pointer)
+            else:
+                self._llvm.ir_builder.call(free_fn, [pointer])
 
         self.cleanup_stack.append(
             CleanupAction(
@@ -241,45 +243,126 @@ class VariableVisitorMixin(ClassVisitorMixin):
             )
         )
 
-    def _destroy_replaced_string(
-        self,
-        node: astx.AST,
-        string_ptr: ir.Value,
-        *,
-        target_name: str,
+    @private
+    def release_string_generation(self, pointer: ir.Value) -> None:
+        """
+        title: Release a heap generation when a string binding owns one.
+        parameters:
+          pointer: Heap address or null for a static generation.
+        """
+        builder = self._llvm.ir_builder
+        owned = builder.icmp_unsigned(
+            "!=", pointer, ir.Constant(pointer.type, None)
+        )
+        with builder.if_then(owned):
+            free = self.require_runtime_symbol("libc", "free")
+            builder.call(free, [pointer])
+
+    @private
+    def store_local_resource(
+        self, node: astx.AST, address: ir.Value, value: ir.Value
+    ) -> ir.Value:
+        """
+        title: Commit a prepared local assignment using its ownership plan.
+        parameters:
+          node: Assignment with resolved resource storage.
+          address: Address of the destination binding.
+          value: Evaluated and converted new value.
+        returns: The value stored in the destination.
+        """
+        semantic = getattr(node, "semantic", None)
+        store = (
+            semantic.resolved_resource_store
+            if isinstance(semantic, SemanticInfo)
+            else None
+        )
+        if store is not None and store.resource_kind in {
+            ResourceKind.LIST,
+            ResourceKind.STRING,
+        }:
+            if store.source_symbol_id == store.owner_symbol_id:
+                return value
+            if store.resource_kind is ResourceKind.LIST:
+                self.clear_moved_list(node, value, store.source_symbol_id)
+                destroy = self.require_runtime_symbol(
+                    LIST_RUNTIME_FEATURE, LIST_DESTROY_SYMBOL
+                )
+                self._llvm.ir_builder.call(destroy, [address])
+            else:
+                if store.transfer_kind is OwnershipTransferKind.COPY:
+                    value = self._copy_string_to_heap(node, value)
+                clear_text_query_caches(cast(VisitorCore, self), address)
+                cleanup_ptr = self.named_values.get(
+                    f"string.owner:{store.owner_symbol_id}"
+                )
+                if cleanup_ptr is not None:
+                    self.release_string_generation(
+                        self._llvm.ir_builder.load(cleanup_ptr)
+                    )
+                elif store.kind is OwnershipKind.OWNED:
+                    free = self.require_runtime_symbol("libc", "free")
+                    self._llvm.ir_builder.call(
+                        free, [self._llvm.ir_builder.load(address)]
+                    )
+                if cleanup_ptr is not None:
+                    self._llvm.ir_builder.store(
+                        value
+                        if store.kind is OwnershipKind.OWNED
+                        else ir.Constant(value.type, None),
+                        cleanup_ptr,
+                    )
+        self._llvm.ir_builder.store(value, address)
+        return value
+
+    @private
+    def clear_moved_list(
+        self, node: astx.AST, value: ir.Value, source_id: str | None
     ) -> None:
         """
-        title: Destroy owned string storage before a validated replacement.
+        title: Disarm the original list cleanup after a named move.
         parameters:
           node: Syntax node to process.
-          string_ptr: String ptr.
-          target_name: Name of target.
+          value: Evaluated list descriptor.
+          source_id: Resolved source binding, if named.
         """
-        ownership = resource_ownership(node)
-        if ownership is None:
-            raise_lowering_internal_error(
-                f"string assignment to '{target_name}' is missing ownership "
-                "metadata",
-                node=node,
-            )
-        clear_text_query_caches(cast(VisitorCore, self), string_ptr)
-        if ownership.kind is OwnershipKind.STATIC:
+        if source_id is None:
             return
-        if (
-            ownership.resource_kind is not ResourceKind.STRING
-            or ownership.kind is not OwnershipKind.OWNED
-        ):
+        source = self.named_values.get(source_id)
+        if source is None:
             raise_lowering_internal_error(
-                f"string assignment to '{target_name}' is missing a "
-                "validated ownership transfer",
-                node=node,
+                "list move has no resolved source storage", node=node
             )
-        old_pointer = self._llvm.ir_builder.load(
-            string_ptr,
-            name=f"{target_name}_replaced_string",
+        self._llvm.ir_builder.store(ir.Constant(value.type, None), source)
+
+    @private
+    def prepare_local_initializer(
+        self,
+        node: astx.VariableDeclaration | astx.InlineVariableDeclaration,
+        value: ir.Value,
+    ) -> ir.Value:
+        """
+        title: Prepare a resolved ownership transfer for a new binding.
+        parameters:
+          node: Declaration with the analyzed initializer.
+          value: Evaluated and converted initial value.
+        returns: Initial value ready to own its storage.
+        """
+        semantic = getattr(node, "semantic", None)
+        store = (
+            semantic.resolved_resource_store
+            if isinstance(semantic, SemanticInfo)
+            else None
         )
-        free_fn = self.require_runtime_symbol("libc", "free")
-        self._llvm.ir_builder.call(free_fn, [old_pointer])
+        if store is not None and store.resource_kind is ResourceKind.LIST:
+            self.clear_moved_list(node, value, store.source_symbol_id)
+        ownership = resource_ownership(node.value)
+        if (
+            ownership is not None
+            and ownership.resource_kind is ResourceKind.STRING
+            and ownership.transfer_kind is OwnershipTransferKind.COPY
+        ):
+            return self._copy_string_to_heap(node, value)
+        return value
 
     @VisitorCore.visit.dispatch
     def visit(self, expr: astx.VariableAssignment) -> None:
@@ -297,7 +380,7 @@ class VariableVisitorMixin(ClassVisitorMixin):
                 node=expr,
             )
 
-        self.visit_child(expr.value)
+        self.visit(expr.value)
         llvm_value = safe_pop(self.result_stack)
         if llvm_value is None:
             raise Exception("codegen: Invalid value in VariableAssignment.")
@@ -314,22 +397,9 @@ class VariableVisitorMixin(ClassVisitorMixin):
                 node=expr,
             )
 
-        if isinstance(
-            self._resolved_ast_type(expr), (astx.ListType, astx.Bytes)
-        ):
-            self._destroy_replaced_list(
-                expr,
-                llvm_var,
-                target_name=expr.name,
-            )
-        elif is_string_type(self._resolved_ast_type(expr)):
-            self._destroy_replaced_string(
-                expr,
-                llvm_var,
-                target_name=expr.name,
-            )
-        self._llvm.ir_builder.store(llvm_value, llvm_var)
-        self.result_stack.append(llvm_value)
+        self.result_stack.append(
+            self.store_local_resource(expr, llvm_var, llvm_value)
+        )
 
     @VisitorCore.visit.dispatch
     def visit(self, node: astx.Identifier) -> None:
@@ -365,7 +435,7 @@ class VariableVisitorMixin(ClassVisitorMixin):
             return
         namespace_value = self._namespace_value(node)
         if namespace_value is not None:
-            self.visit_child(node.value)
+            self.visit(node.value)
             _ = safe_pop(self.result_stack)
             self.result_stack.append(namespace_value)
             return
@@ -466,7 +536,7 @@ class VariableVisitorMixin(ClassVisitorMixin):
         if node.value is not None and not isinstance(
             node.value, astx.Undefined
         ):
-            self.visit_child(node.value)
+            self.visit(node.value)
             init_val = safe_pop(self.result_stack)
             if init_val is None:
                 raise Exception("Initializer code generation failed.")
@@ -475,6 +545,7 @@ class VariableVisitorMixin(ClassVisitorMixin):
                 source_type=self._resolved_ast_type(node.value),
                 target_type=self._resolved_ast_type(node),
             )
+            init_val = self.prepare_local_initializer(node, init_val)
 
             if type_str == "string":
                 alloca = self.create_entry_block_alloca(
@@ -629,7 +700,7 @@ class VariableVisitorMixin(ClassVisitorMixin):
                 f"'{node.name}'."
             )
         if node.value is not None:
-            self.visit_child(node.value)
+            self.visit(node.value)
             init_val = safe_pop(self.result_stack)
             if init_val is None:
                 raise Exception("Initializer code generation failed.")
@@ -638,6 +709,7 @@ class VariableVisitorMixin(ClassVisitorMixin):
                 source_type=self._resolved_ast_type(node.value),
                 target_type=self._resolved_ast_type(node),
             )
+            init_val = self.prepare_local_initializer(node, init_val)
         elif isinstance(self._resolved_ast_type(node), astx.StructType):
             init_val = ir.Constant(llvm_type, None)
         elif isinstance(
