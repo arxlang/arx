@@ -8,7 +8,7 @@ fn choose(flag: bool, when_true: i32, when_false: i32) -> i32:
   title: choose
   summary: Returns one branch-selected integer value.
   ```
-  if flag && true:
+  if flag and true:
     return when_true
   else:
     return when_false
@@ -126,8 +126,8 @@ fn test_boolean_short_circuit_evaluation() -> none:
   title: test_boolean_short_circuit_evaluation
   summary: Confirms Boolean operands evaluate left to right and short circuit.
   ```
-  assert (false && fail_if_evaluated()) == false
-  assert (true || fail_if_evaluated()) == true
+  assert (false and fail_if_evaluated()) == false
+  assert (true or fail_if_evaluated()) == true
   assert not false or fail_if_evaluated()
   assert not (false and not fail_if_evaluated())
 

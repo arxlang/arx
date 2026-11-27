@@ -22,7 +22,7 @@ from arx.dataframe import (
 from arx.exceptions import ParserException
 from arx.lexer import TokenKind
 from arx.parser.base import ParserMixinBase
-from arx.parser.state import TypeUseContext
+from arx.parser.state import BORROW_OPERATORS, TypeUseContext
 from arx.tensor import attach_binding
 
 NOT_PRECEDENCE = 7
@@ -300,29 +300,58 @@ class ExpressionParserMixin(ParserMixinBase):
                 "in a statement or count-loop update, not an expression.",
                 self.tokens.cur_tok.location,
             )
+        if self._is_operator("&&"):
+            raise ParserException(
+                "Use 'and' for logical AND.",
+                self.tokens.cur_tok.location,
+            )
+        if self._is_operator("|"):
+            bar = self.tokens.cur_tok
+            following = self._peek_token()
+            if (
+                following.kind == TokenKind.operator
+                and following.value == "|"
+                and following.location.line == bar.location.line
+                and following.location.col == bar.location.col + 1
+            ):
+                raise ParserException("Use 'or' for logical OR.", bar.location)
         return expression
 
     def parse_assignment_or_expression(self) -> astx.AST:
         """
-        title: Parse a scalar compound statement or an ordinary expression.
+        title: Parse a standalone assignment or an ordinary expression.
         summary: Only statement and count-loop dispatch may enter this path.
           Preserve target, operator, and RHS locations without duplicating
           evaluations; IRx validates mutability, numeric types, and loop
           binding identity.
-        returns: Parsed a scalar compound statement or an ordinary expression.
+        returns: Parsed a standalone assignment or an ordinary expression.
         """
         target = self.tokens.cur_tok
         following = self._peek_token()
         if (
             target.kind != TokenKind.identifier
             or following.kind != TokenKind.operator
-            or following.value not in COMPOUND_OPERATORS
             or following.location.line != target.location.line
         ):
             return self.parse_expression()
+
+        access = None
+        prefix = self._peek_token(1)
+        if (
+            following.value == "="
+            and prefix.kind == TokenKind.operator
+            and prefix.location.line == following.location.line
+        ):
+            access = BORROW_OPERATORS.get(cast(str, prefix.value))
+        if access is None and following.value not in COMPOUND_OPERATORS:
+            return self.parse_expression()
+
         self.tokens.get_next_token()
-        operator = self.tokens.cur_tok
         self.tokens.get_next_token()
+        operator = following
+        if access is not None:
+            operator = prefix
+            self.tokens.get_next_token()
         value_token = self.tokens.cur_tok
         if (
             value_token.kind in {TokenKind.eof, TokenKind.indent}
@@ -333,7 +362,11 @@ class ExpressionParserMixin(ParserMixinBase):
             )
         ):
             raise ParserException(
-                "Expected a value after compound assignment.",
+                (
+                    "A borrow requires a source place."
+                    if access is not None
+                    else "Expected a value after compound assignment."
+                ),
                 value_token.location,
             )
         value = self.parse_expression()
@@ -341,9 +374,20 @@ class ExpressionParserMixin(ParserMixinBase):
             isinstance(value, astx.BinaryOp) and value.op_code == "="
         ):
             raise ParserException(
-                "Compound assignment requires a value, not a statement "
-                "or chained assignment.",
+                (
+                    "A borrow requires a source place."
+                    if access is not None
+                    else "Compound assignment requires a value, not a "
+                    "statement or chained assignment."
+                ),
                 value_token.location,
+            )
+        if access is not None:
+            return astx.BorrowRetarget(
+                astx.Identifier(cast(str, target.value), loc=target.location),
+                value,
+                access,
+                loc=operator.location,
             )
         return astx.AugAssign(
             astx.Identifier(cast(str, target.value), loc=target.location),
@@ -972,6 +1016,12 @@ class ExpressionParserMixin(ParserMixinBase):
 
         op_code = cast(str, self.tokens.cur_tok.value)
         op_loc = self.tokens.cur_tok.location
+        if op_code in BORROW_OPERATORS:
+            raise ParserException(
+                "Borrow prefixes require a local alias initializer or "
+                "retargeting assignment.",
+                op_loc,
+            )
         if op_code == "::":
             raise ParserException(
                 "'::' is only valid in a declaration modifier group or slice.",
@@ -1034,7 +1084,7 @@ class ExpressionParserMixin(ParserMixinBase):
 
             bin_op = cast(str, self.tokens.cur_tok.value)
             bin_loc = self.tokens.cur_tok.location
-            self.tokens.get_next_token()  # eat operator
+            self.tokens.get_next_token()
 
             rhs = self.parse_unary(cur_prec + 1)
 

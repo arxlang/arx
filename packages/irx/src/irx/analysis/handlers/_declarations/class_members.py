@@ -91,6 +91,13 @@ class DeclarationClassMemberVisitorMixin(DeclarationClassMethodVisitorMixin):
                 )
                 continue
             attribute_names.add(attribute.name)
+            if isinstance(attribute, astx.BorrowDeclaration):
+                self.context.diagnostics.add(
+                    "borrow bindings are supported only as local variables",
+                    node=attribute,
+                    code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
+                )
+                continue
             inferred = isinstance(attribute.type_, astx.InferredType)
             attribute_type: astx.DataType | None
             if inferred:

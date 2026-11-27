@@ -16,6 +16,7 @@ from typing import cast
 import astx
 
 from irx.analysis.arrow_conversion import arrow_ownership
+from irx.analysis.borrows import check_borrow_access
 from irx.analysis.call_arguments import (
     analyze_numeric_arguments,
     argument_slots,
@@ -516,6 +517,7 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
         self._semantic(node).lifecycle_self = False
         symbol = self.context.scopes.resolve(node.name)
         if symbol is not None:
+            check_borrow_access(self.context, symbol, node)
             self._set_symbol(node, symbol)
             self._set_type(node, symbol.type_)
             if isinstance(symbol.type_, astx.ClassType):

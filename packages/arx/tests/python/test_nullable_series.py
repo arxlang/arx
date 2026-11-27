@@ -83,7 +83,7 @@ fn main() -> i32:
   equal: series[bool | none] = sum == column
   assert is_null(equal[1])
   assert !fill_null(equal[0], true)
-  logical: series[bool | none] = equal || false
+  logical: series[bool | none] = equal or false
   assert is_null(logical[1])
   assert !fill_null(logical[0], true)
   offset: series[i32 | none] = column + 10

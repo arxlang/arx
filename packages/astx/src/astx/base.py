@@ -120,6 +120,8 @@ class ASTKind(Enum):
     VariableAssignmentKind = -205
     VarsAssignKind = -206
     DeleteStmtKind = -207
+    BorrowDeclarationKind = -208
+    BorrowRetargetKind = -209
 
     # operators
     UnaryOpKind = -300

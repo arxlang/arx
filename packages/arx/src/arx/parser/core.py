@@ -63,9 +63,7 @@ class ParserCore(ParserMixinBase):
         """
         self.bin_op_precedence = {
             "=": 2,
-            "||": 5,
             "or": 5,
-            "&&": 6,
             "and": 6,
             "==": 10,
             "!=": 10,

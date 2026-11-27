@@ -1793,6 +1793,24 @@ class VisitorCore(StringIRMixin, BuilderVisitor):
             )
         return cast(ir.Value, global_value)
 
+    @private
+    def binding_address(self, node: astx.AST, slot: ir.Value) -> ir.Value:
+        """
+        title: Resolve a storage slot or load the address held by a borrow.
+        parameters:
+          node: Access with a resolved symbol.
+          slot: Storage for the resolved binding.
+        returns: Address of the value being accessed.
+        """
+        info = getattr(node, "semantic", None)
+        if (
+            isinstance(info, SemanticInfo)
+            and info.resolved_symbol is not None
+            and info.resolved_symbol.kind == "borrow"
+        ):
+            return self._llvm.ir_builder.load(slot, name="borrow.address")
+        return slot
+
     def _lvalue_address(
         self,
         node: astx.AST,
@@ -1808,7 +1826,7 @@ class VisitorCore(StringIRMixin, BuilderVisitor):
             address = self.named_values.get(symbol_key)
             if address is None:
                 raise Exception(f"Unknown variable name: {node.name}")
-            return address
+            return self.binding_address(node, address)
         if isinstance(node, astx.FieldAccess):
             return self._field_address(node)
         if isinstance(node, astx.BaseFieldAccess):

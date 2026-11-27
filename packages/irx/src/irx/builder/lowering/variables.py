@@ -397,8 +397,9 @@ class VariableVisitorMixin(ClassVisitorMixin):
                 node=expr,
             )
 
+        address = self.binding_address(expr, llvm_var)
         self.result_stack.append(
-            self.store_local_resource(expr, llvm_var, llvm_value)
+            self.store_local_resource(expr, address, llvm_value)
         )
 
     @VisitorCore.visit.dispatch
@@ -411,7 +412,8 @@ class VariableVisitorMixin(ClassVisitorMixin):
         symbol_key = semantic_symbol_key(node, node.name)
         expr_var = self.named_values.get(symbol_key)
         if expr_var:
-            result = self._llvm.ir_builder.load(expr_var, node.name)
+            address = self.binding_address(node, expr_var)
+            result = self._llvm.ir_builder.load(address, node.name)
             self.result_stack.append(result)
             return
 
@@ -512,6 +514,59 @@ class VariableVisitorMixin(ClassVisitorMixin):
         field_ptr = self._static_class_field_address(node)
         result = self._llvm.ir_builder.load(field_ptr, node.field_name)
         self.result_stack.append(result)
+
+    @private
+    def store_borrow_address(
+        self, node: astx.BorrowDeclaration | astx.BorrowRetarget
+    ) -> None:
+        """
+        title: Store a validated place address into its local borrow slot.
+        parameters:
+          node: Borrow declaration or retargeting statement.
+        """
+        info = getattr(node, "semantic", None)
+        borrow = require_semantic_metadata(
+            info.resolved_borrow if isinstance(info, SemanticInfo) else None,
+            node=node,
+            metadata="resolved_borrow",
+            context="local borrow",
+        )
+        source = self.named_values.get(borrow.source.symbol_id)
+        if source is None:
+            raise_lowering_internal_error(
+                "borrow source has no resolved storage", node=node
+            )
+        slot: ir.Value | None
+        if isinstance(node, astx.BorrowDeclaration):
+            slot = self.create_entry_block_alloca(
+                borrow.target.name + ".borrow", source.type
+            )
+            self.named_values[borrow.target.symbol_id] = slot
+        else:
+            slot = self.named_values.get(borrow.target.symbol_id)
+            if slot is None:
+                raise_lowering_internal_error(
+                    "borrow binding has no resolved storage", node=node
+                )
+        self._llvm.ir_builder.store(source, slot)
+
+    @VisitorCore.visit.dispatch
+    def visit(self, node: astx.BorrowDeclaration) -> None:
+        """
+        title: Initialize the address stored by a local borrow.
+        parameters:
+          node: Borrow declaration.
+        """
+        self.store_borrow_address(node)
+
+    @VisitorCore.visit.dispatch
+    def visit(self, node: astx.BorrowRetarget) -> None:
+        """
+        title: Update the address stored by a local borrow.
+        parameters:
+          node: Borrow retargeting statement.
+        """
+        self.store_borrow_address(node)
 
     @VisitorCore.visit.dispatch
     def visit(self, node: astx.VariableDeclaration) -> None:

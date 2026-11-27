@@ -124,6 +124,7 @@
       ";",
       "@",
       "|",
+      "&",
       "!",
       "(",
       ")",
@@ -140,7 +141,6 @@
       ">=",
       "->",
       "&&",
-      "||",
       "++",
       "--",
       "+=",
@@ -151,9 +151,10 @@
     ],
     "word_operators": ["and", "or", "not"],
     "assignment": ["=", "+=", "-=", "*=", "/=", "%="],
+    "borrow": ["&", "&&"],
     "comparison": ["<", ">", "<=", ">=", "==", "!="],
     "arithmetic": ["+", "-", "*", "/", "%"],
-    "logical": ["&&", "||", "and", "or", "!", "not"],
+    "logical": ["and", "or", "!", "not"],
     "type_union": ["|"],
     "punctuation": ["@", ":", "::", ",", ";", "."]
   },
@@ -161,6 +162,7 @@
   "structural_forms": {
     "declarations": {
       "variable": "name: [modifiers ::] type [= initializer]",
+      "local_alias": "name: [modifiers ::] (&type | &&type | auto) = (&place | &&place)",
       "function": "fn name(parameters) -> [modifiers ::] type: body",
       "extern": "extern name(parameters) -> [public|private ::] type",
       "function_modifiers": ["public", "private"],

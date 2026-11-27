@@ -126,6 +126,37 @@ referenced object, change ownership, or require compile-time evaluation. Locals
 initialize on each call. Module declarations still obey the
 [module storage restrictions](modules.md).
 
+Use `&T` for a read-only alias and `&&T` for an exclusive alias to a local
+numeric or Boolean variable. Initialize the alias with `&place` or `&&place`,
+matching its access mode and the exact type of the source. With `auto`, the
+initializer determines both the type and the access mode.
+
+```arx
+fn edit() -> i32:
+  counter: i32 = 0
+  other: i32 = 5
+  editor: &&i32 = &&counter
+  editor = 42
+  editor += 1
+  editor = &&other
+  editor = 0
+  return editor
+```
+
+The alias name reads its current target directly. Assigning an ordinary value to
+an exclusive alias writes to its target. Assigning an explicit borrow retargets
+a mutable alias with the same access mode and type. A borrow ends when its alias
+leaves scope or retargets. Retargeting must take place in the alias's declaring
+scope.
+
+Several read-only aliases may borrow the same variable. The owner remains
+readable while read-only aliases are active. An exclusive alias is the only way
+to read or write its target while the borrow is active. A `const` alias keeps
+its target and, if exclusive, still permits writes through the alias.
+
+Use `and` and `or` for logical AND and OR. Prefix `&&` forms an exclusive
+borrow.
+
 `auto` infers one fixed type from an initializer; it is not dynamic typing.
 Uncontextualized numeric literals use the existing numeric defaults. Inference
 is available for initialized variables, literal-initialized fields, and
