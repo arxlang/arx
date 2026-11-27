@@ -3,6 +3,8 @@ title: Repository class tests
 summary: Cover inheritance, instance methods, field access, and statics.
 ```
 
+import (copy as duplicate) from stdlib.memory
+
 class BaseCounter:
   ```
   title: BaseCounter
@@ -85,3 +87,56 @@ fn test_class_static_members_and_construction() -> none:
   assert Counter.version == 3
   assert CounterFactory.version_value() == 3
   assert take_counter(built) == 128
+
+class CopyCounter:
+  ```
+  title: Counter with a class-defined copy operation
+  ```
+  value: i32 = 5
+
+  fn __copy__(self) -> CopyCounter:
+    ```
+    title: Duplicate the current counter value
+    ```
+    result: CopyCounter = CopyCounter()
+    result.value = self.value
+    return result
+
+class ScaledCopyCounter(CopyCounter):
+  ```
+  title: Customize copies to include a scale factor
+  ```
+  scale: i32 = 2
+
+  fn __copy__(self) -> ScaledCopyCounter:
+    ```
+    title: Apply the scale factor to the copied value
+    ```
+    result: ScaledCopyCounter = ScaledCopyCounter()
+    result.value = self.value * self.scale
+    result.scale = self.scale
+    return result
+
+fn copy_counter(value: CopyCounter) -> CopyCounter:
+  ```
+  title: Copy through a base-typed parameter and return the result
+  ```
+  return duplicate(value)
+
+fn test_class_copy() -> none:
+  ```
+  title: Exercise independent results and covariant virtual overrides
+  ```
+  source: CopyCounter = CopyCounter()
+  result: auto = duplicate(source)
+  result.value = 8
+  assert source.value == 5
+
+  derived: ScaledCopyCounter = ScaledCopyCounter()
+  derived.scale = 3
+  exact: ScaledCopyCounter = duplicate(derived)
+  assert exact.scale == 3
+  assert exact.value == 15
+  virtual: CopyCounter = copy_counter(derived)
+  assert virtual.value == 15
+  assert derived.value == 5

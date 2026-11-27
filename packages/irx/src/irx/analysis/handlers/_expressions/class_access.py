@@ -318,6 +318,24 @@ class ExpressionClassAccessVisitorMixin(ExpressionClassSupportVisitorMixin):
             cast(SemanticAnalyzerCore, self), node, node.method_name
         ):
             return
+        self.bind_instance_method(node, class_, receiver_type, arg_types)
+
+    @private
+    def bind_instance_method(
+        self,
+        node: astx.MethodCall,
+        class_: SemanticClass,
+        receiver_type: astx.DataType | None,
+        arg_types: list[astx.DataType | None],
+    ) -> None:
+        """
+        title: Resolve an instance invocation after its operands are analyzed.
+        parameters:
+          node: Instance method call.
+          class_: Resolved class of the receiver.
+          receiver_type: Analyzed receiver type.
+          arg_types: Types of the explicit arguments in source order.
+        """
         resolved_overload = self._resolve_method_overload(
             class_,
             node.method_name,

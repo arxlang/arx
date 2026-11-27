@@ -15,14 +15,13 @@ import astx
 
 from irx.analysis.module_interfaces import ImportResolutionError, ParsedModule
 
-from arx import arrow_stdlib, native_packages, package_index
+from arx import arrow_stdlib, memory_stdlib, native_packages, package_index
 from arx import builtins as arx_builtins
 from arx import settings as arx_settings
 from arx.codegen import ArxBuilder
 from arx.exceptions import ArxError
 from arx.io import ArxIO
 from arx.lexer import Lexer
-from arx.memory_stdlib import prepare_memory_module
 from arx.parser import Parser
 
 BUILTIN_NAMESPACE = arx_builtins.BUILTIN_NAMESPACE
@@ -794,12 +793,13 @@ class FileImportResolver:
 
         module_file = self._resolve_module_file(resolved_specifier)
         ArxIO.file_to_buffer(str(module_file))
+        builtin_types = None
+        if resolved_specifier in arrow_stdlib.MODULE_NAMES:
+            builtin_types = arrow_stdlib.type_bindings(resolved_specifier)
+        elif resolved_specifier == "stdlib.memory":
+            builtin_types = memory_stdlib.type_bindings()
         module_ast = Parser().parse(
-            Lexer().lex(),
-            resolved_specifier,
-            builtin_types=arrow_stdlib.type_bindings(resolved_specifier)
-            if resolved_specifier in arrow_stdlib.MODULE_NAMES
-            else None,
+            Lexer().lex(), resolved_specifier, builtin_types=builtin_types
         )
         module_ast = inject_ambient_builtin_imports(module_ast)
         if resolved_specifier in arrow_stdlib.MODULE_NAMES:
@@ -807,7 +807,9 @@ class FileImportResolver:
                 module_ast, str(module_file), resolved_specifier
             )
         elif resolved_specifier == "stdlib.memory":
-            parsed_module = prepare_memory_module(module_ast, str(module_file))
+            parsed_module = memory_stdlib.prepare_memory_module(
+                module_ast, str(module_file)
+            )
         else:
             parsed_module = self.prepare_module(
                 module_ast, resolved_specifier, str(module_file)

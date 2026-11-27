@@ -15,8 +15,11 @@ from public import private, public
 
 from irx.analysis.compute import ComputePlan
 from irx.analysis.extensions.records import CallPlan
-from irx.analysis.memory import ListCopyPlan
-from irx.analysis.resolved_nodes import ResolvedClassConstruction
+from irx.analysis.memory import ClassCopyPlan, ListCopyPlan
+from irx.analysis.resolved_nodes import (
+    ResolvedClassConstruction,
+    ResolvedMethodCall,
+)
 from irx.builder.diagnostics import (
     raise_lowering_internal_error,
 )
@@ -119,6 +122,20 @@ class CallLoweringServices(Protocol):
           source: Resolved dynamic list operand.
         """
         del node, source
+        raise NotImplementedError
+
+    @abstractmethod
+    def copy_class(
+        self, node: astx.AST, source: astx.DataType, method: ResolvedMethodCall
+    ) -> None:
+        """
+        title: Emit the resolved copy hook with class lifetime management.
+        parameters:
+          node: Copy call to lower.
+          source: Resolved receiver expression.
+          method: Bound copy hook.
+        """
+        del node, source, method
         raise NotImplementedError
 
     @abstractmethod
@@ -254,6 +271,16 @@ class CallLoweringVisitor:
           call: Call being processed.
         """
         call.services.copy_list(call.node, plan.source)
+
+    @dispatch
+    def visit(self, plan: ClassCopyPlan, call: LoweringCall) -> None:
+        """
+        title: Emit a resolved class copy using ordinary instance dispatch.
+        parameters:
+          plan: Resolved receiver and copy hook.
+          call: Call being processed.
+        """
+        call.services.copy_class(call.node, plan.source, plan.method)
 
     @dispatch
     def visit(self, plan: CallPlan, call: LoweringCall) -> None:

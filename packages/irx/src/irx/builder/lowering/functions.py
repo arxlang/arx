@@ -9,6 +9,7 @@ from typing import Any, Sequence, cast
 import astx
 
 from llvmlite import ir
+from public import private
 
 from irx.analysis.arrow_conversion import ARROW_RESOURCES
 from irx.analysis.extensions.records import CALL_PLAN, CallPlan
@@ -792,7 +793,7 @@ class FunctionVisitorMixin(ClassVisitorMixin):
         parameters:
           node: Syntax node to process.
         """
-        if lower_collection_access(self, node):
+        if lower_collection_access(cast(VisitorCore, self), node):
             return
         if lower_text_operation(cast(VisitorCore, self), node):
             return
@@ -855,15 +856,36 @@ class FunctionVisitorMixin(ClassVisitorMixin):
             self.result_stack.append(result)
             return
 
-        method_resolution = self._semantic_method_call(node)
-        self.visit(node.receiver)
+        result = self.lower_instance_method(
+            node, node.receiver, self._semantic_method_call(node)
+        )
+        if result is not None:
+            self._register_call_result_cleanup(node, result)
+            self.result_stack.append(result)
+
+    @private
+    def lower_instance_method(
+        self,
+        node: astx.AST,
+        receiver: astx.AST,
+        method_resolution: ResolvedMethodCall,
+    ) -> ir.Value | None:
+        """
+        title: Emit a bound instance call through its checked result ABI.
+        parameters:
+          node: Source call for diagnostics.
+          receiver: Expression evaluated once to supply the receiver.
+          method_resolution: Resolved receiver, dispatch, and call metadata.
+        returns: Result value read on success when the method returns one.
+        """
+        self.visit(receiver)
         receiver_value = require_lowered_value(
             safe_pop(self.result_stack),
-            node=node.receiver,
+            node=receiver,
             context=f"receiver for '{method_resolution.member.name}'",
         )
-        self.class_operation(node.receiver, "require", receiver_value)
-        self.class_pin(node.receiver, receiver_value)
+        self.class_operation(receiver, "require", receiver_value)
+        self.class_pin(receiver, receiver_value)
         receiver_parameter_type = (
             method_resolution.function.signature.parameters[0].type_
             if method_resolution.function.signature.parameters
@@ -871,7 +893,7 @@ class FunctionVisitorMixin(ClassVisitorMixin):
         )
         lowered_receiver = self._cast_ast_value(
             receiver_value,
-            source_type=self._resolved_ast_type(node.receiver),
+            source_type=self._resolved_ast_type(receiver),
             target_type=receiver_parameter_type,
         )
         llvm_args = self.lower_bound_call_arguments(
@@ -891,11 +913,33 @@ class FunctionVisitorMixin(ClassVisitorMixin):
                 method_resolution.function
             )
         self._apply_calling_convention(method_resolution.function.signature)
-        result = self.emit_resolved_call(
+        return self.emit_resolved_call(
             node, callee, method_resolution.function.signature, lowered_args
         )
-        if result is None:
-            return
+
+    @private
+    def lower_class_copy(
+        self,
+        node: astx.AST,
+        source: astx.DataType,
+        method: ResolvedMethodCall,
+    ) -> None:
+        """
+        title: Publish a copy after any receiver temporary has been released.
+        parameters:
+          node: Standard-library copy call.
+          source: Resolved copy receiver.
+          method: Bound copy hook.
+        """
+        depth = len(self.cleanup_stack)
+        result = require_lowered_value(
+            self.lower_instance_method(node, source, method),
+            node=node,
+            context="class copy",
+        )
+        rollback = self.class_cleanup(node, result, lexical=True)
+        self._emit_temporary_cleanups(depth)
+        self.cleanup_stack.remove(rollback)
         self._register_call_result_cleanup(node, result)
         self.result_stack.append(result)
 

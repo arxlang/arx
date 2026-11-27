@@ -4,10 +4,21 @@ title: Register memory operations for the bundled stdlib module.
 
 import astx
 
+from astx.types import AnyType
 from irx.analysis.module_interfaces import ParsedModule
 from irx.native import NativeBinding
 from irx.typecheck import typechecked
 from public import private
+
+
+@private
+@typechecked
+def type_bindings() -> dict[str, astx.DataType]:
+    """
+    title: Bind the copy protocol bound only in the bundled memory module.
+    returns: Private template-bound marker interpreted by IRx copy analysis.
+    """
+    return {"CopyableClass": AnyType()}
 
 
 @private
