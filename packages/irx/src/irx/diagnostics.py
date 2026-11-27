@@ -525,6 +525,25 @@ class DiagnosticBag:
         """
         return bool(self.diagnostics)
 
+    def checkpoint(self) -> int:
+        """
+        title: Record the current position in the diagnostic bag.
+        returns: Number of diagnostics already collected.
+        """
+        return len(self.diagnostics)
+
+    def has_errors_since(self, checkpoint: int) -> bool:
+        """
+        title: Report whether an error was added after the checkpoint.
+        parameters:
+          checkpoint: Position previously recorded by this bag.
+        returns: Whether a new error was added.
+        """
+        return any(
+            diagnostic.severity == "error"
+            for diagnostic in self.diagnostics[checkpoint:]
+        )
+
     def format(
         self,
         *,
