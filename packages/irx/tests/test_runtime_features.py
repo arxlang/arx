@@ -289,13 +289,14 @@ def test_simple_module_uses_only_scalar_context_runtime() -> None:
 
 def test_list_runtime_exposes_status_and_destroy_contract() -> None:
     """
-    title: The list feature declares append checks and idempotent destruction.
+    title: The list feature exports checked operations and idempotent cleanup.
     """
     feature = build_list_runtime_feature()
 
     assert set(feature.symbols) == {
         "irx_list_append",
         "irx_list_at",
+        "irx_list_clone",
         "irx_list_destroy",
         "irx_list_status_message",
         "irx_list_sequence_read",

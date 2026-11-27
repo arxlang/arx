@@ -541,11 +541,14 @@ class SemanticRegistry:
             from irx.analysis.compute import ComputeOperation  # noqa: PLC0415
 
             signature = replace(signature, operation=ComputeOperation(compute))
+        if self.context.native_memory.get(id(prototype)) == "copy":
+            from irx.analysis.memory import CopyOperation  # noqa: PLC0415
+
+            signature = replace(signature, operation=CopyOperation())
         if (
             validate_ffi
             and signature.is_extern
-            and table_io is None
-            and compute is None
+            and signature.operation is None
         ):
             ffi = build_ffi_callable_info(
                 self.context,

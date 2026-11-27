@@ -19,15 +19,19 @@ from irx.analysis import (
     OwnershipEscapeKind,
     OwnershipKind,
     OwnershipTransferKind,
+    ParsedModule,
     SemanticError,
     analyze,
+    analyze_modules,
     resource_ownership,
 )
 from irx.builder import Builder
 from irx.builder.base import CommandResult
+from irx.native import NativeBinding
 from public import private
 
 from .conftest import (
+    StaticImportResolver,
     assert_ir_parses,
     assert_jit_int_main_result,
     workspace_tmpdir_env,
@@ -518,6 +522,41 @@ def test_dynamic_list_native_status_and_destroy_are_safe(
         text=True,
     )
     assert run_result.returncode == 0, run_result.stderr
+
+
+@pytest.mark.skipif(not HAS_LITERAL_LIST, reason="requires ASTx LiteralList")
+def test_copy_rejects_static_list_storage() -> None:
+    """
+    title: Reject static ASTx storage at the memory copy semantic boundary.
+    """
+    bound = astx.ListType([astx.Int32()])
+    type_ = astx.TemplateTypeVar("T", bound=bound)
+    prototype = astx.FunctionPrototype(
+        "copy", astx.Arguments(astx.Argument("value", type_)), type_
+    )
+    prototype.is_extern = True
+    astx.set_template_params(prototype, (astx.TemplateParam("T", bound),))
+    memory = astx.Module()
+    memory.block.append(prototype)
+    provider = ParsedModule(
+        "memory",
+        memory,
+        native_bindings=(NativeBinding(prototype, ("list",), memory="copy"),),
+        lazy_declarations=True,
+    )
+    root = _module_with_main(
+        astx.FunctionCall(
+            "copy", [astx.LiteralList(elements=[astx.LiteralInt32(1)])]
+        )
+    )
+    root.block.insert(
+        0, astx.ImportFromStmt(names=[astx.AliasExpr("copy")], module="memory")
+    )
+    with pytest.raises(SemanticError, match="copy requires a dynamic list"):
+        analyze_modules(
+            ParsedModule("main", root),
+            StaticImportResolver({"memory": provider}),
+        )
 
 
 def test_direct_list_length_from_temporary_list_create() -> None:

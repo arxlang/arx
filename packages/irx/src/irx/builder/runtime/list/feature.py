@@ -1,8 +1,8 @@
 """
 title: Dynamic-list runtime feature declarations.
-summary: Declare append, checked status, index, and idempotent storage
-  destruction for IRX lists. Language-level cleanup insertion remains
-  owned by semantic ownership metadata and lowering.
+summary: Declare append, clone, checked status, index, and idempotent storage
+  destruction for IRX lists. Language-level cleanup insertion remains owned
+  by semantic ownership metadata and lowering.
 """
 
 from __future__ import annotations
@@ -24,6 +24,7 @@ from irx.builder.runtime.sequence import declare_sequence_reader
 from irx.builtins.collections.list import (
     LIST_APPEND_SYMBOL,
     LIST_AT_SYMBOL,
+    LIST_CLONE_SYMBOL,
     LIST_DESTROY_SYMBOL,
     LIST_STATUS_MESSAGE_SYMBOL,
 )
@@ -57,6 +58,10 @@ def build_list_runtime_feature() -> RuntimeFeature:
                 LIST_AT_SYMBOL,
                 _declare_list_at,
             ),
+            LIST_CLONE_SYMBOL: ExternalSymbolSpec(
+                LIST_CLONE_SYMBOL,
+                declare_list_clone,
+            ),
             LIST_DESTROY_SYMBOL: ExternalSymbolSpec(
                 LIST_DESTROY_SYMBOL,
                 _declare_list_destroy,
@@ -79,6 +84,7 @@ def build_list_runtime_feature() -> RuntimeFeature:
             "symbols": (
                 LIST_APPEND_SYMBOL,
                 LIST_AT_SYMBOL,
+                LIST_CLONE_SYMBOL,
                 LIST_DESTROY_SYMBOL,
                 LIST_STATUS_MESSAGE_SYMBOL,
             ),
@@ -155,6 +161,23 @@ def _declare_list_at(visitor: VisitorProtocol) -> ir.Function:
         visitor._llvm.module,
         LIST_AT_SYMBOL,
         fn_type,
+    )
+
+
+@private
+@typechecked
+def declare_list_clone(visitor: VisitorProtocol) -> ir.Function:
+    """
+    title: Declare the checked clone for one borrowed list and fresh output.
+    parameters:
+      visitor: Visitor performing the traversal or lowering.
+    returns: Registered declaration for the native list clone operation.
+    """
+    pointer = _list_llvm_type(visitor).as_pointer()
+    return declare_external_function(
+        visitor._llvm.module,
+        LIST_CLONE_SYMBOL,
+        ir.FunctionType(visitor._llvm.INT32_TYPE, [pointer, pointer]),
     )
 
 

@@ -77,7 +77,28 @@ int main(void) {
   assert(irx_list_at(&numbers, 1, &item) == IRX_LIST_OUT_OF_RANGE);
   assert(item == NULL);
   assert(irx_list_at(&numbers, -1, &item) == IRX_LIST_OUT_OF_RANGE);
+  irx_list copy = {0};
+  assert(irx_list_clone(&numbers, &numbers) == IRX_LIST_INVALID_ARGUMENT);
+  assert(irx_list_clone(NULL, &copy) == IRX_LIST_INVALID_ARGUMENT);
+  assert(irx_list_clone(&numbers, NULL) == IRX_LIST_INVALID_ARGUMENT);
+  fail_after = 0;
+  assert(irx_list_clone(&numbers, &copy) == IRX_LIST_ALLOCATION_FAILED);
+  assert(copy.data == NULL && copy.length == 0 && live == 1);
+  fail_after = -1;
+  assert(irx_list_clone(&numbers, &copy) == IRX_LIST_OK);
+  assert(copy.data != numbers.data && copy.length == 1 && live == 2);
+  assert(irx_list_clone(&numbers, &copy) == IRX_LIST_INVALID_ARGUMENT);
+  assert(copy.length == 1 && live == 2);
   irx_list_destroy(&numbers);
+  assert(irx_list_at(&copy, 0, &item) == IRX_LIST_OK);
+  assert(*(int32_t*)item == 7);
+  irx_list_destroy(&copy);
+  fail_after = 0;
+  assert(irx_list_clone(&numbers, &copy) == IRX_LIST_OK);
+  assert(copy.element_size == sizeof(number) && copy.data == NULL);
+  fail_after = -1;
+  assert(irx_list_append(&copy, &number) == IRX_LIST_OK);
+  irx_list_destroy(&copy);
   irx_list_destroy(&numbers);
   assert(live == 0 && numbers.data == NULL && numbers.length == 0);
 
@@ -101,8 +122,23 @@ int main(void) {
   fail_after = 1; /* Clone succeeds, growth fails: roll back the clone. */
   assert(irx_list_append(&strings, &borrowed) == IRX_LIST_ALLOCATION_FAILED);
   assert(strings.length == 4 && strings.capacity == 4 && live == 5);
+  for (int budget = 0; budget < 5; ++budget) {
+    fail_after = budget;
+    assert(irx_list_clone(&strings, &copy) == IRX_LIST_ALLOCATION_FAILED);
+    assert(copy.data == NULL && copy.length == 0 && copy.capacity == 0);
+    assert(strings.length == 4 && live == 5);
+    assert(irx_list_at(&strings, 0, &item) == IRX_LIST_OK);
+    assert(strcmp(*(char**)item, "hello") == 0);
+  }
+  fail_after = -1;
+  assert(irx_list_clone(&strings, &copy) == IRX_LIST_OK);
+  void* copied_item = NULL;
+  assert(irx_list_at(&copy, 0, &copied_item) == IRX_LIST_OK);
+  assert(*(char**)copied_item != *(char**)item && live == 10);
   irx_list_destroy(&strings);
   irx_list_destroy(&strings);
+  assert(strcmp(*(char**)copied_item, "hello") == 0);
+  irx_list_destroy(&copy);
   assert(live == 0);
 
   borrowed = "";
@@ -122,6 +158,8 @@ int main(void) {
   huge.length = 0;
   huge.element_size = INT64_MAX;
   assert(irx_list_append(&huge, &number) == IRX_LIST_CAPACITY_OVERFLOW);
+  assert(irx_list_clone(&huge, &copy) == IRX_LIST_CAPACITY_OVERFLOW);
+  assert(copy.data == NULL && copy.length == 0);
   assert(live == 0);
 
   /* Every allocation frontier of split must release the entire partial list.

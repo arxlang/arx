@@ -142,6 +142,12 @@ def validate_native_registration(
             )
 
             validate_compute_registration(declaration)
+        if binding.memory == "copy":
+            from irx.analysis.memory import (  # noqa: PLC0415
+                validate_copy_registration,
+            )
+
+            validate_copy_registration(declaration)
 
 
 @private

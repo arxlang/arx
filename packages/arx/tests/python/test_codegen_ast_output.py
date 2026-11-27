@@ -2370,6 +2370,68 @@ def test_text_builtins_can_be_shadowed_by_a_function(name: str) -> None:
     assert "irx_text_" not in text
 
 
+@pytest.mark.parametrize(
+    ("body", "message"),
+    [
+        ("copy()", "copy expects one positional list value"),
+        ("copy(values, values)", "copy expects one positional list value"),
+        ("copy(value=values)", "copy expects one positional list value"),
+        ("copy<i32>(values)", "copy expects one positional list value"),
+        ("copy(1)", "copy requires a list of numeric, Boolean, or string"),
+        ("copy([[1]])", "nested"),
+        (
+            "editor: auto = &&values[0]\ncopy(values)",
+            "cannot read 'values' while it is borrowed",
+        ),
+        ("moved: list[i32] = values\ncopy(values)", "after a move"),
+        ("copy: i32 = 0\ncopy(values)", "does not resolve to a function"),
+    ],
+)
+def test_list_copy_invalid_calls(body: str, message: str) -> None:
+    """
+    title: Validate copy inputs and ordinary read permissions before lowering.
+    parameters:
+      body: Copy operation under test.
+      message: Expected semantic diagnostic.
+    """
+    ArxIO.string_to_buffer(
+        "import (copy) from stdlib.memory\n"
+        "fn main() -> i32:\n  values: list[i32] = [1]\n"
+        + indent(body, "  ")
+        + "\n  return 0\n"
+    )
+    with pytest.raises(SemanticError, match=message):
+        ArxBuilder().translate(Parser().parse(Lexer().lex()))
+
+
+def test_user_copy_keeps_its_binding() -> None:
+    """
+    title: Resolve a user callable independently of the imported operation.
+    """
+    ArxIO.string_to_buffer(
+        "import stdlib.memory as memory\n"
+        "fn copy(value: i32) -> i32:\n  return value\n"
+        "fn main() -> i32:\n  return copy(7)\n"
+    )
+    text = ArxBuilder().translate(Parser().parse(Lexer().lex()))
+    llvm.parse_assembly(text).verify()
+    assert "irx_list_clone" not in text
+
+
+@pytest.mark.parametrize("name", ["copy", "clone"])
+def test_list_copy_requires_import(name: str) -> None:
+    """
+    title: Confirm that list copying requires the standard-library binding.
+    parameters:
+      name: Unbound spelling used for a call.
+    """
+    ArxIO.string_to_buffer(f"fn main() -> i32:\n  {name}([1])\n  return 0\n")
+    with pytest.raises(
+        SemanticError, match=f"cannot resolve function '{name}'"
+    ):
+        ArxBuilder().translate(Parser().parse(Lexer().lex()))
+
+
 @pytest.mark.parametrize("name", ["len", "int", "ord"])
 def test_local_text_builtin_shadow_is_not_callable(name: str) -> None:
     """

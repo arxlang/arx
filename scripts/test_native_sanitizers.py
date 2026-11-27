@@ -176,6 +176,8 @@ def main() -> None:
                 "test_method_list_borrows",
                 "test_list_element_borrows",
                 "test_call_scoped_list_element_borrows",
+                "test_list_copy",
+                "test_list_copy_cleanup",
             ),
             work,
             flags,

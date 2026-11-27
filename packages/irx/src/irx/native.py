@@ -22,6 +22,7 @@ NativeArtifactKind = Literal[
 ]
 
 ComputeKernel = Literal["sqrt", "exp"]
+MemoryOperation = Literal["copy"]
 
 
 # Pure immutable names: analysis never imports LLVM or the builder registry.
@@ -227,12 +228,14 @@ class NativeBinding:
       features: Features.
       table_io: Table I/O.
       compute: Compute.
+      memory: Trusted memory operation.
     """
 
     declaration: astx.FunctionPrototype
     features: tuple[str, ...]
     table_io: TableIOOperation | None = None
     compute: ComputeKernel | None = None
+    memory: MemoryOperation | None = None
 
     def __init__(
         self,
@@ -240,6 +243,7 @@ class NativeBinding:
         features: tuple[str, ...],
         table_io: TableIOOperation | None = None,
         compute: ComputeKernel | None = None,
+        memory: MemoryOperation | None = None,
     ) -> None:
         """
         title: Validate a declaration identity and its feature names.
@@ -248,6 +252,7 @@ class NativeBinding:
           features: Features.
           table_io: Table I/O.
           compute: Compute.
+          memory: Trusted memory operation.
         """
         if not features or any(not name.strip() for name in features):
             raise ValueError("native bindings require nonempty feature names")
@@ -262,7 +267,15 @@ class NativeBinding:
                 "compute bindings require only the arrow_compute feature "
                 "and cannot also bind table I/O"
             )
+        if memory is not None and (
+            memory != "copy"
+            or features != ("list",)
+            or compute is not None
+            or table_io is not None
+        ):
+            raise ValueError("copy bindings require only the list feature")
         object.__setattr__(self, "declaration", declaration)
         object.__setattr__(self, "features", features)
         object.__setattr__(self, "table_io", table_io)
         object.__setattr__(self, "compute", compute)
+        object.__setattr__(self, "memory", memory)

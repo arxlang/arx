@@ -23,6 +23,7 @@ from irx.diagnostics import DiagnosticBag, DiagnosticCodes
 from irx.native import (
     BUILTIN_RUNTIME_FEATURES,
     ComputeKernel,
+    MemoryOperation,
     NativeFeature,
     TableIOOperation,
 )
@@ -88,6 +89,7 @@ class CompilationSession:
       native_bindings: Native bindings.
       native_table_io: Native table I/O.
       native_compute: Native compute.
+      native_memory: Trusted memory operations by declaration identity.
       lowering_declarations: Lowering declarations.
       runtime_exception_types: Types of runtime exception.
       _resolution_cache: Resolution cache.
@@ -110,6 +112,7 @@ class CompilationSession:
     native_bindings: dict[int, tuple[str, ...]] = field(default_factory=dict)
     native_table_io: dict[int, TableIOOperation] = field(default_factory=dict)
     native_compute: dict[int, ComputeKernel] = field(default_factory=dict)
+    native_memory: dict[int, MemoryOperation] = field(default_factory=dict)
     lowering_declarations: frozenset[int] | None = None
     runtime_exception_types: dict[str, ResolvedExceptionType] = field(
         default_factory=dict
@@ -202,6 +205,8 @@ class CompilationSession:
                 )
             if binding.compute is not None:
                 self.native_compute[id(binding.declaration)] = binding.compute
+            if binding.memory is not None:
+                self.native_memory[id(binding.declaration)] = binding.memory
 
     def module(self, module_key: ModuleKey) -> ParsedModule:
         """
