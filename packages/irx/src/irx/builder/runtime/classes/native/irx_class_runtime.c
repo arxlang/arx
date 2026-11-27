@@ -6,6 +6,8 @@
 
 typedef struct {
   uint64_t references;
+  uint64_t weak_references;
+  void* payload;
   int32_t completed;
   irx_class_drop drop;
 } irx_class_owner;
@@ -35,6 +37,8 @@ int32_t irx_class_create(size_t size, irx_class_drop drop, void** out,
     return irx_class_error(error, "class payload allocation failed");
   }
   owner->references = 1;
+  owner->weak_references = 1;
+  owner->payload = value;
   owner->drop = drop;
   memcpy(value, &owner, sizeof(owner));
   *out = value;
@@ -59,9 +63,46 @@ int32_t irx_class_release(void* context, void* value, char* error) {
   if (!owner->references)
     return irx_class_error(error, "class release during destruction");
   if (--owner->references) return 0;
+  owner->payload = NULL;
   status = owner->drop(context, value, error);
   free(value);
-  free(owner);
+  irx_class_weak_release(owner);
+  return status;
+}
+int32_t irx_class_weak_retain(void* token, char* error) {
+  irx_class_owner* owner = token;
+  if (error) error[0] = 0;
+  if (!owner) return 0;
+  if (owner->weak_references == UINT64_MAX)
+    return irx_class_error(error, "class weak reference count overflow");
+  owner->weak_references++;
+  return 0;
+}
+void irx_class_weak_release(void* token) {
+  irx_class_owner* owner = token;
+  if (owner && !--owner->weak_references) free(owner);
+}
+int32_t irx_class_downgrade(void* value, void** out, char* error) {
+  irx_class_owner* owner;
+  int32_t status;
+  if (error) error[0] = 0;
+  if (!out) return irx_class_error(error, "missing class downgrade output");
+  *out = NULL;
+  if (!value) return 0;
+  owner = irx_class_token(value);
+  status = irx_class_weak_retain(owner, error);
+  if (!status) *out = owner;
+  return status;
+}
+int32_t irx_class_upgrade(void* token, void** out, char* error) {
+  irx_class_owner* owner = token;
+  int32_t status;
+  if (error) error[0] = 0;
+  if (!out) return irx_class_error(error, "missing class upgrade output");
+  *out = NULL;
+  if (!owner || !owner->payload) return 0;
+  status = irx_class_retain(owner->payload, error);
+  if (!status) *out = owner->payload;
   return status;
 }
 int32_t irx_class_require(void* value, char* error) {

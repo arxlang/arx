@@ -2473,6 +2473,40 @@ def test_class_copy_uses_a_class_call_without_list_runtime() -> None:
     assert "irx_list_clone" not in text
 
 
+@pytest.mark.parametrize(
+    ("body", "message"),
+    [
+        ("value: weak[i32]", "weak requires a class target"),
+        ("downgrade(1)", "downgrade requires a class reference"),
+        ("upgrade(Box())", "upgrade requires a weak class reference"),
+        ("upgrade(downgrade(Box())).value", "field access requires"),
+        (
+            "value: weak[Other] = downgrade(Box())",
+            "weak.*Other",
+        ),
+        (
+            "value: Box = upgrade(downgrade(Box()))",
+            "Box.*none",
+        ),
+    ],
+)
+def test_weak_class_reference_diagnostics(body: str, message: str) -> None:
+    """
+    title: Reject invalid references and implicit access to nullable results.
+    parameters:
+      body: Invalid reference use.
+      message: Expected semantic diagnostic.
+    """
+    ArxIO.string_to_buffer(
+        "import (weak, downgrade, upgrade) from stdlib.memory\n"
+        "class Box:\n  value: i32 = 42\n"
+        "class Other:\n  value: i32 = 0\n"
+        "fn main() -> i32:\n" + indent(body, "  ") + "\n  return 0\n"
+    )
+    with pytest.raises(SemanticError, match=message):
+        ArxBuilder().translate(Parser().parse(Lexer().lex()))
+
+
 def test_user_copy_keeps_its_binding() -> None:
     """
     title: Resolve a user callable independently of the imported operation.

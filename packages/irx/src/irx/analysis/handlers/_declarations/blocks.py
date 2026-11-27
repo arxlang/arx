@@ -45,6 +45,7 @@ from irx.analysis.resolved_nodes import (
     SemanticSymbol,
 )
 from irx.analysis.types import (
+    class_resource_kind,
     is_boolean_type,
     is_numeric_type,
     is_sequence_element,
@@ -100,7 +101,7 @@ class DeclarationBlockVisitorMixin(SemanticVisitorMixinBase):
         if isinstance(symbol.type_, astx.DataFrameType | astx.SeriesType):
             arrow_local(cast(SemanticAnalyzerCore, self), node, symbol)
             return
-        if isinstance(symbol.type_, astx.ClassType):
+        if class_resource_kind(symbol.type_) is not None:
             class_local(cast(SemanticAnalyzerCore, self), node, symbol)
             return
         if isinstance(symbol.type_, astx.FileType):

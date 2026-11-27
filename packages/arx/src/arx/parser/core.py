@@ -29,6 +29,7 @@ class ParserCore(ParserMixinBase):
       list_scopes: List scopes.
       known_class_names: Known class names.
       imported_type_names: Imported type names.
+      weak_type_names: Local spellings of the memory type constructor.
       namespace_roots: Namespace roots.
       builtin_type_bindings: Builtin type bindings.
       tensor_scopes: Tensor scopes.
@@ -45,6 +46,7 @@ class ParserCore(ParserMixinBase):
     list_scopes: list[set[str]]
     known_class_names: set[str]
     imported_type_names: set[str]
+    weak_type_names: set[str]
     namespace_roots: set[str]
     builtin_type_bindings: dict[str, astx.DataType]
     tensor_scopes: list[dict[str, TensorBinding | None]]
@@ -81,6 +83,7 @@ class ParserCore(ParserMixinBase):
         self.list_scopes = [set()]
         self.known_class_names = set()
         self.imported_type_names = set()
+        self.weak_type_names = set()
         self.namespace_roots = set()
         self.builtin_type_bindings = {}
         self.tensor_scopes = [{}]
@@ -99,6 +102,7 @@ class ParserCore(ParserMixinBase):
         self.list_scopes = [set()]
         self.known_class_names = set()
         self.imported_type_names = set()
+        self.weak_type_names = set()
         self.namespace_roots = set()
         self.builtin_type_bindings = {}
         self.tensor_scopes = [{}]
@@ -126,6 +130,8 @@ class ParserCore(ParserMixinBase):
         """
         self.clean()
         self.builtin_type_bindings = dict(builtin_types or {})
+        if "WeakClass" in self.builtin_type_bindings:
+            self.weak_type_names.add("weak")
         self.known_class_names = self._collect_class_names(tokens)
         self.tokens = tokens
 
@@ -213,6 +219,12 @@ class ParserCore(ParserMixinBase):
                     local = alias.asname or alias.name.split(".")[0]
                     if isinstance(import_node, astx.ImportFromStmt):
                         self.imported_type_names.add(local)
+                        if (
+                            import_node.module == "stdlib.memory"
+                            and import_node.level == 0
+                            and alias.name == "weak"
+                        ):
+                            self.weak_type_names.add(local)
                     self.namespace_roots.add(local)
                     if isinstance(import_node, astx.ImportStmt):
                         self.namespace_roots.add(alias.asname or alias.name)

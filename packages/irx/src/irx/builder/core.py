@@ -54,6 +54,7 @@ from irx.analysis.types import (
     is_float_type,
     is_integer_type,
     is_unsigned_type,
+    nullable_class_type,
 )
 from irx.builder.base import BuilderVisitor
 from irx.builder.diagnostics import (
@@ -1494,7 +1495,11 @@ class VisitorCore(StringIRMixin, BuilderVisitor):
             return ir.LiteralStructType([ir.IntType(64)] * 3)
         if isinstance(type_, astx.SequenceType):
             return sequence_view_type()
+        if isinstance(type_, astx.WeakClassType):
+            return self._llvm.OPAQUE_POINTER_TYPE
         if isinstance(type_, astx.NullableType):
+            if (payload := nullable_class_type(type_)) is not None:
+                return self._llvm_type_for_ast_type(payload)
             inner = self._llvm_type_for_ast_type(type_.value_type)
             return (
                 None
@@ -1957,6 +1962,12 @@ class VisitorCore(StringIRMixin, BuilderVisitor):
         if source_type is None or target_type is None:
             return value
 
+        if (payload := nullable_class_type(target_type)) is not None:
+            return self._cast_ast_value(
+                value,
+                source_type=nullable_class_type(source_type) or source_type,
+                target_type=payload,
+            )
         if isinstance(target_type, astx.NullableType):
             valid: ir.Value = ir.Constant(ir.IntType(1), 1)
             if isinstance(source_type, astx.NullableType):

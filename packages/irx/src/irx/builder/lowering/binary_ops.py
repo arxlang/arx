@@ -40,6 +40,7 @@ from irx.analysis.resolved_nodes import (
     ResourceKind,
     SemanticInfo,
 )
+from irx.analysis.types import CLASS_RESOURCES
 from irx.builder.core import (
     VisitorCore,
     semantic_assignment_key,
@@ -681,7 +682,7 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
         if (
             managed is not None
             and managed.resource_kind
-            in {ResourceKind.CLASS, ResourceKind.FILE, *ARROW_RESOURCES}
+            in {*CLASS_RESOURCES, ResourceKind.FILE, *ARROW_RESOURCES}
         ) or (semantic is not None and semantic.lifecycle_field_store):
             address = self._lvalue_address(var_lhs)
             self.visit(node.rhs)
@@ -696,7 +697,7 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
                 target_type=self._resolved_ast_type(node),
             )
             assert managed is not None
-            if managed.resource_kind in {ResourceKind.CLASS, *ARROW_RESOURCES}:
+            if managed.resource_kind in {*CLASS_RESOURCES, *ARROW_RESOURCES}:
                 value = self.class_acquire(node, value)
                 previous = self._llvm.ir_builder.load(address)
                 # A failing release still consumes the old reference. Publish
@@ -721,7 +722,7 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
                     free, [self._llvm.ir_builder.load(address)]
                 )
             if managed.resource_kind not in {
-                ResourceKind.CLASS,
+                *CLASS_RESOURCES,
                 *ARROW_RESOURCES,
             }:
                 self._llvm.ir_builder.store(value, address)

@@ -20,7 +20,7 @@ from irx.analysis.resolved_nodes import (
     ResourceOwnership,
     SemanticSymbol,
 )
-from irx.analysis.types import is_string_type
+from irx.analysis.types import class_resource_kind, is_string_type
 from irx.typecheck import typechecked
 
 
@@ -39,13 +39,15 @@ def resolve_parameter_ownership(
       arg_symbol: Arg symbol.
     """
     analyzer._semantic(arg_node).resource_ownership = None
-    if isinstance(arg_symbol.type_, astx.ClassType):
+    class_kind = class_resource_kind(arg_symbol.type_)
+    if class_kind is not None:
         analyzer._set_resource_ownership(
             arg_node,
             class_ownership(
                 OwnershipKind.OWNED,
                 symbol=arg_symbol.symbol_id,
                 transfer=OwnershipTransferKind.COPY,
+                resource=class_kind,
             ),
         )
     elif isinstance(arg_symbol.type_, astx.DataFrameType | astx.SeriesType):

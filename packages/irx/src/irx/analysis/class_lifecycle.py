@@ -35,7 +35,14 @@ from irx.analysis.resolved_nodes import (
     SemanticClassInitialization,
     SemanticSymbol,
 )
-from irx.analysis.types import is_assignable, is_string_type, same_type
+from irx.analysis.types import (
+    CLASS_RESOURCES,
+    class_resource_kind,
+    is_assignable,
+    is_string_type,
+    nullable_class_type,
+    same_type,
+)
 from irx.diagnostics import DiagnosticCodes
 from irx.typecheck import typechecked
 
@@ -155,8 +162,9 @@ def field_resource(type_: astx.DataType | None) -> ResourceKind | None:
     returns: 'Result of this operation: classify supported owned instance
       storage during analysis.'
     """
-    if isinstance(type_, astx.ClassType):
-        return ResourceKind.CLASS
+    kind = class_resource_kind(type_)
+    if kind is not None:
+        return kind
     if isinstance(type_, astx.FileType):
         return ResourceKind.FILE
     if is_string_type(type_):
@@ -205,14 +213,14 @@ def contains_class(type_: astx.DataType | None) -> bool:
     returns: 'Result of this operation: detect class references hidden in
       unsupported aggregate types.'
     """
-    if isinstance(type_, astx.ClassType):
+    if class_resource_kind(type_) is not None:
         return True
     for name in (
         "element_types",
+        "value_type",
         "members",
         "element_type",
         "key_type",
-        "value_type",
         "yield_type",
         "pointee_type",
         "bound",
@@ -236,6 +244,7 @@ def class_ownership(
     symbol: str | None = None,
     transfer: OwnershipTransferKind = OwnershipTransferKind.NONE,
     escape: OwnershipEscapeKind = OwnershipEscapeKind.NONE,
+    resource: ResourceKind = ResourceKind.CLASS,
 ) -> ResourceOwnership:
     """
     title: Describe one owned reference, not a unique object.
@@ -244,11 +253,12 @@ def class_ownership(
       symbol: Resolved symbol for the operation.
       transfer: Transfer.
       escape: Escape.
+      resource: Strong or weak class resource category.
     returns: 'Result of this operation: describe one owned reference, not
       a unique object.'
     """
     return ResourceOwnership(
-        ResourceKind.CLASS,
+        resource,
         kind,
         owner_symbol_id=symbol if kind is OwnershipKind.OWNED else None,
         source_symbol_id=symbol,
@@ -264,6 +274,8 @@ def acquire_class(
     node: astx.AST,
     value: astx.AST | None,
     symbol: str | None = None,
+    *,
+    resource: ResourceKind = ResourceKind.CLASS,
 ) -> None:
     """
     title: Resolve an owned reference acquired by a binding, store, or return.
@@ -272,6 +284,7 @@ def acquire_class(
       node: Syntax node to process.
       value: Value to process.
       symbol: Resolved symbol for the operation.
+      resource: Strong or weak class resource category.
     """
     ownership = resource_ownership(value)
     operation = OwnershipTransferKind.COPY
@@ -287,7 +300,10 @@ def acquire_class(
     analyzer._set_resource_ownership(
         node,
         class_ownership(
-            OwnershipKind.OWNED, symbol=symbol, transfer=operation
+            OwnershipKind.OWNED,
+            symbol=symbol,
+            transfer=operation,
+            resource=resource,
         ),
     )
 
@@ -317,7 +333,9 @@ def class_local(
             "owned class globals and generator locals are unsupported",
         )
         return
-    acquire_class(analyzer, node, node.value, symbol.symbol_id)
+    kind = class_resource_kind(symbol.type_)
+    assert kind is not None
+    acquire_class(analyzer, node, node.value, symbol.symbol_id, resource=kind)
 
 
 @private
@@ -608,6 +626,9 @@ def validate_class_graph(analyzer: SemanticAnalyzerCore) -> None:
         if owner.layout is not None:
             for field in owner.layout.instance_fields:
                 type_ = field.member.type_
+                nullable = nullable_class_type(type_)
+                if nullable is not None:
+                    type_ = nullable
                 if isinstance(type_, astx.ClassType):
                     for candidate in classes:
                         if any(
@@ -714,17 +735,20 @@ def resolve_store(
             ),
         )
         return True
-    if kind is ResourceKind.CLASS:
+    if kind in CLASS_RESOURCES:
+        assert kind is not None
         if not isinstance(node.lhs, astx.Identifier):
             lifecycle_error(
                 analyzer, node, "owning class statics are unsupported"
             )
-        acquire_class(analyzer, node, node.rhs, symbol.symbol_id)
+        acquire_class(
+            analyzer, node, node.rhs, symbol.symbol_id, resource=kind
+        )
         analyzer._semantic(node).resolved_resource_store = resource_ownership(
             node
         )
         analyzer._set_resource_ownership(
-            node, class_ownership(OwnershipKind.BORROWED)
+            node, class_ownership(OwnershipKind.BORROWED, resource=kind)
         )
         return True
     return False

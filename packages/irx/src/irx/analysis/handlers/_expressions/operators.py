@@ -57,6 +57,7 @@ from irx.analysis.resolved_nodes import (
     ResolvedAugAssignment,
 )
 from irx.analysis.types import (
+    class_resource_kind,
     common_numeric_type,
     display_type_name,
     is_assignable,
@@ -66,6 +67,7 @@ from irx.analysis.types import (
     is_numeric_type,
     is_string_type,
     is_type_member,
+    nullable_class_type,
     same_type,
     union_storage_type,
 )
@@ -607,6 +609,7 @@ class ExpressionOperatorVisitorMixin(SemanticVisitorMixinBase):
           node: Syntax node to process.
         """
         self._semantic(node).resource_ownership = None
+        self._semantic(node).checked_class_unwrap = False
         if node.mode is astx.NumericMode.CHECKED and not (
             isinstance(node.value, astx.LiteralInteger)
             and is_float_type(
@@ -682,9 +685,9 @@ class ExpressionOperatorVisitorMixin(SemanticVisitorMixinBase):
                 code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
             )
             return
-        if isinstance(node.target_type, astx.NullableType) and isinstance(
-            node.value, astx.LiteralNone
-        ):
+        if isinstance(
+            node.target_type, (astx.NullableType, astx.WeakClassType)
+        ) and isinstance(node.value, astx.LiteralNone):
             self._resolve_declared_type(node.target_type, node=node)
             self._set_type(node, node.target_type)
             return
@@ -708,9 +711,15 @@ class ExpressionOperatorVisitorMixin(SemanticVisitorMixinBase):
             node=node,
         )
         self._set_type(node, target_type)
-        if isinstance(target_type, astx.ClassType):
+        class_kind = class_resource_kind(target_type)
+        if class_kind is not None:
+            self._semantic(node).checked_class_unwrap = (
+                isinstance(target_type, astx.ClassType)
+                and nullable_class_type(source_type) is not None
+            )
             self._set_resource_ownership(
-                node, class_ownership(OwnershipKind.BORROWED)
+                node,
+                class_ownership(OwnershipKind.BORROWED, resource=class_kind),
             )
         if isinstance(target_type, astx.DataFrameType | astx.SeriesType):
             self._set_resource_ownership(

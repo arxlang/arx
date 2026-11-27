@@ -228,7 +228,7 @@ class TypeParserMixin(ParserMixinBase):
           data_type: Declared data type.
         returns: Constructed a default initializer for typed declarations.
         """
-        if isinstance(data_type, astx.NullableType):
+        if isinstance(data_type, (astx.NullableType, astx.WeakClassType)):
             return astx.Cast(astx.LiteralNone(), data_type)
         if isinstance(data_type, astx.Float16):
             return astx.LiteralFloat16(0.0)
@@ -357,7 +357,19 @@ class TypeParserMixin(ParserMixinBase):
             if allow_template_vars:
                 template_bound = self._lookup_template_bound(type_name)
 
-            if type_name in COLUMN_TYPE_NAMES or (
+            if (
+                type_name in self.weak_type_names
+                and type_name not in _BUILTIN_TYPE_NAMES
+            ):
+                self.tokens.get_next_token()
+                self._consume_operator("[")
+                target = self.parse_type(
+                    allow_template_vars=allow_template_vars,
+                    type_context=TypeUseContext.NESTED,
+                )
+                self._consume_operator("]")
+                type_ = astx.WeakClassType(target, constructor=type_name)
+            elif type_name in COLUMN_TYPE_NAMES or (
                 type_name in {"timestamp", "time"}
                 and self._peek_token().value == "["
             ):

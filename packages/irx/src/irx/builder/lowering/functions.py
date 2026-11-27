@@ -13,6 +13,7 @@ from public import private
 
 from irx.analysis.arrow_conversion import ARROW_RESOURCES
 from irx.analysis.extensions.records import CALL_PLAN, CallPlan
+from irx.analysis.memory import ClassHandlePlan
 from irx.analysis.ownership import resource_ownership
 from irx.analysis.resolved_nodes import (
     CallingConvention,
@@ -30,7 +31,7 @@ from irx.analysis.resolved_nodes import (
     SemanticFunction,
     SemanticInfo,
 )
-from irx.analysis.types import display_type_name
+from irx.analysis.types import CLASS_RESOURCES, display_type_name
 from irx.builder.core import (
     VisitorCore,
     semantic_symbol_key,
@@ -142,7 +143,7 @@ class FunctionVisitorMixin(ClassVisitorMixin):
         if ownership.resource_kind is ResourceKind.STRING:
             self._register_owned_string_temporary(node, result)
             return
-        if ownership.resource_kind in {ResourceKind.CLASS, *ARROW_RESOURCES}:
+        if ownership.resource_kind in {*CLASS_RESOURCES, *ARROW_RESOURCES}:
             self.class_cleanup(node, result)
             return
         if ownership.resource_kind is not ResourceKind.LIST:
@@ -937,6 +938,56 @@ class FunctionVisitorMixin(ClassVisitorMixin):
             node=node,
             context="class copy",
         )
+        self.publish_class_result(node, result, depth)
+
+    @private
+    def lower_class_handle(
+        self, node: astx.AST, plan: ClassHandlePlan
+    ) -> None:
+        """
+        title: Emit a checked conversion to or from a weak class handle.
+        parameters:
+          node: Memory operation for diagnostics and result type.
+          plan: Analysis-selected operation and operand.
+        """
+        depth = len(self.cleanup_stack)
+        self.visit(plan.source)
+        source = require_lowered_value(
+            safe_pop(self.result_stack),
+            node=node,
+            context="class handle operand",
+        )
+        pointer = self._llvm.OPAQUE_POINTER_TYPE
+        output = self.create_entry_block_alloca("class.handle", pointer)
+        error = self.file_error_buffer()
+        function = self.require_runtime_symbol(
+            "class", f"irx_class_{plan.operation.name}"
+        )
+        builder = self._llvm.ir_builder
+        status = builder.call(
+            function, [self.class_raw(source), output, error]
+        )
+        self.file_check(node, status, error, code="ARX-RUNTIME-CLASS-001")
+        result_type = require_semantic_metadata(
+            self._llvm_type_for_ast_type(self._resolved_ast_type(node)),
+            node=node,
+            metadata="result type",
+            context="class handle conversion",
+        )
+        result = builder.bitcast(builder.load(output), result_type)
+        self.publish_class_result(node, result, depth)
+
+    @private
+    def publish_class_result(
+        self, node: astx.AST, result: ir.Value, depth: int
+    ) -> None:
+        """
+        title: Guard the new reference until operand cleanup succeeds.
+        parameters:
+          node: Operation publishing the result.
+          result: Owned strong or weak reference.
+          depth: Cleanup depth before evaluating the operand.
+        """
         rollback = self.class_cleanup(node, result, lexical=True)
         self._emit_temporary_cleanups(depth)
         self.cleanup_stack.remove(rollback)
@@ -1118,7 +1169,7 @@ class FunctionVisitorMixin(ClassVisitorMixin):
                     if (
                         ownership is not None
                         and ownership.resource_kind
-                        in {ResourceKind.CLASS, *ARROW_RESOURCES}
+                        in {*CLASS_RESOURCES, *ARROW_RESOURCES}
                         and ownership.kind is OwnershipKind.OWNED
                     ):
                         self.class_acquire(argument, llvm_arg)
@@ -1236,7 +1287,7 @@ class FunctionVisitorMixin(ClassVisitorMixin):
             return_ownership is not None
             and return_ownership.source_symbol_id is not None
             and return_ownership.resource_kind
-            in {ResourceKind.STRING, ResourceKind.CLASS, *ARROW_RESOURCES}
+            in {ResourceKind.STRING, *CLASS_RESOURCES, *ARROW_RESOURCES}
             and (
                 bool(self.pending_returns)
                 or any(
@@ -1249,7 +1300,7 @@ class FunctionVisitorMixin(ClassVisitorMixin):
             return_ownership is not None
             and return_ownership.resource_kind
             in {
-                ResourceKind.CLASS,
+                *CLASS_RESOURCES,
                 *ARROW_RESOURCES,
             }
             and (
@@ -1307,7 +1358,7 @@ class FunctionVisitorMixin(ClassVisitorMixin):
         actions: list[CleanupEmitter] = []
         if return_ownership is not None:
             if return_ownership.resource_kind in {
-                ResourceKind.CLASS,
+                *CLASS_RESOURCES,
                 *ARROW_RESOURCES,
             }:
                 actions.append(

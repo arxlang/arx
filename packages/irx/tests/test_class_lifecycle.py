@@ -60,6 +60,9 @@ int test_allocated(void) { return allocated; }
 void test_references(void* value, uint64_t n) {
   irx_class_token(value)->references = n;
 }
+void test_weak_references(void* token, uint64_t n) {
+  ((irx_class_owner*)token)->weak_references = n;
+}
 """,
         encoding="utf-8",
     )
@@ -88,11 +91,20 @@ void test_references(void* value, uint64_t n) {
         ctypes.POINTER(ctypes.c_void_p),
         ctypes.c_void_p,
     ]
-    for name in ("retain", "require"):
+    for name in ("retain", "require", "weak_retain"):
         getattr(runtime, f"irx_class_{name}").argtypes = [
             ctypes.c_void_p,
             ctypes.c_void_p,
         ]
+    for name in ("downgrade", "upgrade"):
+        getattr(runtime, f"irx_class_{name}").argtypes = [
+            ctypes.c_void_p,
+            ctypes.POINTER(ctypes.c_void_p),
+            ctypes.c_void_p,
+        ]
+    runtime.irx_class_weak_release.argtypes = [ctypes.c_void_p]
+    runtime.irx_class_weak_release.restype = None
+    runtime.test_weak_references.argtypes = [ctypes.c_void_p, ctypes.c_uint64]
     runtime.irx_class_release.argtypes = [ctypes.c_void_p] * 3
     runtime.irx_class_complete.argtypes = [ctypes.c_void_p]
     runtime.irx_class_completed.argtypes = [ctypes.c_void_p]
@@ -206,11 +218,134 @@ def test_empty_overflow_and_repeated_lifetimes(native: ctypes.CDLL) -> None:
         assert native.irx_class_release(None, output, error) == 0
 
 
+def test_weak_token_outlives_failed_drop(native: ctypes.CDLL) -> None:
+    """
+    title: Expire before the destructor and free storage after the
+      last observer.
+    parameters:
+      native: Loaded class runtime with allocation counters.
+    """
+    token = ctypes.c_void_p()
+    result = ctypes.c_void_p()
+    error = ctypes.create_string_buffer(ERROR_CAPACITY)
+    during_drop: list[tuple[int, int | None]] = []
+
+    @DROP
+    def drop(context: int | None, value: int, details: int) -> int:
+        """
+        title: Observe expiration and release another reference during cleanup.
+        parameters:
+          context: Active exception context.
+          value: Payload being dropped.
+          details: Runtime error buffer.
+        returns: A failed destructor status.
+        """
+        status = native.irx_class_upgrade(token, ctypes.byref(result), error)
+        during_drop.append((status, result.value))
+        native.irx_class_weak_release(token)
+        ctypes.memmove(details, b"drop failed\0", len(b"drop failed\0"))
+        return 1
+
+    payload = ctypes.c_void_p()
+    assert native.irx_class_create(32, drop, ctypes.byref(payload), error) == 0
+    assert native.irx_class_downgrade(payload, ctypes.byref(token), error) == 0
+    assert token.value is not None
+    assert native.irx_class_weak_retain(token, error) == 0
+    assert native.irx_class_upgrade(token, ctypes.byref(result), error) == 0
+    assert result.value == payload.value
+    assert native.irx_class_release(None, payload, error) == 0
+    assert not during_drop
+    assert native.irx_class_release(None, result, error) != 0
+    assert during_drop == [(0, None)]
+    assert error.value == b"drop failed"
+    assert native.test_allocated() == 1
+    result.value = 123
+    assert native.irx_class_upgrade(token, ctypes.byref(result), error) == 0
+    assert result.value is None
+    native.irx_class_weak_release(token)
+
+
+def test_weak_conversion_empty_and_overflow(native: ctypes.CDLL) -> None:
+    """
+    title: Return null outputs for empty references and failed acquisitions.
+    parameters:
+      native: Loaded class runtime with faultable counts.
+    """
+
+    @DROP
+    def drop(context: int | None, value: int, error: int) -> int:
+        """
+        title: Drop a payload without owned fields.
+        parameters:
+          context: Active exception context.
+          value: Payload being dropped.
+          error: Runtime error buffer.
+        returns: Successful status.
+        """
+        return 0
+
+    error = ctypes.create_string_buffer(ERROR_CAPACITY)
+    result = ctypes.c_void_p(123)
+    assert native.irx_class_upgrade(None, ctypes.byref(result), error) == 0
+    assert result.value is None
+    assert native.irx_class_downgrade(None, None, error) != 0
+    assert native.irx_class_upgrade(None, None, error) != 0
+    native.irx_class_weak_release(None)
+    payload = ctypes.c_void_p()
+    token = ctypes.c_void_p()
+    assert native.irx_class_create(32, drop, ctypes.byref(payload), error) == 0
+    assert native.irx_class_downgrade(payload, ctypes.byref(token), error) == 0
+    native.test_weak_references(token, 2**64 - 1)
+    result.value = 123
+    assert (
+        native.irx_class_downgrade(payload, ctypes.byref(result), error) != 0
+    )
+    assert result.value is None
+    native.test_weak_references(token, 2)
+    native.test_references(payload, 2**64 - 1)
+    result.value = 123
+    assert native.irx_class_upgrade(token, ctypes.byref(result), error) != 0
+    assert result.value is None
+    native.test_references(payload, 1)
+    native.irx_class_weak_release(token)
+    assert native.irx_class_release(None, payload, error) == 0
+
+
+@pytest.mark.parametrize(
+    "reference",
+    [
+        astx.WeakClassType(astx.ClassType("Counter")),
+        astx.NullableType(astx.ClassType("Counter")),
+    ],
+)
+def test_reference_struct_fields_are_rejected(
+    reference: astx.DataType,
+) -> None:
+    """
+    title: Require class layout cleanup for weak and nullable reference fields.
+    parameters:
+      reference: Class-reference annotation for the struct field.
+    """
+    unit = astx.Module("handles")
+    unit.nodes.append(astx.ClassDefStmt("Counter"))
+    unit.nodes.append(
+        astx.StructDefStmt(
+            "Holder", attributes=[astx.VariableDeclaration("value", reference)]
+        )
+    )
+    with pytest.raises(
+        SemanticError, match="class references in struct fields"
+    ):
+        analyze(unit)
+
+
 def test_constructor_model_runtime_checks() -> None:
     """
     title: Preserve the old construction API and check every argument item.
     """
     assert str(astx.ClassConstruct("Counter")) == "ClassConstruct[Counter]"
+    with pytest.raises(TypeCheckError):
+        astx.WeakClassType("Counter")  # type: ignore[arg-type]
     with pytest.raises(TypeCheckError):
         astx.ClassConstruct("Counter", (astx.LiteralInt32(1), "bad"))  # type: ignore[arg-type]
     with pytest.raises(TypeCheckError):

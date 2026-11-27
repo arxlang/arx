@@ -187,7 +187,11 @@ def main() -> None:
         )
         check_generated_ownership(
             fixtures / "test_class_lifecycle.x",
-            ("test_const_field_borrows",),
+            (
+                "test_const_field_borrows",
+                "test_weak_class_handles",
+                "test_weak_downgrade_cleanup",
+            ),
             work,
             flags,
             env,

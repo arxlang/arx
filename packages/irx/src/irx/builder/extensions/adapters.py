@@ -10,6 +10,7 @@ from llvmlite import ir
 from public import private
 
 from irx.analysis.compute import ComputePlan
+from irx.analysis.memory import ClassHandlePlan
 from irx.analysis.resolved_nodes import (
     ResolvedClassConstruction,
     ResolvedMethodCall,
@@ -160,6 +161,17 @@ class VisitorCallServices:
           method: Bound copy hook.
         """
         self.owner.lower_class_copy(node, source, method)
+
+    def convert_class_handle(
+        self, node: astx.AST, plan: ClassHandlePlan
+    ) -> None:
+        """
+        title: Delegate a checked class handle conversion to the LLVM visitor.
+        parameters:
+          node: Memory call to lower.
+          plan: Resolved reference conversion.
+        """
+        self.owner.lower_class_handle(node, plan)
 
     def track(
         self, node: astx.AST, feature: str, destroy: str, value: ir.Value

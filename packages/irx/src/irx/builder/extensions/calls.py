@@ -15,7 +15,7 @@ from public import private, public
 
 from irx.analysis.compute import ComputePlan
 from irx.analysis.extensions.records import CallPlan
-from irx.analysis.memory import ClassCopyPlan, ListCopyPlan
+from irx.analysis.memory import ClassCopyPlan, ClassHandlePlan, ListCopyPlan
 from irx.analysis.resolved_nodes import (
     ResolvedClassConstruction,
     ResolvedMethodCall,
@@ -136,6 +136,19 @@ class CallLoweringServices(Protocol):
           method: Bound copy hook.
         """
         del node, source, method
+        raise NotImplementedError
+
+    @abstractmethod
+    def convert_class_handle(
+        self, node: astx.AST, plan: ClassHandlePlan
+    ) -> None:
+        """
+        title: Emit a resolved checked class handle conversion.
+        parameters:
+          node: Memory call to lower.
+          plan: Analysis-selected conversion and operand.
+        """
+        del node, plan
         raise NotImplementedError
 
     @abstractmethod
@@ -281,6 +294,16 @@ class CallLoweringVisitor:
           call: Call being processed.
         """
         call.services.copy_class(call.node, plan.source, plan.method)
+
+    @dispatch
+    def visit(self, plan: ClassHandlePlan, call: LoweringCall) -> None:
+        """
+        title: Emit the resolved class handle conversion.
+        parameters:
+          plan: Analysis-selected reference conversion.
+          call: Call being processed.
+        """
+        call.services.convert_class_handle(call.node, plan)
 
     @dispatch
     def visit(self, plan: CallPlan, call: LoweringCall) -> None:

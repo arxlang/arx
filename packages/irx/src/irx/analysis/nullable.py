@@ -20,6 +20,7 @@ from irx.analysis.types import (
     is_integer_type,
     is_numeric_type,
     is_unsigned_type,
+    nullable_class_type,
     same_type,
 )
 from irx.analysis.typing import COMPARISON_OPERATORS
@@ -229,6 +230,11 @@ def resolve_column_binary(
         isinstance(left, managed) or isinstance(right, managed)
     ):
         return False
+    if any(nullable_class_type(item) is not None for item in (left, right)):
+        nullable_error(
+            analyzer, node, "use is_null for nullable class references"
+        )
+        return True
     lhs, rhs = scalar_type(left), scalar_type(right)
     kernel = KERNELS.get(node.op_code)
     promoted = lhs if same_type(lhs, rhs) else common_numeric_type(lhs, rhs)
@@ -407,6 +413,11 @@ def resolve_column_unary(
     source = analyzer._expr_type(node.operand)
     if not isinstance(source, (astx.NullableType, astx.SeriesType)):
         return False
+    if nullable_class_type(source) is not None:
+        nullable_error(
+            analyzer, node, "use is_null for nullable class references"
+        )
+        return True
     inner = scalar_type(source)
     kernels = {
         "+": "identity",

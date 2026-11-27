@@ -35,6 +35,10 @@ def build_class_runtime_feature() -> RuntimeFeature:
         "complete",
         "completed",
         "record",
+        "downgrade",
+        "upgrade",
+        "weak_retain",
+        "weak_release",
     ):
 
         def declare(
@@ -62,6 +66,11 @@ def build_class_runtime_feature() -> RuntimeFeature:
                     pointer.as_pointer(),
                     pointer,
                 ]
+            elif operation in {"downgrade", "upgrade"}:
+                parameters = [pointer, pointer.as_pointer(), pointer]
+            elif operation == "weak_release":
+                parameters = [pointer]
+                result = visitor._llvm.VOID_TYPE
             elif operation == "release":
                 parameters = [pointer, pointer, pointer]
             elif operation in {"complete", "completed"}:

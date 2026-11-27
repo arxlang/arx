@@ -48,6 +48,7 @@ class ParsedModule:
       native_file_class: Native file class.
       native_features: Native features.
       native_bindings: Native bindings.
+      weak_class_type: Whether the host exports the weak type constructor.
       native_record_batch_class: Native record batch class.
       lazy_declarations: Whether to use lazy declarations.
       native_arrow_classes: Native arrow classes.
@@ -68,6 +69,7 @@ class ParsedModule:
     lazy_declarations: bool = False
     native_arrow_classes: tuple[astx.ClassDefStmt, ...] = ()
     exception_classes: tuple[astx.ClassDefStmt, ...] = ()
+    weak_class_type: bool = False
 
     def __post_init__(self) -> None:
         """
@@ -142,12 +144,16 @@ def validate_native_registration(
             )
 
             validate_compute_registration(declaration)
-        if binding.memory == "copy":
+        if binding.memory is not None:
             from irx.analysis.memory import (  # noqa: PLC0415
                 validate_copy_registration,
+                validate_handle_registration,
             )
 
-            validate_copy_registration(declaration)
+            if binding.memory == "copy":
+                validate_copy_registration(declaration)
+            else:
+                validate_handle_registration(declaration, binding.memory)
 
 
 @private

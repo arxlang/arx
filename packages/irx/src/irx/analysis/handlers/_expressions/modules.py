@@ -67,7 +67,7 @@ from irx.analysis.resolved_nodes import (
 )
 from irx.analysis.sequences import resolve_materialization
 from irx.analysis.text import resolve_text_call
-from irx.analysis.types import is_string_type
+from irx.analysis.types import class_resource_kind, is_string_type
 from irx.analysis.validation import validate_call
 from irx.diagnostics import DiagnosticCodes
 from irx.typecheck import typechecked
@@ -197,7 +197,8 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
                     escape_kind=OwnershipEscapeKind.CALL,
                 ),
             )
-        if isinstance(result_type, astx.ClassType):
+        class_kind = class_resource_kind(result_type)
+        if class_kind is not None:
             call = self._semantic(node).resolved_call
             if call is not None and call.callee.function.definition is None:
                 self.context.diagnostics.add(
@@ -206,7 +207,7 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
                     code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
                 )
             self._set_resource_ownership(
-                node, class_ownership(OwnershipKind.OWNED)
+                node, class_ownership(OwnershipKind.OWNED, resource=class_kind)
             )
         elif isinstance(result_type, astx.DataFrameType | astx.SeriesType):
             self._set_resource_ownership(
@@ -593,7 +594,8 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
                 check_borrow_access(self.context, symbol, node)
             self._set_symbol(node, symbol)
             self._set_type(node, symbol.type_)
-            if isinstance(symbol.type_, astx.ClassType):
+            class_kind = class_resource_kind(symbol.type_)
+            if class_kind is not None:
                 function = self.context.current_function
                 if (
                     function is not None
@@ -612,6 +614,7 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
                         OwnershipKind.BORROWED,
                         symbol=symbol.symbol_id,
                         transfer=OwnershipTransferKind.BORROW,
+                        resource=class_kind,
                     ),
                 )
                 function = self.context.current_function

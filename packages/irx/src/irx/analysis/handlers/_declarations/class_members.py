@@ -20,6 +20,7 @@ from irx.analysis.class_lifecycle import (
     COPY_HOOK,
     INITIALIZER_HOOK,
     LIFECYCLE_HOOKS,
+    field_resource,
     unsupported_class_field,
     validate_file_fields,
     validate_hook,
@@ -39,10 +40,12 @@ from irx.analysis.resolved_nodes import (
     FunctionSignature,
     OwnershipKind,
     OwnershipTransferKind,
+    ResourceKind,
     SemanticClass,
     SemanticClassMember,
     SemanticClassMemberResolution,
 )
+from irx.analysis.types import CLASS_RESOURCES
 from irx.analysis.validation import validate_assignment
 from irx.diagnostics import DiagnosticCodes
 from irx.typecheck import typechecked
@@ -141,9 +144,9 @@ class DeclarationClassMemberVisitorMixin(DeclarationClassMethodVisitorMixin):
             has_storage_type = not isinstance(
                 attribute_type, FailedInferenceType
             )
-            if self._attribute_is_static(attribute) and isinstance(
-                attribute_type, (astx.FileType, astx.ClassType)
-            ):
+            if self._attribute_is_static(attribute) and field_resource(
+                attribute_type
+            ) in {ResourceKind.FILE, *CLASS_RESOURCES}:
                 self.context.diagnostics.add(
                     "owning static class fields are unsupported",
                     node=attribute,

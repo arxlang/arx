@@ -22,7 +22,7 @@ NativeArtifactKind = Literal[
 ]
 
 ComputeKernel = Literal["sqrt", "exp"]
-MemoryOperation = Literal["copy"]
+MemoryOperation = Literal["copy", "downgrade", "upgrade"]
 
 
 # Pure immutable names: analysis never imports LLVM or the builder registry.
@@ -268,12 +268,12 @@ class NativeBinding:
                 "and cannot also bind table I/O"
             )
         if memory is not None and (
-            memory != "copy"
-            or features != ("list",)
+            memory not in {"copy", "downgrade", "upgrade"}
+            or features != (("list",) if memory == "copy" else ("class",))
             or compute is not None
             or table_io is not None
         ):
-            raise ValueError("copy bindings require only the list feature")
+            raise ValueError("invalid native binding for memory operation")
         object.__setattr__(self, "declaration", declaration)
         object.__setattr__(self, "features", features)
         object.__setattr__(self, "table_io", table_io)

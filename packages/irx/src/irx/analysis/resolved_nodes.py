@@ -149,6 +149,7 @@ class ResourceKind(str, Enum):
     STRING = "string"
     FILE = "file"
     CLASS = "class"
+    WEAK_CLASS = "weak_class"
     DATAFRAME = "dataframe"
     SERIES = "series"
 
@@ -2086,6 +2087,8 @@ class SemanticInfo:
       resolved_text_operation: Resolved unshadowed len intrinsic using shared
         queries.
       lifecycle_self: Whether to use lifecycle self.
+      checked_class_unwrap: Whether a cast checks a nullable class reference.
+      class_null_check: Whether a null test reads a class reference.
       lifecycle_field_store: Whether to use lifecycle field store.
       resolved_resource_store: Resolved resource store.
       initializer_receiver: Initializer receiver.
@@ -2154,6 +2157,8 @@ class SemanticInfo:
     text_query_cache: bool = False
     resolved_text_operation: ResolvedTextOperation | None = None
     lifecycle_self: bool = False
+    checked_class_unwrap: bool = False
+    class_null_check: bool = False
     lifecycle_field_store: bool = False
     resolved_resource_store: ResourceOwnership | None = None
     initializer_receiver: SemanticSymbol | None = None

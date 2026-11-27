@@ -13,6 +13,7 @@ from llvmlite import ir
 
 from irx.analysis.compute import ComputePlan
 from irx.analysis.nullable import ColumnOperation
+from irx.analysis.resolved_nodes import SemanticInfo
 from irx.builder.core import VisitorCore
 from irx.builder.diagnostics import (
     require_lowered_value,
@@ -319,6 +320,20 @@ class NullableVisitorMixin(DataFrameVisitorMixin):
         parameters:
           node: Syntax node to process.
         """
+        info = getattr(node, "semantic", None)
+        if isinstance(info, SemanticInfo) and info.class_null_check:
+            self.visit(node.value)
+            value = require_lowered_value(
+                safe_pop(self.result_stack),
+                node=node,
+                context="class null check",
+            )
+            self.result_stack.append(
+                self._llvm.ir_builder.icmp_unsigned(
+                    "==", value, ir.Constant(value.type, None)
+                )
+            )
+            return
         if not self.lower_column_operation(node):
             require_semantic_metadata(
                 None, node=node, metadata="column_operation", context="is_null"

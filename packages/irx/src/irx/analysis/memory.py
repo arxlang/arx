@@ -1,8 +1,10 @@
+# mypy: disable-error-code=no-redef
 """
 title: Analyze resolved standard-library memory operations.
 """
 
 from dataclasses import dataclass
+from typing import Literal
 
 import astx
 
@@ -10,7 +12,7 @@ from astx.types import AnyType
 from plum import dispatch
 from public import private
 
-from irx.analysis.class_lifecycle import COPY_HOOK
+from irx.analysis.class_lifecycle import COPY_HOOK, class_ownership
 from irx.analysis.compute import ComputeAnalysisVisitor
 from irx.analysis.extensions.calls import AnalysisCall
 from irx.analysis.extensions.records import CALL_PLAN, CallOperation, CallPlan
@@ -42,9 +44,22 @@ class CopyOperation(CallOperation):
 
 @private
 @typechecked
-class CopyPlan(CallPlan):
+@dataclass(frozen=True)
+class ClassHandleOperation(CallOperation):
     """
-    title: A copy result with type and ownership supplied by the chosen path.
+    title: Convert one reference using the registered class handle protocol.
+    attributes:
+      name: Trusted conversion operation.
+    """
+
+    name: Literal["downgrade", "upgrade"]
+
+
+@private
+@typechecked
+class MemoryResultPlan(CallPlan):
+    """
+    title: A memory operation with its own result type and ownership.
     """
 
     def invalidate(self, node: astx.AST) -> None:
@@ -62,7 +77,7 @@ class CopyPlan(CallPlan):
 @private
 @typechecked
 @dataclass(frozen=True)
-class ListCopyPlan(CopyPlan):
+class ListCopyPlan(MemoryResultPlan):
     """
     title: Copy one resolved list operand into independently owned storage.
     attributes:
@@ -89,7 +104,7 @@ class ListCopyPlan(CopyPlan):
 @private
 @typechecked
 @dataclass(frozen=True)
-class ClassCopyPlan(CopyPlan):
+class ClassCopyPlan(MemoryResultPlan):
     """
     title: Call the resolved instance hook with the original operand.
     attributes:
@@ -119,6 +134,76 @@ class ClassCopyPlan(CopyPlan):
             self.method.class_.declaration,
             self.method.member.declaration,
         )
+
+
+@private
+@typechecked
+@dataclass(frozen=True)
+class ClassHandlePlan(MemoryResultPlan):
+    """
+    title: Convert a resolved class reference through its checked native ABI.
+    attributes:
+      operation: Trusted handle conversion to emit.
+      source: Resolved operand.
+    """
+
+    operation: ClassHandleOperation
+    source: astx.DataType
+
+    def validate(self) -> None:
+        """
+        title: Require nominal operation and operand metadata.
+        """
+        if not isinstance(
+            self.operation, ClassHandleOperation
+        ) or not isinstance(self.source, astx.DataType):
+            raise TypeError(
+                "class conversion requires a typed operation and value"
+            )
+
+    def dependencies(self) -> tuple[astx.AST, ...]:
+        """
+        title: Expose the operand to traversal.
+        returns: Operand evaluated by the conversion.
+        """
+        return (self.source,)
+
+
+@private
+@typechecked
+def validate_handle_registration(
+    declaration: astx.FunctionPrototype,
+    name: Literal["downgrade", "upgrade"],
+) -> None:
+    """
+    title: Validate the trusted strong/weak conversion signatures.
+    parameters:
+      declaration: Bundled memory prototype.
+      name: Registered operation identity.
+    """
+    args = declaration.args.nodes
+    params = astx.get_template_params(declaration)
+    if (
+        len(params) != 1
+        or type(params[0].bound) is not AnyType
+        or len(args) != 1
+        or args[0].borrow_access is not None
+        or not isinstance(args[0].default, astx.Undefined)
+        or getattr(declaration, "is_variadic", False)
+    ):
+        raise ValueError(f"invalid {name} declaration")
+    target = astx.TemplateTypeVar(params[0].name, bound=params[0].bound)
+    weak = astx.WeakClassType(target)
+    source: astx.DataType
+    result: astx.DataType
+    if name == "downgrade":
+        source, result = target, weak
+    else:
+        source, result = weak, astx.NullableType(target)
+    if not same_type(args[0].type_, source) or not same_type(
+        declaration.return_type, result
+    ):
+        raise ValueError(f"invalid {name} class types")
 
 
 @private
@@ -246,6 +331,89 @@ class MemoryAnalysisVisitor(ComputeAnalysisVisitor):
         info.facts = info.facts.with_fact(CALL_PLAN, ListCopyPlan(source))
         info.resolved_type = source_type
         info.resource_ownership = list_resource_ownership(OwnershipKind.OWNED)
+
+    @copy_type(ComputeAnalysisVisitor.visit)
+    @dispatch
+    def visit(
+        self, operation: ClassHandleOperation, call: AnalysisCall
+    ) -> None:
+        """
+        title: Resolve the operand and owned result of a class conversion.
+        parameters:
+          operation: Trusted memory conversion.
+          call: Invocation with typed analysis services.
+        """
+        node, info = call.node, call.info
+        info.resolved_type = FailedInferenceType()
+        info.resource_ownership = None
+        operands = tuple(node.args)
+        if len(operands) != 1 or node.keywords or astx.get_template_args(node):
+            call.diagnostics.add(
+                f"{operation.name} expects one positional value",
+                node=node,
+                code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
+            )
+            return
+        source = operands[0]
+        type_ = call.services.evaluate(source)
+        if isinstance(type_, FailedInferenceType):
+            return
+        downgrade = operation.name == "downgrade"
+        target: astx.DataType | None
+        if downgrade:
+            target = type_
+        else:
+            target = (
+                type_.target if isinstance(type_, astx.WeakClassType) else None
+            )
+        if not isinstance(target, astx.ClassType):
+            call.diagnostics.add(
+                f"{operation.name} requires "
+                + (
+                    "a class reference"
+                    if downgrade
+                    else "a weak class reference"
+                ),
+                node=source,
+                code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
+            )
+            return
+        if not call.services.allowed:
+            call.diagnostics.add(
+                f"{operation.name} requires a non-generator function",
+                node=node,
+                code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
+            )
+            return
+        owner = call.services.resolve_class(target, source)
+        if owner is None:
+            return
+        arrow_classes = call.services.registered_classes
+        if any(
+            any(base.declaration is item for item in arrow_classes)
+            for base in owner.mro
+        ):
+            call.diagnostics.add(
+                "weak Arrow handles are unsupported",
+                node=source,
+                code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
+            )
+            return
+        result: astx.DataType = (
+            astx.WeakClassType(target)
+            if downgrade
+            else astx.NullableType(target)
+        )
+        ownership = (
+            ResourceKind.WEAK_CLASS if downgrade else ResourceKind.CLASS
+        )
+        info.facts = info.facts.with_fact(
+            CALL_PLAN, ClassHandlePlan(operation, source)
+        )
+        info.resolved_type = result
+        info.resource_ownership = class_ownership(
+            OwnershipKind.OWNED, resource=ownership
+        )
 
 
 @private
