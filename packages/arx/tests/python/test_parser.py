@@ -427,7 +427,7 @@ def test_symbolic_logical_operators_are_rejected(
         ("r: i32 = &value", "Use an alias type"),
         ("r: &auto = &value", "Use 'auto' to infer the type"),
         ("r = &&", "requires a source place"),
-        ("consume(&value)", "Borrow prefixes require a local alias"),
+        ("r: i32 = (&value)", "Borrow prefixes require a local alias"),
     ],
 )
 def test_borrow_syntax_requires_explicit_aliases(
@@ -441,6 +441,36 @@ def test_borrow_syntax_requires_explicit_aliases(
     """
     with pytest.raises(ParserException, match=message):
         _parse_module(source)
+
+
+def test_parse_call_borrow_modes() -> None:
+    """
+    title: Preserve borrowed parameter and named operand access modes.
+    """
+    tree = _parse_module(
+        "fn grow(values: &&list[i32]) -> none:\n"
+        "  return none\n"
+        "grow(values=&&items)\n"
+    )
+    function, call = tree.nodes
+    assert isinstance(function, astx.FunctionDef)
+    assert (
+        function.prototype.args[0].borrow_access is astx.BorrowAccess.exclusive
+    )
+    assert isinstance(call, astx.FunctionCall)
+    borrow = call.keywords[0].value
+    assert isinstance(borrow, astx.BorrowArgument)
+    assert borrow.access is astx.BorrowAccess.exclusive
+    assert isinstance(borrow.source, astx.Identifier)
+    assert borrow.source.name == "items"
+
+
+def test_require_explicit_list_parameter_borrow() -> None:
+    """
+    title: Diagnose the previous implicit list parameter spelling.
+    """
+    with pytest.raises(ParserException, match="List parameters require"):
+        _parse_module("fn read(items: list[i32]) -> none:\n  return none\n")
 
 
 @pytest.mark.parametrize("text", ["+=", ";", ":", "&", "&&"])

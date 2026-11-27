@@ -11,6 +11,8 @@ from typing import cast
 import astx
 
 from astx.operators import OpCodeAugAssign
+from irx.typecheck import typechecked
+from public import private
 
 from arx import builtins
 from arx.dataframe import (
@@ -141,6 +143,26 @@ class ExpressionParserMixin(ParserMixinBase):
             self.tokens.get_next_token()
         raise ParserException(msg)
 
+    @private
+    @typechecked
+    def parse_call_operand(self) -> astx.DataType:
+        """
+        title: Parse an ordinary or explicitly borrowed call operand.
+        returns: The operand expression.
+        """
+        token = self.tokens.cur_tok
+        if token.kind == TokenKind.operator:
+            access = BORROW_OPERATORS.get(cast(str, token.value))
+            if access is not None:
+                self.tokens.get_next_token()
+                source = self.parse_expression()
+                if not isinstance(source, astx.DataType):
+                    raise ParserException(
+                        "A borrow requires a source place.", token.location
+                    )
+                return astx.BorrowArgument(source, access, loc=token.location)
+        return cast(astx.DataType, self.parse_expression())
+
     def parse_call_arguments(
         self,
         *,
@@ -166,7 +188,7 @@ class ExpressionParserMixin(ParserMixinBase):
                 keywords.append(
                     astx.KeywordArgument(
                         cast(str, token.value),
-                        cast(astx.DataType, self.parse_expression()),
+                        self.parse_call_operand(),
                         loc=token.location,
                     )
                 )
@@ -175,7 +197,7 @@ class ExpressionParserMixin(ParserMixinBase):
                     raise ParserException(
                         "Positional arguments cannot follow keywords."
                     )
-                args.append(cast(astx.DataType, self.parse_expression()))
+                args.append(self.parse_call_operand())
             if self._is_operator(")"):
                 break
             self._consume_operator(",")
@@ -1018,8 +1040,8 @@ class ExpressionParserMixin(ParserMixinBase):
         op_loc = self.tokens.cur_tok.location
         if op_code in BORROW_OPERATORS:
             raise ParserException(
-                "Borrow prefixes require a local alias initializer or "
-                "retargeting assignment.",
+                "Borrow prefixes require a local alias initializer, "
+                "retargeting assignment, or call operand.",
                 op_loc,
             )
         if op_code == "::":

@@ -423,6 +423,31 @@ class SemanticRegistry:
             )
 
         is_extern = self._prototype_is_extern(prototype)
+        borrowing = any(
+            arg.borrow_access is not None for arg in prototype.args.nodes
+        )
+        if borrowing:
+            for argument in prototype.args.nodes:
+                if argument.borrow_access is not None and (
+                    not isinstance(argument.type_, astx.ListType)
+                    or argument.mutability is not astx.MutabilityKind.constant
+                ):
+                    self.context.diagnostics.add(
+                        "borrowed parameters require a fixed list binding",
+                        node=argument,
+                        code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
+                    )
+            if (
+                is_extern
+                or seen_default_parameter
+                or isinstance(prototype.return_type, astx.GeneratorType)
+            ):
+                self.context.diagnostics.add(
+                    "list borrows require an Arx function without defaults "
+                    "or generator results",
+                    node=prototype,
+                    code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
+                )
         if not is_extern and getattr(prototype, "ffi_return_ownership", None):
             self.context.diagnostics.add(
                 "ffi_return_ownership is valid only for extern declarations",

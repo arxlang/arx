@@ -29,6 +29,7 @@ from arx.lexer import Token, TokenKind
 from arx.parser.base import ParserMixinBase
 from arx.parser.state import (
     BINDING_MUTABILITY_MODIFIERS,
+    BORROW_OPERATORS,
     CLASS_ALLOWED_MODIFIERS,
     FIELD_ALLOWED_MODIFIERS,
     FUNCTION_ALLOWED_MODIFIERS,
@@ -233,6 +234,7 @@ class DeclarationParserMixin(ParserMixinBase):
         arg_type: astx.DataType,
         arg_loc: SourceLocation,
         mutability: astx.MutabilityKind,
+        borrow_access: astx.BorrowAccess | None,
     ) -> None:
         """
         title: Append one parsed argument, including an optional default.
@@ -242,12 +244,17 @@ class DeclarationParserMixin(ParserMixinBase):
           arg_type: Type of arg.
           arg_loc: Arg loc.
           mutability: Mutability.
+          borrow_access: Explicit parameter borrow mode.
         """
         default = self._parse_argument_default(arg_name, arg_type)
         if default is None:
             args.append(
                 astx.Argument(
-                    arg_name, arg_type, mutability=mutability, loc=arg_loc
+                    arg_name,
+                    arg_type,
+                    mutability=mutability,
+                    loc=arg_loc,
+                    borrow_access=borrow_access,
                 )
             )
             return
@@ -259,6 +266,7 @@ class DeclarationParserMixin(ParserMixinBase):
                 default=default,
                 mutability=mutability,
                 loc=arg_loc,
+                borrow_access=borrow_access,
             )
         )
 
@@ -1139,16 +1147,51 @@ class DeclarationParserMixin(ParserMixinBase):
                     arg_modifiers, frozenset({"var", "const"}), "parameter"
                 )
                 self.skip_callable_layout()
+                type_token = self.tokens.cur_tok
+                borrow_access = (
+                    BORROW_OPERATORS.get(cast(str, type_token.value))
+                    if type_token.kind == TokenKind.operator
+                    else None
+                )
+                if borrow_access is not None:
+                    self.tokens.get_next_token()
+                    self.skip_callable_layout()
                 arg_type = self.parse_type(
                     allow_union=True, type_context=TypeUseContext.PARAMETER
                 )
                 self.skip_callable_layout()
+                if (
+                    not is_method
+                    and borrow_access is None
+                    and isinstance(arg_type, astx.ListType)
+                ):
+                    raise ParserException(
+                        "List parameters require &list[T] or &&list[T].",
+                        type_token.location,
+                    )
+                if borrow_access is not None and (
+                    is_method or not isinstance(arg_type, astx.ListType)
+                ):
+                    raise ParserException(
+                        "Borrowed parameters require list types on functions.",
+                        type_token.location,
+                    )
+                if borrow_access is not None and arg_modifiers is not None:
+                    raise ParserException(
+                        "Borrowed parameters have a fixed binding.",
+                        arg_modifiers.loc,
+                    )
                 self._append_argument(
                     args,
                     cast(str, token.value),
                     arg_type,
                     token.location,
-                    self.resolve_binding_mutability(arg_modifiers),
+                    (
+                        astx.MutabilityKind.constant
+                        if borrow_access is not None
+                        else self.resolve_binding_mutability(arg_modifiers)
+                    ),
+                    borrow_access,
                 )
             first = False
             self.skip_callable_layout()

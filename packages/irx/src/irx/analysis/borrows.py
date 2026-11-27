@@ -1,15 +1,23 @@
 """
-title: Validate lexical access to local scalar places.
+title: Validate lexical and call-scoped access to borrowed places.
 """
+
+from collections.abc import Iterator
 
 import astx
 
 from public import private
 
+from irx.analysis.class_lifecycle import lifecycle_children
 from irx.analysis.context import SemanticContext
-from irx.analysis.resolved_nodes import SemanticSymbol
+from irx.analysis.ownership import symbol_resource_ownership
+from irx.analysis.resolved_nodes import (
+    OwnershipKind,
+    SemanticInfo,
+    SemanticSymbol,
+)
 from irx.analysis.types import is_boolean_type, is_numeric_type
-from irx.diagnostics import DiagnosticCodes
+from irx.diagnostics import DiagnosticBag, DiagnosticCodes
 from irx.typecheck import typechecked
 
 
@@ -119,7 +127,13 @@ def check_borrow_access(
       read_checked: Whether the same target already performed a read check.
     returns: Whether the access is allowed.
     """
-    if write and symbol.kind == "borrow" and not symbol.is_mutable:
+    if write and (
+        (symbol.kind == "borrow" and not symbol.is_mutable)
+        or (
+            isinstance(symbol.declaration, astx.Argument)
+            and symbol.declaration.borrow_access is astx.BorrowAccess.read_only
+        )
+    ):
         context.diagnostics.add(
             f"cannot write through read-only borrow '{symbol.name}'",
             node=node,
@@ -141,3 +155,153 @@ def check_borrow_access(
                 )
             return False
     return True
+
+
+@private
+@typechecked
+def resolve_list_call_borrow(
+    context: SemanticContext, operand: astx.BorrowArgument
+) -> SemanticSymbol | None:
+    """
+    title: Validate named dynamic list storage for a call-scoped loan.
+    parameters:
+      context: Active semantic context.
+      operand: Explicitly borrowed call argument.
+    returns: The local storage binding if access is permitted.
+    """
+    source = operand.source
+    info = getattr(source, "semantic", None)
+    symbol = info.resolved_symbol if isinstance(info, SemanticInfo) else None
+    function = context.current_function
+    if (
+        not isinstance(source, astx.Identifier)
+        or symbol is None
+        or not isinstance(symbol.type_, astx.ListType)
+        or not any(
+            scope.symbols.get(source.name) is symbol
+            for scope in context.scopes.function_scopes
+        )
+        or function is None
+        or function.signature.metadata.get("generator") is not None
+    ):
+        context.diagnostics.add(
+            "a list borrow requires a named local list or borrowed parameter",
+            node=operand,
+            code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
+        )
+        return None
+
+    declaration = symbol.declaration
+    forwarded = (
+        declaration.borrow_access
+        if isinstance(declaration, astx.Argument)
+        else None
+    )
+    ownership = symbol_resource_ownership(symbol)
+    if forwarded is None and (
+        ownership is None or ownership.kind is not OwnershipKind.OWNED
+    ):
+        context.diagnostics.add(
+            "a list borrow requires dynamically owned list storage",
+            node=operand,
+            code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
+        )
+        return None
+    if operand.access is astx.BorrowAccess.exclusive and (
+        (forwarded is None and not symbol.is_mutable)
+        or forwarded is astx.BorrowAccess.read_only
+        or symbol.symbol_id in context.active_list_iteration_owners
+    ):
+        context.diagnostics.add(
+            f"cannot exclusively borrow '{symbol.name}': requires writable "
+            "storage outside active iteration",
+            node=operand,
+            code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
+        )
+        return None
+    return symbol
+
+
+@private
+@typechecked
+def mentions_list_binding(node: astx.AST, symbol: SemanticSymbol) -> bool:
+    """
+    title: Find an evaluated operand access to the same named storage.
+    parameters:
+      node: Operand or child expression.
+      symbol: Borrowed list binding.
+    returns: Whether the expression accesses the binding.
+    """
+    if isinstance(node, astx.Identifier):
+        info = getattr(node, "semantic", None)
+        return (
+            isinstance(info, SemanticInfo)
+            and info.resolved_symbol is not None
+            and info.resolved_symbol.symbol_id == symbol.symbol_id
+        )
+    return any(
+        mentions_list_binding(child, symbol)
+        for child in lifecycle_children(node)
+    )
+
+
+@private
+@typechecked
+def list_loan_sources(
+    node: astx.AST, *, include_shared: bool
+) -> Iterator[SemanticSymbol]:
+    """
+    title: Find named storage loaned during one operand's evaluation.
+    summary: Only exclusive nested loans can invalidate a sibling operand.
+    parameters:
+      node: Analyzed operand or descendant.
+      include_shared: Whether the operand itself can hold a shared loan.
+    returns: Storage bindings loaned in this operand.
+    """
+    if isinstance(node, astx.BorrowArgument):
+        if include_shared or node.access is astx.BorrowAccess.exclusive:
+            info = getattr(node, "semantic", None)
+            if isinstance(info, SemanticInfo) and info.resolved_symbol:
+                yield info.resolved_symbol
+        return
+    for child in lifecycle_children(node):
+        yield from list_loan_sources(child, include_shared=False)
+
+
+@private
+@typechecked
+def check_list_call_borrows(
+    diagnostics: DiagnosticBag, arguments: tuple[astx.AST, ...]
+) -> None:
+    """
+    title: Reject overlapping list storage across call operands.
+    summary: Compatible shared loans can coexist. Reject a nested exclusive
+      loan even in a call with no borrowed parameters because an earlier
+      list or sequence operand may hold a view of the backing allocation.
+    parameters:
+      diagnostics: Collected semantic diagnostics.
+      arguments: Explicit operands in source order, including a receiver.
+    """
+    if len(arguments) <= 1:
+        return
+    for index, operand in enumerate(arguments):
+        for source in list_loan_sources(operand, include_shared=True):
+            for other_index, other in enumerate(arguments):
+                if other_index == index:
+                    continue
+                if (
+                    isinstance(operand, astx.BorrowArgument)
+                    and isinstance(other, astx.BorrowArgument)
+                    and operand.access
+                    is other.access
+                    is astx.BorrowAccess.read_only
+                ):
+                    continue
+                if mentions_list_binding(other, source):
+                    diagnostics.add(
+                        "call operands overlap a loan of "
+                        f"list '{source.name}'",
+                        node=other,
+                        code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
+                    )
+                    return

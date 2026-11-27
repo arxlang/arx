@@ -61,7 +61,12 @@ from astx.binary_op import (
 from astx.blocks import (
     Block,
 )
-from astx.borrows import BorrowAccess, BorrowDeclaration, BorrowRetarget
+from astx.borrows import (
+    BorrowAccess,
+    BorrowArgument,
+    BorrowDeclaration,
+    BorrowRetarget,
+)
 from astx.buffer import (
     BufferOwnerType,
     BufferViewDescriptor,
@@ -398,6 +403,7 @@ __all__ = [
     "BoolUnaryOp",
     "Boolean",
     "BorrowAccess",
+    "BorrowArgument",
     "BorrowDeclaration",
     "BorrowRetarget",
     "BreakStmt",

@@ -14,6 +14,7 @@ from typing import cast
 
 import astx
 
+from irx.analysis.borrows import check_list_call_borrows
 from irx.analysis.builtin_file import (
     is_native_file_class,
     resolve_public_file_construction,
@@ -198,6 +199,7 @@ class ExpressionClassAccessVisitorMixin(ExpressionClassSupportVisitorMixin):
         evaluations, indices, types = constructor_arguments(
             cast(SemanticAnalyzerCore, self), node, class_
         )
+        check_list_call_borrows(self.context.diagnostics, evaluations)
         self._set_class_construction(
             node,
             ResolvedClassConstruction(

@@ -93,7 +93,10 @@ current contract is deliberately move-only:
   Moving or replacing the active owner of an iteration is rejected;
 - returning a fresh owner or an owned local moves it to the caller; returning a
   borrowed parameter or static literal storage is rejected with `IRX-S013`;
-- append is allowed only through a locally owned list binding;
+- append is allowed through a locally owned list binding or an explicit
+  exclusive list parameter. For explicit call loans, lowering passes the
+  caller's list header by address so growth updates its length, capacity, and
+  data pointer. The callee borrows storage and registers no owner cleanup;
 - the lower-level ASTx `LiteralList` remains literal-only, static storage; Arx
   bracket expressions use `ListExpr`, not this non-owning representation; and
 - local aliases, borrowed/static-to-owned copies, static list call arguments or

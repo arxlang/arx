@@ -22,6 +22,7 @@ from irx.analysis.resolved_nodes import (
     OwnershipEscapeKind,
     OwnershipKind,
     OwnershipTransferKind,
+    ParameterPassingKind,
     ResolvedMethodCall,
     ResourceKind,
     ReturnResolution,
@@ -287,6 +288,9 @@ class FunctionVisitorMixin(ClassVisitorMixin):
                 node=arg,
                 context=f"argument {index + 1} of {label}",
             )
+            if isinstance(arg, astx.BorrowArgument):
+                llvm_args.append(llvm_arg)
+                continue
             self.class_pin(arg, llvm_arg)
             target_type = (
                 resolution.resolved_argument_types[index]
@@ -581,7 +585,11 @@ class FunctionVisitorMixin(ClassVisitorMixin):
                     f"{display_type_name(parameter.type_)}",
                     code=DiagnosticCodes.LOWERING_TYPE_MISMATCH,
                 )
-            args_type.append(llvm_type)
+            args_type.append(
+                llvm_type
+                if parameter.passing_kind is ParameterPassingKind.BY_VALUE
+                else llvm_type.as_pointer()
+            )
 
         return_type = self._llvm_type_for_ast_type(signature.return_type)
         if return_type is None:
@@ -758,6 +766,27 @@ class FunctionVisitorMixin(ClassVisitorMixin):
             return
         self._register_call_result_cleanup(node, result)
         self.result_stack.append(result)
+
+    @VisitorCore.visit.dispatch
+    def visit(self, node: astx.BorrowArgument) -> None:
+        """
+        title: Pass the address of semantically checked caller list storage.
+        parameters:
+          node: Resolved borrow operand.
+        """
+        info = getattr(node, "semantic", None)
+        source = require_semantic_metadata(
+            info.resolved_symbol if isinstance(info, SemanticInfo) else None,
+            node=node,
+            metadata="resolved_symbol",
+            context="call borrow",
+        )
+        address = self.named_values.get(source.symbol_id)
+        if not isinstance(address, ir.Value):
+            raise_lowering_internal_error(
+                "borrow argument storage is missing", node=node
+            )
+        self.result_stack.append(address)
 
     @VisitorCore.visit.dispatch
     def visit(self, node: astx.MethodCall) -> None:
@@ -1019,11 +1048,16 @@ class FunctionVisitorMixin(ClassVisitorMixin):
                         code=DiagnosticCodes.LOWERING_TYPE_MISMATCH,
                         node=parameter_node,
                     )
-                alloca = self._llvm.ir_builder.alloca(
-                    arg_type,
-                    name=arg_symbol.name,
-                )
-                self._llvm.ir_builder.store(llvm_arg, alloca)
+                storage: ir.Value = llvm_arg
+                if (
+                    signature.parameters[idx].passing_kind
+                    is ParameterPassingKind.BY_VALUE
+                ):
+                    storage = self._llvm.ir_builder.alloca(
+                        arg_type,
+                        name=arg_symbol.name,
+                    )
+                    self._llvm.ir_builder.store(llvm_arg, storage)
                 if idx < hidden_parameter_count:
                     symbol_key = arg_symbol.symbol_id
                 else:
@@ -1033,12 +1067,12 @@ class FunctionVisitorMixin(ClassVisitorMixin):
                         ],
                         arg_symbol.symbol_id,
                     )
-                self.named_values[symbol_key] = alloca
+                self.named_values[symbol_key] = storage
                 if idx >= hidden_parameter_count:
                     argument = function.prototype.args.nodes[
                         idx - hidden_parameter_count
                     ]
-                    bind_text_query_cache(self, argument, alloca)
+                    bind_text_query_cache(self, argument, storage)
                     ownership = resource_ownership(argument)
                     if (
                         ownership is not None
@@ -1048,7 +1082,7 @@ class FunctionVisitorMixin(ClassVisitorMixin):
                     ):
                         self.class_acquire(argument, llvm_arg)
                         self.class_cleanup(
-                            argument, alloca, symbol_key, storage=True
+                            argument, storage, symbol_key, storage=True
                         )
                 if idx == 0 and signature.metadata.get("is_class_initializer"):
                     self.class_construction_stack = [llvm_arg]

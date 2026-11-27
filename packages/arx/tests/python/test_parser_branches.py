@@ -214,7 +214,7 @@ def test_parse_list_and_tensor_type_forms_and_default_values() -> None:
     title: Parse list and tensor type forms plus default-value helper branches.
     """
     tree = _parse(
-        "fn dynamic(arg: list[i32]) -> i32:\n"
+        "fn dynamic(arg: &list[i32]) -> i32:\n"
         "  return 1\n"
         "fn fixed(values: tensor[i32, 4]) -> i32:\n"
         "  return values[0]\n"
@@ -226,6 +226,10 @@ def test_parse_list_and_tensor_type_forms_and_default_values() -> None:
     grid_fn = tree.nodes[2]
     assert isinstance(dynamic_fn, astx.FunctionDef)
     assert isinstance(dynamic_fn.prototype.args[0].type_, astx.ListType)
+    assert (
+        dynamic_fn.prototype.args[0].borrow_access
+        is astx.BorrowAccess.read_only
+    )
     assert isinstance(fixed_fn, astx.FunctionDef)
     assert isinstance(fixed_fn.prototype.args[0].type_, astx.TensorType)
     assert tensor_shape(fixed_fn.prototype.args[0].type_) == (4,)
