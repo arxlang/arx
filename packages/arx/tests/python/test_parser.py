@@ -1348,7 +1348,9 @@ def test_parse_builtin_cast_and_print() -> None:
     tree = parser.parse(lexer.lex())
     fn = tree.nodes[0]
     assert isinstance(fn, astx.FunctionDef)
-    assert isinstance(fn.body.nodes[1], irx_astx.PrintExpr)
+    output = fn.body.nodes[1]
+    assert isinstance(output, irx_astx.PrintExpr)
+    assert (output.loc.line, output.loc.col) == (3, 3)
 
 
 @pytest.mark.parametrize(

@@ -156,3 +156,18 @@ def test_semantic_error_preserves_aggregated_diagnostic_bag() -> None:
     assert "demo:2:3: error[IRX-S001]: cannot resolve name 'missing'" in str(
         exc_info.value
     )
+
+
+def test_diagnostic_checkpoint_checks_only_new_errors() -> None:
+    """
+    title: Ignore earlier errors and new warnings after a checkpoint.
+    """
+    diagnostics = DiagnosticBag()
+    diagnostics.add("Earlier error")
+    checkpoint = diagnostics.checkpoint()
+    diagnostics.add("New warning", severity="warning")
+    assert not diagnostics.has_errors_since(checkpoint)
+
+    diagnostics.add("New error")
+    assert diagnostics.has_errors_since(checkpoint)
+    assert not diagnostics.has_errors_since(diagnostics.checkpoint())

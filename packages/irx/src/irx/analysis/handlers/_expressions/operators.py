@@ -751,12 +751,16 @@ class ExpressionOperatorVisitorMixin(SemanticVisitorMixinBase):
         parameters:
           node: Syntax node to process.
         """
+        diagnostics = self.context.diagnostics
+        checkpoint = diagnostics.checkpoint()
         self.visit(node.message)
+        self._set_type(node, astx.Int32())
+        if diagnostics.has_errors_since(checkpoint):
+            return
         if not self._require_value_expression(
             node.message,
             context="PrintExpr",
         ):
-            self._set_type(node, astx.Int32())
             return
         message_type = self._expr_type(node.message)
         if not (
@@ -765,13 +769,12 @@ class ExpressionOperatorVisitorMixin(SemanticVisitorMixinBase):
             or is_float_type(message_type)
             or is_boolean_type(message_type)
         ):
-            self.context.diagnostics.add(
+            diagnostics.add(
                 "unsupported PrintExpr message type "
                 f"{display_type_name(message_type)}",
                 node=node,
                 code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
             )
-        self._set_type(node, astx.Int32())
 
     @SemanticAnalyzerCore.visit.dispatch
     def visit(self, node: astx.TypeOfExpr) -> None:
