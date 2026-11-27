@@ -51,6 +51,7 @@ from irx.analysis.ownership import (
     string_resource_ownership,
 )
 from irx.analysis.resolved_nodes import (
+    FailedInferenceType,
     ImplicitConversion,
     OwnershipKind,
     ResolvedAugAssignment,
@@ -111,6 +112,11 @@ class ExpressionOperatorVisitorMixin(SemanticVisitorMixinBase):
             )
             return
         self.visit(node.target)
+        target_type = self._expr_type(node.target)
+        if isinstance(target_type, FailedInferenceType):
+            self.visit(node.value)
+            self._set_type(node, target_type)
+            return
         resolved = self._resolve_mutation_target(
             node.target,
             node=node,
@@ -184,13 +190,16 @@ class ExpressionOperatorVisitorMixin(SemanticVisitorMixinBase):
         if expected is not None:
             contextualize_literal(node.operand, expected)
         self.visit(node.operand)
+        operand_type = self._expr_type(node.operand)
+        if isinstance(operand_type, FailedInferenceType):
+            self._set_type(node, operand_type)
+            return
         if not self._require_value_expression(
             node.operand,
             context=f"Unary operator '{node.op_code}'",
         ):
             self._set_type(node, None)
             return
-        operand_type = self._expr_type(node.operand)
         if resolve_column_unary(cast(SemanticAnalyzerCore, self), node):
             return
         if node.op_code in {"+", "-"} and not is_numeric_type(operand_type):
@@ -297,6 +306,12 @@ class ExpressionOperatorVisitorMixin(SemanticVisitorMixinBase):
                 self.visit(node.rhs)
         lhs_type = self._expr_type(node.lhs)
         rhs_type = self._expr_type(node.rhs)
+        if isinstance(lhs_type, FailedInferenceType) or isinstance(
+            rhs_type, FailedInferenceType
+        ):
+            self._set_type(node, FailedInferenceType())
+            self._set_operator(node, None)
+            return
         if (
             isinstance(lhs_type, astx.FileType)
             or isinstance(rhs_type, astx.FileType)
@@ -604,6 +619,9 @@ class ExpressionOperatorVisitorMixin(SemanticVisitorMixinBase):
         self.visit(node.value)
         source = self._expr_type(node.value)
         target = node.target_type
+        if isinstance(source, FailedInferenceType):
+            self._set_type(node, source)
+            return
         if isinstance(source, astx.Bytes) or isinstance(target, astx.Bytes):
             self.context.diagnostics.add(
                 "bytes casts are unsupported; "

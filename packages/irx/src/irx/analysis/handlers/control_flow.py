@@ -35,6 +35,7 @@ from irx.analysis.ownership import (
     transfer_resource_ownership,
 )
 from irx.analysis.resolved_nodes import (
+    FailedInferenceType,
     ImplicitConversion,
     OwnershipEscapeKind,
     OwnershipKind,
@@ -567,11 +568,16 @@ class ControlFlowVisitorMixin(SemanticVisitorMixinBase):
         if node.value is not None:
             contextualize_literal(node.value, expected)
             self.visit(node.value)
+        value_type = self._expr_type(node.value)
+        if isinstance(value_type, FailedInferenceType):
+            self._set_return(node, None)
+            self._set_type(node, value_type)
+            return
         return_resolution = resolve_return(
             self.context.diagnostics,
             function=self.context.current_function,
             value=node.value,
-            value_type=self._expr_type(node.value),
+            value_type=value_type,
             node=node,
         )
         self._set_return(node, return_resolution)

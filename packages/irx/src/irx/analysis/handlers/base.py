@@ -29,6 +29,7 @@ from irx.analysis.ownership import (
 from irx.analysis.registry import SemanticRegistry
 from irx.analysis.resolved_nodes import (
     CallResolution,
+    FailedInferenceType,
     IterationKind,
     OwnershipKind,
     ResolvedAssignment,
@@ -937,6 +938,7 @@ class SemanticAnalyzerCore(BaseVisitor):
         info.resolved_type = type_
         if (
             type_ is not None
+            and not isinstance(type_, FailedInferenceType)
             and hasattr(node, "type_")
             and not isinstance(node, (astx.LiteralInteger, astx.LiteralFloat))
             and not isinstance(getattr(node, "type_", None), astx.InferredType)
@@ -1864,6 +1866,8 @@ class SemanticAnalyzerCore(BaseVisitor):
         if node is None:
             return True
         resolved_type = self._expr_type(node)
+        if isinstance(resolved_type, FailedInferenceType):
+            return False
         if not isinstance(resolved_type, astx.NoneType):
             return True
         semantic = cast(SemanticInfo | None, getattr(node, "semantic", None))

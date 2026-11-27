@@ -25,6 +25,16 @@ from irx.analysis.numeric_policy import (
 from irx.typecheck import typechecked
 
 
+@private
+@typechecked
+class FailedInferenceType(astx.DataType):
+    """
+    title: Track a value whose declaration already failed type inference.
+    summary: This analysis-only type keeps name lookup available after an
+      error. It carries no storage or lowering contract.
+    """
+
+
 @public
 @typechecked
 @dataclass(frozen=True)

@@ -32,6 +32,7 @@ from irx.analysis.ownership import resource_ownership
 from irx.analysis.resolved_nodes import (
     ClassMemberKind,
     ClassMemberResolutionKind,
+    FailedInferenceType,
     OwnershipKind,
     OwnershipTransferKind,
     SemanticClass,
@@ -91,6 +92,7 @@ class DeclarationClassMemberVisitorMixin(DeclarationClassMethodVisitorMixin):
                 continue
             attribute_names.add(attribute.name)
             inferred = isinstance(attribute.type_, astx.InferredType)
+            attribute_type: astx.DataType | None
             if inferred:
                 # Layout precedes the constructor's locals and ownership scope.
                 # Runtime inference needs a separate initializer-typing pass.
@@ -102,13 +104,14 @@ class DeclarationClassMemberVisitorMixin(DeclarationClassMethodVisitorMixin):
                         node=attribute,
                         code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
                     )
-                    continue
-                with self.context.in_class(class_):
-                    attribute_type = resolve_initializer_type(
-                        cast(SemanticAnalyzerCore, self), attribute
-                    )
-                if attribute_type is None:
-                    continue
+                    attribute_type = FailedInferenceType()
+                else:
+                    with self.context.in_class(class_):
+                        attribute_type = resolve_initializer_type(
+                            cast(SemanticAnalyzerCore, self), attribute
+                        )
+                    if attribute_type is None:
+                        continue
                 self._set_type(attribute, attribute_type)
             else:
                 attribute_type = self._resolve_declared_type(
@@ -116,6 +119,10 @@ class DeclarationClassMemberVisitorMixin(DeclarationClassMethodVisitorMixin):
                     node=attribute,
                     unknown_message="Unknown attribute type '{name}'",
                 )
+            is_constant = attribute.mutability == astx.MutabilityKind.constant
+            has_storage_type = not isinstance(
+                attribute_type, FailedInferenceType
+            )
             if self._attribute_is_static(attribute) and isinstance(
                 attribute_type, (astx.FileType, astx.ClassType)
             ):
@@ -138,7 +145,8 @@ class DeclarationClassMemberVisitorMixin(DeclarationClassMethodVisitorMixin):
                     code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
                 )
             if (
-                self._attribute_is_static(attribute)
+                has_storage_type
+                and self._attribute_is_static(attribute)
                 and attribute.value is not None
                 and not isinstance(
                     attribute.value,
@@ -175,7 +183,8 @@ class DeclarationClassMemberVisitorMixin(DeclarationClassMethodVisitorMixin):
                         code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
                     )
             if (
-                not self._attribute_is_static(attribute)
+                has_storage_type
+                and not self._attribute_is_static(attribute)
                 and attribute.value is not None
             ):
                 owned = resource_ownership(attribute.value)
@@ -186,10 +195,13 @@ class DeclarationClassMemberVisitorMixin(DeclarationClassMethodVisitorMixin):
                             owned, transfer_kind=OwnershipTransferKind.MOVE
                         ),
                     )
-            is_constant = attribute.mutability == astx.MutabilityKind.constant
-            if is_constant and (
-                attribute.value is None
-                or isinstance(attribute.value, astx.Undefined)
+            if (
+                has_storage_type
+                and is_constant
+                and (
+                    attribute.value is None
+                    or isinstance(attribute.value, astx.Undefined)
+                )
             ):
                 self.context.diagnostics.add(
                     (
@@ -200,8 +212,10 @@ class DeclarationClassMemberVisitorMixin(DeclarationClassMethodVisitorMixin):
                     node=attribute,
                     code=DiagnosticCodes.SEMANTIC_INVALID_ASSIGNMENT_TARGET,
                 )
-            if self._attribute_is_static(attribute) and not (
-                self._static_initializer_is_supported(attribute.value)
+            if (
+                has_storage_type
+                and self._attribute_is_static(attribute)
+                and not self._static_initializer_is_supported(attribute.value)
             ):
                 self.context.diagnostics.add(
                     (

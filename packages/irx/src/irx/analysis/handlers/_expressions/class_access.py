@@ -43,6 +43,7 @@ from irx.analysis.handlers._expressions.class_support import (
 from irx.analysis.handlers.base import SemanticAnalyzerCore
 from irx.analysis.numeric_literals import default_numeric_literal_type
 from irx.analysis.resolved_nodes import (
+    FailedInferenceType,
     MethodDispatchKind,
     OwnershipKind,
     OwnershipTransferKind,
@@ -228,6 +229,12 @@ class ExpressionClassAccessVisitorMixin(ExpressionClassSupportVisitorMixin):
         info.resolved_class_construction = None
         self._semantic(node).resource_ownership = None
         self.visit(node.receiver)
+        receiver_type = self._expr_type(node.receiver)
+        if isinstance(receiver_type, FailedInferenceType):
+            for arg in call_evaluations(node):
+                self.visit(arg)
+            self._set_type(node, receiver_type)
+            return
         module = self._module_namespace(node.receiver)
         if module is not None:
             self._resolve_module_namespace_call(node, module, [])
@@ -601,13 +608,16 @@ class ExpressionClassAccessVisitorMixin(ExpressionClassSupportVisitorMixin):
         """
         self._semantic(node).resource_ownership = None
         self.visit(node.receiver)
+        receiver_type = self._expr_type(node.receiver)
+        if isinstance(receiver_type, FailedInferenceType):
+            self._set_type(node, receiver_type)
+            return
         if not self._require_value_expression(
             node.receiver,
             context="Base field access",
         ):
             self._set_type(node, None)
             return
-        receiver_type = self._expr_type(node.receiver)
         resolved_classes = self._resolve_base_access_classes(
             receiver_type,
             node.base_class_name,
@@ -648,6 +658,9 @@ class ExpressionClassAccessVisitorMixin(ExpressionClassSupportVisitorMixin):
                 code=DiagnosticCodes.SEMANTIC_INVALID_FIELD_ACCESS,
             )
             self._set_type(node, None)
+            return
+        if isinstance(member.type_, FailedInferenceType):
+            self._set_type(node, member.type_)
             return
         field = self._resolve_class_field_slot(
             receiver_class,
@@ -725,6 +738,9 @@ class ExpressionClassAccessVisitorMixin(ExpressionClassSupportVisitorMixin):
             )
             self._set_type(node, None)
             return
+        if isinstance(member.type_, FailedInferenceType):
+            self._set_type(node, member.type_)
+            return
         storage = self._resolve_static_class_storage(
             class_,
             member,
@@ -747,6 +763,10 @@ class ExpressionClassAccessVisitorMixin(ExpressionClassSupportVisitorMixin):
         self._semantic(node).normalized_collection = None
         self._semantic(node).resource_ownership = None
         self.visit(node.value)
+        base_type = self._expr_type(node.value)
+        if isinstance(base_type, FailedInferenceType):
+            self._set_type(node, base_type)
+            return
         if not self._require_value_expression(
             node.value,
             context="Field access",
@@ -774,7 +794,6 @@ class ExpressionClassAccessVisitorMixin(ExpressionClassSupportVisitorMixin):
             return
         if resolve_collection_access(cast(SemanticAnalyzerCore, self), node):
             return
-        base_type = self._expr_type(node.value)
         struct = self._resolve_struct_from_type(
             base_type,
             node=node,
@@ -842,6 +861,9 @@ class ExpressionClassAccessVisitorMixin(ExpressionClassSupportVisitorMixin):
                 code=DiagnosticCodes.SEMANTIC_INVALID_FIELD_ACCESS,
             )
             self._set_type(node, None)
+            return
+        if isinstance(member.type_, FailedInferenceType):
+            self._set_type(node, member.type_)
             return
         layout_field = self._resolve_class_field_slot(
             class_,

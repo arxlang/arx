@@ -2461,6 +2461,78 @@ def test_inference_rejects_ambiguous_or_unsupported_storage(
         ArxBuilder().translate(Parser().parse(Lexer().lex()))
 
 
+def test_failed_local_inference_keeps_dependent_names_in_scope() -> None:
+    """
+    title: Preserve a failed declaration's binding and report unrelated names.
+    """
+    ArxIO.string_to_buffer(
+        "fn send(arg: i32) -> i32:\n  return arg\n"
+        "fn main() -> i32:\n"
+        "  value: auto = []\n"
+        "  dependent: auto = value\n"
+        "  annotated: i32 = value\n"
+        "  print(value)\n"
+        "  print(dependent + 1)\n"
+        "  print(value[0])\n"
+        "  print([1][value])\n"
+        "  print(send(value))\n"
+        "  print(value.method())\n"
+        "  print(1[value])\n"
+        "  print(annotated[0])\n"
+        "  print(missing)\n"
+        "  return dependent\n"
+    )
+    with pytest.raises(SemanticError) as error:
+        ArxBuilder().translate(Parser().parse(Lexer().lex()))
+    diagnostics = error.value.diagnostics.diagnostics
+    primary, invalid_receiver, invalid_annotated, unresolved = diagnostics
+    assert primary.code == DiagnosticCodes.SEMANTIC_TYPE_MISMATCH
+    assert "list expression needs a concrete element type" in primary.message
+    for invalid in (invalid_receiver, invalid_annotated):
+        assert invalid.code == DiagnosticCodes.SEMANTIC_TYPE_MISMATCH
+        assert invalid.message == "subscript access is not supported for Int32"
+    assert unresolved.code == DiagnosticCodes.SEMANTIC_UNRESOLVED_NAME
+    assert unresolved.message == "cannot resolve name 'missing'"
+
+
+def test_failed_field_inference_keeps_lookup_without_allocating_slot() -> None:
+    """
+    title: Resolve inherited failed fields without adding object storage.
+    """
+    ArxIO.string_to_buffer(
+        "fn initial() -> i32:\n  return 1\n"
+        "class Box:\n"
+        "  valid: i32 = 3\n"
+        "  broken: auto = initial()\n"
+        "class Child(Box):\n"
+        "  own: i32 = 1\n"
+        "fn main() -> i32:\n"
+        "  box: Child = Child()\n"
+        "  print(box.broken)\n"
+        "  print(box.broken.child)\n"
+        "  print(box.valid)\n"
+        "  print(box.missing)\n"
+        "  return 0\n"
+    )
+    module = Parser().parse(Lexer().lex())
+    with pytest.raises(SemanticError) as error:
+        ArxBuilder().translate(module)
+    primary, unrelated = error.value.diagnostics.diagnostics
+    assert primary.code == DiagnosticCodes.SEMANTIC_TYPE_MISMATCH
+    assert "Field inference requires a literal initializer" in primary.message
+    assert unrelated.code == DiagnosticCodes.SEMANTIC_INVALID_FIELD_ACCESS
+    assert unrelated.message == "class 'Child' has no attribute 'missing'"
+    child = next(
+        node
+        for node in module.nodes
+        if isinstance(node, astx.ClassDefStmt) and node.name == "Child"
+    )
+    semantic = getattr(child, "semantic")
+    class_ = semantic.resolved_class
+    assert "broken" in class_.member_table
+    assert set(class_.layout.visible_field_slots) == {"valid", "own"}
+
+
 def test_collection_access_paths_have_equivalent_semantics() -> None:
     """
     title: Collection paths retain equivalent semantics as metadata is unified.

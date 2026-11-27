@@ -18,6 +18,7 @@ import astx
 from irx.analysis.arrow_conversion import arrow_ownership
 from irx.analysis.call_arguments import (
     analyze_numeric_arguments,
+    argument_slots,
     call_evaluations,
     contextualize_null_arguments,
 )
@@ -42,6 +43,7 @@ from irx.analysis.ownership import (
 )
 from irx.analysis.ranges import resolve_range_call
 from irx.analysis.resolved_nodes import (
+    FailedInferenceType,
     OwnershipEscapeKind,
     OwnershipKind,
     OwnershipTransferKind,
@@ -786,6 +788,13 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
             )
             return
         function = binding.function
+        failed_argument = any(
+            isinstance(arg_type, FailedInferenceType) for arg_type in arg_types
+        )
+        if failed_argument and function.template_params:
+            argument_slots(function, node, self.context.diagnostics)
+            self._set_type(node, FailedInferenceType())
+            return
         target_function = function
         validation_function = function
         if function.template_params:
@@ -802,13 +811,16 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
                 resolved_specialization,
                 name=function.name,
             )
-        self._set_function(node, target_function)
         call_resolution = validate_call(
             self.context.diagnostics,
             function=validation_function,
             arg_types=arg_types,
             node=node,
         )
+        if failed_argument:
+            self._set_type(node, FailedInferenceType())
+            return
+        self._set_function(node, target_function)
         if validation_function is not target_function:
             call_resolution = replace(
                 call_resolution,

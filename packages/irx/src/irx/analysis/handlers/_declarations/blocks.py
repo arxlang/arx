@@ -34,6 +34,7 @@ from irx.analysis.ownership import (
     transfer_resource_ownership,
 )
 from irx.analysis.resolved_nodes import (
+    FailedInferenceType,
     OwnershipKind,
     OwnershipTransferKind,
     ResolvedGeneratorFunction,
@@ -456,5 +457,9 @@ class DeclarationBlockVisitorMixin(SemanticVisitorMixinBase):
             declaration=node,
         )
         self._set_symbol(node, symbol)
+        if isinstance(resolved_type, FailedInferenceType) or isinstance(
+            self._expr_type(node.value), FailedInferenceType
+        ):
+            return
         self._resolve_local_resource_ownership(node, symbol)
         resolve_module_storage(analyzer, node, symbol)
