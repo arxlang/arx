@@ -298,15 +298,9 @@ class SemanticEntityFactory:
         return ParameterSpec(
             name=argument.name,
             type_=clone_type(argument.type_),
-            passing_kind={
-                astx.BorrowAccess.read_only: (
-                    ParameterPassingKind.READ_ONLY_BORROW
-                ),
-                astx.BorrowAccess.exclusive: (
-                    ParameterPassingKind.EXCLUSIVE_BORROW
-                ),
-                None: ParameterPassingKind.BY_VALUE,
-            }[argument.borrow_access],
+            passing_kind=ParameterPassingKind.from_access(
+                argument.borrow_access
+            ),
             metadata=self._parameter_default_metadata(argument),
         )
 

@@ -32,10 +32,10 @@ owned list moves it to the caller. A list moved into a pending return cannot be
 read or reassigned through that binding in `finally`; a separate fresh owned
 return value is allowed.
 
-Free functions take lists through an explicit call-scoped borrow. Use `&list[T]`
-with `&values` to read, or `&&list[T]` with `&&values` to read and append.
-Migrate a plain `list[T]` parameter to `&list[T]` and add `&` to its call
-operands. Bind temporary lists to a local before borrowing them.
+Function and method parameters take lists through an explicit call-scoped
+borrow. Use `&list[T]` with `&values` to read, or `&&list[T]` with `&&values` to
+read and append. Migrate a plain `list[T]` parameter to `&list[T]` and add `&`
+to its call operands. Bind temporary lists to a local before borrowing them.
 
 ```arx
 fn grow(values: &&list[i32]) -> none:
@@ -56,8 +56,9 @@ the same call must use independent storage when they access lists. Exclusive
 call borrows require writable storage outside active iteration. Borrow sources
 are named locals or borrowed parameters. Functions with borrow parameters
 require explicit operands and cannot have default arguments or return
-generators. Class method list parameters use the implicit read-only borrowing
-contract.
+generators. Instance methods, static methods, and constructors accept the same
+borrow spellings. The borrow mode participates in method overload selection and
+inherited dispatch.
 
 While a `for ... in` loop borrows a list, replacing that owner binding anywhere
 in the body is a compile-time ownership error (`IRX-S013`), including nested

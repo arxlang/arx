@@ -20,8 +20,8 @@ from public import private
 
 from irx.analysis.arrow_conversion import arrow_ownership
 from irx.analysis.borrows import (
+    analyze_list_call_operand,
     check_borrow_access,
-    resolve_list_call_borrow,
 )
 from irx.analysis.call_arguments import (
     analyze_numeric_arguments,
@@ -123,14 +123,7 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
         ):
             self.visit(value)
             return
-        self.visit(value.source)
-        source = resolve_list_call_borrow(self.context, value)
-        self._semantic(value).resolved_symbol = None
-        if source is None:
-            self._set_type(value, FailedInferenceType())
-            return
-        self._set_symbol(value, source)
-        self._set_type(value, source.type_)
+        analyze_list_call_operand(cast(SemanticAnalyzerCore, self), value)
 
     @SemanticAnalyzerCore.visit.dispatch
     def visit(self, node: astx.BorrowArgument) -> None:

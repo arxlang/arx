@@ -74,7 +74,8 @@ class ClassMemberFormattingVisitorMixin(SemanticVisitorMixinBase):
         if member.signature is None:
             return member.name
         parameters = ", ".join(
-            display_type_name(parameter.type_)
+            parameter.passing_kind.borrow_prefix
+            + display_type_name(parameter.type_)
             for parameter in member.signature.parameters
         )
         suffix = " static" if member.is_static else ""

@@ -1511,7 +1511,7 @@ def test_grouped_type_annotations_preserve_block_layout() -> None:
         "class Holder:\n"
         "  first: (\n    i32\n  )\n"
         "  second: i32 = 2\n"
-        "  fn read(self, values: (\n"
+        "  fn read(self, values: &(\n"
         "    list[\n      (i32)\n    ]\n"
         "  )) -> (\n    i32\n  ):\n"
         "    result: (\n      i32\n    ) = values[0]\n"
@@ -1524,7 +1524,9 @@ def test_grouped_type_annotations_preserve_block_layout() -> None:
     assert [field.name for field in holder.attributes] == ["first", "second"]
     assert [method.name for method in holder.methods] == ["read", "next"]
     read = holder.methods[0]
-    parameter = read.prototype.args.nodes[0].type_
+    argument = read.prototype.args.nodes[0]
+    assert argument.borrow_access is astx.BorrowAccess.read_only
+    parameter = argument.type_
     assert isinstance(parameter, astx.ListType)
     assert isinstance(parameter.element_types[0], astx.Int32)
     assert isinstance(read.prototype.return_type, astx.Int32)

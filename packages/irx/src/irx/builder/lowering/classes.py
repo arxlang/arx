@@ -15,6 +15,7 @@ from irx.analysis.resolved_nodes import (
     ClassHeaderFieldKind,
     OwnershipKind,
     OwnershipTransferKind,
+    ParameterPassingKind,
     ResolvedClassConstruction,
     ResourceKind,
     SemanticClass,
@@ -647,19 +648,25 @@ class ClassVisitorMixin(FileVisitorMixin):
                         phase_index
                         == len(resolution.initialization.phases) - 1
                     ):
-                        for index, type_ in zip(
+                        for index, type_, parameter_spec in zip(
                             resolution.argument_indices,
                             resolution.argument_types,
+                            phase.initializer.signature.parameters[1:],
+                            strict=True,
                         ):
-                            arguments.append(
-                                self._cast_ast_value(
-                                    values[index],
+                            value = values[index]
+                            if (
+                                parameter_spec.passing_kind
+                                is ParameterPassingKind.BY_VALUE
+                            ):
+                                value = self._cast_ast_value(
+                                    value,
                                     source_type=self._resolved_ast_type(
                                         resolution.evaluations[index]
                                     ),
                                     target_type=type_,
                                 )
-                            )
+                            arguments.append(value)
                     else:
                         for (
                             parameter

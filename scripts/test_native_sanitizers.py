@@ -29,8 +29,9 @@ from irx.typecheck import typechecked
 
 
 @typechecked
-def check_generated_reassignment(
-    root: Path,
+def check_generated_ownership(
+    fixture: Path,
+    tests: tuple[str, ...],
     work: Path,
     flags: list[str],
     env: dict[str, str],
@@ -38,31 +39,28 @@ def check_generated_reassignment(
     cxx: str,
 ) -> None:
     """
-    title: Run compiled Arx replacement cases with sanitizer allocation hooks.
+    title: Run compiled Arx ownership cases with instrumented runtimes.
     parameters:
-      root: Repository root.
+      fixture: Source module containing the ownership tests.
+      tests: Functions to invoke from the generated entry point.
       work: Directory for the generated program.
       flags: Clang sanitizer flags.
       env: Sanitizer execution environment.
       cc: Clang executable.
       cxx: Clang C++ executable.
     """
-    fixture = root / "packages/arx/tests/arx/test_text.x"
-    ArxIO.string_to_buffer(
-        fixture.read_text(encoding="utf-8") + "\nfn main() -> i32:\n"
-        "  test_resource_reassignment()\n"
-        "  test_text_failures()\n"
-        "  return 0\n"
-    )
+    calls = "".join(f"  {name}()\n" for name in tests)
+    main = f"\nfn main() -> i32:\n{calls}  return 0\n"
+    ArxIO.string_to_buffer(fixture.read_text(encoding="utf-8") + main)
     builder = ArxBuilder()
     module = llvm.parse_assembly(
         builder.translate(Parser().parse(Lexer().lex()))
     )
     module.verify()
-    primary = work / "reassignment.o"
+    primary = work / f"{fixture.stem}.o"
     primary.write_bytes(builder.translator.target_machine.emit_object(module))
     features = builder.translator.runtime_features
-    executable = work / "reassignment"
+    executable = work / fixture.stem
     link_executable(
         primary,
         executable,
@@ -161,7 +159,25 @@ def main() -> None:
             UBSAN_OPTIONS="halt_on_error=1:print_stacktrace=1",
         )
         subprocess.run([str(executable)], cwd=work, env=env, check=True)
-        check_generated_reassignment(root, work, flags, env, cc, cxx)
+        fixtures = root / "packages/arx/tests/arx"
+        check_generated_ownership(
+            fixtures / "test_text.x",
+            ("test_resource_reassignment", "test_text_failures"),
+            work,
+            flags,
+            env,
+            cc,
+            cxx,
+        )
+        check_generated_ownership(
+            fixtures / "test_lists.x",
+            ("test_call_scoped_list_borrows", "test_method_list_borrows"),
+            work,
+            flags,
+            env,
+            cc,
+            cxx,
+        )
     suffix = " (leak detection disabled)" if args.no_leaks else ""
     print(f"Native ASan/UBSan smoke passed{suffix}")
 

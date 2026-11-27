@@ -1160,20 +1160,18 @@ class DeclarationParserMixin(ParserMixinBase):
                     allow_union=True, type_context=TypeUseContext.PARAMETER
                 )
                 self.skip_callable_layout()
-                if (
-                    not is_method
-                    and borrow_access is None
-                    and isinstance(arg_type, astx.ListType)
+                if borrow_access is None and isinstance(
+                    arg_type, astx.ListType
                 ):
                     raise ParserException(
                         "List parameters require &list[T] or &&list[T].",
                         type_token.location,
                     )
-                if borrow_access is not None and (
-                    is_method or not isinstance(arg_type, astx.ListType)
+                if borrow_access is not None and not isinstance(
+                    arg_type, astx.ListType
                 ):
                     raise ParserException(
-                        "Borrowed parameters require list types on functions.",
+                        "Borrowed parameters require list types.",
                         type_token.location,
                     )
                 if borrow_access is not None and arg_modifiers is not None:

@@ -175,3 +175,75 @@ fn test_call_scoped_list_borrows() -> none:
     assert values[48] == 23
   values.append(4)
   assert values[49] == 4
+
+
+class ListReader:
+  ```
+  title: View lists through method overloads
+  ```
+  fn process(self, values: &list[i32]) -> i64:
+    ```
+    title: Read the length through a shared loan
+    ```
+    return len(values)
+
+  fn process(self, values: &&list[i32]) -> i64:
+    ```
+    title: Append through an exclusive loan
+    ```
+    values.append(1)
+    return len(values)
+
+class ListEditor(ListReader):
+  ```
+  title: Override only the exclusive overload
+  ```
+  fn process(self, values: &&list[i32]) -> i64:
+    ```
+    title: Grow the caller list across a buffer reallocation
+    ```
+    grow(&&values, false)
+    return len(values)
+
+  fn size(values: &list[i32]) -> static :: i64:
+    ```
+    title: Accept a read-only borrow in a static method
+    ```
+    return len(values)
+
+class ListInitializer:
+  ```
+  title: Borrow a list for construction
+  ```
+  fn __init__(self, values: &&list[i32], fail: bool) -> none:
+    ```
+    title: Grow the list even when construction raises
+    ```
+    values.append(42)
+    if fail:
+      raise ValueError("after append")
+
+fn process_through_base(reader: ListReader, values: &&list[i32]) -> i64:
+  ```
+  title: Dispatch an exclusive method through its base type
+  ```
+  return reader.process(values=&&values)
+
+fn test_method_list_borrows() -> none:
+  ```
+  title: Preserve access modes through overload selection and dispatch
+  ```
+  values: list[i32] = [7]
+  editor: ListEditor = ListEditor()
+  assert editor.process(&values) == 1
+  assert process_through_base(editor, &&values) == 25
+  assert ListEditor.size(&values) == 25
+  assert values[24] == 23
+
+  try:
+    failed: ListInitializer = ListInitializer(fail=true, values=&&values)
+    assert false
+  except ValueError:
+    assert values[25] == 42
+  built: ListInitializer = ListInitializer(&&values, false)
+  assert values[26] == 42
