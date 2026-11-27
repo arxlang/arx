@@ -180,22 +180,27 @@ class ListVisitorMixin(VisitorMixinBase):
         """
         return self._list_element_size_from_type(self._resolved_ast_type(node))
 
-    def _empty_list_value_for_type(
+    @private
+    def list_value_for_storage(
         self,
         type_: astx.DataType | None,
+        data: ir.Constant,
+        length: int,
     ) -> ir.Constant:
         """
-        title: Return one zero-length lowered list value for one list type.
+        title: Build a lowered list descriptor for existing storage.
         parameters:
           type_: Type expression to process.
-        returns: One zero-length lowered list value for one list type.
+          data: Pointer to list elements.
+          length: Number of elements in the storage.
+        returns: A list value with length and capacity matching the storage.
         """
         return ir.Constant(
             cast(ir.LiteralStructType, self._llvm_list_type()),
             [
-                ir.Constant(self._llvm.INT8_TYPE.as_pointer(), None),
-                ir.Constant(self._llvm.INT64_TYPE, 0),
-                ir.Constant(self._llvm.INT64_TYPE, 0),
+                data,
+                ir.Constant(self._llvm.INT64_TYPE, length),
+                ir.Constant(self._llvm.INT64_TYPE, length),
                 ir.Constant(
                     self._llvm.INT64_TYPE,
                     self._list_element_size_from_type(type_),
@@ -205,6 +210,19 @@ class ListVisitorMixin(VisitorMixinBase):
                     int(is_string_type(list_element_type(type_))),
                 ),
             ],
+        )
+
+    def _empty_list_value_for_type(
+        self, type_: astx.DataType | None
+    ) -> ir.Constant:
+        """
+        title: Return one zero-length lowered list value for one list type.
+        parameters:
+          type_: Type expression to process.
+        returns: One zero-length lowered list value for one list type.
+        """
+        return self.list_value_for_storage(
+            type_, ir.Constant(self._llvm.INT8_TYPE.as_pointer(), None), 0
         )
 
     def _empty_list_value(self, node: astx.AST) -> ir.Constant:
@@ -612,6 +630,18 @@ class ListVisitorMixin(VisitorMixinBase):
           index_node: Index node.
           result_node: Result node.
         """
+        info = getattr(result_node, "semantic", None)
+        if (
+            isinstance(info, SemanticInfo)
+            and info.constant_list_elements is not None
+        ):
+            list_ptr = self.static_list_read_storage(
+                base, info.constant_list_elements
+            )
+            self._load_list_element_via_runtime(
+                base=base, list_ptr=list_ptr, index_node=index_node
+            )
+            return
         if isinstance(base, astx.LiteralList):
             static_index = self._static_integer_literal_value(index_node)
             if static_index is not None and 0 <= static_index < len(
@@ -645,6 +675,42 @@ class ListVisitorMixin(VisitorMixinBase):
             index_node=index_node,
         )
         self.copy_list_string_result(result_node)
+
+    @private
+    def static_list_read_storage(
+        self, base: astx.AST, elements: tuple[int, ...]
+    ) -> ir.GlobalVariable:
+        """
+        title: Emit read-only element data and a descriptor for checked reads.
+        parameters:
+          base: List expression with a resolved element type.
+          elements: Resolved integer values.
+        returns: Constant descriptor passed only to the read-only list API.
+        """
+        element_type = self._list_element_llvm_type(base)
+        array = ir.Constant(
+            ir.ArrayType(element_type, len(elements)),
+            [ir.Constant(element_type, value) for value in elements],
+        )
+        module = self._llvm.module
+        storage = ir.GlobalVariable(
+            module, array.type, module.get_unique_name("list.literal.data")
+        )
+        storage.linkage = "internal"
+        storage.global_constant = True
+        storage.initializer = array
+        descriptor = self.list_value_for_storage(
+            self._resolved_ast_type(base),
+            storage.bitcast(self._llvm.INT8_TYPE.as_pointer()),
+            len(elements),
+        )
+        view = ir.GlobalVariable(
+            module, descriptor.type, module.get_unique_name("list.literal")
+        )
+        view.linkage = "internal"
+        view.global_constant = True
+        view.initializer = descriptor
+        return view
 
     @private
     def copy_list_string_result(self, node: astx.AST) -> None:

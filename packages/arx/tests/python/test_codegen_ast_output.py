@@ -700,13 +700,15 @@ def literal_loop_ir() -> tuple[ArxBuilder, str]:
     ArxIO.string_to_buffer(
         "```\ntitle: Bounded literal loop storage\n```\n"
         "extern getchar() -> i32\n"
+        "fn offset(index: i32) -> i32:\n"
+        "  return [-1, 2, 3][index]\n"
         "fn main() -> i32:\n"
         "  count: i32 = getchar() * 200\n"
         "  numbers: list[i32] = list(range(0, count))\n"
         "  total: i32 = 0\n"
         "  j: i32 = 1\n"
         "  for number in numbers:\n"
-        "    total = total + [1, 2, 3][j]\n"
+        "    total = total + offset(j)\n"
         "    assert ![true, false, true][j]\n"
         "    for value in [1, 2]:\n"
         "      total = total + value\n"
@@ -742,6 +744,11 @@ def test_literal_loop_allocations_are_in_entry(
                     assert block == entry, (function.name, str(instruction))
     assert found == tested
     assert "irx_list_destroy" in text
+    body = str(module.get_function("main__offset"))
+    assert "irx_list_at" in body
+    assert "internal constant [3 x i32] [i32 -1, i32 2, i32 3]" in text
+    assert "irx_list_append" not in body
+    assert "irx_list_destroy" not in body
 
 
 @pytest.fixture(scope="module", params=[0, 3])
@@ -2157,6 +2164,8 @@ fn main() -> i32:
     if mode == 4:
       matrix: tensor[i64, 1, 2] = [[7, 9]]
       return cast(runtime_borrow(matrix), i32)
+    if mode == 6:
+      return [7, 9][index]
     copied: list[i64] = list(values, max_items=index)
     return cast(len(copied), i32)
   except IndexError:
@@ -2193,6 +2202,9 @@ fn main() -> i32:
         (4, 0, 11),
         (5, -1, 11),
         (5, 1, 11),
+        (6, 1, 9),
+        (6, -1, 10),
+        (6, 2, 10),
         (5, 2, 2),
     ],
 )
