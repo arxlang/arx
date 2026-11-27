@@ -173,8 +173,9 @@ def test_borrowed_list_parameters_preserve_access(
         ("editor.inspect(&&values)", "requires an explicit '&' borrow"),
         ("editor.mix(&values, &&values)", "call operands overlap"),
         ("get_editor(&values).grow(&&values)", "call operands overlap"),
-        ("Editor(values)", "constructor argument 'values' requires"),
-        ("Editor(&&values)", "constructor argument 'values' requires"),
+        ("Editor(values, 0)", "constructor argument 'values' requires"),
+        ("Editor(&&values, 0)", "constructor argument 'values' requires"),
+        ("Editor(&values, editor.grow(&&values))", "call operands overlap"),
     ],
 )
 def test_method_list_borrows_reject_invalid_operands(
@@ -188,19 +189,20 @@ def test_method_list_borrows_reject_invalid_operands(
     """
     ArxIO.string_to_buffer(
         "class Editor:\n"
-        "  fn __init__(self, values: &list[i32]) -> none:\n"
+        "  fn __init__(self, values: &list[i32], size: i64) -> none:\n"
         "    return none\n"
-        "  fn grow(self, values: &&list[i32]) -> none:\n"
+        "  fn grow(self, values: &&list[i32]) -> i64:\n"
         "    values.append(2)\n"
+        "    return len(values)\n"
         "  fn inspect(self, values: &list[i32]) -> i64:\n"
         "    return len(values)\n"
         "  fn mix(self, first: &list[i32], second: &&list[i32]) -> none:\n"
         "    return none\n"
         "fn get_editor(values: &list[i32]) -> Editor:\n"
-        "  return Editor(&values)\n"
+        "  return Editor(&values, 0)\n"
         "fn main() -> i32:\n"
         "  values: list[i32] = [1]\n"
-        "  editor: Editor = Editor(&values)\n"
+        "  editor: Editor = Editor(&values, 0)\n"
         f"  {body}\n"
         "  return 0\n"
     )
