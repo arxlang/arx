@@ -619,7 +619,9 @@ class ExpressionParserMixin(ParserMixinBase):
                 )
             message = self.parse_expression()
             self._consume_operator(")")
-            return builtins.build_print(cast(astx.Expr, message))
+            output = builtins.build_print(cast(astx.Expr, message))
+            output.loc = id_loc
+            return output
 
         if id_name == builtins.BUILTIN_TYPE:
             if template_args is not None:

@@ -1332,6 +1332,46 @@ def test_nullable_series_translate_verifies() -> None:
     assert "column_valid" in text
 
 
+def test_print_diagnostics_keep_primary_errors_and_source_locations() -> None:
+    """
+    title: Report a failed argument and an independent print error once each.
+    """
+    invalid_argument = '  print(df["label"][1])'
+    invalid_print = '  print(df["x"][0])'
+    ArxIO.string_to_buffer(
+        "```\ntitle: Print argument diagnostics\n```\n"
+        "fn main() -> i32:\n"
+        "  df: dataframe[x: i64 | none, label: str] = "
+        'dataframe({x: [10, none], label: ["a", "b"]})\n'
+        f"{invalid_argument}\n"
+        f"{invalid_print}\n"
+        "  return 0\n"
+    )
+    with pytest.raises(SemanticError) as error:
+        ArxBuilder().translate(Parser().parse(Lexer().lex()))
+    argument, output = error.value.diagnostics.diagnostics
+    assert argument.code == DiagnosticCodes.SEMANTIC_TYPE_MISMATCH
+    assert "Series scalar operations support numeric and bool" in (
+        argument.message
+    )
+    location = argument.resolved_source()
+    assert location is not None
+    assert (location.line, location.col) == (
+        6,
+        invalid_argument.rindex("[") + 1,
+    )
+    assert output.code == DiagnosticCodes.SEMANTIC_TYPE_MISMATCH
+    assert (
+        output.message == "unsupported PrintExpr message type nullable[Int64]"
+    )
+    location = output.resolved_source()
+    assert location is not None
+    assert (location.line, location.col) == (
+        7,
+        invalid_print.index("print") + 1,
+    )
+
+
 @pytest.mark.parametrize(
     "body,message",
     [

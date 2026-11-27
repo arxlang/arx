@@ -751,12 +751,16 @@ class ExpressionOperatorVisitorMixin(SemanticVisitorMixinBase):
         parameters:
           node: Syntax node to process.
         """
+        diagnostics = self.context.diagnostics.diagnostics
+        start = len(diagnostics)
         self.visit(node.message)
+        self._set_type(node, astx.Int32())
+        if any(item.severity == "error" for item in diagnostics[start:]):
+            return
         if not self._require_value_expression(
             node.message,
             context="PrintExpr",
         ):
-            self._set_type(node, astx.Int32())
             return
         message_type = self._expr_type(node.message)
         if not (
@@ -771,7 +775,6 @@ class ExpressionOperatorVisitorMixin(SemanticVisitorMixinBase):
                 node=node,
                 code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
             )
-        self._set_type(node, astx.Int32())
 
     @SemanticAnalyzerCore.visit.dispatch
     def visit(self, node: astx.TypeOfExpr) -> None:
