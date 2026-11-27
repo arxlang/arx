@@ -19,6 +19,7 @@ from irx.analysis.types import (
     common_numeric_type,
     is_boolean_type,
     is_numeric_type,
+    is_string_type,
     is_unsigned_type,
     union_storage_type,
 )
@@ -125,5 +126,10 @@ def normalize_operator(
             ImplicitConversion(rhs_storage, computation_type)
             if computation_type is not None and rhs_storage is not None
             else None
+        ),
+        string_comparison=(
+            op_code in {"==", "!="}
+            and is_string_type(lhs_storage)
+            and is_string_type(rhs_storage)
         ),
     )

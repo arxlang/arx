@@ -1020,9 +1020,9 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
         self.result_stack.append(result)
 
     @VisitorCore.visit.dispatch
-    def visit(self, node: EqBinOp) -> None:
+    def visit(self, node: EqBinOp | NeBinOp) -> None:
         """
-        title: Visit EqBinOp nodes.
+        title: Lower analyzed equality and inequality comparisons.
         parameters:
           node: Syntax node to process.
         """
@@ -1033,51 +1033,29 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
         if is_vector(llvm_lhs) and is_vector(llvm_rhs):
             raise Exception(f"Vector binop {node.op_code} not implemented.")
 
-        if (
-            isinstance(llvm_lhs.type, ir.PointerType)
-            and isinstance(llvm_rhs.type, ir.PointerType)
-            and llvm_lhs.type.pointee == self._llvm.INT8_TYPE
-            and llvm_rhs.type.pointee == self._llvm.INT8_TYPE
-        ):
-            result = self._handle_string_comparison(llvm_lhs, llvm_rhs, "==")
-        else:
-            result = self._emit_numeric_compare(
-                "==",
-                llvm_lhs,
-                llvm_rhs,
-                unsigned=unsigned,
-                name="eqtmp",
+        semantic = require_semantic_metadata(
+            cast(SemanticInfo | None, getattr(node, "semantic", None)),
+            node=node,
+            metadata="semantic",
+            context="equality comparison",
+        )
+        operation = require_semantic_metadata(
+            semantic.resolved_operator,
+            node=node,
+            metadata="resolved_operator",
+            context="equality comparison",
+        )
+        if operation.string_comparison:
+            result = self._handle_string_comparison(
+                llvm_lhs, llvm_rhs, node.op_code
             )
-        self.result_stack.append(result)
-
-    @VisitorCore.visit.dispatch
-    def visit(self, node: NeBinOp) -> None:
-        """
-        title: Visit NeBinOp nodes.
-        parameters:
-          node: Syntax node to process.
-        """
-        if cast(NullableVisitorMixin, self).lower_column_operation(node):
-            return
-        llvm_lhs, llvm_rhs, unsigned = self._load_binary_operands(node)
-
-        if is_vector(llvm_lhs) and is_vector(llvm_rhs):
-            raise Exception(f"Vector binop {node.op_code} not implemented.")
-
-        if (
-            isinstance(llvm_lhs.type, ir.PointerType)
-            and isinstance(llvm_rhs.type, ir.PointerType)
-            and llvm_lhs.type.pointee == self._llvm.INT8_TYPE
-            and llvm_rhs.type.pointee == self._llvm.INT8_TYPE
-        ):
-            result = self._handle_string_comparison(llvm_lhs, llvm_rhs, "!=")
         else:
             result = self._emit_numeric_compare(
-                "!=",
+                node.op_code,
                 llvm_lhs,
                 llvm_rhs,
                 unsigned=unsigned,
-                name="netmp",
+                name="eqtmp" if node.op_code == "==" else "netmp",
             )
         self.result_stack.append(result)
 

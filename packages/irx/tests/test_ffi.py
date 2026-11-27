@@ -211,6 +211,45 @@ def test_translate_pointer_and_opaque_handle_externs() -> None:
     assert_ir_parses(ir_text)
 
 
+@pytest.mark.parametrize(
+    "operand_type,operator,instruction",
+    [
+        (astx.PointerType(astx.Float64()), "<", "icmp slt double*"),
+        (astx.PointerType(astx.UInt8()), "==", "icmp eq i8*"),
+        (astx.OpaqueHandleType("demo_handle"), "!=", "icmp ne i8*"),
+    ],
+)
+def test_native_pointer_and_handle_comparisons(
+    operand_type: astx.DataType, operator: str, instruction: str
+) -> None:
+    """
+    title: Compare native addresses without dereferencing byte pointers.
+    parameters:
+      operand_type: Type shared by both operands.
+      operator: Comparison operator.
+      instruction: Expected LLVM comparison instruction.
+    """
+    prototype = astx.FunctionPrototype(
+        "compare",
+        args=astx.Arguments(
+            astx.Argument("left", operand_type),
+            astx.Argument("right", operand_type),
+        ),
+        return_type=astx.Boolean(),
+    )
+    comparison = astx.BinaryOp(
+        operator, astx.Identifier("left"), astx.Identifier("right")
+    )
+    body = astx.Block()
+    body.append(astx.FunctionReturn(comparison))
+    module = astx.Module()
+    module.block.append(astx.FunctionDef(prototype=prototype, body=body))
+    ir_text = Builder().translate(module)
+    assert instruction in ir_text
+    assert "strcmp" not in ir_text
+    assert_ir_parses(ir_text)
+
+
 def test_translate_struct_extern_by_value() -> None:
     """
     title: ABI-safe structs should lower by value across extern boundaries.

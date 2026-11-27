@@ -1309,6 +1309,7 @@ class ResolvedOperator:
       computation_type: Numeric operand type, distinct from comparison results.
       lhs_conversion: Left operand conversion.
       rhs_conversion: Right operand conversion.
+      string_comparison: Whether equality compares text contents.
     """
 
     op_code: str
@@ -1320,6 +1321,7 @@ class ResolvedOperator:
     computation_type: astx.DataType | None = None
     lhs_conversion: ImplicitConversion | None = None
     rhs_conversion: ImplicitConversion | None = None
+    string_comparison: bool = False
 
 
 @public
