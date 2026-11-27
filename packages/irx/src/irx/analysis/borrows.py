@@ -10,9 +10,12 @@ from public import private
 
 from irx.analysis.class_lifecycle import lifecycle_children
 from irx.analysis.context import SemanticContext
+from irx.analysis.handlers.base import SemanticAnalyzerCore
 from irx.analysis.ownership import symbol_resource_ownership
 from irx.analysis.resolved_nodes import (
+    FailedInferenceType,
     OwnershipKind,
+    ParameterPassingKind,
     SemanticInfo,
     SemanticSymbol,
 )
@@ -220,6 +223,71 @@ def resolve_list_call_borrow(
         )
         return None
     return symbol
+
+
+@private
+@typechecked
+def analyze_list_call_operand(
+    analyzer: SemanticAnalyzerCore, operand: astx.BorrowArgument
+) -> None:
+    """
+    title: Resolve the storage of a borrow at a checked call boundary.
+    parameters:
+      analyzer: Active semantic analyzer.
+      operand: Explicit borrow operand.
+    """
+    analyzer.visit(operand.source)
+    source = resolve_list_call_borrow(analyzer.context, operand)
+    analyzer._semantic(operand).resolved_symbol = None
+    if source is None:
+        analyzer._set_type(operand, FailedInferenceType())
+        return
+    analyzer._set_symbol(operand, source)
+    analyzer._set_type(operand, source.type_)
+
+
+@private
+@typechecked
+def call_operand_mode(operand: astx.AST) -> ParameterPassingKind:
+    """
+    title: Return the passing mode requested by an operand.
+    parameters:
+      operand: Call operand.
+    returns: Explicit borrow mode or the ordinary passing mode.
+    """
+    return ParameterPassingKind.from_access(
+        operand.access if isinstance(operand, astx.BorrowArgument) else None
+    )
+
+
+@private
+@typechecked
+def validate_call_operand_mode(
+    diagnostics: DiagnosticBag,
+    operand: astx.AST,
+    expected: ParameterPassingKind,
+    *,
+    label: str,
+) -> None:
+    """
+    title: Diagnose a mismatched parameter and operand access mode.
+    parameters:
+      diagnostics: Collected semantic diagnostics.
+      operand: Call operand.
+      expected: Parameter passing mode.
+      label: Human-facing argument description.
+    """
+    if call_operand_mode(operand) is expected:
+        return
+    prefix = expected.borrow_prefix
+    message = (
+        f"{label} requires an explicit '{prefix}' borrow"
+        if prefix
+        else f"{label} does not accept a borrow"
+    )
+    diagnostics.add(
+        message, node=operand, code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP
+    )
 
 
 @private

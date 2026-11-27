@@ -165,6 +165,49 @@ def test_borrowed_list_parameters_preserve_access(
         ArxBuilder().translate(Parser().parse(Lexer().lex()))
 
 
+@pytest.mark.parametrize(
+    ("body", "message"),
+    [
+        ("editor.grow(values)", "requires an explicit '&&' borrow"),
+        ("editor.grow(&values)", "requires an explicit '&&' borrow"),
+        ("editor.inspect(&&values)", "requires an explicit '&' borrow"),
+        ("editor.mix(&values, &&values)", "call operands overlap"),
+        ("get_editor(&values).grow(&&values)", "call operands overlap"),
+        ("Editor(values)", "constructor argument 'values' requires"),
+        ("Editor(&&values)", "constructor argument 'values' requires"),
+    ],
+)
+def test_method_list_borrows_reject_invalid_operands(
+    body: str, message: str
+) -> None:
+    """
+    title: Reject method and constructor access mismatches and overlap.
+    parameters:
+      body: Invalid borrow operation.
+      message: Expected semantic diagnostic.
+    """
+    ArxIO.string_to_buffer(
+        "class Editor:\n"
+        "  fn __init__(self, values: &list[i32]) -> none:\n"
+        "    return none\n"
+        "  fn grow(self, values: &&list[i32]) -> none:\n"
+        "    values.append(2)\n"
+        "  fn inspect(self, values: &list[i32]) -> i64:\n"
+        "    return len(values)\n"
+        "  fn mix(self, first: &list[i32], second: &&list[i32]) -> none:\n"
+        "    return none\n"
+        "fn get_editor(values: &list[i32]) -> Editor:\n"
+        "  return Editor(&values)\n"
+        "fn main() -> i32:\n"
+        "  values: list[i32] = [1]\n"
+        "  editor: Editor = Editor(&values)\n"
+        f"  {body}\n"
+        "  return 0\n"
+    )
+    with pytest.raises(SemanticError, match=message):
+        ArxBuilder().translate(Parser().parse(Lexer().lex()))
+
+
 @pytest.mark.skipif(shutil.which("clang") is None, reason="requires clang")
 def test_text_query_cache_handles_foreign_writes(tmp_path: Path) -> None:
     """

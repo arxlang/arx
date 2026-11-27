@@ -60,13 +60,6 @@ class DeclarationClassMethodVisitorMixin(SemanticVisitorMixinBase):
             validate_ffi=False,
             validate_main=False,
         )
-        for argument in declaration.prototype.args.nodes:
-            if argument.borrow_access is not None:
-                self.context.diagnostics.add(
-                    "explicit list borrows are supported on functions",
-                    node=argument,
-                    code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
-                )
         if signature.is_extern:
             self.context.diagnostics.add(
                 (

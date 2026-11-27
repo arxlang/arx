@@ -11,7 +11,10 @@ from typing import cast
 
 import astx
 
-from irx.analysis.borrows import check_list_call_borrows
+from irx.analysis.borrows import (
+    check_list_call_borrows,
+    validate_call_operand_mode,
+)
 from irx.analysis.call_arguments import argument_slots, call_evaluations
 from irx.analysis.resolved_nodes import (
     CallableResolution,
@@ -251,31 +254,12 @@ def validate_call(
             if parameter is not None
             else ParameterPassingKind.BY_VALUE
         )
-        if passing is ParameterPassingKind.BY_VALUE:
-            if isinstance(argument, astx.BorrowArgument):
-                diagnostics.add(
-                    f"argument {source_index + 1} of call to "
-                    f"'{function.name}' does not accept a borrow",
-                    node=argument,
-                    code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
-                )
-        else:
-            mode, prefix = (
-                (astx.BorrowAccess.read_only, "&")
-                if passing is ParameterPassingKind.READ_ONLY_BORROW
-                else (astx.BorrowAccess.exclusive, "&&")
-            )
-            if (
-                not isinstance(argument, astx.BorrowArgument)
-                or argument.access is not mode
-            ):
-                diagnostics.add(
-                    f"argument {source_index + 1} of call to "
-                    f"'{function.name}' requires an explicit "
-                    f"'{prefix}' borrow",
-                    node=argument,
-                    code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
-                )
+        validate_call_operand_mode(
+            diagnostics,
+            argument,
+            passing,
+            label=f"argument {source_index + 1} of call to '{function.name}'",
+        )
         if parameter is not None:
             target: astx.DataType | None = parameter.type_
             compatible = (

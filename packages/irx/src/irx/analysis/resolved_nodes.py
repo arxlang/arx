@@ -251,11 +251,41 @@ class ParameterPassingKind(str, Enum):
     title: Stable semantic parameter-passing modes.
     summary: Classify how one semantic parameter is passed across the callable
       boundary.
+    attributes:
+      borrow_prefix: The source prefix for the passing mode.
     """
 
     BY_VALUE = "by_value"
     READ_ONLY_BORROW = "read_only_borrow"
     EXCLUSIVE_BORROW = "exclusive_borrow"
+
+    @classmethod
+    def from_access(
+        cls, access: astx.BorrowAccess | None
+    ) -> ParameterPassingKind:
+        """
+        title: Normalize a declared or supplied borrow mode.
+        parameters:
+          access: Explicit access mode, if present.
+        returns: Canonical passing mode.
+        """
+        if access is astx.BorrowAccess.read_only:
+            return cls.READ_ONLY_BORROW
+        if access is astx.BorrowAccess.exclusive:
+            return cls.EXCLUSIVE_BORROW
+        return cls.BY_VALUE
+
+    @property
+    def borrow_prefix(self) -> str:
+        """
+        title: Render the explicit prefix required at the call boundary.
+        returns: Borrow prefix or an empty string for by-value arguments.
+        """
+        if self is ParameterPassingKind.READ_ONLY_BORROW:
+            return "&"
+        if self is ParameterPassingKind.EXCLUSIVE_BORROW:
+            return "&&"
+        return ""
 
 
 @public

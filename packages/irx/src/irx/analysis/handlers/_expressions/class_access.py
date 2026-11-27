@@ -14,7 +14,9 @@ from typing import cast
 
 import astx
 
-from irx.analysis.borrows import check_list_call_borrows
+from public import private
+
+from irx.analysis.borrows import analyze_list_call_operand
 from irx.analysis.builtin_file import (
     is_native_file_class,
     resolve_public_file_construction,
@@ -72,6 +74,32 @@ class ExpressionClassAccessVisitorMixin(ExpressionClassSupportVisitorMixin):
     """
     title: Expression class-access visitors.
     """
+
+    @private
+    def analyze_method_operands(
+        self, node: astx.AST, *, allow_borrow: bool = True
+    ) -> list[astx.DataType | None]:
+        """
+        title: Resolve explicit method operands before overload selection.
+        parameters:
+          node: Source call.
+          allow_borrow: Whether the receiver uses Arx class dispatch.
+        returns: Types in source operand order.
+        """
+        arg_types: list[astx.DataType | None] = []
+        for arg in call_evaluations(node):
+            if allow_borrow and isinstance(arg, astx.BorrowArgument):
+                analyze_list_call_operand(
+                    cast(SemanticAnalyzerCore, self), arg
+                )
+            elif not is_numeric_literal_argument(arg):
+                self.visit(arg)
+            arg_types.append(
+                default_numeric_literal_type(arg)
+                if isinstance(arg, (astx.LiteralInteger, astx.LiteralFloat))
+                else self._expr_type(arg)
+            )
+        return arg_types
 
     def _abstract_method_call_is_invalid(
         self,
@@ -199,7 +227,6 @@ class ExpressionClassAccessVisitorMixin(ExpressionClassSupportVisitorMixin):
         evaluations, indices, types = constructor_arguments(
             cast(SemanticAnalyzerCore, self), node, class_
         )
-        check_list_call_borrows(self.context.diagnostics, evaluations)
         self._set_class_construction(
             node,
             ResolvedClassConstruction(
@@ -256,15 +283,9 @@ class ExpressionClassAccessVisitorMixin(ExpressionClassSupportVisitorMixin):
                 f"{node.method_name} requires a text receiver",
             )
             return
-        arg_types: list[astx.DataType | None] = []
-        for arg in call_evaluations(node):
-            if not is_numeric_literal_argument(arg):
-                self.visit(arg)
-            arg_types.append(
-                default_numeric_literal_type(arg)
-                if isinstance(arg, (astx.LiteralInteger, astx.LiteralFloat))
-                else self._expr_type(arg)
-            )
+        arg_types = self.analyze_method_operands(
+            node, allow_borrow=isinstance(receiver_type, astx.ClassType)
+        )
         if not self._require_value_expression(
             node.receiver,
             context="Method call receiver",
@@ -407,15 +428,7 @@ class ExpressionClassAccessVisitorMixin(ExpressionClassSupportVisitorMixin):
             return
         self._semantic(node).resource_ownership = None
         self.visit(node.receiver)
-        arg_types: list[astx.DataType | None] = []
-        for arg in call_evaluations(node):
-            if not is_numeric_literal_argument(arg):
-                self.visit(arg)
-            arg_types.append(
-                default_numeric_literal_type(arg)
-                if isinstance(arg, (astx.LiteralInteger, astx.LiteralFloat))
-                else self._expr_type(arg)
-            )
+        arg_types = self.analyze_method_operands(node)
         if not self._require_value_expression(
             node.receiver,
             context="Base method call receiver",
@@ -517,15 +530,7 @@ class ExpressionClassAccessVisitorMixin(ExpressionClassSupportVisitorMixin):
             cast(SemanticAnalyzerCore, self), node, node.method_name
         ):
             return
-        arg_types: list[astx.DataType | None] = []
-        for arg in call_evaluations(node):
-            if not is_numeric_literal_argument(arg):
-                self.visit(arg)
-            arg_types.append(
-                default_numeric_literal_type(arg)
-                if isinstance(arg, (astx.LiteralInteger, astx.LiteralFloat))
-                else self._expr_type(arg)
-            )
+        arg_types = self.analyze_method_operands(node)
         class_ = self._resolve_named_class(node.class_name, node=node)
         if class_ is None:
             self._set_type(node, None)

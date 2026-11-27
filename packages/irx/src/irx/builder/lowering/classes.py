@@ -651,15 +651,17 @@ class ClassVisitorMixin(FileVisitorMixin):
                             resolution.argument_indices,
                             resolution.argument_types,
                         ):
-                            arguments.append(
-                                self._cast_ast_value(
-                                    values[index],
+                            operand = resolution.evaluations[index]
+                            value = values[index]
+                            if not isinstance(operand, astx.BorrowArgument):
+                                value = self._cast_ast_value(
+                                    value,
                                     source_type=self._resolved_ast_type(
-                                        resolution.evaluations[index]
+                                        operand
                                     ),
                                     target_type=type_,
                                 )
-                            )
+                            arguments.append(value)
                     else:
                         for (
                             parameter

@@ -10,6 +10,7 @@ from typing import cast
 
 import astx
 
+from irx.analysis.borrows import call_operand_mode
 from irx.analysis.call_arguments import (
     argument_slots,
     call_evaluations,
@@ -379,6 +380,7 @@ class ExpressionClassSupportVisitorMixin(ClassMemberFormattingVisitorMixin):
         self,
         method_name: str,
         arg_types: list[astx.DataType | None],
+        node: astx.AST,
         *,
         is_static: bool,
     ) -> str:
@@ -387,11 +389,16 @@ class ExpressionClassSupportVisitorMixin(ClassMemberFormattingVisitorMixin):
         parameters:
           method_name: Name of method.
           arg_types: Types of arg.
+          node: Source call.
           is_static: Whether the member belongs to the class rather than
             an instance.
         returns: One human-facing requested method signature.
         """
-        parameters = ", ".join(display_type_name(arg) for arg in arg_types)
+        parameters = ", ".join(
+            call_operand_mode(argument).borrow_prefix
+            + display_type_name(type_)
+            for argument, type_ in zip(call_evaluations(node), arg_types)
+        )
         suffix = " static" if is_static else ""
         return f"{method_name}({parameters}){suffix}"
 
@@ -422,8 +429,13 @@ class ExpressionClassSupportVisitorMixin(ClassMemberFormattingVisitorMixin):
             return False
         if exact and len(slots) != len(function.signature.parameters):
             return False
-        for slot, type_ in zip(slots, arg_types):
-            target = function.signature.parameters[slot].type_
+        for argument, slot, type_ in zip(
+            call_evaluations(node), slots, arg_types
+        ):
+            parameter = function.signature.parameters[slot]
+            if call_operand_mode(argument) is not parameter.passing_kind:
+                return False
+            target = parameter.type_
             if same_type(target, type_):
                 continue
             # Erasing a table's static schema changes no runtime data. Keep
@@ -601,6 +613,7 @@ class ExpressionClassSupportVisitorMixin(ClassMemberFormattingVisitorMixin):
         requested = self._format_requested_method_signature(
             method_name,
             arg_types,
+            node,
             is_static=is_static,
         )
         available = ", ".join(

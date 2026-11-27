@@ -27,13 +27,14 @@ from irx.analysis.resolved_nodes import (
     OwnershipEscapeKind,
     OwnershipKind,
     OwnershipTransferKind,
+    ParameterPassingKind,
     ResourceKind,
     ResourceOwnership,
     SemanticClass,
     SemanticClassInitialization,
     SemanticSymbol,
 )
-from irx.analysis.types import is_assignable, is_string_type
+from irx.analysis.types import is_assignable, is_string_type, same_type
 from irx.diagnostics import DiagnosticCodes
 from irx.typecheck import typechecked
 
@@ -382,6 +383,12 @@ def constructor_arguments(
     returns: 'Result of this operation: bind constructor names while preserving
       supplied evaluation order.'
     """
+    from irx.analysis.borrows import (  # noqa: PLC0415
+        analyze_list_call_operand,
+        check_list_call_borrows,
+        validate_call_operand_mode,
+    )
+
     assert class_.initialization is not None
     function = analyzer.context.current_function
     if (
@@ -424,7 +431,10 @@ def constructor_arguments(
                 evaluations[supplied[param.name]], param.type_
             )
     for value in evaluations:
-        analyzer.visit(value)
+        if isinstance(value, astx.BorrowArgument):
+            analyze_list_call_operand(analyzer, value)
+        else:
+            analyzer.visit(value)
     indices: list[int] = []
     for param in params:
         if param.name not in supplied:
@@ -441,14 +451,27 @@ def constructor_arguments(
             analyzer.visit(param.default)
         index = supplied[param.name]
         indices.append(index)
-        if not is_assignable(
-            param.type_, analyzer._expr_type(evaluations[index])
-        ):
+        operand = evaluations[index]
+        passing = ParameterPassingKind.from_access(param.borrow_access)
+        validate_call_operand_mode(
+            analyzer.context.diagnostics,
+            operand,
+            passing,
+            label=f"constructor argument '{param.name}'",
+        )
+        actual = analyzer._expr_type(operand)
+        compatible = (
+            is_assignable(param.type_, actual)
+            if passing is ParameterPassingKind.BY_VALUE
+            else same_type(param.type_, actual)
+        )
+        if not compatible:
             lifecycle_error(
                 analyzer,
-                evaluations[index],
+                operand,
                 f"constructor argument '{param.name}' has incompatible type",
             )
+    check_list_call_borrows(analyzer.context.diagnostics, tuple(evaluations))
     for phase in phases[:-1]:
         if phase.initializer and any(
             isinstance(arg.default, astx.Undefined)

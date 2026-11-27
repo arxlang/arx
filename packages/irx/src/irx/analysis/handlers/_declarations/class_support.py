@@ -193,7 +193,8 @@ class DeclarationClassSupportVisitorMixin(ClassMemberFormattingVisitorMixin):
         """
         dispatch_kind = "static" if is_static else "instance"
         parameters = ",".join(
-            display_type_name(parameter.type_)
+            parameter.passing_kind.borrow_prefix
+            + display_type_name(parameter.type_)
             for parameter in signature.parameters
         )
         variadic = "variadic" if signature.is_variadic else "fixed"
@@ -221,7 +222,8 @@ class DeclarationClassSupportVisitorMixin(ClassMemberFormattingVisitorMixin):
         """
         dispatch_kind = "static" if is_static else "instance"
         parameters = ",".join(
-            display_type_name(parameter.type_)
+            parameter.passing_kind.borrow_prefix
+            + display_type_name(parameter.type_)
             for parameter in signature.parameters
         )
         variadic = "variadic" if signature.is_variadic else "fixed"
