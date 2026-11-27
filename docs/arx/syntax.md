@@ -143,16 +143,16 @@ fn edit() -> i32:
   return editor
 ```
 
-The alias name reads its current target directly. Assigning an ordinary value
-to an exclusive alias writes to its target. Assigning an explicit borrow
-retargets a mutable alias with the same access mode and type. A borrow ends when
-its alias leaves scope or retargets. Retargeting must take place in the alias's
-declaring scope.
+The alias name reads its current target directly. Assigning an ordinary value to
+an exclusive alias writes to its target. Assigning an explicit borrow retargets
+a mutable alias with the same access mode and type. A borrow ends when its alias
+leaves scope or retargets. Retargeting must take place in the alias's declaring
+scope.
 
 Several read-only aliases may borrow the same variable. The owner remains
-readable while read-only aliases are active. An exclusive alias is the only
-way to read or write its target while the borrow is active. A `const` alias
-keeps its target and, if exclusive, still permits writes through the alias.
+readable while read-only aliases are active. An exclusive alias is the only way
+to read or write its target while the borrow is active. A `const` alias keeps
+its target and, if exclusive, still permits writes through the alias.
 
 Use `and` and `or` for logical AND and OR. Prefix `&&` forms an exclusive
 borrow.
