@@ -16,6 +16,8 @@ from irx.analysis.types import (
 )
 from irx.typecheck import typechecked
 
+COMPARISON_OPERATORS = frozenset({"<", ">", "<=", ">=", "==", "!="})
+
 
 @typechecked
 def binary_result_type(
@@ -31,7 +33,7 @@ def binary_result_type(
       rhs_type: Type of right operand.
     returns: Computed the semantic result type of a binary operator.
     """
-    if op_code in {"<", ">", "<=", ">=", "==", "!="}:
+    if op_code in COMPARISON_OPERATORS:
         return astx.Boolean()
 
     if op_code in {"&&", "and", "||", "or"}:

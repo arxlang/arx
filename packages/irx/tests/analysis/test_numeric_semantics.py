@@ -9,6 +9,7 @@ import pytest
 
 from irx.analysis import SemanticError, analyze
 from irx.analysis.numeric_literals import numeric_constant
+from irx.diagnostics import DiagnosticCodes
 
 
 @pytest.mark.parametrize(
@@ -112,6 +113,39 @@ def test_mixed_comparison_uses_lossless_signed_domain() -> None:
     semantic = getattr(expr, "semantic")
     assert semantic.resolved_type.__class__ is astx.Boolean
     assert semantic.semantic_flags.unsigned is False
+
+
+@pytest.mark.parametrize(
+    "operator,left,right,message",
+    [
+        ("<", astx.LiteralBoolean(False), astx.LiteralString("a"), "Boolean"),
+        ("<=", astx.LiteralString("a"), astx.LiteralString("b"), "String"),
+        (">=", astx.LiteralBoolean(False), astx.LiteralInt32(1), "Int32"),
+        ("!=", astx.LiteralString("a"), astx.LiteralInt32(1), "Int32"),
+        (
+            ">",
+            astx.LiteralInt64(-1),
+            astx.LiteralUInt64(1),
+            "no lossless common type",
+        ),
+    ],
+)
+def test_invalid_comparison_operands(
+    operator: str, left: astx.Literal, right: astx.Literal, message: str
+) -> None:
+    """
+    title: Unsupported comparison domains fail during semantic analysis.
+    parameters:
+      operator: Comparison operator.
+      left: Left operand.
+      right: Right operand.
+      message: Expected diagnostic text.
+    """
+    with pytest.raises(SemanticError) as error:
+        analyze(astx.BinaryOp(operator, left, right))
+    (diagnostic,) = error.value.diagnostics.diagnostics
+    assert diagnostic.code == DiagnosticCodes.SEMANTIC_TYPE_MISMATCH
+    assert message in diagnostic.message
 
 
 def test_analyze_widens_at_equal_width_boundary() -> None:

@@ -610,6 +610,61 @@ def test_elif_condition_requires_boolean() -> None:
         ArxBuilder().translate(Parser().parse(Lexer().lex()))
 
 
+@pytest.mark.parametrize(
+    "expression,operator,operand_types",
+    [
+        ('"hello" < 5', "<", ("String", "Int32")),
+        ('5 == "hello"', "==", ("Int32", "String")),
+        ("1 < x < 10", "<", ("Boolean", "Int32")),
+    ],
+)
+def test_invalid_comparison_reports_its_operator(
+    expression: str, operator: str, operand_types: tuple[str, str]
+) -> None:
+    """
+    title: Invalid comparisons report their operator before LLVM lowering.
+    parameters:
+      expression: Comparison to compile.
+      operator: Invalid operator spelling.
+      operand_types: Expected names of the left and right operand types.
+    """
+    line = f"  condition: bool = {expression}"
+    ArxIO.string_to_buffer(
+        "```\ntitle: Invalid comparison\n```\n"
+        "fn main() -> i32:\n"
+        "  x: i32 = 5\n"
+        f"{line}\n"
+        "  return 0\n"
+    )
+    with pytest.raises(SemanticError) as error:
+        ArxBuilder().translate(Parser().parse(Lexer().lex()))
+    (diagnostic,) = error.value.diagnostics.diagnostics
+    assert diagnostic.code == DiagnosticCodes.SEMANTIC_TYPE_MISMATCH
+    assert diagnostic.message == (
+        f"comparison '{operator}' does not support operands of type "
+        f"{operand_types[0]} and {operand_types[1]}"
+    )
+    location = diagnostic.resolved_source()
+    assert location is not None
+    assert (location.line, location.col) == (6, line.rindex(operator) + 1)
+
+
+def test_class_equality_compares_identity() -> None:
+    """
+    title: Comparing values of the same class retains identity equality.
+    """
+    ArxIO.string_to_buffer(
+        "```\ntitle: Class identity comparison\n```\n"
+        "class Item:\n"
+        "  value: i32 = 0\n\n"
+        "fn compare(left: Item, right: Item) -> bool:\n"
+        "  return left == right\n"
+    )
+    text = ArxBuilder().translate(Parser().parse(Lexer().lex()))
+    assert 'icmp eq %"main__Item"*' in text
+    llvm.parse_assembly(text).verify()
+
+
 @pytest.mark.parametrize("expression", ["café[0]", "café[:1]", "42[0]"])
 def test_unsupported_subscript_reports_its_source(expression: str) -> None:
     """

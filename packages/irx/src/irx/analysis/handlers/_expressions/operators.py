@@ -31,7 +31,11 @@ from irx.analysis.handlers.base import (
     SemanticAnalyzerCore,
     SemanticVisitorMixinBase,
 )
-from irx.analysis.normalization import normalize_flags, normalize_operator
+from irx.analysis.normalization import (
+    normalize_flags,
+    normalize_operator,
+    numeric_operand_storage,
+)
 from irx.analysis.nullable import resolve_column_binary, resolve_column_unary
 from irx.analysis.numeric_literals import (
     analyze_constant_cast,
@@ -64,7 +68,11 @@ from irx.analysis.types import (
     same_type,
     union_storage_type,
 )
-from irx.analysis.typing import binary_result_type, unary_result_type
+from irx.analysis.typing import (
+    COMPARISON_OPERATORS,
+    binary_result_type,
+    unary_result_type,
+)
 from irx.analysis.validation import validate_assignment, validate_cast
 from irx.diagnostics import DiagnosticCodes
 from irx.typecheck import typechecked
@@ -507,10 +515,49 @@ class ExpressionOperatorVisitorMixin(SemanticVisitorMixinBase):
                 node=node,
             )
 
+        result_type = binary_result_type(node.op_code, lhs_type, rhs_type)
+        lhs_storage, rhs_storage = lhs_type, rhs_type
+        is_comparison = node.op_code in COMPARISON_OPERATORS
+        if is_comparison:
+            # Keep the Boolean result for error recovery in enclosing contexts.
+            self._set_type(node, result_type)
+            self._set_operator(node, None)
+            lhs_storage = numeric_operand_storage(lhs_type)
+            rhs_storage = numeric_operand_storage(rhs_type)
+            numeric_pair = is_numeric_type(lhs_storage) and is_numeric_type(
+                rhs_storage
+            )
+            boolean_pair = is_boolean_type(lhs_type) and is_boolean_type(
+                rhs_type
+            )
+            pointer_pair = isinstance(
+                lhs_type, astx.PointerType
+            ) and same_type(lhs_type, rhs_type)
+            equality_pair = node.op_code in {"==", "!="} and (
+                (is_string_type(lhs_storage) and is_string_type(rhs_storage))
+                or (
+                    isinstance(
+                        lhs_type, (astx.ClassType, astx.OpaqueHandleType)
+                    )
+                    and same_type(lhs_type, rhs_type)
+                )
+            )
+            if not (
+                numeric_pair or boolean_pair or pointer_pair or equality_pair
+            ):
+                self.context.diagnostics.add(
+                    f"comparison '{node.op_code}' does not support operands "
+                    f"of type {display_type_name(lhs_type)} and "
+                    f"{display_type_name(rhs_type)}",
+                    node=node,
+                    code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
+                )
+                return
+
         if (
-            is_numeric_type(lhs_type)
-            and is_numeric_type(rhs_type)
-            and common_numeric_type(lhs_type, rhs_type) is None
+            is_numeric_type(lhs_storage)
+            and is_numeric_type(rhs_storage)
+            and common_numeric_type(lhs_storage, rhs_storage) is None
         ):
             self.context.diagnostics.add(
                 "numeric operands have no lossless common type; use an "
@@ -519,7 +566,6 @@ class ExpressionOperatorVisitorMixin(SemanticVisitorMixinBase):
                 code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
             )
             return
-        result_type = binary_result_type(node.op_code, lhs_type, rhs_type)
         self._set_type(node, result_type)
         analyze_constant_operation(node, self.context, result_type)
         self._set_operator(

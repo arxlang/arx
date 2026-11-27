@@ -747,7 +747,12 @@ IR.
 
 Boolean behavior is part of the stable semantic boundary:
 
-- comparisons always return `Boolean`
+- scalar comparisons return `Boolean`
+- numeric scalars and numeric unions support all six comparisons when their
+  operands share a lossless numeric type
+- strings and characters support content equality with `==` and `!=`
+- same-type native pointers compare addresses, and same-type opaque handles and
+  class references support identity equality with `==` and `!=`
 - `if`, `while`, and `for-count` conditions must be `Boolean`
 - `&&`, `||`, and `!` require `Boolean` operands
 - implicit truthiness is forbidden for integers, floats, pointers, and other

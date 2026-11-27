@@ -22,6 +22,7 @@ from irx.analysis.types import (
     is_unsigned_type,
     same_type,
 )
+from irx.analysis.typing import COMPARISON_OPERATORS
 from irx.builtins.collections.column_types import (
     column_arrow_type,
     dataframe_schema_ipc,
@@ -47,7 +48,6 @@ KERNELS = {
     "||": "or",
     "or": "or",
 }
-COMPARISONS = {"==", "!=", "<", "<=", ">", ">="}
 
 
 @private
@@ -253,7 +253,9 @@ def resolve_column_binary(
         )
         return True
     assert promoted is not None
-    output = astx.Boolean() if node.op_code in COMPARISONS else promoted
+    output = (
+        astx.Boolean() if node.op_code in COMPARISON_OPERATORS else promoted
+    )
     nullable = any(
         isinstance(t, astx.NullableType)
         or (isinstance(t, astx.SeriesType) and t.nullable)
