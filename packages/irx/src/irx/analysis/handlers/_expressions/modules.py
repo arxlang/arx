@@ -581,7 +581,8 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
         self._semantic(node).lifecycle_self = False
         symbol = self.context.scopes.resolve(node.name)
         if symbol is not None:
-            check_borrow_access(self.context, symbol, node)
+            if node is not self.context.list_index_base:
+                check_borrow_access(self.context, symbol, node)
             self._set_symbol(node, symbol)
             self._set_type(node, symbol.type_)
             if isinstance(symbol.type_, astx.ClassType):

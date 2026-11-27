@@ -31,6 +31,7 @@ from irx.builder.diagnostics import (
 )
 from irx.builder.lowering.classes import ClassVisitorMixin
 from irx.builder.lowering.collection_access import lower_collection_access
+from irx.builder.lowering.list import ListVisitorMixin
 from irx.builder.runtime import safe_pop
 from irx.builder.state import CleanupAction
 from irx.builder.text_cache import (
@@ -531,10 +532,22 @@ class VariableVisitorMixin(ClassVisitorMixin):
             metadata="resolved_borrow",
             context="local borrow",
         )
-        source = self.named_values.get(borrow.source.symbol_id)
+        source = self.named_values.get(borrow.place.root.symbol_id)
         if source is None:
             raise_lowering_internal_error(
                 "borrow source has no resolved storage", node=node
+            )
+        index = borrow.place.index
+        if index is not None:
+            lists = cast(ListVisitorMixin, self)
+            element_type = require_semantic_metadata(
+                self._llvm_type_for_ast_type(borrow.place.type_),
+                node=node,
+                metadata="element storage type",
+                context="list element borrow",
+            )
+            source = lists.list_element_address(
+                node, source, lists.list_index_value(index), element_type
             )
         slot: ir.Value | None
         if isinstance(node, astx.BorrowDeclaration):

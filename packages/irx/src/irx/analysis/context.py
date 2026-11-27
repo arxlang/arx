@@ -47,6 +47,7 @@ class SemanticContext:
       check_constant_expressions: Whether to use check constant expressions.
       loop_depth: Loop depth.
       active_list_iteration_owners: Active list iteration owners.
+      list_index_base: Receiver currently visited for projected list access.
       local_list_moves: Number of resolved moves from named list bindings.
       exception_region_depth: Exception region depth.
       native_feature_names: Native feature names.
@@ -76,6 +77,7 @@ class SemanticContext:
     check_constant_expressions: bool = True
     loop_depth: int = 0
     active_list_iteration_owners: frozenset[str] = frozenset()
+    list_index_base: astx.Identifier | None = None
     local_list_moves: int = 0
     exception_region_depth: int = 0
     native_feature_names: tuple[str, ...] = ()

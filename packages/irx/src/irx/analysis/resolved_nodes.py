@@ -67,17 +67,36 @@ class SemanticSymbol:
 @private
 @typechecked
 @dataclass(frozen=True)
+class ResolvedBorrowPlace:
+    """
+    title: Describe the resolved storage of a lexical borrow.
+    attributes:
+      root: Local binding that keeps the place alive.
+      type_: Exact value type at that place.
+      index: Evaluated index expression for a list element place.
+      constant_index: Statically known list position for overlap checks.
+    """
+
+    root: SemanticSymbol
+    type_: astx.DataType
+    index: astx.AST | None = None
+    constant_index: int | None = None
+
+
+@private
+@typechecked
+@dataclass(frozen=True)
 class ResolvedBorrow:
     """
     title: Address transfer between a local place and a lexical borrow slot.
     attributes:
       target: Borrow binding storing the address.
-      source: Local binding whose address is borrowed.
+      place: Source place whose address is borrowed.
       access: Access granted by the borrow.
     """
 
     target: SemanticSymbol
-    source: SemanticSymbol
+    place: ResolvedBorrowPlace
     access: astx.BorrowAccess
 
 

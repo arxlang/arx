@@ -324,6 +324,11 @@ class ExpressionMutationVisitorMixin(ClassMemberFormattingVisitorMixin):
             return
 
         source_id = source.symbol_id if source is not None else None
+        if source is not None and source_id != symbol.symbol_id:
+            if not check_borrow_access(
+                self.context, source, value, write=True, read_checked=True
+            ):
+                return
         if (
             source_id != symbol.symbol_id
             and symbol.symbol_id in self.context.active_list_iteration_owners

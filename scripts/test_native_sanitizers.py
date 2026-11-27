@@ -171,7 +171,11 @@ def main() -> None:
         )
         check_generated_ownership(
             fixtures / "test_lists.x",
-            ("test_call_scoped_list_borrows", "test_method_list_borrows"),
+            (
+                "test_call_scoped_list_borrows",
+                "test_method_list_borrows",
+                "test_list_element_borrows",
+            ),
             work,
             flags,
             env,

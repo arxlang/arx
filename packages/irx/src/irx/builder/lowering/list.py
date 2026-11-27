@@ -22,6 +22,7 @@ from irx.analysis.types import is_string_type, sequence_element_type
 from irx.builder.core import VisitorCore, semantic_symbol_key
 from irx.builder.diagnostics import (
     raise_lowering_error,
+    require_lowered_value,
     require_semantic_metadata,
 )
 from irx.builder.protocols import VisitorMixinBase
@@ -301,21 +302,29 @@ class ListVisitorMixin(VisitorMixinBase):
           list_ptr: List ptr.
           index_node: Index node.
         """
-        self.visit(index_node)
-        index = safe_pop(self.result_stack)
-        if index is None:
-            raise Exception("dynamic list subscript requires an index value")
-        index = self._cast_ast_value(
-            index,
-            source_type=self._resolved_ast_type(index_node),
-            target_type=astx.Int64(),
-        )
         self.result_stack.append(
             self._load_list_element_at_index(
                 base=base,
                 list_ptr=list_ptr,
-                index=index,
+                index=self.list_index_value(index_node),
             )
+        )
+
+    @private
+    def list_index_value(self, node: astx.AST) -> ir.Value:
+        """
+        title: Evaluate an index once and convert it to the list ABI index.
+        parameters:
+          node: Analyzed index expression.
+        returns: Lowered signed 64-bit ABI operand.
+        """
+        self.visit(node)
+        return self._cast_ast_value(
+            require_lowered_value(
+                safe_pop(self.result_stack), node=node, context="list index"
+            ),
+            source_type=self._resolved_ast_type(node),
+            target_type=astx.Int64(),
         )
 
     def _load_list_element_at_index(
@@ -333,6 +342,28 @@ class ListVisitorMixin(VisitorMixinBase):
           index: Index selecting the item.
         returns: Loaded one list element at a lowered Int64 index.
         """
+        address = self.list_element_address(
+            base, list_ptr, index, self._list_element_llvm_type(base)
+        )
+        return self._llvm.ir_builder.load(address, name="irx_list_at_load")
+
+    @private
+    def list_element_address(
+        self,
+        node: astx.AST,
+        list_ptr: ir.Value,
+        index: ir.Value,
+        element_type: ir.Type,
+    ) -> ir.Value:
+        """
+        title: Resolve an element address using the checked native list ABI.
+        parameters:
+          node: Source syntax for diagnostics.
+          list_ptr: Address of the list header.
+          index: Lowered index operand.
+          element_type: Lowered element type.
+        returns: Typed element pointer after successful bounds checking.
+        """
         output = self.create_entry_block_alloca(
             "list.element.out", self._llvm.OPAQUE_POINTER_TYPE
         )
@@ -341,20 +372,12 @@ class ListVisitorMixin(VisitorMixinBase):
             [list_ptr, index, output],
             name="irx_list_at_status",
         )
-        self.check_list_status(base, status)
+        self.check_list_status(node, status)
         raw_ptr = self._llvm.ir_builder.load(output, name="irx_list_at_ptr")
-        llvm_element_type = self._list_element_llvm_type(base)
-        typed_ptr = self._llvm.ir_builder.bitcast(
+        return self._llvm.ir_builder.bitcast(
             raw_ptr,
-            llvm_element_type.as_pointer(),
+            element_type.as_pointer(),
             name="irx_list_at_typed_ptr",
-        )
-        return cast(
-            ir.Value,
-            self._llvm.ir_builder.load(
-                typed_ptr,
-                name="irx_list_at_load",
-            ),
         )
 
     def _literal_list_pointer_for_runtime(

@@ -15,6 +15,7 @@ import astx
 from astx.types import AnyType as AstxAnyType
 
 from irx.analysis.arrow_conversion import arrow_ownership
+from irx.analysis.borrows import check_borrow_access
 from irx.analysis.class_lifecycle import (
     CONTEXT_ENTER_HOOK,
     CONTEXT_EXIT_HOOK,
@@ -162,6 +163,14 @@ class ControlFlowVisitorMixin(SemanticVisitorMixinBase):
                         "expression",
                     ),
                 )
+                return
+            if not check_borrow_access(
+                self.context,
+                source_symbol,
+                node.value,
+                write=True,
+                read_checked=True,
+            ):
                 return
             source_symbol_id = source_symbol.symbol_id
             moved = list_resource_ownership(
