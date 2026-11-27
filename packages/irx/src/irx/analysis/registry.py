@@ -34,7 +34,12 @@ from irx.analysis.resolved_nodes import (
     SemanticStruct,
     SemanticSymbol,
 )
-from irx.analysis.types import display_type_name, same_type
+from irx.analysis.types import (
+    display_type_name,
+    is_boolean_type,
+    is_numeric_type,
+    same_type,
+)
 from irx.diagnostics import (
     DiagnosticCodes,
     DiagnosticRelatedInformation,
@@ -429,11 +434,16 @@ class SemanticRegistry:
         if borrowing:
             for argument in prototype.args.nodes:
                 if argument.borrow_access is not None and (
-                    not isinstance(argument.type_, astx.ListType)
+                    not (
+                        isinstance(argument.type_, astx.ListType)
+                        or is_numeric_type(argument.type_)
+                        or is_boolean_type(argument.type_)
+                    )
                     or argument.mutability is not astx.MutabilityKind.constant
                 ):
                     self.context.diagnostics.add(
-                        "borrowed parameters require a fixed list binding",
+                        "borrowed parameters require a fixed numeric, "
+                        "Boolean, or list binding",
                         node=argument,
                         code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
                     )
@@ -443,8 +453,8 @@ class SemanticRegistry:
                 or isinstance(prototype.return_type, astx.GeneratorType)
             ):
                 self.context.diagnostics.add(
-                    "list borrows require an Arx function without defaults "
-                    "or generator results",
+                    "parameter borrows require an Arx function without "
+                    "defaults or generator results",
                     node=prototype,
                     code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
                 )

@@ -12,7 +12,7 @@ import astx
 from plum import dispatch
 from public import private
 
-from irx.analysis.borrows import check_list_call_borrows
+from irx.analysis.borrows import check_call_borrows
 from irx.analysis.handlers.base import SemanticAnalyzerCore
 from irx.analysis.numeric_literals import contextualize_literal
 from irx.analysis.ownership import list_resource_ownership
@@ -243,7 +243,7 @@ def resolve_materialization(
         return
     if limit is not None:
         analyzer.visit(limit)
-        check_list_call_borrows(analyzer.context.diagnostics, (source, limit))
+        check_call_borrows(analyzer.context.diagnostics, (source, limit))
         limit_type = analyzer._expr_type(limit)
         if not is_integer_type(limit_type) or isinstance(
             limit_type, (astx.UInt64, astx.UInt128)

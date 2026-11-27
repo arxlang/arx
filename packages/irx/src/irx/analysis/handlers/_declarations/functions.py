@@ -15,6 +15,7 @@ from typing import cast
 
 import astx
 
+from irx.analysis.factories import parameter_allows_write
 from irx.analysis.handlers.base import (
     SemanticAnalyzerCore,
     SemanticVisitorMixinBase,
@@ -153,10 +154,7 @@ class DeclarationFunctionVisitorMixin(SemanticVisitorMixinBase):
                     arg_symbol,
                     name=arg_node.name,
                     type_=clone_type(arg_node.type_),
-                    is_mutable=(
-                        binding_args[index].mutability
-                        != astx.MutabilityKind.constant
-                    ),
+                    is_mutable=parameter_allows_write(binding_args[index]),
                     qualified_name=qualified_local_name(
                         function.module_key,
                         arg_symbol.kind,

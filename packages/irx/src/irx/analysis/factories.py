@@ -12,7 +12,7 @@ from typing import Any
 
 import astx
 
-from public import public
+from public import private, public
 
 from irx.analysis.context import SemanticContext
 from irx.analysis.module_interfaces import ModuleKey
@@ -40,7 +40,7 @@ from irx.analysis.resolved_nodes import (
     SemanticSymbol,
 )
 from irx.analysis.symbols import variable_symbol
-from irx.analysis.types import clone_type
+from irx.analysis.types import clone_type, is_boolean_type, is_numeric_type
 from irx.typecheck import typechecked
 
 PARAMETER_DEFAULT_FINGERPRINT_METADATA = "default_fingerprint"
@@ -56,6 +56,22 @@ _TRANSIENT_AST_FIELDS = frozenset(
         "type_",
     }
 )
+
+
+@private
+@typechecked
+def parameter_allows_write(argument: astx.Argument) -> bool:
+    """
+    title: Preserve writes through exclusive scalar parameter addresses.
+    parameters:
+      argument: Declared parameter.
+    returns: Whether ordinary assignment can write through the binding.
+    """
+    if argument.borrow_access is None:
+        return argument.mutability is not astx.MutabilityKind.constant
+    return argument.borrow_access is astx.BorrowAccess.exclusive and (
+        is_numeric_type(argument.type_) or is_boolean_type(argument.type_)
+    )
 
 
 @public
@@ -117,8 +133,8 @@ class SemanticEntityFactory:
     ) -> SemanticSymbol:
         """
         title: Create one function-parameter semantic symbol.
-        summary: Rebinding follows Argument.mutability independently
-          of parameter passing and resource-ownership policy.
+        summary: An exclusive scalar parameter can write through its fixed
+          address. A borrowed list parameter cannot replace its storage.
         parameters:
           module_key: Canonical module identity.
           argument: Argument.
@@ -128,7 +144,7 @@ class SemanticEntityFactory:
             module_key,
             argument.name,
             argument.type_,
-            is_mutable=argument.mutability != astx.MutabilityKind.constant,
+            is_mutable=parameter_allows_write(argument),
             declaration=argument,
             kind="argument",
         )

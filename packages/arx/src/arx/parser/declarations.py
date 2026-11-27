@@ -1167,13 +1167,6 @@ class DeclarationParserMixin(ParserMixinBase):
                         "List parameters require &list[T] or &&list[T].",
                         type_token.location,
                     )
-                if borrow_access is not None and not isinstance(
-                    arg_type, astx.ListType
-                ):
-                    raise ParserException(
-                        "Borrowed parameters require list types.",
-                        type_token.location,
-                    )
                 if borrow_access is not None and arg_modifiers is not None:
                     raise ParserException(
                         "Borrowed parameters have a fixed binding.",

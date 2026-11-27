@@ -254,6 +254,99 @@ def test_borrowed_list_parameters_preserve_access(
 @pytest.mark.parametrize(
     ("body", "message"),
     [
+        ("edit(values[0], 2)", "requires an explicit '&&' borrow"),
+        ("edit(&values[0], 2)", "requires an explicit '&&' borrow"),
+        ("narrow(&&values[0])", "expects Int16 but got Int32"),
+        ("pair(&&values[0], &values[0])", "call operands overlap"),
+        ("pair(&&values[0], &values[index])", "call operands overlap"),
+        ("edit(&&values[0], values[0])", "call operands overlap"),
+        ("edit(&&values[0], edit(&&values[0], 2))", "call operands overlap"),
+        ("edit(&&values[0], values.append(1))", "call operands overlap"),
+        ("edit(&&values[0], grow(&&values))", "call operands overlap"),
+        ("mixed(&&values, &values[0])", "call operands overlap"),
+        (
+            "observe(&values[0], &other[edit(&&values[0], 0)])",
+            "call operands overlap",
+        ),
+        ("receiver(&values).edit(&&values[0])", "call operands overlap"),
+        (
+            "edit(&&[1][0], 2)",
+            "requires a scalar variable or named list element",
+        ),
+        ("other = values\nedit(&&values[0], 2)", "after a move"),
+        (
+            "alias: auto = &values[0]\nedit(&&values[0], 2)",
+            "conflicting borrow",
+        ),
+    ],
+)
+def test_call_element_borrows_reject_invalid_operands(
+    body: str, message: str
+) -> None:
+    """
+    title: Reject conflicting or incompatible loans before generating a call.
+    parameters:
+      body: Operation under test.
+      message: Expected semantic diagnostic.
+    """
+    ArxIO.string_to_buffer(
+        "fn edit(value: &&i32, n: i32) -> i32:\n  return n\n"
+        "fn narrow(value: &&i16) -> none:\n  return none\n"
+        "fn pair(first: &&i32, second: &i32) -> none:\n  return none\n"
+        "fn observe(first: &i32, second: &i32) -> none:\n  return none\n"
+        "fn mixed(first: &&list[i32], second: &i32) -> none:\n  return none\n"
+        "fn grow(values: &&list[i32]) -> i32:\n"
+        "  values.append(2)\n  return 2\n"
+        "class Editor:\n"
+        "  fn edit(self, value: &&i32) -> none:\n    return none\n"
+        "fn receiver(values: &list[i32]) -> Editor:\n  return Editor()\n"
+        "fn check(index: i32) -> none:\n"
+        "  values: list[i32] = [1, 2]\n"
+        "  other: list[i32] = [3]\n" + indent(body, "  ") + "\n"
+    )
+    with pytest.raises(SemanticError, match=message):
+        ArxBuilder().translate(Parser().parse(Lexer().lex()))
+
+
+@pytest.mark.parametrize(
+    ("signature", "body", "message"),
+    [
+        ("&i32", "value += 1", "cannot write through read-only borrow"),
+        (
+            "&i32",
+            "take(&&value)",
+            "cannot exclusively borrow through read-only",
+        ),
+        (
+            "&&i32",
+            "value = &&other",
+            "retargeting requires an existing borrow binding",
+        ),
+        ("&str", "return none", "borrowed parameters require a fixed numeric"),
+    ],
+)
+def test_scalar_borrow_parameter_permissions(
+    signature: str, body: str, message: str
+) -> None:
+    """
+    title: Enforce fixed scalar borrow parameters and access modes.
+    parameters:
+      signature: Parameter type and access mode.
+      body: Operation under test.
+      message: Expected semantic diagnostic.
+    """
+    ArxIO.string_to_buffer(
+        "fn take(value: &&i32) -> none:\n  return none\n"
+        f"fn check(value: {signature}) -> none:\n"
+        "  other: i32 = 0\n" + indent(body, "  ") + "\n"
+    )
+    with pytest.raises(SemanticError, match=message):
+        ArxBuilder().translate(Parser().parse(Lexer().lex()))
+
+
+@pytest.mark.parametrize(
+    ("body", "message"),
+    [
         ("editor.grow(values)", "requires an explicit '&&' borrow"),
         ("editor.grow(&values)", "requires an explicit '&&' borrow"),
         ("editor.inspect(&&values)", "requires an explicit '&' borrow"),

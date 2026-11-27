@@ -16,7 +16,7 @@ import astx
 
 from public import private
 
-from irx.analysis.borrows import analyze_list_call_operand
+from irx.analysis.borrows import analyze_call_borrow_operand
 from irx.analysis.builtin_file import (
     is_native_file_class,
     resolve_public_file_construction,
@@ -89,7 +89,7 @@ class ExpressionClassAccessVisitorMixin(ExpressionClassSupportVisitorMixin):
         arg_types: list[astx.DataType | None] = []
         for arg in call_evaluations(node):
             if allow_borrow and isinstance(arg, astx.BorrowArgument):
-                analyze_list_call_operand(
+                analyze_call_borrow_operand(
                     cast(SemanticAnalyzerCore, self), arg
                 )
             elif not is_numeric_literal_argument(arg):

@@ -47,6 +47,7 @@ from irx.builder.extensions.calls import (
 )
 from irx.builder.lowering.classes import ClassVisitorMixin
 from irx.builder.lowering.collection_access import lower_collection_access
+from irx.builder.lowering.list import ListVisitorMixin
 from irx.builder.lowering.materialization import lower_materialization
 from irx.builder.lowering.ranges import lower_range_call
 from irx.builder.lowering.sequences import adapt_sequence
@@ -770,23 +771,20 @@ class FunctionVisitorMixin(ClassVisitorMixin):
     @VisitorCore.visit.dispatch
     def visit(self, node: astx.BorrowArgument) -> None:
         """
-        title: Pass the address of semantically checked caller list storage.
+        title: Pass the checked address of the caller's borrowed place.
         parameters:
           node: Resolved borrow operand.
         """
         info = getattr(node, "semantic", None)
-        source = require_semantic_metadata(
-            info.resolved_symbol if isinstance(info, SemanticInfo) else None,
+        place = require_semantic_metadata(
+            info.call_borrow_place if isinstance(info, SemanticInfo) else None,
             node=node,
-            metadata="resolved_symbol",
+            metadata="call_borrow_place",
             context="call borrow",
         )
-        address = self.named_values.get(source.symbol_id)
-        if not isinstance(address, ir.Value):
-            raise_lowering_internal_error(
-                "borrow argument storage is missing", node=node
-            )
-        self.result_stack.append(address)
+        self.result_stack.append(
+            cast(ListVisitorMixin, self).lower_borrow_place(node, place)
+        )
 
     @VisitorCore.visit.dispatch
     def visit(self, node: astx.MethodCall) -> None:
