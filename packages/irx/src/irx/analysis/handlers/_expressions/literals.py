@@ -36,6 +36,7 @@ from irx.analysis.normalization import normalize_flags, normalize_operator
 from irx.analysis.nullable import resolve_column_index
 from irx.analysis.numeric_literals import (
     contextualize_literal,
+    numeric_constant,
     resolve_numeric_literal,
 )
 from irx.analysis.ownership import (
@@ -1044,16 +1045,32 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
 
     @private
     def resolve_list_read(
-        self, node: astx.AST, element_type: astx.DataType | None
+        self,
+        node: astx.ListIndex | astx.SubscriptExpr,
+        base: astx.AST,
+        element_type: astx.DataType | None,
     ) -> None:
         """
-        title: Resolve copied string results without borrowing list storage.
+        title: Resolve direct list reads and any result ownership.
         parameters:
           node: Syntax node to process.
+          base: List expression being indexed.
           element_type: Type of each element.
         """
         self._set_type(node, element_type)
-        self._semantic(node).resource_ownership = None
+        info = self._semantic(node)
+        info.resource_ownership = None
+        if isinstance(base, astx.ListExpr) and is_integer_type(element_type):
+            constants: list[int] = []
+            for item in base.elements:
+                value = numeric_constant(item)
+                if not isinstance(item, astx.Literal) or not isinstance(
+                    value, int
+                ):
+                    break
+                constants.append(value)
+            else:
+                info.constant_list_elements = tuple(constants)
         if not is_string_type(element_type):
             return
         function = self.context.current_function
@@ -1078,6 +1095,7 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
         parameters:
           node: Syntax node to process.
         """
+        self._semantic(node).constant_list_elements = None
         self.visit(node.base)
         self.visit(node.index)
 
@@ -1104,7 +1122,7 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
                 node=node.base,
                 code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
             )
-        self.resolve_list_read(node, list_element_type(value_type))
+        self.resolve_list_read(node, node.base, list_element_type(value_type))
 
     @SemanticAnalyzerCore.visit.dispatch
     def visit(self, node: astx.ListLength) -> None:
@@ -1229,6 +1247,7 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
         info.sequence_access = None
         info.normalized_collection = None
         info.tensor_index = None
+        info.constant_list_elements = None
         if info.resolved_text_operation is not None:
             info.resource_ownership = None
         info.resolved_text_operation = None
@@ -1322,7 +1341,9 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
                     node=node.value,
                     code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
                 )
-            self.resolve_list_read(node, list_element_type(value_type))
+            self.resolve_list_read(
+                node, node.value, list_element_type(value_type)
+            )
             return
         if not isinstance(node.value, astx.LiteralDict):
             self.context.diagnostics.add(

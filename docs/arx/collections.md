@@ -49,6 +49,11 @@ target types fresh literal elements first. Otherwise all elements must have a
 common lossless domain, independent of order. Empty lists need a target, for
 example `values: list[i64] = []`. Nested owned lists remain unsupported.
 
+Direct indexing of an integer literal list such as `[-1, 0, 1][index]` can use
+static data and still checks bounds. For other lists and for fixed-shape tensors
+reused in a hot loop, construct the collection before the loop to avoid repeated
+allocations.
+
 `len(values)` returns `i64`; narrowing it requires a checked `cast`. String
 insertion copies the bytes, and indexing or iterating a string list produces
 independent strings that survive list replacement. Failed construction drops

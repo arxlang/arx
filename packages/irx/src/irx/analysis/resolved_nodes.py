@@ -1961,6 +1961,7 @@ class SemanticInfo:
       sequence_access: Sequence access.
       normalized_collection: Normalized collection.
       tensor_index: Index selecting tensor.
+      constant_list_elements: Static integer values for a direct list read.
       numeric_storage: Numeric storage.
       module_storage: Module storage.
       literal_context: Expected literal, literal-arithmetic, or collection
@@ -2027,6 +2028,7 @@ class SemanticInfo:
     sequence_access: ResolvedSequenceAccess | None = None
     normalized_collection: astx.Expr | None = None
     tensor_index: astx.TensorIndex | None = None
+    constant_list_elements: tuple[int, ...] | None = None
     numeric_storage: astx.DataType | None = None
     module_storage: ResolvedModuleStorage | None = None
     literal_context: astx.DataType | None = None
