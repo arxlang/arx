@@ -1419,6 +1419,49 @@ def test_grouped_type_annotations_preserve_block_layout() -> None:
     assert sibling.name == "next"
 
 
+@pytest.mark.parametrize(
+    "declaration,expected_message",
+    [
+        ("total: var :: i64 | none = 0", "Use 'nullable[T]'"),
+        ("total: none | i64 = none", "Use 'nullable[T]'"),
+        (
+            "for total: i64 | none = 0; false; total = 1:\n    break",
+            "Use 'nullable[T]'",
+        ),
+        ("total: i32 | i64 = 0", "Parenthesize a union type"),
+    ],
+)
+def test_ungrouped_variable_union_reports_pipe(
+    declaration: str, expected_message: str
+) -> None:
+    """
+    title: Report an ungrouped variable union at its annotation operator.
+    parameters:
+      declaration: Local declaration containing the union.
+      expected_message: Expected diagnostic guidance.
+    """
+    line = f"  {declaration}"
+    with pytest.raises(ParserException) as error:
+        _parse_module(f"fn main() -> i32:\n{line}\n  return 0\n")
+    diagnostic = error.value
+    assert diagnostic.code == "ARX-PARSE-TYPE-UNION-001"
+    assert expected_message in diagnostic.message
+    location = diagnostic.location
+    assert location is not None
+    assert (location.line, location.col) == (2, line.index("|") + 1)
+
+
+def test_variable_annotation_does_not_consume_next_line_pipe() -> None:
+    """
+    title: A top-level expression on the next line stays a separate node.
+    """
+    tree = _parse_module("value: i32\n|1\n")
+    declaration, expression = tree.nodes
+    assert isinstance(declaration, astx.VariableDeclaration)
+    assert isinstance(expression, astx.UnaryOp)
+    assert expression.op_code == "|"
+
+
 def test_grouped_type_lookahead_preserves_column_parameters() -> None:
     """
     title: Lookahead skips layout inside nested parameterized type groups.

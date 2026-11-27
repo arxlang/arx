@@ -216,10 +216,11 @@ RecordBatch IPC, and current interoperability details.
 
 ## Nullable scalars and Series expressions
 
-`nullable[T]` stores a fixed-width numeric or Boolean scalar plus a validity
-bit. A nullable column is spelled `series[T | none]`. Indexing a nullable column
-returns `nullable[T]`; indexing a non-nullable column returns `T`. Indices are
-zero-based; negative or out-of-range indices fail at runtime.
+Use `nullable[T]` to annotate a nullable scalar variable. It stores a
+fixed-width numeric or Boolean scalar plus a validity bit. A nullable column is
+spelled `series[T | none]`. Indexing a nullable column returns `nullable[T]`;
+indexing a non-nullable column returns `T`. Indices are zero-based; negative or
+out-of-range indices fail at runtime.
 
 ````arx
 ```

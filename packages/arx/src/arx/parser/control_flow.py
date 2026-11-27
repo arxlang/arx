@@ -11,6 +11,8 @@ from typing import cast
 import astx
 
 from astx import SourceLocation
+from astx.tools.typing import typechecked
+from public import private
 
 from arx.dataframe import (
     DataFrameBinding,
@@ -444,6 +446,35 @@ class ControlFlowParserMixin(ParserMixinBase):
             loc=for_loc,
         )
 
+    @private
+    @typechecked
+    def parse_variable_annotation(
+        self, type_context: TypeUseContext
+    ) -> astx.DataType:
+        """
+        title: Parse a variable annotation and diagnose an ungrouped union.
+        parameters:
+          type_context: Declaration context used to parse the type.
+        returns: Parsed variable type.
+        """
+        var_type = self.parse_type(type_context=type_context)
+        token = self.tokens.cur_tok
+        # Unindented lines have no indentation marker before the next token.
+        if self._is_operator("|") and token.location.col > 1:
+            if (
+                isinstance(var_type, astx.NoneType)
+                or self._peek_token().kind == TokenKind.none_literal
+            ):
+                message = "Use 'nullable[T]' to annotate a nullable scalar."
+            else:
+                message = "Parenthesize a union type in a variable annotation."
+            raise ParserException(
+                message,
+                token.location,
+                code="ARX-PARSE-TYPE-UNION-001",
+            )
+        return var_type
+
     def parse_inline_var_declaration(self) -> astx.InlineVariableDeclaration:
         """
         title: Parse inline variable declaration used by count-style for
@@ -457,7 +488,9 @@ class ControlFlowParserMixin(ParserMixinBase):
         )
         var_loc = name_token.location
         name = cast(str, name_token.value)
-        var_type = self.parse_type(type_context=TypeUseContext.INLINE_VARIABLE)
+        var_type = self.parse_variable_annotation(
+            TypeUseContext.INLINE_VARIABLE
+        )
 
         self._consume_operator("=")
         try:
@@ -490,7 +523,7 @@ class ControlFlowParserMixin(ParserMixinBase):
         """
         var_loc = name_token.location
         name = cast(str, name_token.value)
-        var_type = self.parse_type(type_context=TypeUseContext.VARIABLE)
+        var_type = self.parse_variable_annotation(TypeUseContext.VARIABLE)
 
         value: astx.Expr | None = None
         if self._is_operator("="):
