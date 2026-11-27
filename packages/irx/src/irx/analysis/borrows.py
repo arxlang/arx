@@ -184,14 +184,26 @@ def resolve_borrow_source(
         )
         return None
     projection = named_list_projection(place)
-    if isinstance(place, astx.Identifier):
+    field = place if isinstance(place, astx.FieldAccess) else None
+    if field is not None:
+        receiver = field.value
+        if not isinstance(receiver, astx.Identifier):
+            context.diagnostics.add(
+                "a class field borrow requires a named receiver",
+                node=receiver,
+                code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
+            )
+            return None
+        root, index = receiver, None
+    elif isinstance(place, astx.Identifier):
         root = place
         index = None
     elif projection is not None:
         root, index = projection
     else:
         context.diagnostics.add(
-            "a local borrow requires a scalar variable or named list element",
+            "a local borrow requires a scalar variable or named list element, "
+            "or a const scalar field",
             node=place,
             code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
         )
@@ -211,7 +223,11 @@ def resolve_borrow_source(
             code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
         )
         return None
-    if index is not None:
+    if field is not None:
+        resolved = resolve_const_field_place(analyzer, field, source, access)
+        if resolved is None:
+            return None
+    elif index is not None:
         resolved = resolve_list_element_place(analyzer, root, source, index)
         if resolved is None:
             return None
@@ -259,6 +275,48 @@ def resolve_borrow_source(
         )
         return None
     return resolved
+
+
+@private
+@typechecked
+def resolve_const_field_place(
+    analyzer: SemanticAnalyzerCore,
+    field: astx.FieldAccess,
+    root: SemanticSymbol,
+    access: astx.BorrowAccess,
+) -> ResolvedBorrowPlace | None:
+    """
+    title: Borrow an immutable scalar field through a live class binding.
+    parameters:
+      analyzer: Active semantic analyzer.
+      field: Instance field syntax.
+      root: Resolved receiver symbol.
+      access: Requested loan mode.
+    returns: Validated immutable field address plan.
+    """
+    analyzer.visit(field)
+    field_type = analyzer._expr_type(field)
+    if field_type is None or isinstance(field_type, FailedInferenceType):
+        return None
+    resolved = analyzer._semantic(field).resolved_class_field_access
+    if (
+        resolved is None
+        or resolved.member.is_mutable
+        or not (is_numeric_type(field_type) or is_boolean_type(field_type))
+    ):
+        message = (
+            "a field borrow requires a const numeric or Boolean instance field"
+        )
+    elif analyzer._semantic(field.value).lifecycle_self:
+        message = "a lifecycle hook cannot borrow a field of self"
+    elif access is astx.BorrowAccess.exclusive:
+        message = "const instance fields only support read-only borrows"
+    else:
+        return ResolvedBorrowPlace(root, field_type, field=field)
+    analyzer.context.diagnostics.add(
+        message, node=field, code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP
+    )
+    return None
 
 
 @private
@@ -507,13 +565,19 @@ def analyze_call_borrow_operand(
             ResolvedBorrowPlace(root, root.type_) if root is not None else None
         )
     elif isinstance(
-        source, (astx.Identifier, astx.ListIndex, astx.SubscriptExpr)
+        source,
+        (
+            astx.Identifier,
+            astx.ListIndex,
+            astx.SubscriptExpr,
+            astx.FieldAccess,
+        ),
     ):
         place = resolve_borrow_source(analyzer, source, operand.access)
     else:
         analyzer.context.diagnostics.add(
             "a borrow requires a named local list, scalar variable, "
-            "or list element",
+            "list element, or const scalar field",
             node=operand,
             code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
         )
@@ -522,7 +586,7 @@ def analyze_call_borrow_operand(
         analyzer._set_type(operand, FailedInferenceType())
         return
     info.call_borrow_place = place
-    if place.index is None:
+    if place.index is None and place.field is None:
         analyzer._set_symbol(operand, place.root)
     analyzer._set_type(operand, place.type_)
 
@@ -604,8 +668,11 @@ def overlaps_call_operand(
                 and overlaps_call_operand(other.index, place)
             )
     if isinstance(node, astx.Identifier):
+        # Reading a class handle cannot mutate its immutable field. Rebinding
+        # the receiver is checked below as an assignment to its root.
         return (
-            isinstance(info, SemanticInfo)
+            place.field is None
+            and isinstance(info, SemanticInfo)
             and info.resolved_symbol is not None
             and info.resolved_symbol.symbol_id == place.root.symbol_id
         )
@@ -616,8 +683,9 @@ def overlaps_call_operand(
             return positions_may_overlap(
                 place.constant_index, known_list_position(index)
             ) or overlaps_call_operand(index, place)
-    if isinstance(node, astx.VariableAssignment) and isinstance(
-        info, SemanticInfo
+    if isinstance(info, SemanticInfo) and (
+        isinstance(node, astx.VariableAssignment)
+        or (isinstance(node, astx.BinaryOp) and node.op_code == "=")
     ):
         assignment = info.resolved_assignment
         if (
@@ -691,9 +759,12 @@ def check_call_borrows(
                         if isinstance(place.root.type_, astx.ListType)
                         else "scalar"
                     )
+                    name = place.root.name
+                    if place.field is not None:
+                        kind = "field"
+                        name += f".{place.field.field_name}"
                     diagnostics.add(
-                        f"call operands overlap a loan of {kind} "
-                        f"'{place.root.name}'",
+                        f"call operands overlap a loan of {kind} '{name}'",
                         node=other,
                         code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
                     )

@@ -47,7 +47,6 @@ from irx.builder.extensions.calls import (
 )
 from irx.builder.lowering.classes import ClassVisitorMixin
 from irx.builder.lowering.collection_access import lower_collection_access
-from irx.builder.lowering.list import ListVisitorMixin
 from irx.builder.lowering.materialization import lower_materialization
 from irx.builder.lowering.ranges import lower_range_call
 from irx.builder.lowering.sequences import adapt_sequence
@@ -783,7 +782,7 @@ class FunctionVisitorMixin(ClassVisitorMixin):
             context="call borrow",
         )
         self.result_stack.append(
-            cast(ListVisitorMixin, self).lower_borrow_place(node, place)
+            cast(VisitorCore, self).lower_borrow_place(node, place)
         )
 
     @VisitorCore.visit.dispatch

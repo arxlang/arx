@@ -75,12 +75,14 @@ class ResolvedBorrowPlace:
       type_: Exact value type at that place.
       index: Evaluated index expression for a list element place.
       constant_index: Statically known list position for overlap checks.
+      field: Resolved immutable instance field access, if any.
     """
 
     root: SemanticSymbol
     type_: astx.DataType
     index: astx.AST | None = None
     constant_index: int | None = None
+    field: astx.FieldAccess | None = None
 
 
 @private

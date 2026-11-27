@@ -31,7 +31,6 @@ from irx.builder.diagnostics import (
 )
 from irx.builder.lowering.classes import ClassVisitorMixin
 from irx.builder.lowering.collection_access import lower_collection_access
-from irx.builder.lowering.list import ListVisitorMixin
 from irx.builder.runtime import safe_pop
 from irx.builder.state import CleanupAction
 from irx.builder.text_cache import (
@@ -532,9 +531,7 @@ class VariableVisitorMixin(ClassVisitorMixin):
             metadata="resolved_borrow",
             context="local borrow",
         )
-        source = cast(ListVisitorMixin, self).lower_borrow_place(
-            node, borrow.place
-        )
+        source = cast(VisitorCore, self).lower_borrow_place(node, borrow.place)
         slot: ir.Value | None
         if isinstance(node, astx.BorrowDeclaration):
             slot = self.create_entry_block_alloca(

@@ -213,6 +213,24 @@ empty; dereferencing an empty class value reports a checked runtime error rather
 than using a null pointer. Field declarations may refer to already initialized
 fields through `self`.
 
+A named receiver's `const` numeric or Boolean instance field can be borrowed
+with `&`. Use a local alias or pass the borrow to a read-only scalar parameter.
+The receiver remains live for the loan. Assigning to its binding requires ending
+or retargeting the local alias first. Other strong handles can share the
+instance and read its immutable fields.
+
+```arx
+class Tag:
+  code: const :: i32 = 7
+
+fn read(code: &i32) -> i32:
+  return code
+
+fn example() -> i32:
+  tag: Tag = Tag()
+  return read(&tag.code)
+```
+
 A public `File` (or lowercase `file`) field holds an ordinary class reference.
 It may be initialized with `File(...)`, `open(...)`, or another File reference,
 and may be replaced or shared. Empty fields use the normal checked class
