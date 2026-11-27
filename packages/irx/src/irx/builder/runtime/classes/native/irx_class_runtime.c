@@ -21,6 +21,22 @@ static irx_class_owner* irx_class_token(void* value) {
   memcpy(&owner, value, sizeof(owner));
   return owner;
 }
+/* Keep operations on a token within the library that allocated it. */
+static int32_t irx_class_retain_owner(irx_class_owner* owner, char* error) {
+  if (!owner->references || owner->references == UINT64_MAX)
+    return irx_class_error(error, "invalid class retain or resurrection");
+  owner->references++;
+  return 0;
+}
+static int32_t irx_class_retain_weak_owner(irx_class_owner* owner, char* error) {
+  if (owner->weak_references == UINT64_MAX)
+    return irx_class_error(error, "class weak reference count overflow");
+  owner->weak_references++;
+  return 0;
+}
+static void irx_class_release_weak_owner(irx_class_owner* owner) {
+  if (!--owner->weak_references) free(owner);
+}
 int32_t irx_class_create(size_t size, irx_class_drop drop, void** out,
                          char* error) {
   irx_class_owner* owner;
@@ -45,14 +61,8 @@ int32_t irx_class_create(size_t size, irx_class_drop drop, void** out,
   return 0;
 }
 int32_t irx_class_retain(void* value, char* error) {
-  irx_class_owner* owner;
   if (error) error[0] = 0;
-  if (!value) return 0;
-  owner = irx_class_token(value);
-  if (!owner->references || owner->references == UINT64_MAX)
-    return irx_class_error(error, "invalid class retain or resurrection");
-  owner->references++;
-  return 0;
+  return value ? irx_class_retain_owner(irx_class_token(value), error) : 0;
 }
 int32_t irx_class_release(void* context, void* value, char* error) {
   irx_class_owner* owner;
@@ -66,21 +76,15 @@ int32_t irx_class_release(void* context, void* value, char* error) {
   owner->payload = NULL;
   status = owner->drop(context, value, error);
   free(value);
-  irx_class_weak_release(owner);
+  irx_class_release_weak_owner(owner);
   return status;
 }
 int32_t irx_class_weak_retain(void* token, char* error) {
-  irx_class_owner* owner = token;
   if (error) error[0] = 0;
-  if (!owner) return 0;
-  if (owner->weak_references == UINT64_MAX)
-    return irx_class_error(error, "class weak reference count overflow");
-  owner->weak_references++;
-  return 0;
+  return token ? irx_class_retain_weak_owner(token, error) : 0;
 }
 void irx_class_weak_release(void* token) {
-  irx_class_owner* owner = token;
-  if (owner && !--owner->weak_references) free(owner);
+  if (token) irx_class_release_weak_owner(token);
 }
 int32_t irx_class_downgrade(void* value, void** out, char* error) {
   irx_class_owner* owner;
@@ -90,7 +94,7 @@ int32_t irx_class_downgrade(void* value, void** out, char* error) {
   *out = NULL;
   if (!value) return 0;
   owner = irx_class_token(value);
-  status = irx_class_weak_retain(owner, error);
+  status = irx_class_retain_weak_owner(owner, error);
   if (!status) *out = owner;
   return status;
 }
@@ -101,7 +105,7 @@ int32_t irx_class_upgrade(void* token, void** out, char* error) {
   if (!out) return irx_class_error(error, "missing class upgrade output");
   *out = NULL;
   if (!owner || !owner->payload) return 0;
-  status = irx_class_retain(owner->payload, error);
+  status = irx_class_retain_owner(owner, error);
   if (!status) *out = owner->payload;
   return status;
 }
