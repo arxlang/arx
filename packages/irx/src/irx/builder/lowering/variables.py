@@ -532,23 +532,9 @@ class VariableVisitorMixin(ClassVisitorMixin):
             metadata="resolved_borrow",
             context="local borrow",
         )
-        source = self.named_values.get(borrow.place.root.symbol_id)
-        if source is None:
-            raise_lowering_internal_error(
-                "borrow source has no resolved storage", node=node
-            )
-        index = borrow.place.index
-        if index is not None:
-            lists = cast(ListVisitorMixin, self)
-            element_type = require_semantic_metadata(
-                self._llvm_type_for_ast_type(borrow.place.type_),
-                node=node,
-                metadata="element storage type",
-                context="list element borrow",
-            )
-            source = lists.list_element_address(
-                node, source, lists.list_index_value(index), element_type
-            )
+        source = cast(ListVisitorMixin, self).lower_borrow_place(
+            node, borrow.place
+        )
         slot: ir.Value | None
         if isinstance(node, astx.BorrowDeclaration):
             slot = self.create_entry_block_alloca(

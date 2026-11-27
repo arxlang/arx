@@ -85,6 +85,43 @@ def known_list_position(index: astx.AST | None) -> int | None:
 
 @private
 @typechecked
+def named_list_projection(
+    node: astx.AST,
+) -> tuple[astx.Identifier, astx.AST] | None:
+    """
+    title: Recognize a single-element projection of a named list candidate.
+    parameters:
+      node: Source expression.
+    returns: Named receiver and index, if present.
+    """
+    if isinstance(node, astx.ListIndex) and isinstance(
+        node.base, astx.Identifier
+    ):
+        return node.base, node.index
+    if (
+        isinstance(node, astx.SubscriptExpr)
+        and not node.is_slice
+        and isinstance(node.value, astx.Identifier)
+    ):
+        return node.value, node.index
+    return None
+
+
+@private
+@typechecked
+def positions_may_overlap(left: int | None, right: int | None) -> bool:
+    """
+    title: Treat a whole place or unknown element as overlapping any position.
+    parameters:
+      left: First statically known position, if any.
+      right: Second statically known position, if any.
+    returns: Whether the positions can refer to the same storage.
+    """
+    return left is None or right is None or left == right
+
+
+@private
+@typechecked
 def conflicting_borrow(
     context: SemanticContext,
     root: SemanticSymbol,
@@ -107,11 +144,9 @@ def conflicting_borrow(
         for borrow in scope.borrows.values():
             if borrow.target is retarget or borrow.place.root is not root:
                 continue
-            existing = borrow.place.constant_index
-            if position is not None and existing is not None:
-                if position != existing:
-                    continue
-            if write or borrow.access is astx.BorrowAccess.exclusive:
+            if positions_may_overlap(
+                position, borrow.place.constant_index
+            ) and (write or borrow.access is astx.BorrowAccess.exclusive):
                 return borrow
     return None
 
@@ -126,7 +161,7 @@ def resolve_borrow_source(
     retarget: SemanticSymbol | None = None,
 ) -> ResolvedBorrowPlace | None:
     """
-    title: Validate a local scalar place before installing its lexical borrow.
+    title: Validate a local scalar place before creating a borrow.
     parameters:
       analyzer: Active semantic analyzer.
       place: Expression designating the original storage.
@@ -148,21 +183,12 @@ def resolve_borrow_source(
             code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
         )
         return None
+    projection = named_list_projection(place)
     if isinstance(place, astx.Identifier):
         root = place
         index = None
-    elif isinstance(place, astx.ListIndex) and isinstance(
-        place.base, astx.Identifier
-    ):
-        root = place.base
-        index = place.index
-    elif (
-        isinstance(place, astx.SubscriptExpr)
-        and not place.is_slice
-        and isinstance(place.value, astx.Identifier)
-    ):
-        root = place.value
-        index = place.index
+    elif projection is not None:
+        root, index = projection
     else:
         context.diagnostics.add(
             "a local borrow requires a scalar variable or named list element",
@@ -189,15 +215,21 @@ def resolve_borrow_source(
         resolved = resolve_list_element_place(analyzer, root, source, index)
         if resolved is None:
             return None
-    elif source.kind != "variable" or not (
+    elif not (
         isinstance(
             source.declaration,
-            (astx.VariableDeclaration, astx.InlineVariableDeclaration),
+            (
+                astx.VariableDeclaration,
+                astx.InlineVariableDeclaration,
+                astx.Argument,
+            ),
         )
+        and source.kind in {"variable", "argument"}
         and (is_numeric_type(source.type_) or is_boolean_type(source.type_))
     ):
         context.diagnostics.add(
-            "a local borrow requires an owning numeric or Boolean variable",
+            "a scalar borrow requires a numeric or Boolean variable "
+            "or parameter",
             node=place,
             code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
         )
@@ -205,6 +237,7 @@ def resolve_borrow_source(
     else:
         resolved = ResolvedBorrowPlace(source, source.type_)
         analyzer._set_symbol(root, source)
+        analyzer._set_type(root, source.type_)
     exclusive = access is astx.BorrowAccess.exclusive
     if exclusive and not check_borrow_source_writable(
         context, resolved, place
@@ -305,7 +338,10 @@ def check_borrow_source_writable(
     """
     root = place.root
     declaration = root.declaration
-    if isinstance(declaration, astx.Argument):
+    if (
+        isinstance(declaration, astx.Argument)
+        and declaration.borrow_access is not None
+    ):
         writable = declaration.borrow_access is astx.BorrowAccess.exclusive
         message = f"cannot exclusively borrow through read-only '{root.name}'"
     else:
@@ -446,7 +482,7 @@ def resolve_list_call_borrow(
 
 @private
 @typechecked
-def analyze_list_call_operand(
+def analyze_call_borrow_operand(
     analyzer: SemanticAnalyzerCore, operand: astx.BorrowArgument
 ) -> None:
     """
@@ -455,14 +491,40 @@ def analyze_list_call_operand(
       analyzer: Active semantic analyzer.
       operand: Explicit borrow operand.
     """
-    analyzer.visit(operand.source)
-    source = resolve_list_call_borrow(analyzer.context, operand)
-    analyzer._semantic(operand).resolved_symbol = None
-    if source is None:
+    info = analyzer._semantic(operand)
+    info.call_borrow_place = None
+    info.resolved_symbol = None
+    source = operand.source
+    symbol = (
+        analyzer.context.scopes.resolve(source.name)
+        if isinstance(source, astx.Identifier)
+        else None
+    )
+    if symbol is not None and isinstance(symbol.type_, astx.ListType):
+        analyzer.visit(source)
+        root = resolve_list_call_borrow(analyzer.context, operand)
+        place = (
+            ResolvedBorrowPlace(root, root.type_) if root is not None else None
+        )
+    elif isinstance(
+        source, (astx.Identifier, astx.ListIndex, astx.SubscriptExpr)
+    ):
+        place = resolve_borrow_source(analyzer, source, operand.access)
+    else:
+        analyzer.context.diagnostics.add(
+            "a borrow requires a named local list, scalar variable, "
+            "or list element",
+            node=operand,
+            code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
+        )
+        place = None
+    if place is None:
         analyzer._set_type(operand, FailedInferenceType())
         return
-    analyzer._set_symbol(operand, source)
-    analyzer._set_type(operand, source.type_)
+    info.call_borrow_place = place
+    if place.index is None:
+        analyzer._set_symbol(operand, place.root)
+    analyzer._set_type(operand, place.type_)
 
 
 @private
@@ -511,83 +573,127 @@ def validate_call_operand_mode(
 
 @private
 @typechecked
-def mentions_list_binding(node: astx.AST, symbol: SemanticSymbol) -> bool:
+def overlaps_call_operand(
+    node: astx.AST,
+    place: ResolvedBorrowPlace,
+    *,
+    compatible_shared_loan: bool = False,
+) -> bool:
     """
-    title: Find an evaluated operand access to the same named storage.
+    title: Detect an operand access that might overlap an active call loan.
     parameters:
-      node: Operand or child expression.
-      symbol: Borrowed list binding.
-    returns: Whether the expression accesses the binding.
+      node: Operand or evaluated child expression.
+      place: Source place of the loan being checked.
+      compatible_shared_loan: Whether the direct operand has a shared loan.
+    returns: Whether an access might overlap the loan.
     """
+    info = getattr(node, "semantic", None)
+    if isinstance(node, astx.BorrowArgument) and isinstance(
+        info, SemanticInfo
+    ):
+        other = info.call_borrow_place
+        if other is not None:
+            return (
+                not compatible_shared_loan
+                and other.root.symbol_id == place.root.symbol_id
+                and positions_may_overlap(
+                    place.constant_index, other.constant_index
+                )
+            ) or (
+                other.index is not None
+                and overlaps_call_operand(other.index, place)
+            )
     if isinstance(node, astx.Identifier):
-        info = getattr(node, "semantic", None)
         return (
             isinstance(info, SemanticInfo)
             and info.resolved_symbol is not None
-            and info.resolved_symbol.symbol_id == symbol.symbol_id
+            and info.resolved_symbol.symbol_id == place.root.symbol_id
         )
+    projection = named_list_projection(node)
+    if projection is not None:
+        base, index = projection
+        if overlaps_call_operand(base, place):
+            return positions_may_overlap(
+                place.constant_index, known_list_position(index)
+            ) or overlaps_call_operand(index, place)
+    if isinstance(node, astx.VariableAssignment) and isinstance(
+        info, SemanticInfo
+    ):
+        assignment = info.resolved_assignment
+        if (
+            assignment is not None
+            and assignment.target.symbol_id == place.root.symbol_id
+        ):
+            return True
     return any(
-        mentions_list_binding(child, symbol)
+        overlaps_call_operand(child, place)
         for child in lifecycle_children(node)
     )
 
 
 @private
 @typechecked
-def list_loan_sources(
-    node: astx.AST, *, include_shared: bool
-) -> Iterator[SemanticSymbol]:
+def call_operand_loans(
+    node: astx.AST, *, direct: bool
+) -> Iterator[tuple[ResolvedBorrowPlace, astx.BorrowAccess]]:
     """
-    title: Find named storage loaned during one operand's evaluation.
-    summary: Only exclusive nested loans can invalidate a sibling operand.
+    title: Find call loans that can conflict across operand evaluation.
+    summary: A nested exclusive loan can mutate a location or invalidate
+      a view held by a sibling operand. A direct loan lasts through the call.
     parameters:
       node: Analyzed operand or descendant.
-      include_shared: Whether the operand itself can hold a shared loan.
-    returns: Storage bindings loaned in this operand.
+      direct: Whether the node is a direct operand of the call being checked.
+    returns: Potentially conflicting places and loan modes.
     """
     if isinstance(node, astx.BorrowArgument):
-        if include_shared or node.access is astx.BorrowAccess.exclusive:
-            info = getattr(node, "semantic", None)
-            if isinstance(info, SemanticInfo) and info.resolved_symbol:
-                yield info.resolved_symbol
-        return
+        info = getattr(node, "semantic", None)
+        if (
+            isinstance(info, SemanticInfo)
+            and info.call_borrow_place is not None
+        ):
+            if direct or node.access is astx.BorrowAccess.exclusive:
+                yield info.call_borrow_place, node.access
     for child in lifecycle_children(node):
-        yield from list_loan_sources(child, include_shared=False)
+        yield from call_operand_loans(child, direct=False)
 
 
 @private
 @typechecked
-def check_list_call_borrows(
+def check_call_borrows(
     diagnostics: DiagnosticBag, arguments: tuple[astx.AST, ...]
 ) -> None:
     """
-    title: Reject overlapping list storage across call operands.
-    summary: Compatible shared loans can coexist. Reject a nested exclusive
-      loan even in a call with no borrowed parameters because an earlier
-      list or sequence operand may hold a view of the backing allocation.
+    title: Reject conflicting access to borrowed places across call operands.
+    summary: The receiver precedes the explicit arguments. Compatible direct
+      shared loans can overlap. A nested exclusive loan can invalidate an
+      earlier operand, including a list-backed sequence view.
     parameters:
       diagnostics: Collected semantic diagnostics.
-      arguments: Explicit operands in source order, including a receiver.
+      arguments: Operands in source order, including any receiver.
     """
     if len(arguments) <= 1:
         return
     for index, operand in enumerate(arguments):
-        for source in list_loan_sources(operand, include_shared=True):
+        for place, access in call_operand_loans(operand, direct=True):
             for other_index, other in enumerate(arguments):
                 if other_index == index:
                     continue
-                if (
+                compatible_shared_loan = (
                     isinstance(operand, astx.BorrowArgument)
                     and isinstance(other, astx.BorrowArgument)
-                    and operand.access
-                    is other.access
-                    is astx.BorrowAccess.read_only
+                    and access is other.access is astx.BorrowAccess.read_only
+                )
+                if overlaps_call_operand(
+                    other, place, compatible_shared_loan=compatible_shared_loan
                 ):
-                    continue
-                if mentions_list_binding(other, source):
+                    kind = (
+                        "list"
+                        if isinstance(place.root.type_, astx.ListType)
+                        else "scalar"
+                    )
                     diagnostics.add(
-                        "call operands overlap a loan of "
-                        f"list '{source.name}'",
+                        f"call operands overlap a loan of {kind} "
+                        f"'{place.root.name}'",
                         node=other,
                         code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
                     )

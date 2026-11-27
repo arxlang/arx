@@ -69,7 +69,7 @@ class SemanticSymbol:
 @dataclass(frozen=True)
 class ResolvedBorrowPlace:
     """
-    title: Describe the resolved storage of a lexical borrow.
+    title: Describe the resolved storage of a lexical or call borrow.
     attributes:
       root: Local binding that keeps the place alive.
       type_: Exact value type at that place.
@@ -2051,6 +2051,7 @@ class SemanticInfo:
       resolved_operator: Resolved operator.
       resolved_assignment: Resolved assignment.
       resolved_borrow: Resolved local borrow creation or retargeting.
+      call_borrow_place: Resolved place passed by address to a callable.
       resolved_aug_assignment: Resolved aug assignment.
       resolved_field_access: Resolved field access.
       resolved_module_member_access: Resolved module member access.
@@ -2118,6 +2119,7 @@ class SemanticInfo:
     resolved_operator: ResolvedOperator | None = None
     resolved_assignment: ResolvedAssignment | None = None
     resolved_borrow: ResolvedBorrow | None = None
+    call_borrow_place: ResolvedBorrowPlace | None = None
     resolved_aug_assignment: ResolvedAugAssignment | None = None
     resolved_field_access: ResolvedFieldAccess | None = None
     resolved_module_member_access: ResolvedModuleMemberAccess | None = None

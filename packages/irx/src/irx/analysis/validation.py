@@ -12,7 +12,7 @@ from typing import cast
 import astx
 
 from irx.analysis.borrows import (
-    check_list_call_borrows,
+    check_call_borrows,
     validate_call_operand_mode,
 )
 from irx.analysis.call_arguments import argument_slots, call_evaluations
@@ -223,7 +223,7 @@ def validate_call(
     operands: tuple[astx.AST, ...] = evaluations
     if isinstance(node, (astx.MethodCall, astx.BaseMethodCall)):
         operands = (node.receiver, *evaluations)
-    check_list_call_borrows(diagnostics, operands)
+    check_call_borrows(diagnostics, operands)
     if signature.is_extern:
         for value in evaluations:
             if isinstance(value, astx.LiteralString) and "\x00" in value.value:

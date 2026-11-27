@@ -20,7 +20,7 @@ from public import private
 
 from irx.analysis.arrow_conversion import arrow_ownership
 from irx.analysis.borrows import (
-    analyze_list_call_operand,
+    analyze_call_borrow_operand,
     check_borrow_access,
 )
 from irx.analysis.call_arguments import (
@@ -85,7 +85,7 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
         self, node: astx.AST, function: SemanticFunction | None
     ) -> list[astx.DataType | None]:
         """
-        title: Analyze named list loans at direct and namespace calls.
+        title: Analyze explicit loans at direct and namespace calls.
         parameters:
           node: Call being analyzed.
           function: Resolved function declaration, if available.
@@ -123,7 +123,7 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
         ):
             self.visit(value)
             return
-        analyze_list_call_operand(cast(SemanticAnalyzerCore, self), value)
+        analyze_call_borrow_operand(cast(SemanticAnalyzerCore, self), value)
 
     @SemanticAnalyzerCore.visit.dispatch
     def visit(self, node: astx.BorrowArgument) -> None:
@@ -132,7 +132,9 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
         parameters:
           node: Unsupported borrow operand.
         """
-        self._semantic(node).resolved_symbol = None
+        info = self._semantic(node)
+        info.call_borrow_place = None
+        info.resolved_symbol = None
         self._set_type(node, FailedInferenceType())
         self.context.diagnostics.add(
             "borrow operands require an Arx function with a borrow parameter",

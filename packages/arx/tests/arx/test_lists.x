@@ -311,3 +311,75 @@ fn test_list_element_borrows() -> none:
   same: auto = &values[0]
   assert reader == same
   assert values[0] == 11
+
+fn bump_element(value: &&i32, amount: i32) -> i32:
+  ```
+  title: Write through a call-scoped exclusive scalar parameter
+  ```
+  value += amount
+  return value
+
+fn combine_elements(left: &i32, right: &i32) -> i32:
+  ```
+  title: Read two compatible shared loans of the same or disjoint places
+  ```
+  return left + right
+
+fn exchange_elements(left: &&i32, right: &&i32) -> none:
+  ```
+  title: Forward one scalar loan and assign through another
+  ```
+  old: auto = left
+  left = right
+  right = old
+  bump_element(&&right, 1)
+
+class ElementEditor:
+  ```
+  title: Use scalar loans through constructors and virtual dispatch
+  ```
+  fn __init__(self, value: &&i32) -> none:
+    ```
+    title: Update the caller's element before returning
+    ```
+    ++value
+
+  fn edit(self, flag: &&bool, value: &&i32) -> none:
+    ```
+    title: Mutate borrowed elements and propagate a checked exception
+    ```
+    flag = true
+    ++value
+    raise ValueError("after updating elements")
+
+fn test_call_scoped_list_element_borrows() -> none:
+  ```
+  title: Bind projected arguments once and release loans on success or failure
+  ```
+  values: list[i32] = [10, 20, 30]
+  index: i32 = -1
+  assert bump_element(amount=30, value=&&values[++index]) == 40
+  assert index == 0
+  assert bump_element(&&values[0], values[2] - 30) == 40
+  assert combine_elements(&values[0], &values[0]) == 80
+  exchange_elements(&&values[0], &&values[1])
+  assert values[0] == 20
+  assert values[1] == 41
+
+  try:
+    bump_element(&&values[99], ++index)
+    assert false
+  except IndexError:
+    assert index == 0
+  values.append(4)
+
+  editor: ElementEditor = ElementEditor(&&values[1])
+  flags: list[bool] = [false]
+  try:
+    editor.edit(&&flags[0], &&values[1])
+    assert false
+  except ValueError:
+    assert flags[0]
+    assert values[1] == 43
+  values = [1]
+  assert bump_element(&&values[0], 1) == 2

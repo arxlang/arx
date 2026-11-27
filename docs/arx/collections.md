@@ -77,7 +77,24 @@ active iteration. The compiler can prove distinct nonnegative literal indices
 are disjoint and treats other indices conservatively. A live element loan
 prevents append, ownership transfer, replacement, and an exclusive call borrow
 of the entire list. A whole-list read conflicts with an exclusive element loan.
-Element borrows use local alias declarations and same-scope retargeting.
+Use the same syntax to pass an element to a borrowed scalar parameter:
+
+```arx
+fn increment(value: &&i32) -> none:
+  ++value
+
+fn edit() -> i32:
+  values: list[i32] = [10, 20]
+  increment(&&values[0])
+  return values[0]
+```
+
+The parameter and element must have the same type and access mode. A call loan
+lasts until the call returns or raises. Arx evaluates its index once and checks
+its bounds before evaluating later arguments. Other operands, including the
+receiver and nested calls, may use disjoint places or compatible direct
+read-only loans. A borrowed scalar parameter can be forwarded with compatible
+access. The parameter's target stays fixed throughout the call.
 
 While a `for ... in` loop borrows a list, replacing that owner binding anywhere
 in the body is a compile-time ownership error (`IRX-S013`), including nested

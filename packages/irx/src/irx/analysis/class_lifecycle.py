@@ -384,8 +384,8 @@ def constructor_arguments(
       supplied evaluation order.'
     """
     from irx.analysis.borrows import (  # noqa: PLC0415
-        analyze_list_call_operand,
-        check_list_call_borrows,
+        analyze_call_borrow_operand,
+        check_call_borrows,
         validate_call_operand_mode,
     )
 
@@ -432,7 +432,7 @@ def constructor_arguments(
             )
     for value in evaluations:
         if isinstance(value, astx.BorrowArgument):
-            analyze_list_call_operand(analyzer, value)
+            analyze_call_borrow_operand(analyzer, value)
         else:
             analyzer.visit(value)
     indices: list[int] = []
@@ -471,7 +471,7 @@ def constructor_arguments(
                 operand,
                 f"constructor argument '{param.name}' has incompatible type",
             )
-    check_list_call_borrows(analyzer.context.diagnostics, tuple(evaluations))
+    check_call_borrows(analyzer.context.diagnostics, tuple(evaluations))
     for phase in phases[:-1]:
         if phase.initializer and any(
             isinstance(arg.default, astx.Undefined)
