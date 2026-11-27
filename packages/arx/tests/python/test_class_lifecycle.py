@@ -409,6 +409,45 @@ def test_null_class_reference_is_checked(tmp_path: Path) -> None:
     assert "ARX-RUNTIME-CLASS-001" in result.stderr
 
 
+@pytest.mark.parametrize(
+    ("body", "message"),
+    [
+        ("key: auto = &owner.mutable", "requires a const numeric or Boolean"),
+        ("key: auto = &&owner.key", "only support read-only borrows"),
+        ("consume(&&owner.key)", "only support read-only borrows"),
+        ("key: auto = &owner.text", "requires a const numeric or Boolean"),
+        ("key: auto = &owner.secret", "is not accessible from this context"),
+        ("key: auto = &Tagged().key", "requires a named receiver"),
+        ("key: auto = &Tagged.static_key", "requires a scalar variable"),
+        ("key: auto = &owner.key\nkey = 8", "cannot write through read-only"),
+        ("key: auto = &owner.key\nowner = Tagged()", "while it is borrowed"),
+        ("read(&owner.key, (owner = Tagged()))", "call operands overlap"),
+    ],
+)
+def test_const_field_borrow_diagnostics(body: str, message: str) -> None:
+    """
+    title: Reject field loans without stable access and receiver storage.
+    parameters:
+      body: Field borrow operation under test.
+      message: Expected semantic diagnostic.
+    """
+    declarations = """class Tagged:
+  key: const :: i32 = 5
+  mutable: i32 = 0
+  text: const :: str = "tag"
+  secret: private const :: i32 = 1
+  static_key: static const :: i32 = 7
+
+fn read(key: &i32, owner: Tagged) -> i32:
+  return key + owner.key
+
+fn consume(key: &&i32) -> none:
+  return none
+"""
+    with pytest.raises(SemanticError, match=message):
+        analyze(parsed(declarations, "owner: Tagged = Tagged()\n" + body))
+
+
 def test_ordinary_keyword_calls_parse() -> None:
     """
     title: Ordinary method keywords preserve their value expressions.

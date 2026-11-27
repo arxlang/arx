@@ -40,6 +40,7 @@ from irx.analysis.resolved_nodes import (
     OwnershipEscapeKind,
     OwnershipKind,
     OwnershipTransferKind,
+    ResolvedBorrowPlace,
     ResolvedExceptionType,
     ResourceKind,
     SemanticClassLayout,
@@ -1834,6 +1835,40 @@ class VisitorCore(StringIRMixin, BuilderVisitor):
         if isinstance(node, astx.StaticFieldAccess):
             return self._static_class_field_address(node)
         raise Exception("codegen: invalid mutable target")
+
+    @private
+    def lower_borrow_place(
+        self, node: astx.AST, place: ResolvedBorrowPlace
+    ) -> ir.Value:
+        """
+        title: Produce the checked address of a semantically resolved place.
+        parameters:
+          node: Borrow declaration, retarget, or call operand.
+          place: Addressable storage selected by analysis.
+        returns: Address passed to the callee or stored in a lexical slot.
+        """
+        if place.field is not None:
+            return self._field_address(place.field)
+        source = self.named_values.get(place.root.symbol_id)
+        if source is None:
+            raise_lowering_internal_error(
+                "borrow source has no resolved storage", node=node
+            )
+        if place.index is None:
+            return source
+
+        from irx.builder.lowering.list import ListVisitorMixin  # noqa: PLC0415
+
+        lists = cast(ListVisitorMixin, self)
+        element_type = require_semantic_metadata(
+            self._llvm_type_for_ast_type(place.type_),
+            node=node,
+            metadata="element storage type",
+            context="list element borrow",
+        )
+        return lists.list_element_address(
+            node, source, lists.list_index_value(place.index), element_type
+        )
 
     def _bool_value_from_numeric(
         self,

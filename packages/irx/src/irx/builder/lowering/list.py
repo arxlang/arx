@@ -15,7 +15,6 @@ from public import private
 
 from irx.analysis.resolved_nodes import (
     IterationKind,
-    ResolvedBorrowPlace,
     ResolvedIteration,
     SemanticInfo,
 )
@@ -23,7 +22,6 @@ from irx.analysis.types import is_string_type, sequence_element_type
 from irx.builder.core import VisitorCore, semantic_symbol_key
 from irx.builder.diagnostics import (
     raise_lowering_error,
-    raise_lowering_internal_error,
     require_lowered_value,
     require_semantic_metadata,
 )
@@ -48,34 +46,6 @@ class ListVisitorMixin(VisitorMixinBase):
     """
     title: Dynamic-list visitor mixin.
     """
-
-    @private
-    def lower_borrow_place(
-        self, node: astx.AST, place: ResolvedBorrowPlace
-    ) -> ir.Value:
-        """
-        title: Produce the checked address of a semantically resolved place.
-        parameters:
-          node: Borrow declaration, retarget, or call operand.
-          place: Addressable storage selected by analysis.
-        returns: Address passed to the callee or stored in a lexical slot.
-        """
-        source = self.named_values.get(place.root.symbol_id)
-        if source is None:
-            raise_lowering_internal_error(
-                "borrow source has no resolved storage", node=node
-            )
-        if place.index is None:
-            return source
-        element_type = require_semantic_metadata(
-            self._llvm_type_for_ast_type(place.type_),
-            node=node,
-            metadata="element storage type",
-            context="list element borrow",
-        )
-        return self.list_element_address(
-            node, source, self.list_index_value(place.index), element_type
-        )
 
     @private
     def check_list_status(self, node: astx.AST, status: ir.Value) -> None:

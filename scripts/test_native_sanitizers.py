@@ -183,6 +183,15 @@ def main() -> None:
             cc,
             cxx,
         )
+        check_generated_ownership(
+            fixtures / "test_class_lifecycle.x",
+            ("test_const_field_borrows",),
+            work,
+            flags,
+            env,
+            cc,
+            cxx,
+        )
     suffix = " (leak detection disabled)" if args.no_leaks else ""
     print(f"Native ASan/UBSan smoke passed{suffix}")
 
