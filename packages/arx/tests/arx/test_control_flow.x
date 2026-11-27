@@ -254,6 +254,50 @@ fn test_local_borrows() -> none:
   assert counter < -editor + 20
   assert counter<-editor + 20
 
+fn retarget_by_branch(mode: i32) -> i32:
+  ```
+  title: Write through the target selected by a reachable branch
+  ```
+  original: i32 = 5
+  first: i32 = 10
+  second: i32 = 20
+  editor: &&i32 = &&original
+  if mode == 0:
+    return editor
+  elif mode == 1:
+    editor = &&first
+  else:
+    editor = &&second
+  original = 0
+  editor += 1
+  selected: i32 = editor
+  editor = &&original
+  assert first + second == 31
+  return selected
+
+fn test_control_flow_borrow_retargeting() -> none:
+  ```
+  title: Keep possible targets through branches and across loop edges
+  ```
+  assert retarget_by_branch(0) == 5
+  assert retarget_by_branch(1) == 11
+  assert retarget_by_branch(2) == 21
+
+  original: i32 = 100
+  destination: i32 = 5
+  lap: i32 = 0
+  editor: &&i32 = &&original
+  while true:
+    editor = &&destination
+    editor += 1
+    lap += 1
+    if lap == 1:
+      continue
+    break
+  original = 9
+  assert original == 9
+  assert editor == 7
+
 fn test_loop_transfers() -> none:
   ```
   title: Stop searches and skip work in each source loop form.

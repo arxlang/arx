@@ -40,8 +40,16 @@ from .test_file_class_native import build_audited_file_program
         ("r: auto = &&n\n++n", "cannot read 'n' while it is borrowed"),
         ("r: auto = &n\nw: auto = &&n", "has a conflicting borrow"),
         (
-            "r: auto = &n\nif true:\n  r = &other",
-            "retarget a borrow in the same lexical scope",
+            "r: auto = &n\nif true:\n  n: i32 = 2\n  r = &n",
+            "must outlive borrow binding 'r'",
+        ),
+        (
+            "r: auto = &&n\nif wide == 1:\n  r = &&other\nn = 0",
+            "cannot read 'n' while it is borrowed",
+        ),
+        (
+            "r: auto = &&n\nif wide == 1:\n  r = &&other\nprint(other)",
+            "cannot read 'other' while it is borrowed",
         ),
         (
             "r: const :: auto = &&n\nr = &&other",
@@ -56,8 +64,12 @@ from .test_file_class_native import build_audited_file_program
         ("r: auto = &n\nr = &wide", "requires the original source type"),
         ("n = &&other", "requires an existing borrow binding"),
         (
-            "r: auto = &&n\nwhile false:\n  r = &&other",
-            "retarget a borrow in the same lexical scope",
+            "r: auto = &&n\nwhile other > 0:\n  r = &&other\n  continue",
+            "cannot read 'other' while it is borrowed",
+        ),
+        (
+            "r: auto = &&n\nwhile wide > 0:\n  r = &&other\n  break\nn = 0",
+            "cannot read 'n' while it is borrowed",
         ),
     ],
 )
@@ -102,6 +114,16 @@ def test_local_borrows_reject_invalid_access(body: str, message: str) -> None:
         ("a: auto = &values[0]\nreturn values", "cannot write 'values'"),
         ("a: auto = &values[0]\ngrow(&&values)", "cannot write 'values'"),
         ("a: auto = &&values[0]\nsize(&values)", "cannot read 'values'"),
+        (
+            "a: auto = &values[0]\ntry:\n  a = &other[index]\n"
+            "except IndexError:\n  values.append(1)",
+            "cannot write 'values' while it is borrowed",
+        ),
+        (
+            "try:\n  a: auto = &values[0]\nexcept IndexError:\n  return []\n"
+            "else:\n  values.append(1)",
+            "cannot write 'values' while it is borrowed",
+        ),
         ("other = values\na: auto = &values[0]", "after a move"),
         (
             "other = values\na: auto = &other[0]\na = &values[0]",

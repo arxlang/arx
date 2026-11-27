@@ -125,6 +125,32 @@ def _duplicate_definition(
     )
 
 
+def test_local_borrow_cannot_escape_nested_ast_block() -> None:
+    """
+    title: Reject an outer loan of storage declared in a nested AST block.
+    """
+    access = astx.BorrowAccess.read_only
+    module = _main_module(
+        astx.VariableDeclaration(
+            "outer", astx.Int32(), value=astx.LiteralInt32(1)
+        ),
+        astx.BorrowDeclaration(
+            "reader", astx.Int32(), astx.Identifier("outer"), access
+        ),
+        _block(
+            astx.VariableDeclaration(
+                "inner", astx.Int32(), value=astx.LiteralInt32(2)
+            ),
+            astx.BorrowRetarget(
+                astx.Identifier("reader"), astx.Identifier("inner"), access
+            ),
+        ),
+        astx.FunctionReturn(astx.Identifier("reader")),
+    )
+    with pytest.raises(SemanticError, match="must outlive borrow binding"):
+        analyze(module)
+
+
 def test_analyze_attaches_canonical_function_signature() -> None:
     """
     title: Function declarations should expose one canonical semantic

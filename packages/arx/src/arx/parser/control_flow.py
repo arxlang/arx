@@ -430,6 +430,11 @@ class ControlFlowParserMixin(ParserMixinBase):
             self._consume_operator(";")
 
             update = self.parse_assignment_or_expression()
+            if isinstance(update, astx.BorrowRetarget):
+                raise ParserException(
+                    "A count-loop update cannot retarget a borrow.",
+                    update.loc,
+                )
             self._consume_operator(":")
 
             body = self.parse_block()

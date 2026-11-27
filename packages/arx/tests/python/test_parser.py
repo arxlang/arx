@@ -398,6 +398,16 @@ def test_borrow_statement_spelling_and_comparison() -> None:
         assert declaration.value.rhs.op_code == sign
 
 
+def test_count_loop_update_cannot_retarget_borrow() -> None:
+    """
+    title: Report a statement-only borrow retarget before constructing a loop.
+    """
+    with pytest.raises(
+        ParserException, match="A count-loop update cannot retarget a borrow"
+    ):
+        _parse_module("for i: i32 = 0; i < 1; reader = &value:\n  print(i)\n")
+
+
 @pytest.mark.parametrize(
     ("source", "message"),
     [

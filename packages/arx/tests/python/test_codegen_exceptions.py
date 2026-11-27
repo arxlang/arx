@@ -538,6 +538,37 @@ def test_cleanup_failure_preserves_primary_exception(
 
 
 @pytest.mark.parametrize("optimization", [0, 3])
+def test_failed_index_cleanup_preserves_borrow_target(
+    tmp_path: Path, optimization: int
+) -> None:
+    """
+    title: Keep the old alias address when index cleanup raises.
+    parameters:
+      tmp_path: Temporary directory for this test.
+      optimization: Optimization level.
+    """
+    result = run_exception(
+        tmp_path,
+        "original: i32 = 5\n"
+        "values: list[i32] = [7]\n"
+        "item: &&i32 = &&original\n"
+        "try:\n"
+        "  item = &&values[Resource().index]\n"
+        "  assert false\n"
+        "except ValueError:\n"
+        "  assert item == 5\n"
+        "  item = 11\n"
+        "item = &&values[0]\n"
+        "assert original == 11\n"
+        "assert item == 7",
+        "class Resource:\n  index: i32 = 0\n  fn __del__(self) -> none:\n"
+        '    raise ValueError("temporary cleanup")\n',
+        optimization,
+    )
+    assert result.returncode == 0, result.stderr
+
+
+@pytest.mark.parametrize("optimization", [0, 3])
 @pytest.mark.parametrize("failure", ["body", "exit", "enter"])
 def test_nested_resource_failure_precedence(
     tmp_path: Path, optimization: int, failure: str

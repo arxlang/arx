@@ -531,7 +531,12 @@ class VariableVisitorMixin(ClassVisitorMixin):
             metadata="resolved_borrow",
             context="local borrow",
         )
-        source = cast(VisitorCore, self).lower_borrow_place(node, borrow.place)
+        core = cast(VisitorCore, self)
+        cleanup_depth = len(core.cleanup_stack)
+        source = core.lower_borrow_place(node, borrow.place)
+        # Complete fallible cleanup of index evaluation before committing
+        # the new address. The source binding pins the address itself.
+        core._emit_temporary_cleanups(cleanup_depth)
         slot: ir.Value | None
         if isinstance(node, astx.BorrowDeclaration):
             slot = self.create_entry_block_alloca(
