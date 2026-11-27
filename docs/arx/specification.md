@@ -9,9 +9,9 @@ support summary; executable conformance lives in the compiler tests.
 
 ### Boolean evaluation
 
-- Scalar `&&`/`and` and `||`/`or` require Boolean operands.
+- Scalar `and` and `||`/`or` require Boolean operands.
 - The left operand is evaluated first.
-- For `lhs && rhs`, `rhs` is evaluated only when `lhs` is `true`.
+- For `lhs and rhs`, `rhs` is evaluated only when `lhs` is `true`.
 - For `lhs || rhs`, `rhs` is evaluated only when `lhs` is `false`.
 
 `packages/arx/tests/arx/test_datatypes.x` contains the black-box conformance

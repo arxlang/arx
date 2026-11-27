@@ -514,7 +514,7 @@ class DeclarationBlockVisitorMixin(SemanticVisitorMixinBase):
         ):
             self.context.diagnostics.add(
                 "retargeting requires a mutable binding and the original "
-                "borrow operator",
+                "borrow mode",
                 node=node.target,
                 code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
             )

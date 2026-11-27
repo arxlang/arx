@@ -319,7 +319,7 @@ def test_parse_comparisons_do_not_trigger_template_call_handling() -> None:
             """
             fn main() -> i32:
               a32: i32 = 32
-              ok: bool = (a32 > 0) && (a32 < 100)
+              ok: bool = (a32 > 0) and (a32 < 100)
               return 0
             """
         ).lstrip()

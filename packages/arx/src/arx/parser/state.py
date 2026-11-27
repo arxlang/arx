@@ -14,6 +14,10 @@ import astx
 from astx import SourceLocation
 
 INDENT_SIZE = 2
+BORROW_OPERATORS = {
+    "&": astx.BorrowAccess.read_only,
+    "&&": astx.BorrowAccess.exclusive,
+}
 
 
 class TypeUseContext(Enum):
@@ -117,6 +121,7 @@ MUTABILITY_NAME_MAP = {
 
 __all__ = [
     "BINDING_MUTABILITY_MODIFIERS",
+    "BORROW_OPERATORS",
     "CLASS_ALLOWED_MODIFIERS",
     "FIELD_ALLOWED_MODIFIERS",
     "FUNCTION_ALLOWED_MODIFIERS",

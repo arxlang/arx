@@ -65,7 +65,6 @@ class ParserCore(ParserMixinBase):
             "=": 2,
             "||": 5,
             "or": 5,
-            "&&": 6,
             "and": 6,
             "==": 10,
             "!=": 10,
@@ -712,7 +711,4 @@ class ParserCore(ParserMixinBase):
         title: Get the precedence of the pending binary operator token.
         returns: The precedence of the pending binary operator token.
         """
-        operator = self.tokens.cur_tok.value
-        return self.bin_op_precedence.get(
-            "<" if operator == "<-" else operator, -1
-        )
+        return self.bin_op_precedence.get(self.tokens.cur_tok.value, -1)

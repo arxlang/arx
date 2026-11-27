@@ -34,23 +34,28 @@ from .test_file_class_native import build_audited_file_program
 @pytest.mark.parametrize(
     ("body", "message"),
     [
-        ("r: auto <- n\nr = 1", "cannot write through read-only borrow"),
-        ("r: auto <- n\nn += 1", "cannot write 'n' while it is borrowed"),
-        ("r: auto <<- n\nprint(n)", "cannot read 'n' while it is borrowed"),
-        ("r: auto <<- n\n++n", "cannot read 'n' while it is borrowed"),
-        ("r: auto <- n\nw: auto <<- n", "has a conflicting borrow"),
+        ("r: auto = &n\nr = 1", "cannot write through read-only borrow"),
+        ("r: auto = &n\nn += 1", "cannot write 'n' while it is borrowed"),
+        ("r: auto = &&n\nprint(n)", "cannot read 'n' while it is borrowed"),
+        ("r: auto = &&n\n++n", "cannot read 'n' while it is borrowed"),
+        ("r: auto = &n\nw: auto = &&n", "has a conflicting borrow"),
         (
-            "r: auto <- n\nif true:\n  r <- other",
+            "r: auto = &n\nif true:\n  r = &other",
             "retarget a borrow in the same lexical scope",
         ),
         (
-            "r: const :: auto <<- n\nr <<- other",
+            "r: const :: auto = &&n\nr = &&other",
             "retargeting requires a mutable binding",
         ),
-        ("r: auto <<- n\nr <- other", "the original borrow operator"),
-        ("r: auto <- n + 1", "requires a scalar variable as its source"),
-        ("r: i64 <- n", "must have the exact type of its source"),
-        ("r: auto <- n\nr <- wide", "requires the original source type"),
+        ("r: auto = &&n\nr = &other", "the original borrow mode"),
+        ("r: auto = &n + 1", "requires a scalar variable as its source"),
+        ("r: &i64 = &n", "must have the exact type of its source"),
+        ("r: auto = &n\nr = &wide", "requires the original source type"),
+        ("n = &&other", "requires an existing borrow binding"),
+        (
+            "r: auto = &&n\nwhile false:\n  r = &&other",
+            "retarget a borrow in the same lexical scope",
+        ),
     ],
 )
 def test_local_borrows_reject_invalid_access(body: str, message: str) -> None:
@@ -1439,7 +1444,7 @@ def test_print_diagnostics_keep_primary_errors_and_source_locations() -> None:
         ("bad: i32 = fill_null(frame.x[0], 1.5)", "matching non-null"),
         ("if frame.x[0]:\n    return 1", "condition must be Boolean"),
         ("bad: series[i32] = frame.x", "cannot assign"),
-        ("bad: series[bool] = frame.x && frame.x", "require bool"),
+        ("bad: series[bool] = frame.x and frame.x", "require bool"),
     ],
 )
 def test_nullable_semantic_errors(body: str, message: str) -> None:

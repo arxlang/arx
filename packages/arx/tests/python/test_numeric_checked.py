@@ -765,7 +765,7 @@ def test_unsupported_storage_conversions_are_semantic_errors(
         "frame: dataframe[x:i8] = dataframe({x:[128]})",
         "frame: dataframe[x:f32] = dataframe({x:[16777217]})",
         "if true:\n  2147483647 + 1",
-        "true && (2147483647 + 1 == 0)",
+        "true and (2147483647 + 1 == 0)",
     ],
 )
 def test_evaluated_constant_and_column_range_errors(body: str) -> None:

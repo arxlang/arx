@@ -70,7 +70,7 @@ fn irx_feature_proposal(arg1: i32, arg2: str) -> i32:
   ge: bool = a32 >= 10
   eq: bool = a32 == 33
   ne: bool = a32 != 0
-  l_and: bool = (a32 > 0) && (a32 < 100)
+  l_and: bool = (a32 > 0) and (a32 < 100)
   l_or: bool = (a32 < 0) || (a32 > 0)
   k_and: bool = (a32 > 0) and (a32 < 100)
   k_or: bool = (a32 < 0) or (a32 > 0)

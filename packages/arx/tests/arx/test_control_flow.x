@@ -226,26 +226,29 @@ fn test_local_borrows() -> none:
   ```
   counter: i32 = 40
   other: i32 = 5
-  editor: auto <<- counter
+  editor: &&i32 = &&counter
+  editor = other
+  assert editor == 5
+  editor = 40
   editor += 1
   ++editor
-  editor <<- counter
-  editor<<-other
+  editor = &&counter
+  editor=&&other
   assert counter == 42
   editor = 7
   assert editor == 7
 
   remaining: i32 = 3
   if true:
-    first: auto <- counter
-    second: auto <- counter
+    first: &i32 = &counter
+    second: auto = &counter
     assert first == second
-    first <- remaining
+    first = &remaining
     assert first == 3
     assert second == 42
   counter = 0
   if true:
-    writer: const :: auto <<- counter
+    writer: const :: auto = &&counter
     writer = 9
   assert counter == 9
   assert counter < -editor + 20

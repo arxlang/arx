@@ -220,7 +220,7 @@ def test_binop_precedence() -> None:
         ("not a < b + c", "!(a < (b + c))"),
         ("not a and b or c", "((!a) and b) or c"),
         ("a and not b == c", "a and (!(b == c))"),
-        ("a || not b && c", "a || ((!b) && c)"),
+        ("a || not b and c", "a || ((!b) and c)"),
         ("not not a", "!(!a)"),
         ("!a == b", "(!a) == b"),
         ("a = not b == c", "a = (!(b == c))"),
@@ -369,16 +369,19 @@ def test_borrow_statement_spelling_and_comparison() -> None:
     title: Keep borrow tokens out of less-than and prefix-sign expressions.
     """
     tree = _parse_module(
-        "reader: auto<-value\n"
-        "writer: i32 <<- value\n"
-        "reader <- other\n"
-        "writer<<-other\n"
+        "reader: auto=&value\n"
+        "writer: &&i32 = &&value\n"
+        "reader = &other\n"
+        "writer=&&other\n"
         "check: bool = x<-y\n"
         "decrement: bool = x<--y\n"
+        "x<-y\n"
     )
-    reader, writer, read_retarget, write_retarget, check, decrement = (
+    reader, writer, read_retarget, write_retarget, check, decrement, bare = (
         tree.nodes
     )
+    assert isinstance(bare, astx.BinaryOp)
+    assert bare.op_code == "<"
     assert isinstance(reader, astx.BorrowDeclaration)
     assert reader.access is astx.BorrowAccess.read_only
     assert isinstance(writer, astx.BorrowDeclaration)
@@ -395,7 +398,33 @@ def test_borrow_statement_spelling_and_comparison() -> None:
         assert declaration.value.rhs.op_code == sign
 
 
-@pytest.mark.parametrize("text", ["+=", ";", ":"])
+@pytest.mark.parametrize(
+    ("source", "message"),
+    [
+        ("ready: bool = a && b", "Use 'and' for logical AND"),
+        ("r: &i32", "requires an explicit borrow initializer"),
+        ("r: &&i32 = value", "requires an explicit borrow initializer"),
+        ("r: &i32 = &&value", "must match the alias access mode"),
+        ("r: i32 = &value", "Use an alias type"),
+        ("r: &auto = &value", "Use 'auto' to infer the type"),
+        ("r = &&", "requires a source place"),
+        ("consume(&value)", "Borrow prefixes require a local alias"),
+    ],
+)
+def test_borrow_syntax_requires_explicit_aliases(
+    source: str, message: str
+) -> None:
+    """
+    title: Diagnose invalid alias forms and the former infix AND operator.
+    parameters:
+      source: Arx source to parse.
+      message: Expected diagnostic text.
+    """
+    with pytest.raises(ParserException, match=message):
+        _parse_module(source)
+
+
+@pytest.mark.parametrize("text", ["+=", ";", ":", "&", "&&"])
 def test_compound_operator_detection_ignores_literal_contents(
     text: str,
 ) -> None:
@@ -407,6 +436,10 @@ def test_compound_operator_detection_ignores_literal_contents(
     tree = _parse_module(f'x\n"{text}"\n')
     assert len(tree.nodes) == 2
     assert isinstance(tree.nodes[1], astx.LiteralString)
+    literal = _parse_module(f'x: str = "{text}"\n').nodes[0]
+    assert isinstance(literal, astx.VariableDeclaration)
+    assert not isinstance(literal, astx.BorrowDeclaration)
+    assert isinstance(literal.value, astx.LiteralString)
     tree = _parse_module(f'x += "{text}"\n')
     node = tree.nodes[0]
     assert isinstance(node, astx.AugAssign)

@@ -126,30 +126,35 @@ referenced object, change ownership, or require compile-time evaluation. Locals
 initialize on each call. Module declarations still obey the
 [module storage restrictions](modules.md).
 
-Local borrows of numeric and Boolean variables use `<-` for read-only access
-and `<<-` for exclusive mutable access. The source and destination types
-match exactly, or the destination uses `auto`. A borrow ends at the end of its
-lexical scope, or when retargeted with the same operator in that scope.
+Use `&T` for a read-only alias and `&&T` for an exclusive alias to a local
+numeric or Boolean variable. Initialize the alias with `&place` or `&&place`,
+matching its access mode and the exact type of the source. With `auto`, the
+initializer determines both the type and the access mode.
 
 ```arx
 fn edit() -> i32:
   counter: i32 = 0
   other: i32 = 5
-  editor: auto <<- counter
+  editor: &&i32 = &&counter
   editor = 42
-  editor <<- other
   editor += 1
+  editor = &&other
+  editor = 0
   return editor
 ```
 
-Several read-only borrows may coexist. A read-only borrow prevents writes to
-its source. An exclusive borrow keeps reads and writes on the borrower until
-it ends. A `const` borrow binding keeps its target for the whole scope. Its
-operator still determines whether the borrowed value can be written.
+The alias name reads its current target directly. Assigning an ordinary value
+to an exclusive alias writes to its target. Assigning an explicit borrow
+retargets a mutable alias with the same access mode and type. A borrow ends when
+its alias leaves scope or retargets. Retargeting must take place in the alias's
+declaring scope.
 
-`x<-y` in an expression such as `flag: bool = x<-y` compares `x` to `-y`.
-At the start of a statement it retargets `x`. Write `x < -y` to keep a
-standalone comparison.
+Several read-only aliases may borrow the same variable. The owner remains
+readable while read-only aliases are active. An exclusive alias is the only
+way to read or write its target while the borrow is active. A `const` alias
+keeps its target and, if exclusive, still permits writes through the alias.
+
+Use `and` for logical AND. Prefix `&&` forms an exclusive borrow.
 
 `auto` infers one fixed type from an initializer; it is not dynamic typing.
 Uncontextualized numeric literals use the existing numeric defaults. Inference

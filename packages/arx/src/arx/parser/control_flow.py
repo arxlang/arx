@@ -26,7 +26,7 @@ from arx.docstrings import validate_docstring
 from arx.exceptions import ParserException
 from arx.lexer import Token, TokenKind
 from arx.parser.base import ParserMixinBase
-from arx.parser.state import ParsedAnnotation, TypeUseContext
+from arx.parser.state import BORROW_OPERATORS, ParsedAnnotation, TypeUseContext
 from arx.tensor import (
     TensorBinding,
     binding_from_type,
@@ -490,34 +490,71 @@ class ControlFlowParserMixin(ParserMixinBase):
         """
         var_loc = name_token.location
         name = cast(str, name_token.value)
+        type_token = self.tokens.cur_tok
+        annotated_access = (
+            BORROW_OPERATORS.get(cast(str, type_token.value))
+            if type_token.kind == TokenKind.operator
+            else None
+        )
+        if annotated_access is not None:
+            self.tokens.get_next_token()
         var_type = self.parse_type(type_context=TypeUseContext.VARIABLE)
+        if annotated_access is not None and isinstance(
+            var_type, astx.InferredType
+        ):
+            raise ParserException(
+                "Use 'auto' to infer the type and access mode of an alias.",
+                type_token.location,
+            )
 
-        if self._is_operator("<-") or self._is_operator("<<-"):
-            operator = self.tokens.cur_tok
+        value: astx.Expr | None = None
+        has_initializer = self._is_operator("=")
+        if has_initializer:
+            self._consume_operator("=")
+        operator = self.tokens.cur_tok
+        access = (
+            BORROW_OPERATORS.get(cast(str, operator.value))
+            if operator.kind == TokenKind.operator
+            else None
+        )
+        if has_initializer and access is not None:
+            if annotated_access is None and not isinstance(
+                var_type, astx.InferredType
+            ):
+                raise ParserException(
+                    "Use an alias type (&T or &&T) or auto with a borrow "
+                    "initializer.",
+                    type_token.location,
+                )
+            if annotated_access is not None and annotated_access is not access:
+                raise ParserException(
+                    "The borrow initializer must match the alias access mode.",
+                    operator.location,
+                )
             self.tokens.get_next_token()
             source = self.parse_expression()
             if not isinstance(source, astx.Expr):
                 raise ParserException(
                     "A borrow requires a source place.", operator.location
                 )
-            borrow = astx.BorrowDeclaration(
+            self._declare_value_name(name)
+            return astx.BorrowDeclaration(
                 name,
                 var_type,
                 source,
-                (
-                    astx.BorrowAccess.read_only
-                    if operator.value == "<-"
-                    else astx.BorrowAccess.exclusive
-                ),
+                access,
                 mutability=self.resolve_binding_mutability(modifiers),
                 loc=var_loc,
             )
-            self._declare_value_name(name)
-            return borrow
 
-        value: astx.Expr | None = None
-        if self._is_operator("="):
-            self._consume_operator("=")
+        if annotated_access is not None:
+            raise ParserException(
+                "An alias declaration requires an explicit borrow "
+                "initializer.",
+                type_token.location,
+            )
+
+        if has_initializer:
             try:
                 raw_value = cast(astx.Expr, self.parse_expression())
                 value = coerce_dataframe_expression(
