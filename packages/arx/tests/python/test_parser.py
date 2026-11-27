@@ -1420,42 +1420,114 @@ def test_grouped_type_annotations_preserve_block_layout() -> None:
 
 
 @pytest.mark.parametrize(
-    "declaration,expected_message",
+    "annotation",
+    ["nullable[i64]", "i64 | none", "none | i64", "(i64 | none)"],
+)
+def test_nullable_scalar_annotations(annotation: str) -> None:
+    """
+    title: Normalize nullable scalar type spellings across declarations.
+    parameters:
+      annotation: Nullable type spelling.
+    """
+    tree = _parse_module(
+        f"type Maybe = {annotation}\n"
+        f"class Holder:\n  item: {annotation} = 42\n"
+        f"fn keep(item: {annotation}) -> {annotation}:\n"
+        f"  value: var :: {annotation} = item\n"
+        f"  for cursor: {annotation} = none; false; cursor = none:\n"
+        "    break\n"
+        "  result: Maybe = value\n"
+        "  return result\n"
+    )
+    holder, function = tree.nodes
+    assert isinstance(holder, astx.ClassDefStmt)
+    assert isinstance(function, astx.FunctionDef)
+    value, loop, result, returned = function.body.nodes
+    assert isinstance(value, astx.VariableDeclaration)
+    assert isinstance(loop, astx.ForCountLoopStmt)
+    assert isinstance(result, astx.VariableDeclaration)
+    assert isinstance(returned, astx.FunctionReturn)
+    for type_ in (
+        holder.attributes[0].type_,
+        function.prototype.args.nodes[0].type_,
+        function.prototype.return_type,
+        value.type_,
+        loop.initializer.type_,
+        result.type_,
+    ):
+        assert isinstance(type_, astx.NullableType)
+        assert isinstance(type_.value_type, astx.Int64)
+
+
+def test_nullable_alias_preserves_dataframe_column_nullability() -> None:
+    """
+    title: An aliased nullable column retains its Arrow type and validity.
+    """
+    tree = _parse_module(
+        "type Label = str | none\n"
+        "fn read(frame: dataframe[label: Label]) -> i32:\n"
+        "  return 0\n"
+    )
+    (function,) = tree.nodes
+    assert isinstance(function, astx.FunctionDef)
+    frame = function.prototype.args.nodes[0].type_
+    assert isinstance(frame, astx.DataFrameType)
+    assert frame.columns is not None
+    (column,) = frame.columns
+    assert isinstance(column.type_, astx.String)
+    assert column.nullable
+
+
+def test_nullable_union_alias_remains_a_membership_domain() -> None:
+    """
+    title: A nullable union alias still models a template membership bound.
+    """
+    tree = _parse_module(
+        "type Maybe = i64 | none\n"
+        "@<T: Maybe>\n"
+        "fn check(value: T) -> bool:\n"
+        "  return true\n"
+    )
+    (function,) = tree.nodes
+    assert isinstance(function, astx.FunctionDef)
+    (parameter,) = astx.get_template_params(function.prototype)
+    assert isinstance(parameter.bound, astx.UnionType)
+
+
+@pytest.mark.parametrize(
+    "declaration",
     [
-        ("total: var :: i64 | none = 0", "Use 'nullable[T]'"),
-        ("total: none | i64 = none", "Use 'nullable[T]'"),
-        (
-            "for total: i64 | none = 0; false; total = 1:\n    break",
-            "Use 'nullable[T]'",
-        ),
-        ("total: i32 | i64 = 0", "Parenthesize a union type"),
+        "total: i32 | i64 = 0",
+        "total: i32 | i64 | none = 0",
     ],
 )
-def test_ungrouped_variable_union_reports_pipe(
-    declaration: str, expected_message: str
-) -> None:
+def test_ungrouped_variable_union_reports_pipe(declaration: str) -> None:
     """
     title: Report an ungrouped variable union at its annotation operator.
     parameters:
       declaration: Local declaration containing the union.
-      expected_message: Expected diagnostic guidance.
     """
     line = f"  {declaration}"
     with pytest.raises(ParserException) as error:
         _parse_module(f"fn main() -> i32:\n{line}\n  return 0\n")
     diagnostic = error.value
     assert diagnostic.code == "ARX-PARSE-TYPE-UNION-001"
-    assert expected_message in diagnostic.message
+    assert "Parenthesize a union type" in diagnostic.message
     location = diagnostic.location
     assert location is not None
     assert (location.line, location.col) == (2, line.index("|") + 1)
 
 
-def test_variable_annotation_does_not_consume_next_line_pipe() -> None:
+@pytest.mark.parametrize("annotation", ["i32", "i32 | none"])
+def test_variable_annotation_does_not_consume_next_line_pipe(
+    annotation: str,
+) -> None:
     """
     title: A top-level expression on the next line stays a separate node.
+    parameters:
+      annotation: Variable type annotation.
     """
-    tree = _parse_module("value: i32\n|1\n")
+    tree = _parse_module(f"value: {annotation}\n|1\n")
     declaration, expression = tree.nodes
     assert isinstance(declaration, astx.VariableDeclaration)
     assert isinstance(expression, astx.UnaryOp)

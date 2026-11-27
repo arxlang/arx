@@ -291,6 +291,7 @@ class TypeParserMixin(ParserMixinBase):
         *,
         allow_template_vars: bool = True,
         allow_union: bool = False,
+        allow_nullable_union: bool = True,
         type_context: TypeUseContext = TypeUseContext.GENERAL,
     ) -> astx.DataType:
         """
@@ -302,6 +303,7 @@ class TypeParserMixin(ParserMixinBase):
         parameters:
           allow_template_vars: Whether to use allow template vars.
           allow_union: Whether to consume unparenthesized union members.
+          allow_nullable_union: Whether to consume nullable shorthand.
           type_context: Type context.
         returns: Parsed a type annotation.
         """
@@ -603,24 +605,63 @@ class TypeParserMixin(ParserMixinBase):
                         f"Parser: Unknown type '{type_name}'.", type_location
                     )
 
-        if not allow_union or not self._is_operator("|"):
+        nullable_annotation = allow_nullable_union and type_context in {
+            TypeUseContext.VARIABLE,
+            TypeUseContext.INLINE_VARIABLE,
+            TypeUseContext.FIELD,
+            TypeUseContext.PARAMETER,
+            TypeUseContext.RETURN,
+        }
+        if not (allow_union or nullable_annotation):
             return type_
-
-        members: list[astx.DataType] = []
-        if isinstance(type_, astx.UnionType):
-            members.extend(type_.members)
-        else:
-            members.append(type_)
-        while self._is_operator("|"):
-            self._consume_operator("|")
-            member_type = self.parse_type(
-                allow_template_vars=allow_template_vars,
-                allow_union=False,
-                type_context=type_context,
+        pipe = self.tokens.cur_tok
+        # Unindented statements have no indentation marker of their own.
+        has_pipe = self._is_operator("|") and (
+            allow_union or pipe.location.col > 1
+        )
+        if has_pipe:
+            members = (
+                list(type_.members)
+                if isinstance(type_, astx.UnionType)
+                else [type_]
             )
-            if isinstance(member_type, astx.UnionType):
-                members.extend(member_type.members)
-            else:
-                members.append(member_type)
+            while self._is_operator("|") and (
+                allow_union or self.tokens.cur_tok.location.col > 1
+            ):
+                self._consume_operator("|")
+                member_type = self.parse_type(
+                    allow_template_vars=allow_template_vars,
+                    allow_union=False,
+                    allow_nullable_union=False,
+                    type_context=type_context,
+                )
+                if isinstance(member_type, astx.UnionType):
+                    members.extend(member_type.members)
+                else:
+                    members.append(member_type)
+            type_ = astx.UnionType(members)
 
-        return astx.UnionType(members)
+        # Union aliases can also describe template bounds and column types.
+        # Normalize their scalar uses here.
+        if (
+            nullable_annotation
+            and isinstance(type_, astx.UnionType)
+            and len(type_.members) == 2
+        ):
+            non_null = [
+                member
+                for member in type_.members
+                if not isinstance(member, astx.NoneType)
+            ]
+            if len(non_null) == 1:
+                nullable_type = astx.NullableType(non_null[0])
+                if type_.alias_name is not None:
+                    setattr(nullable_type, "alias_name", type_.alias_name)
+                return nullable_type
+        if has_pipe and not allow_union:
+            raise ParserException(
+                "Parenthesize a union type in this annotation.",
+                pipe.location,
+                code="ARX-PARSE-TYPE-UNION-001",
+            )
+        return type_
