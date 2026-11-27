@@ -334,7 +334,7 @@ def test_get_tok_template_parameter_block() -> None:
 
 def test_get_tok_multi_char_operators() -> None:
     """
-    title: Test tokenization of multi-character operators.
+    title: Tokenize multi-character operators and separate adjacent bars.
     """
     ArxIO.string_to_buffer("a == b != c <= d >= e &&f || g -> &h ++i --j")
     lexer = Lexer()
@@ -351,7 +351,8 @@ def test_get_tok_multi_char_operators() -> None:
         Token(TokenKind.identifier, "e"),
         Token(TokenKind.operator, "&&"),
         Token(TokenKind.identifier, "f"),
-        Token(TokenKind.operator, "||"),
+        Token(TokenKind.operator, "|"),
+        Token(TokenKind.operator, "|"),
         Token(TokenKind.identifier, "g"),
         Token(TokenKind.operator, "->"),
         Token(TokenKind.operator, "&"),

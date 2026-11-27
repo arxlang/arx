@@ -305,6 +305,16 @@ class ExpressionParserMixin(ParserMixinBase):
                 "Use 'and' for logical AND.",
                 self.tokens.cur_tok.location,
             )
+        if self._is_operator("|"):
+            bar = self.tokens.cur_tok
+            following = self._peek_token()
+            if (
+                following.kind == TokenKind.operator
+                and following.value == "|"
+                and following.location.line == bar.location.line
+                and following.location.col == bar.location.col + 1
+            ):
+                raise ParserException("Use 'or' for logical OR.", bar.location)
         return expression
 
     def parse_assignment_or_expression(self) -> astx.AST:

@@ -252,7 +252,7 @@ that cannot be represented by the promoted type fail explicitly. Series/scalar
 operations broadcast the scalar. Series/Series operations require equal lengths.
 Integer arithmetic is checked: overflow and division by zero fail instead of
 wrapping. Null operands produce null outputs, including comparisons. Boolean
-`and` and `||`/`or` propagate nulls strictly, not with Kleene semantics.
+`and` and `or` propagate nulls strictly, not with Kleene semantics.
 These operations are eager, not short-circuiting.
 
 `is_null` returns `bool` for a nullable scalar or a non-nullable Boolean Series

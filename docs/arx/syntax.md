@@ -154,7 +154,8 @@ readable while read-only aliases are active. An exclusive alias is the only
 way to read or write its target while the borrow is active. A `const` alias
 keeps its target and, if exclusive, still permits writes through the alias.
 
-Use `and` for logical AND. Prefix `&&` forms an exclusive borrow.
+Use `and` and `or` for logical AND and OR. Prefix `&&` forms an exclusive
+borrow.
 
 `auto` infers one fixed type from an initializer; it is not dynamic typing.
 Uncontextualized numeric literals use the existing numeric defaults. Inference

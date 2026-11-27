@@ -220,7 +220,7 @@ def test_binop_precedence() -> None:
         ("not a < b + c", "!(a < (b + c))"),
         ("not a and b or c", "((!a) and b) or c"),
         ("a and not b == c", "a and (!(b == c))"),
-        ("a || not b and c", "a || ((!b) and c)"),
+        ("a or not b and c", "a or ((!b) and c)"),
         ("not not a", "!(!a)"),
         ("!a == b", "(!a) == b"),
         ("a = not b == c", "a = (!(b == c))"),
@@ -402,6 +402,25 @@ def test_borrow_statement_spelling_and_comparison() -> None:
     ("source", "message"),
     [
         ("ready: bool = a && b", "Use 'and' for logical AND"),
+        ("ready: bool = a || b", "Use 'or' for logical OR"),
+    ],
+)
+def test_symbolic_logical_operators_are_rejected(
+    source: str, message: str
+) -> None:
+    """
+    title: Report the replacement spelling for symbolic AND and OR.
+    parameters:
+      source: Arx source to parse.
+      message: Expected diagnostic text.
+    """
+    with pytest.raises(ParserException, match=message):
+        _parse_module(source)
+
+
+@pytest.mark.parametrize(
+    ("source", "message"),
+    [
         ("r: &i32", "requires an explicit borrow initializer"),
         ("r: &&i32 = value", "requires an explicit borrow initializer"),
         ("r: &i32 = &&value", "must match the alias access mode"),
@@ -415,7 +434,7 @@ def test_borrow_syntax_requires_explicit_aliases(
     source: str, message: str
 ) -> None:
     """
-    title: Diagnose invalid alias forms and the former infix AND operator.
+    title: Diagnose invalid alias forms.
     parameters:
       source: Arx source to parse.
       message: Expected diagnostic text.

@@ -127,7 +127,7 @@ fn test_boolean_short_circuit_evaluation() -> none:
   summary: Confirms Boolean operands evaluate left to right and short circuit.
   ```
   assert (false and fail_if_evaluated()) == false
-  assert (true || fail_if_evaluated()) == true
+  assert (true or fail_if_evaluated()) == true
   assert not false or fail_if_evaluated()
   assert not (false and not fail_if_evaluated())
 
