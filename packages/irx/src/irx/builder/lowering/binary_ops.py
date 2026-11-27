@@ -151,6 +151,7 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
             raise_lowering_internal_error(
                 "compound assignment target has no resolved storage", node=node
             )
+        address = self.binding_address(node.target, address)
         old = self._llvm.ir_builder.load(address)
         self.visit(node.value)
         rhs = require_lowered_value(

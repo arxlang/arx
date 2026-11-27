@@ -492,6 +492,29 @@ class ControlFlowParserMixin(ParserMixinBase):
         name = cast(str, name_token.value)
         var_type = self.parse_type(type_context=TypeUseContext.VARIABLE)
 
+        if self._is_operator("<-") or self._is_operator("<<-"):
+            operator = self.tokens.cur_tok
+            self.tokens.get_next_token()
+            source = self.parse_expression()
+            if not isinstance(source, astx.Expr):
+                raise ParserException(
+                    "A borrow requires a source place.", operator.location
+                )
+            borrow = astx.BorrowDeclaration(
+                name,
+                var_type,
+                source,
+                (
+                    astx.BorrowAccess.read_only
+                    if operator.value == "<-"
+                    else astx.BorrowAccess.exclusive
+                ),
+                mutability=self.resolve_binding_mutability(modifiers),
+                loc=var_loc,
+            )
+            self._declare_value_name(name)
+            return borrow
+
         value: astx.Expr | None = None
         if self._is_operator("="):
             self._consume_operator("=")

@@ -20,7 +20,7 @@ from arx.dataframe import (
     column_type as dataframe_column_type,
 )
 from arx.exceptions import ParserException
-from arx.lexer import TokenKind
+from arx.lexer import Token, TokenKind
 from arx.parser.base import ParserMixinBase
 from arx.parser.state import TypeUseContext
 from arx.tensor import attach_binding
@@ -300,6 +300,12 @@ class ExpressionParserMixin(ParserMixinBase):
                 "in a statement or count-loop update, not an expression.",
                 self.tokens.cur_tok.location,
             )
+        if self._is_operator("<<-"):
+            raise ParserException(
+                "A borrow requires a standalone declaration or retargeting "
+                "statement.",
+                self.tokens.cur_tok.location,
+            )
         return expression
 
     def parse_assignment_or_expression(self) -> astx.AST:
@@ -316,7 +322,7 @@ class ExpressionParserMixin(ParserMixinBase):
         if (
             target.kind != TokenKind.identifier
             or following.kind != TokenKind.operator
-            or following.value not in COMPOUND_OPERATORS
+            or following.value not in {*COMPOUND_OPERATORS, "<-", "<<-"}
             or following.location.line != target.location.line
         ):
             return self.parse_expression()
@@ -344,6 +350,17 @@ class ExpressionParserMixin(ParserMixinBase):
                 "Compound assignment requires a value, not a statement "
                 "or chained assignment.",
                 value_token.location,
+            )
+        if operator.value in {"<-", "<<-"}:
+            return astx.BorrowRetarget(
+                astx.Identifier(cast(str, target.value), loc=target.location),
+                value,
+                (
+                    astx.BorrowAccess.read_only
+                    if operator.value == "<-"
+                    else astx.BorrowAccess.exclusive
+                ),
+                loc=operator.location,
             )
         return astx.AugAssign(
             astx.Identifier(cast(str, target.value), loc=target.location),
@@ -1034,7 +1051,16 @@ class ExpressionParserMixin(ParserMixinBase):
 
             bin_op = cast(str, self.tokens.cur_tok.value)
             bin_loc = self.tokens.cur_tok.location
-            self.tokens.get_next_token()  # eat operator
+            if bin_op == "<-":
+                # Outside assignment position, '<-' retains 'less than -'.
+                bin_op = "<"
+                self.tokens.cur_tok = Token(
+                    TokenKind.operator,
+                    "-",
+                    astx.SourceLocation(bin_loc.line, bin_loc.col + 1),
+                )
+            else:
+                self.tokens.get_next_token()
 
             rhs = self.parse_unary(cur_prec + 1)
 

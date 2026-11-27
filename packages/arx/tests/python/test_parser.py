@@ -364,6 +364,37 @@ def test_compound_statement_locations_and_precedence(operator: str) -> None:
     assert node.value.rhs.op_code == "*"
 
 
+def test_borrow_statement_spelling_and_comparison() -> None:
+    """
+    title: Keep borrow tokens out of less-than and prefix-sign expressions.
+    """
+    tree = _parse_module(
+        "reader: auto<-value\n"
+        "writer: i32 <<- value\n"
+        "reader <- other\n"
+        "writer<<-other\n"
+        "check: bool = x<-y\n"
+        "decrement: bool = x<--y\n"
+    )
+    reader, writer, read_retarget, write_retarget, check, decrement = (
+        tree.nodes
+    )
+    assert isinstance(reader, astx.BorrowDeclaration)
+    assert reader.access is astx.BorrowAccess.read_only
+    assert isinstance(writer, astx.BorrowDeclaration)
+    assert writer.access is astx.BorrowAccess.exclusive
+    assert isinstance(read_retarget, astx.BorrowRetarget)
+    assert read_retarget.access is astx.BorrowAccess.read_only
+    assert isinstance(write_retarget, astx.BorrowRetarget)
+    assert write_retarget.access is astx.BorrowAccess.exclusive
+    for declaration, sign in ((check, "-"), (decrement, "--")):
+        assert isinstance(declaration, astx.VariableDeclaration)
+        assert isinstance(declaration.value, astx.BinaryOp)
+        assert declaration.value.op_code == "<"
+        assert isinstance(declaration.value.rhs, astx.UnaryOp)
+        assert declaration.value.rhs.op_code == sign
+
+
 @pytest.mark.parametrize("text", ["+=", ";", ":"])
 def test_compound_operator_detection_ignores_literal_contents(
     text: str,

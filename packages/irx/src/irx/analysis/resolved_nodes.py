@@ -64,6 +64,23 @@ class SemanticSymbol:
     qualified_name: str = ""
 
 
+@private
+@typechecked
+@dataclass(frozen=True)
+class ResolvedBorrow:
+    """
+    title: Address transfer between a local place and a lexical borrow slot.
+    attributes:
+      target: Borrow binding storing the address.
+      source: Local binding whose address is borrowed.
+      access: Access granted by the borrow.
+    """
+
+    target: SemanticSymbol
+    source: SemanticSymbol
+    access: astx.BorrowAccess
+
+
 @public
 @typechecked
 @dataclass(frozen=True, init=False)
@@ -1982,6 +1999,7 @@ class SemanticInfo:
       resolved_call: Resolved call.
       resolved_operator: Resolved operator.
       resolved_assignment: Resolved assignment.
+      resolved_borrow: Resolved local borrow creation or retargeting.
       resolved_aug_assignment: Resolved aug assignment.
       resolved_field_access: Resolved field access.
       resolved_module_member_access: Resolved module member access.
@@ -2048,6 +2066,7 @@ class SemanticInfo:
     resolved_call: CallResolution | None = None
     resolved_operator: ResolvedOperator | None = None
     resolved_assignment: ResolvedAssignment | None = None
+    resolved_borrow: ResolvedBorrow | None = None
     resolved_aug_assignment: ResolvedAugAssignment | None = None
     resolved_field_access: ResolvedFieldAccess | None = None
     resolved_module_member_access: ResolvedModuleMemberAccess | None = None

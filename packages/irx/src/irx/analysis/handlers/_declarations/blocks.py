@@ -15,6 +15,7 @@ from typing import cast
 import astx
 
 from irx.analysis.arrow_conversion import arrow_local
+from irx.analysis.borrows import resolve_borrow_source
 from irx.analysis.class_lifecycle import class_local
 from irx.analysis.file_io import resolve_file_local
 from irx.analysis.flow import flow_outcomes
@@ -37,6 +38,7 @@ from irx.analysis.resolved_nodes import (
     FailedInferenceType,
     OwnershipKind,
     OwnershipTransferKind,
+    ResolvedBorrow,
     ResolvedGeneratorFunction,
     ResourceKind,
     ResourceOwnership,
@@ -47,6 +49,7 @@ from irx.analysis.types import (
     is_numeric_type,
     is_sequence_element,
     is_string_type,
+    same_type,
 )
 from irx.diagnostics import DiagnosticCodes
 from irx.typecheck import typechecked
@@ -435,6 +438,104 @@ class DeclarationBlockVisitorMixin(SemanticVisitorMixinBase):
             and self.context.local_list_moves != moves
         ):
             ListMoveCheck(self.context.diagnostics).visit(block, frozenset())
+
+    @SemanticAnalyzerCore.visit.dispatch
+    def visit(self, node: astx.BorrowDeclaration) -> None:
+        """
+        title: Bind a local name to a validated source place.
+        parameters:
+          node: Borrow declaration to resolve.
+        """
+        info = self._semantic(node)
+        info.resolved_borrow = None
+        info.resolved_symbol = None
+        source = resolve_borrow_source(self.context, node.value, node.access)
+        if source is None:
+            return
+        if not isinstance(node.type_, astx.InferredType):
+            declared = self._resolve_declared_type(node.type_, node=node)
+            if not same_type(declared, source.type_):
+                self.context.diagnostics.add(
+                    "a borrow must have the exact type of its source place",
+                    node=node,
+                    code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
+                )
+                return
+        target = self.registry.declare_local(
+            node.name,
+            source.type_,
+            is_mutable=node.access is astx.BorrowAccess.exclusive,
+            declaration=node,
+            kind="borrow",
+        )
+        scope = self.context.scopes.current
+        assert scope is not None
+        if scope.symbols.get(node.name) is target:
+            borrow = ResolvedBorrow(target, source, node.access)
+            scope.borrows[target.symbol_id] = borrow
+            info.resolved_borrow = borrow
+            self._set_symbol(node, target)
+            self._set_symbol(node.value, source)
+
+    @SemanticAnalyzerCore.visit.dispatch
+    def visit(self, node: astx.BorrowRetarget) -> None:
+        """
+        title: Validate a new place before ending the original borrow.
+        parameters:
+          node: Borrow retargeting statement to resolve.
+        """
+        info = self._semantic(node)
+        info.resolved_borrow = None
+        self._set_type(node, None)
+        target = self.context.scopes.resolve(node.target.name)
+        if target is None or not isinstance(
+            target.declaration, astx.BorrowDeclaration
+        ):
+            self.context.diagnostics.add(
+                "retargeting requires an existing borrow binding",
+                node=node.target,
+                code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
+            )
+            return
+        scope = self.context.scopes.current
+        assert scope is not None
+        old = scope.borrows.get(target.symbol_id)
+        if old is None:
+            self.context.diagnostics.add(
+                "retarget a borrow in the same lexical scope as its "
+                "declaration",
+                node=node.target,
+                code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
+            )
+            return
+        if (
+            target.declaration.mutability is astx.MutabilityKind.constant
+            or old.access is not node.access
+        ):
+            self.context.diagnostics.add(
+                "retargeting requires a mutable binding and the original "
+                "borrow operator",
+                node=node.target,
+                code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
+            )
+            return
+        source = resolve_borrow_source(
+            self.context, node.source, node.access, retarget=target
+        )
+        if source is None:
+            return
+        if not same_type(target.type_, source.type_):
+            self.context.diagnostics.add(
+                "retargeting requires the original source type",
+                node=node.source,
+                code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
+            )
+            return
+        borrow = ResolvedBorrow(target, source, node.access)
+        scope.borrows[target.symbol_id] = borrow
+        info.resolved_borrow = borrow
+        self._set_symbol(node.target, target)
+        self._set_symbol(node.source, source)
 
     @SemanticAnalyzerCore.visit.dispatch
     def visit(

@@ -911,6 +911,16 @@ class VisitorMixinTypingBase(ExceptionLoweringTypingBase):
         _ = purpose, symbol_namespace
         return cast(ir.Value, None)
 
+    def binding_address(self, node: astx.AST, slot: ir.Value) -> ir.Value:
+        """
+        title: Return the value address granted by resolved binding storage.
+        parameters:
+          node: Access with a resolved symbol.
+          slot: Storage for the resolved binding.
+        returns: Address of the value being accessed.
+        """
+        return slot
+
     def _field_address(self, _node: astx.FieldAccess) -> ir.Value:
         """
         title: Lower one field access to an address.

@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import copy
 
+from collections import deque
 from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
 from enum import Enum
@@ -353,6 +354,7 @@ class Lexer:
       _keyword_map: Keyword map.
       _line_comment_delims: Line comment delims.
       _multi_char_ops: Multi char ops.
+      operator_lookahead: Characters buffered while matching an operator.
       _literal_keywords: Literal keywords.
       _keyword_token_map: Keyword token map.
     """
@@ -365,7 +367,9 @@ class Lexer:
 
     # Manifest-driven shared tables.
     _line_comment_delims: tuple[str, ...] = _MANIFEST.line_comment_delimiters
-    _multi_char_ops: set[str] = _MANIFEST.multi_char_operators
+    _multi_char_ops: tuple[str, ...] = tuple(
+        sorted(_MANIFEST.multi_char_operators, key=len, reverse=True)
+    )
     _literal_keywords: dict[str, Any] = _MANIFEST.literal_keywords
 
     # Compiler-facing token mapping remains explicit.
@@ -405,6 +409,7 @@ class Lexer:
         self.last_char = ""
         self.initialized = False
         self.new_line = True
+        self.operator_lookahead: deque[str] = deque()
         self._keyword_map = copy.deepcopy(self._keyword_token_map)
 
     def clean(self) -> None:
@@ -412,6 +417,7 @@ class Lexer:
         title: Reset the Lexer attributes.
         """
         self.lex_loc = SourceLocation(1, 0)
+        self.operator_lookahead.clear()
         self.last_char = ""
         self.initialized = False
         self.new_line = True
@@ -735,7 +741,11 @@ class Lexer:
         title: Advance the token from the buffer.
         returns: TokenKind in integer form.
         """
-        last_char = ArxIO.get_char()
+        last_char = (
+            self.operator_lookahead.popleft()
+            if self.operator_lookahead
+            else ArxIO.get_char()
+        )
         if last_char in ("\n", "\r"):
             self.lex_loc.line += 1
             self.lex_loc.col = 0
@@ -790,13 +800,21 @@ class Lexer:
         op = self.last_char
         self.last_char = self.advance()
 
-        if op + self.last_char in self._multi_char_ops:
-            full_op = op + self.last_char
-            self.last_char = self.advance()
-            return Token(
-                kind=TokenKind.operator,
-                value=full_op,
-                location=location,
-            )
+        for spelling in self._multi_char_ops:
+            if spelling[:2] != op + self.last_char:
+                continue
+            extra = len(spelling) - 2
+            # Preserve the existing '<' followed by prefix decrement.
+            needed = max(extra, int(spelling == "<-"))
+            while len(self.operator_lookahead) < needed:
+                self.operator_lookahead.append(ArxIO.get_char())
+            tail = "".join(self.operator_lookahead)
+            if not tail.startswith(spelling[2:]) or (
+                spelling == "<-" and tail.startswith("-")
+            ):
+                continue
+            for _ in spelling[1:]:
+                self.last_char = self.advance()
+            return Token(TokenKind.operator, spelling, location)
 
         return Token(kind=TokenKind.operator, value=op, location=location)

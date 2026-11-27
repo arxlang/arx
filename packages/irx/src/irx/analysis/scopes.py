@@ -10,7 +10,7 @@ from dataclasses import dataclass, field
 
 from public import public
 
-from irx.analysis.resolved_nodes import SemanticSymbol
+from irx.analysis.resolved_nodes import ResolvedBorrow, SemanticSymbol
 from irx.typecheck import typechecked
 
 
@@ -25,10 +25,12 @@ class Scope:
     attributes:
       kind: Kind of value or operation.
       symbols: Symbols.
+      borrows: Active lexical borrows declared in this scope.
     """
 
     kind: str
     symbols: dict[str, SemanticSymbol] = field(default_factory=dict)
+    borrows: dict[str, ResolvedBorrow] = field(default_factory=dict)
 
 
 @public
@@ -41,6 +43,7 @@ class ScopeStack:
     attributes:
       _stack: Stack.
       current: Current.
+      function_scopes: Active scopes inside the nearest callable.
     """
 
     def __init__(self) -> None:
@@ -72,6 +75,19 @@ class ScopeStack:
         scope = Scope(kind=kind)
         self._stack.append(scope)
         return scope
+
+    @property
+    def function_scopes(self) -> tuple[Scope, ...]:
+        """
+        title: Return active scopes inside the nearest callable.
+        returns: Callable scopes from innermost to outermost.
+        """
+        scopes: list[Scope] = []
+        for scope in reversed(self._stack):
+            scopes.append(scope)
+            if scope.kind in {"function", "method"}:
+                return tuple(scopes)
+        return ()
 
     def pop(self) -> Scope:
         """

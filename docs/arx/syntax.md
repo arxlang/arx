@@ -126,6 +126,31 @@ referenced object, change ownership, or require compile-time evaluation. Locals
 initialize on each call. Module declarations still obey the
 [module storage restrictions](modules.md).
 
+Local borrows of numeric and Boolean variables use `<-` for read-only access
+and `<<-` for exclusive mutable access. The source and destination types
+match exactly, or the destination uses `auto`. A borrow ends at the end of its
+lexical scope, or when retargeted with the same operator in that scope.
+
+```arx
+fn edit() -> i32:
+  counter: i32 = 0
+  other: i32 = 5
+  editor: auto <<- counter
+  editor = 42
+  editor <<- other
+  editor += 1
+  return editor
+```
+
+Several read-only borrows may coexist. A read-only borrow prevents writes to
+its source. An exclusive borrow keeps reads and writes on the borrower until
+it ends. A `const` borrow binding keeps its target for the whole scope. Its
+operator still determines whether the borrowed value can be written.
+
+`x<-y` in an expression such as `flag: bool = x<-y` compares `x` to `-y`.
+At the start of a statement it retargets `x`. Write `x < -y` to keep a
+standalone comparison.
+
 `auto` infers one fixed type from an initializer; it is not dynamic typing.
 Uncontextualized numeric literals use the existing numeric defaults. Inference
 is available for initialized variables, literal-initialized fields, and

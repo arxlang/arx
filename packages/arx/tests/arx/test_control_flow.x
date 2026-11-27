@@ -220,6 +220,37 @@ fn test_prefix_mutation_values() -> none:
     total = total + i
   assert total == 3
 
+fn test_local_borrows() -> none:
+  ```
+  title: Write through an exclusive borrow and end it on retarget or scope exit.
+  ```
+  counter: i32 = 40
+  other: i32 = 5
+  editor: auto <<- counter
+  editor += 1
+  ++editor
+  editor <<- counter
+  editor<<-other
+  assert counter == 42
+  editor = 7
+  assert editor == 7
+
+  remaining: i32 = 3
+  if true:
+    first: auto <- counter
+    second: auto <- counter
+    assert first == second
+    first <- remaining
+    assert first == 3
+    assert second == 42
+  counter = 0
+  if true:
+    writer: const :: auto <<- counter
+    writer = 9
+  assert counter == 9
+  assert counter < -editor + 20
+  assert counter<-editor + 20
+
 fn test_loop_transfers() -> none:
   ```
   title: Stop searches and skip work in each source loop form.

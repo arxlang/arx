@@ -8,7 +8,7 @@ import subprocess
 import sys
 
 from pathlib import Path
-from textwrap import dedent
+from textwrap import dedent, indent
 
 import astx
 import pytest
@@ -29,6 +29,45 @@ from llvmlite import binding as llvm
 from llvmlite import ir
 
 from .test_file_class_native import build_audited_file_program
+
+
+@pytest.mark.parametrize(
+    ("body", "message"),
+    [
+        ("r: auto <- n\nr = 1", "cannot write through read-only borrow"),
+        ("r: auto <- n\nn += 1", "cannot write 'n' while it is borrowed"),
+        ("r: auto <<- n\nprint(n)", "cannot read 'n' while it is borrowed"),
+        ("r: auto <<- n\n++n", "cannot read 'n' while it is borrowed"),
+        ("r: auto <- n\nw: auto <<- n", "has a conflicting borrow"),
+        (
+            "r: auto <- n\nif true:\n  r <- other",
+            "retarget a borrow in the same lexical scope",
+        ),
+        (
+            "r: const :: auto <<- n\nr <<- other",
+            "retargeting requires a mutable binding",
+        ),
+        ("r: auto <<- n\nr <- other", "the original borrow operator"),
+        ("r: auto <- n + 1", "requires a scalar variable as its source"),
+        ("r: i64 <- n", "must have the exact type of its source"),
+        ("r: auto <- n\nr <- wide", "requires the original source type"),
+    ],
+)
+def test_local_borrows_reject_invalid_access(body: str, message: str) -> None:
+    """
+    title: Reject conflicting or ill-typed accesses before LLVM lowering.
+    parameters:
+      body: Borrow operations to analyze.
+      message: Expected semantic diagnostic.
+    """
+    ArxIO.string_to_buffer(
+        "fn main() -> i32:\n"
+        "  n: i32 = 0\n"
+        "  other: i32 = 1\n"
+        "  wide: i64 = 1\n" + indent(body, "  ") + "\n  return 0\n"
+    )
+    with pytest.raises(SemanticError, match=message):
+        ArxBuilder().translate(Parser().parse(Lexer().lex()))
 
 
 @pytest.mark.skipif(shutil.which("clang") is None, reason="requires clang")

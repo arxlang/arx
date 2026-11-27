@@ -13,6 +13,7 @@ from typing import cast
 
 import astx
 
+from irx.analysis.borrows import check_borrow_access
 from irx.analysis.handlers.base import SemanticAnalyzerCore
 from irx.analysis.handlers.class_helpers import (
     ClassMemberFormattingVisitorMixin,
@@ -122,6 +123,14 @@ class ExpressionMutationVisitorMixin(ClassMemberFormattingVisitorMixin):
                 )
                 return None
             target_name = symbol.name
+            if not check_borrow_access(
+                self.context,
+                symbol,
+                target,
+                write=True,
+                read_checked=True,
+            ):
+                return None
             if require_reassignment and not symbol.is_mutable:
                 self.context.diagnostics.add(
                     f"Cannot {action} '{target_name}': declared as constant",
@@ -492,6 +501,8 @@ class ExpressionMutationVisitorMixin(ClassMemberFormattingVisitorMixin):
                 node=node,
                 code=DiagnosticCodes.SEMANTIC_UNRESOLVED_NAME,
             )
+            return
+        if not check_borrow_access(self.context, symbol, node, write=True):
             return
         if isinstance(symbol.type_, (astx.SequenceType, astx.GeneratorType)):
             self.context.diagnostics.add(
