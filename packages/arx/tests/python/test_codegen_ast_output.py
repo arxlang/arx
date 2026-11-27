@@ -2373,11 +2373,12 @@ def test_text_builtins_can_be_shadowed_by_a_function(name: str) -> None:
 @pytest.mark.parametrize(
     ("body", "message"),
     [
-        ("copy()", "copy expects one positional list value"),
-        ("copy(values, values)", "copy expects one positional list value"),
-        ("copy(value=values)", "copy expects one positional list value"),
-        ("copy<i32>(values)", "copy expects one positional list value"),
+        ("copy()", "copy expects one positional value"),
+        ("copy(values, values)", "copy expects one positional value"),
+        ("copy(value=values)", "copy expects one positional value"),
+        ("copy<i32>(values)", "copy expects one positional value"),
         ("copy(1)", "copy requires a list of numeric, Boolean, or string"),
+        ("copy(none)", "or a class with __copy__"),
         ("copy([[1]])", "nested"),
         (
             "editor: auto = &&values[0]\ncopy(values)",
@@ -2402,6 +2403,74 @@ def test_list_copy_invalid_calls(body: str, message: str) -> None:
     )
     with pytest.raises(SemanticError, match=message):
         ArxBuilder().translate(Parser().parse(Lexer().lex()))
+
+
+@pytest.mark.parametrize(
+    ("member", "code", "message"),
+    [
+        ("value: i32 = 0", "copy(Box())", "has no method '__copy__'"),
+        (
+            "fn __copy__(self) -> i32:\n  return 0",
+            "",
+            "copy hook must be an instance method '__copy__",
+        ),
+        (
+            "fn __copy__(self, amount: i32 = 0) -> Box:\n  return Box()",
+            "",
+            "without additional parameters",
+        ),
+        (
+            "fn __copy__() -> public static :: Box:\n  return Box()",
+            "",
+            "copy hook must be an instance method",
+        ),
+        ("__copy__: i32 = 0", "", "__copy__ is reserved for a method"),
+        (
+            "fn __copy__(self) -> private :: Box:\n  return Box()",
+            "copy(Box())",
+            "is not accessible from this context",
+        ),
+        (
+            "fn __copy__(self) -> Box:\n  return Box()",
+            "copy(DerivedBox())",
+            "requires 'DerivedBox.__copy__' to return 'DerivedBox'",
+        ),
+    ],
+)
+def test_class_copy_diagnostics(member: str, code: str, message: str) -> None:
+    """
+    title: Reject invalid copy hooks and checked calls before lowering.
+    parameters:
+      member: Class member or hook declaration.
+      code: Additional call under test.
+      message: Expected semantic diagnostic.
+    """
+    ArxIO.string_to_buffer(
+        "import (copy) from stdlib.memory\n"
+        "class Box:\n"
+        + indent(member, "  ")
+        + "\nclass DerivedBox(Box):\n  extra: i32 = 0\n"
+        "fn main() -> i32:\n" + indent(code, "  ") + "\n  return 0\n"
+    )
+    with pytest.raises(SemanticError, match=message):
+        ArxBuilder().translate(Parser().parse(Lexer().lex()))
+
+
+def test_class_copy_uses_a_class_call_without_list_runtime() -> None:
+    """
+    title: Verify class-only copying emits a checked method call.
+    """
+    ArxIO.string_to_buffer(
+        "import (copy as duplicate) from stdlib.memory\n"
+        "class Box:\n  value: i32 = 42\n"
+        "  fn __copy__(self) -> Box:\n    return Box()\n"
+        "fn main() -> i32:\n  return duplicate(Box()).value\n"
+    )
+    builder = ArxBuilder()
+    text = builder.translate(Parser().parse(Lexer().lex()))
+    llvm.parse_assembly(text).verify()
+    assert "__copy___callee" in text
+    assert "irx_list_clone" not in text
 
 
 def test_user_copy_keeps_its_binding() -> None:

@@ -37,6 +37,9 @@ from irx.analysis.extensions.calls import (
 )
 from irx.analysis.ffi import ffi_returns_owned_string
 from irx.analysis.file_io import resolve_file_open
+from irx.analysis.handlers._expressions.class_access import (
+    ExpressionClassAccessVisitorMixin,
+)
 from irx.analysis.handlers.base import (
     SemanticAnalyzerCore,
     SemanticVisitorMixinBase,
@@ -548,6 +551,9 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
             analyze_operand=self.analyze_call_operand,
             find_class=self.resolve_call_class,
             analyze_construction=self.resolve_class_construction,
+            analyze_method=cast(
+                ExpressionClassAccessVisitorMixin, self
+            ).bind_instance_method,
             registered_classes=tuple(
                 declaration
                 for module in (

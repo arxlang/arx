@@ -187,14 +187,17 @@ class ClassVisitorMixin(FileVisitorMixin):
         owner: str | None = None,
         *,
         storage: bool = False,
-    ) -> None:
+        lexical: bool = False,
+    ) -> CleanupAction:
         """
-        title: Release one reference or the current generation of a binding.
+        title: Register release of a reference or a binding's current value.
         parameters:
           node: Syntax node to process.
           value: Value to process.
           owner: Owner keeping the resource alive.
-          storage: Whether to use storage.
+          storage: Whether to load the current value from storage.
+          lexical: Keep the release armed while cleaning up temporaries.
+        returns: Cleanup action for the owned reference.
         """
 
         ownership = resource_ownership(node)
@@ -223,14 +226,15 @@ class ClassVisitorMixin(FileVisitorMixin):
             else:
                 self.class_operation(node, "release", current)
 
-        self.cleanup_stack.append(
-            CleanupAction(
-                release,
-                owner_symbol_id=owner,
-                fallible=ownership is None
-                or ownership.resource_kind not in ARROW_RESOURCES,
-            )
+        cleanup = CleanupAction(
+            release,
+            owner_symbol_id=owner,
+            fallible=ownership is None
+            or ownership.resource_kind not in ARROW_RESOURCES,
+            lexical=lexical,
         )
+        self.cleanup_stack.append(cleanup)
+        return cleanup
 
     def class_pin(self, node: astx.AST, value: ir.Value) -> None:
         """

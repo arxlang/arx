@@ -14,7 +14,10 @@ from typing import cast
 
 import astx
 
+from public import private
+
 from irx.analysis.class_lifecycle import (
+    COPY_HOOK,
     INITIALIZER_HOOK,
     LIFECYCLE_HOOKS,
     unsupported_class_field,
@@ -33,6 +36,7 @@ from irx.analysis.resolved_nodes import (
     ClassMemberKind,
     ClassMemberResolutionKind,
     FailedInferenceType,
+    FunctionSignature,
     OwnershipKind,
     OwnershipTransferKind,
     SemanticClass,
@@ -73,6 +77,13 @@ class DeclarationClassMemberVisitorMixin(DeclarationClassMethodVisitorMixin):
                 self.context.diagnostics.add(
                     f"class member '{attribute.name}' is reserved for a "
                     "lifecycle method, not a field",
+                    node=attribute,
+                    code=DiagnosticCodes.SEMANTIC_INVALID_FIELD_ACCESS,
+                )
+                continue
+            if attribute.name == COPY_HOOK.name:
+                self.context.diagnostics.add(
+                    "__copy__ is reserved for a method",
                     node=attribute,
                     code=DiagnosticCodes.SEMANTIC_INVALID_FIELD_ACCESS,
                 )
@@ -289,6 +300,10 @@ class DeclarationClassMemberVisitorMixin(DeclarationClassMethodVisitorMixin):
             signature = self._normalize_class_method_signature(class_, method)
             is_static = self._method_is_static(method)
             is_abstract = self._method_is_abstract(method)
+            if method.name == COPY_HOOK.name and not self.valid_copy_hook(
+                class_, method, signature, is_static=is_static
+            ):
+                continue
             signature_key = self._method_signature_key(
                 method.name,
                 signature,
@@ -484,6 +499,44 @@ class DeclarationClassMemberVisitorMixin(DeclarationClassMethodVisitorMixin):
             members.append(member)
 
         return tuple(members)
+
+    @private
+    def valid_copy_hook(
+        self,
+        class_: SemanticClass,
+        method: astx.FunctionDef,
+        signature: FunctionSignature,
+        *,
+        is_static: bool,
+    ) -> bool:
+        """
+        title: Require an instance copy hook with its own nominal return type.
+        parameters:
+          class_: Class declaring the hook.
+          method: Copy hook declaration.
+          signature: Resolved visible signature.
+          is_static: Whether the hook lacks an instance receiver.
+        returns: Whether the declaration satisfies the copy protocol.
+        """
+        result = signature.return_type
+        if (
+            not is_static
+            and not signature.parameters
+            and not signature.is_extern
+            and not signature.is_variadic
+            and not astx.is_template_node(method.prototype)
+            and isinstance(result, astx.ClassType)
+            and result.qualified_name == class_.qualified_name
+        ):
+            return True
+        self.context.diagnostics.add(
+            f"copy hook must be an instance method "
+            f"'__copy__(self) -> {class_.name}' without additional "
+            "parameters, templates, or an extern declaration",
+            node=method,
+            code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
+        )
+        return False
 
     def _resolve_effective_class_members(
         self,

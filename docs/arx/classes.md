@@ -202,6 +202,18 @@ dispatch. Values evaluate in source order, then omitted defaults in declaration
 order. See [Functions](functions.md#keyword-arguments). Direct lifecycle-hook
 calls remain forbidden.
 
+## Copying Instances
+
+Import `copy` from `stdlib.memory` to ask a class to duplicate itself. A copy
+hook is an instance method `__copy__(self)` that returns its declaring class and
+takes no additional arguments. The method chooses which fields to duplicate or
+share. Normal visibility and method dispatch apply.
+
+A subclass can override the hook with its own return type. A call through a
+base-typed reference dispatches to the override and keeps the base static result
+type. Copying a subclass-typed value requires a hook that returns that subclass.
+A missing hook is a compile-time error.
+
 ## Owned Fields And Boundaries
 
 Scalar fields keep their existing behavior. Instance strings own independent

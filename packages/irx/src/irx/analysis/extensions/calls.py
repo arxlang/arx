@@ -1,11 +1,13 @@
 """
 title: Narrow call-analysis dependencies and fail-closed static dispatch.
+attributes:
+  MethodBinder: Callback for binding an instance call with analyzed operands.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Callable, Protocol, runtime_checkable
+from typing import Callable, Protocol, TypeAlias, runtime_checkable
 
 import astx
 
@@ -71,6 +73,23 @@ class CallAnalysisServices(Protocol):
         """
         ...
 
+    def bind_instance_method(
+        self,
+        node: astx.MethodCall,
+        class_: SemanticClass,
+        receiver_type: astx.DataType | None,
+        arg_types: list[astx.DataType | None],
+    ) -> None:
+        """
+        title: Bind an instance invocation after its operands are analyzed.
+        parameters:
+          node: Instance method call.
+          class_: Resolved receiver class.
+          receiver_type: Analyzed receiver type.
+          arg_types: Explicit operand types in source order.
+        """
+        ...
+
     def construct(
         self, node: astx.ClassConstruct, class_: SemanticClass
     ) -> None:
@@ -83,6 +102,17 @@ class CallAnalysisServices(Protocol):
         ...
 
 
+MethodBinder: TypeAlias = Callable[
+    [
+        astx.MethodCall,
+        SemanticClass,
+        astx.DataType | None,
+        list[astx.DataType | None],
+    ],
+    None,
+]
+
+
 @private
 @typechecked
 @dataclass(frozen=True)
@@ -93,6 +123,7 @@ class AnalysisServices:
       analyze_operand: Analyze operand.
       find_class: Find class.
       analyze_construction: Analyze construction.
+      analyze_method: Bind a method with previously analyzed operands.
       registered_classes: Registered classes.
       allowed: Whether to use allowed.
     """
@@ -100,6 +131,7 @@ class AnalysisServices:
     analyze_operand: Callable[[astx.AST], astx.DataType | None]
     find_class: Callable[[astx.ClassType, astx.AST], SemanticClass | None]
     analyze_construction: Callable[[astx.ClassConstruct, SemanticClass], None]
+    analyze_method: MethodBinder
     registered_classes: tuple[astx.ClassDefStmt, ...]
     allowed: bool
 
@@ -111,6 +143,7 @@ class AnalysisServices:
             self.analyze_operand,
             self.find_class,
             self.analyze_construction,
+            self.analyze_method,
             self.registered_classes,
             self.allowed,
         )
@@ -138,6 +171,23 @@ class AnalysisServices:
         """
         return self.find_class(type_, node)
 
+    def bind_instance_method(
+        self,
+        node: astx.MethodCall,
+        class_: SemanticClass,
+        receiver_type: astx.DataType | None,
+        arg_types: list[astx.DataType | None],
+    ) -> None:
+        """
+        title: Bind an instance invocation after its operands are analyzed.
+        parameters:
+          node: Instance method call.
+          class_: Resolved receiver class.
+          receiver_type: Analyzed receiver type.
+          arg_types: Explicit operand types in source order.
+        """
+        self.analyze_method(node, class_, receiver_type, arg_types)
+
     def construct(
         self, node: astx.ClassConstruct, class_: SemanticClass
     ) -> None:
@@ -156,6 +206,7 @@ def validate_services(
     evaluate: Callable[[astx.AST], astx.DataType | None],
     resolve_class: Callable[[astx.ClassType, astx.AST], SemanticClass | None],
     construct: Callable[[astx.ClassConstruct, SemanticClass], None],
+    bind_method: MethodBinder,
     registered_classes: tuple[astx.ClassDefStmt, ...],
     allowed: bool,
 ) -> None:
@@ -165,9 +216,11 @@ def validate_services(
       evaluate: Evaluate.
       resolve_class: Resolve class.
       construct: Construct.
+      bind_method: Analyzed instance call binder.
       registered_classes: Registered classes.
       allowed: Whether to use allowed.
     """
+    del bind_method
 
 
 @public
@@ -226,6 +279,7 @@ def validate_call(
         services.evaluate,
         services.resolve_class,
         services.construct,
+        services.bind_instance_method,
         services.registered_classes,
         services.allowed,
     )

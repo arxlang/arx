@@ -3,6 +3,8 @@ title: Compiled class lifecycle regression
 summary: Verifies constructor keywords, aliases, returns, and final destruction.
 ```
 
+import stdlib.memory as memory
+
 class Counter:
   ```
   title: Counter
@@ -135,3 +137,55 @@ fn test_const_field_borrows() -> none:
   Tagged.destroyed = 0
   use_const_field_borrows()
   assert Tagged.destroyed == 2
+
+class FallibleCopy:
+  ```
+  title: Count copy hook invocations and release temporary instances
+  ```
+  value: i32 = 0
+  invoked: static var :: i32 = 0
+  released: static var :: i32 = 0
+
+  fn __init__(self, value: i32) -> none:
+    ```
+    title: Set the value used to select the failure path
+    ```
+    self.value = value
+
+  fn __copy__(self) -> FallibleCopy:
+    ```
+    title: Count receiver evaluation and optionally fail the copy
+    ```
+    FallibleCopy.invoked = FallibleCopy.invoked + 1
+    if self.value == 0:
+      raise ValueError("copy hook failed")
+    return FallibleCopy(self.value + 2)
+
+  fn __del__(self) -> none:
+    ```
+    title: Fail when releasing a negative-valued receiver
+    ```
+    FallibleCopy.released = FallibleCopy.released + 1
+    if self.value < 0:
+      raise RuntimeError("copy receiver cleanup failed")
+
+fn test_class_copy_cleanup() -> none:
+  ```
+  title: Roll back copy results and preserve the previous destination
+  ```
+  FallibleCopy.invoked = 0
+  FallibleCopy.released = 0
+  destination: FallibleCopy = FallibleCopy(3)
+  try:
+    destination = memory.copy(FallibleCopy(0))
+    assert false
+  except ValueError:
+    assert destination.value == 3
+    assert FallibleCopy.released == 1
+  try:
+    destination = memory.copy(FallibleCopy(-1))
+    assert false
+  except RuntimeError:
+    assert destination.value == 3
+    assert FallibleCopy.released == 3
+  assert FallibleCopy.invoked == 2

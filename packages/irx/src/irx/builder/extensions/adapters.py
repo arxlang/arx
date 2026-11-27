@@ -10,7 +10,10 @@ from llvmlite import ir
 from public import private
 
 from irx.analysis.compute import ComputePlan
-from irx.analysis.resolved_nodes import ResolvedClassConstruction
+from irx.analysis.resolved_nodes import (
+    ResolvedClassConstruction,
+    ResolvedMethodCall,
+)
 from irx.builder.backend import Visitor
 from irx.builder.diagnostics import require_lowered_value
 from irx.builder.runtime import safe_pop
@@ -145,6 +148,18 @@ class VisitorCallServices:
           source: Resolved dynamic list operand.
         """
         self.owner.lower_list_clone(node, source)
+
+    def copy_class(
+        self, node: astx.AST, source: astx.DataType, method: ResolvedMethodCall
+    ) -> None:
+        """
+        title: Reuse resolved instance dispatch and class result cleanup.
+        parameters:
+          node: Copy call to lower.
+          source: Resolved receiver expression.
+          method: Bound copy hook.
+        """
+        self.owner.lower_class_copy(node, source, method)
 
     def track(
         self, node: astx.AST, feature: str, destroy: str, value: ir.Value

@@ -5,6 +5,7 @@ attributes:
   FINALIZER_HOOK: Finalizer hook.
   CONTEXT_ENTER_HOOK: Context enter hook.
   CONTEXT_EXIT_HOOK: Context exit hook.
+  COPY_HOOK: Class copy protocol hook.
   CLASS_HOOKS: Class hooks.
   LIFECYCLE_HOOKS: Lifecycle hooks.
   DUNDER_MIN_LENGTH: Dunder min length.
@@ -81,6 +82,9 @@ CONTEXT_ENTER_HOOK: Final = ClassHookSpec(
 CONTEXT_EXIT_HOOK: Final = ClassHookSpec(
     "__exit__", accepts_parameters=True, is_lifecycle=False
 )
+COPY_HOOK: Final = ClassHookSpec(
+    "__copy__", accepts_parameters=False, is_lifecycle=False
+)
 CLASS_HOOKS: Final[Mapping[str, ClassHookSpec]] = MappingProxyType(
     {
         hook.name: hook
@@ -89,6 +93,7 @@ CLASS_HOOKS: Final[Mapping[str, ClassHookSpec]] = MappingProxyType(
             FINALIZER_HOOK,
             CONTEXT_ENTER_HOOK,
             CONTEXT_EXIT_HOOK,
+            COPY_HOOK,
         )
     }
 )
@@ -517,7 +522,7 @@ def validate_hook(
     analyzer: SemanticAnalyzerCore, declaration: astx.FunctionDef
 ) -> None:
     """
-    title: Forbid resurrection, receiver escape, and unsafe hook declarations.
+    title: Check reserved method names and lifecycle restrictions.
     parameters:
       analyzer: Semantic analyzer resolving the operation.
       declaration: Declaration being processed.
@@ -537,8 +542,7 @@ def validate_hook(
                 code=DiagnosticCodes.SEMANTIC_INVALID_FIELD_ACCESS,
             )
         return
-    # Context hooks retain ordinary dispatch and their existing call-site
-    # validation; lifecycle-only restrictions must not change that protocol.
+    # Each ordinary protocol validates its own signature.
     if not hook.is_lifecycle:
         return
     prototype = declaration.prototype

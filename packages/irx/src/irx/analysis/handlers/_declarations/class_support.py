@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import astx
 
+from irx.analysis.class_lifecycle import COPY_HOOK
 from irx.analysis.handlers.class_helpers import (
     ClassMemberFormattingVisitorMixin,
 )
@@ -198,10 +199,17 @@ class DeclarationClassSupportVisitorMixin(ClassMemberFormattingVisitorMixin):
             for parameter in signature.parameters
         )
         variadic = "variadic" if signature.is_variadic else "fixed"
+        # Validated copy hooks return the declaring class. An override can
+        # therefore share the slot using the existing class pointer ABI.
+        result = (
+            "self"
+            if method_name == COPY_HOOK.name
+            else display_type_name(signature.return_type)
+        )
         return (
             f"{dispatch_kind}|{method_name}|"
             f"{signature.calling_convention.value}|{variadic}|"
-            f"({parameters})->{display_type_name(signature.return_type)}"
+            f"({parameters})->{result}"
         )
 
     def _method_call_key_from_signature(
