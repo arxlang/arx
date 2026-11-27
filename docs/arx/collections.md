@@ -60,6 +60,25 @@ generators. Instance methods, static methods, and constructors accept the same
 borrow spellings. The borrow mode participates in method overload selection and
 inherited dispatch.
 
+Local aliases can borrow a numeric or Boolean element of an owned local list
+or a borrowed list parameter. The index is evaluated and bounds-checked once
+when the alias is formed or retargeted. A failed check raises `IndexError`
+before changing the target. Use an integer index up to 64 bits.
+
+```arx
+values: list[i32] = [10, 20]
+item: &&i32 = &&values[0]
+item = 42
+assert values[1] == 20
+```
+
+Read-only loans can overlap. An exclusive loan requires writable storage
+outside active iteration. The compiler can prove distinct nonnegative literal
+indices are disjoint and treats other indices conservatively. A live element
+loan prevents append, ownership transfer, replacement, and an exclusive call
+borrow of the entire list. A whole-list read conflicts with an exclusive element
+loan. Element borrows use local alias declarations and same-scope retargeting.
+
 While a `for ... in` loop borrows a list, replacing that owner binding anywhere
 in the body is a compile-time ownership error (`IRX-S013`), including nested
 branches and exception clauses. Move the replacement after the loop or build a

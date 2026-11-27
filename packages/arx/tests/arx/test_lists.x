@@ -247,3 +247,67 @@ fn test_method_list_borrows() -> none:
     assert values[25] == 42
   built: ListInitializer = ListInitializer(&&values, false)
   assert values[26] == 42
+
+fn update_list_element(values: &&list[i32]) -> i32:
+  ```
+  title: Borrow a writable element through an exclusive list parameter
+  ```
+  first: &&i32 = &&values[0]
+  second: &&i32 = &&values[1]
+  first += 1
+  ++second
+  assert values[2] == 30
+  return first + second
+
+fn test_list_element_borrows() -> none:
+  ```
+  title: Check element addresses once and release loans on lexical exits
+  ```
+  values: list[i32] = [10, 20, 30]
+  assert update_list_element(&&values) == 32
+  assert values[0] == 11
+  assert values[1] == 21
+
+  index: i32 = 0
+  scalar: i32 = 5
+  item: auto = &&values[++index]
+  assert index == 1
+  index = 2
+  item = 42
+  assert index == 2
+  item = &&values[0]
+  item = &&values[0]
+  assert values[1] == 42
+  item = &&scalar
+  values.append(4)
+  values.append(5)
+  item = &&values[4]
+  assert item == 5
+  item = &&scalar
+
+  try:
+    entry: auto = &&values[1]
+    entry = &&values[99]
+    assert false
+  except IndexError:
+    assert values[1] == 42
+  values.append(6)
+
+  try:
+    overflow: u64 = 18446744073709551615
+    missing: auto = &values[overflow]
+    assert false
+  except IndexError:
+    assert values[0] == 11
+
+  flags: list[bool] = [false, true]
+  if true:
+    flag: const :: &&bool = &&flags[0]
+    flag = true
+    assert flags[1]
+  assert flags[0]
+
+  reader: &i32 = &values[0]
+  same: auto = &values[0]
+  assert reader == same
+  assert values[0] == 11

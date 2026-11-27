@@ -48,7 +48,10 @@ from .test_file_class_native import build_audited_file_program
             "retargeting requires a mutable binding",
         ),
         ("r: auto = &&n\nr = &other", "the original borrow mode"),
-        ("r: auto = &n + 1", "requires a scalar variable as its source"),
+        (
+            "r: auto = &n + 1",
+            "requires a scalar variable or named list element",
+        ),
         ("r: &i64 = &n", "must have the exact type of its source"),
         ("r: auto = &n\nr = &wide", "requires the original source type"),
         ("n = &&other", "requires an existing borrow binding"),
@@ -70,6 +73,84 @@ def test_local_borrows_reject_invalid_access(body: str, message: str) -> None:
         "  n: i32 = 0\n"
         "  other: i32 = 1\n"
         "  wide: i64 = 1\n" + indent(body, "  ") + "\n  return 0\n"
+    )
+    with pytest.raises(SemanticError, match=message):
+        ArxBuilder().translate(Parser().parse(Lexer().lex()))
+
+
+@pytest.mark.parametrize(
+    ("body", "message"),
+    [
+        ("a: auto = &values[0]\na = 1", "cannot write through read-only"),
+        ("a: auto = &&values[0]\nprint(values[0])", "cannot read 'values'"),
+        (
+            "a: auto = &&values[0]\nprint(values[index])",
+            "cannot read 'values'",
+        ),
+        (
+            "a: auto = &values[index]\nb: auto = &&values[1]",
+            "conflicting borrow",
+        ),
+        ("a: auto = &values[0]\nb: auto = &&values[0]", "conflicting borrow"),
+        ("a: auto = &values[0]\nvalues.append(1)", "cannot write 'values'"),
+        ("a: auto = &values[0]\nvalues = [1]", "cannot write 'values'"),
+        (
+            "a: auto = &values[0]\nb: list[i32] = values",
+            "cannot write 'values'",
+        ),
+        ("a: auto = &values[0]\nother = values", "cannot write 'values'"),
+        ("a: auto = &values[0]\nreturn values", "cannot write 'values'"),
+        ("a: auto = &values[0]\ngrow(&&values)", "cannot write 'values'"),
+        ("a: auto = &&values[0]\nsize(&values)", "cannot read 'values'"),
+        ("other = values\na: auto = &values[0]", "after a move"),
+        (
+            "other = values\na: auto = &other[0]\na = &values[0]",
+            "after a move",
+        ),
+        ("a: auto = &values[true]", "requires an integer index"),
+        ("a: &&i64 = &&values[0]", "must have the exact type"),
+        ("a: auto = &&fixed[0]", "cannot exclusively borrow constant"),
+        ("a: auto = &words[0]", "list of numeric or Boolean values"),
+        (
+            "a: auto = &[1][0]",
+            "requires a scalar variable or named list element",
+        ),
+        (
+            "a: auto = &values[:1]",
+            "requires a scalar variable or named list element",
+        ),
+        (
+            "for value in values:\n  a: auto = &&values[0]",
+            "during iteration",
+        ),
+        (
+            "a: auto = &&values[0]\nfor value in values:\n  print(value)",
+            "cannot read 'values'",
+        ),
+    ],
+)
+def test_list_element_borrows_reject_invalid_access(
+    body: str, message: str
+) -> None:
+    """
+    title: Reject conflicting, invalidating and unsupported list element loans.
+    parameters:
+      body: Borrow operations to analyze.
+      message: Expected semantic diagnostic.
+    """
+    ArxIO.string_to_buffer(
+        "fn grow(values: &&list[i32]) -> none:\n"
+        "  values.append(1)\n"
+        "fn size(values: &list[i32]) -> i64:\n"
+        "  return len(values)\n"
+        "fn check(index: i32) -> list[i32]:\n"
+        "  values: list[i32] = [1, 2]\n"
+        "  other: list[i32] = [3, 4]\n"
+        "  fixed: const :: list[i32] = [1]\n"
+        '  words: list[str] = ["word"]\n'
+        + indent(body, "  ")
+        + ("" if body.endswith("return values") else "\n  return [1]")
+        + "\nfn main() -> i32:\n  return 0\n"
     )
     with pytest.raises(SemanticError, match=message):
         ArxBuilder().translate(Parser().parse(Lexer().lex()))
@@ -137,6 +218,11 @@ def test_call_list_borrows_reject_invalid_operands(
         ("&list[i32]", "values.append(2)", "read-only borrow"),
         ("&&list[i32]", "values = [2]", "constant"),
         ("&list[i32]", "grow(&&values)", "cannot exclusively borrow"),
+        (
+            "&list[i32]",
+            "alias: auto = &&values[0]",
+            "cannot exclusively borrow through read-only",
+        ),
         (
             "&&list[i32]",
             "for value in values:\n  grow(&&values)",

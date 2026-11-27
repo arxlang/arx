@@ -15,7 +15,7 @@ from typing import cast
 import astx
 
 from irx.analysis.arrow_conversion import arrow_local
-from irx.analysis.borrows import resolve_borrow_source
+from irx.analysis.borrows import check_borrow_access, resolve_borrow_source
 from irx.analysis.class_lifecycle import class_local
 from irx.analysis.file_io import resolve_file_local
 from irx.analysis.flow import flow_outcomes
@@ -210,6 +210,10 @@ class DeclarationBlockVisitorMixin(SemanticVisitorMixinBase):
                     code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
                     notes=("create a new list or move an owned local",),
                 )
+                return
+            if not check_borrow_access(
+                self.context, source, value, write=True, read_checked=True
+            ):
                 return
             if source.symbol_id in self.context.active_list_iteration_owners:
                 self.context.diagnostics.add(
@@ -449,12 +453,14 @@ class DeclarationBlockVisitorMixin(SemanticVisitorMixinBase):
         info = self._semantic(node)
         info.resolved_borrow = None
         info.resolved_symbol = None
-        source = resolve_borrow_source(self.context, node.value, node.access)
-        if source is None:
+        place = resolve_borrow_source(
+            cast(SemanticAnalyzerCore, self), node.value, node.access
+        )
+        if place is None:
             return
         if not isinstance(node.type_, astx.InferredType):
             declared = self._resolve_declared_type(node.type_, node=node)
-            if not same_type(declared, source.type_):
+            if not same_type(declared, place.type_):
                 self.context.diagnostics.add(
                     "a borrow must have the exact type of its source place",
                     node=node,
@@ -463,7 +469,7 @@ class DeclarationBlockVisitorMixin(SemanticVisitorMixinBase):
                 return
         target = self.registry.declare_local(
             node.name,
-            source.type_,
+            place.type_,
             is_mutable=node.access is astx.BorrowAccess.exclusive,
             declaration=node,
             kind="borrow",
@@ -471,11 +477,10 @@ class DeclarationBlockVisitorMixin(SemanticVisitorMixinBase):
         scope = self.context.scopes.current
         assert scope is not None
         if scope.symbols.get(node.name) is target:
-            borrow = ResolvedBorrow(target, source, node.access)
+            borrow = ResolvedBorrow(target, place, node.access)
             scope.borrows[target.symbol_id] = borrow
             info.resolved_borrow = borrow
             self._set_symbol(node, target)
-            self._set_symbol(node.value, source)
 
     @SemanticAnalyzerCore.visit.dispatch
     def visit(self, node: astx.BorrowRetarget) -> None:
@@ -519,23 +524,25 @@ class DeclarationBlockVisitorMixin(SemanticVisitorMixinBase):
                 code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
             )
             return
-        source = resolve_borrow_source(
-            self.context, node.source, node.access, retarget=target
+        place = resolve_borrow_source(
+            cast(SemanticAnalyzerCore, self),
+            node.source,
+            node.access,
+            retarget=target,
         )
-        if source is None:
+        if place is None:
             return
-        if not same_type(target.type_, source.type_):
+        if not same_type(target.type_, place.type_):
             self.context.diagnostics.add(
                 "retargeting requires the original source type",
                 node=node.source,
                 code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
             )
             return
-        borrow = ResolvedBorrow(target, source, node.access)
+        borrow = ResolvedBorrow(target, place, node.access)
         scope.borrows[target.symbol_id] = borrow
         info.resolved_borrow = borrow
         self._set_symbol(node.target, target)
-        self._set_symbol(node.source, source)
 
     @SemanticAnalyzerCore.visit.dispatch
     def visit(

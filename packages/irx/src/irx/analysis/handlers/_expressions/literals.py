@@ -20,6 +20,7 @@ import astx
 from public import private
 
 from irx.analysis.arrow_conversion import contains_arrow
+from irx.analysis.borrows import analyze_list_index_base, check_borrow_access
 from irx.analysis.class_lifecycle import contains_class
 from irx.analysis.collection_access import resolve_collection_access
 from irx.analysis.collections import (
@@ -1096,8 +1097,12 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
           node: Syntax node to process.
         """
         self._semantic(node).constant_list_elements = None
-        self.visit(node.base)
+        source = analyze_list_index_base(
+            cast(SemanticAnalyzerCore, self), node.base
+        )
         self.visit(node.index)
+        if source is not None:
+            check_borrow_access(self.context, source, node, index=node.index)
 
         value_type = self._expr_type(node.base)
         if not isinstance(value_type, astx.ListType):
@@ -1255,7 +1260,9 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
         if info.resolved_text_operation is not None:
             info.resource_ownership = None
         info.resolved_text_operation = None
-        self.visit(node.value)
+        source = analyze_list_index_base(
+            cast(SemanticAnalyzerCore, self), node.value
+        )
         value_type = self._expr_type(node.value)
         if isinstance(value_type, FailedInferenceType):
             indices = (
@@ -1328,6 +1335,10 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
                 )
                 self._set_type(node, None)
                 return
+            if source is not None:
+                check_borrow_access(
+                    self.context, source, node, index=node.index
+                )
             index_type = self._expr_type(node.index)
             if isinstance(index_type, FailedInferenceType):
                 self._set_type(node, index_type)
