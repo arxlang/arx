@@ -2052,6 +2052,7 @@ class SemanticInfo:
       resolved_file_operation: Resolved file operation.
       resolved_call: Resolved call.
       resolved_operator: Resolved operator.
+      comparison_chain: Resolved comparisons for adjacent operands.
       resolved_assignment: Resolved assignment.
       resolved_borrow: Resolved local borrow creation or retargeting.
       call_borrow_place: Resolved place passed by address to a callable.
@@ -2122,6 +2123,7 @@ class SemanticInfo:
     resolved_file_operation: ResolvedFileOperation | None = None
     resolved_call: CallResolution | None = None
     resolved_operator: ResolvedOperator | None = None
+    comparison_chain: tuple[ResolvedOperator, ...] = ()
     resolved_assignment: ResolvedAssignment | None = None
     resolved_borrow: ResolvedBorrow | None = None
     call_borrow_place: ResolvedBorrowPlace | None = None

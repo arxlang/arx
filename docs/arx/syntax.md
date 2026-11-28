@@ -106,6 +106,13 @@ The lexer recognizes these escapes:
 Raw strings, triple-quoted strings, and interpolation are not supported. Triple
 backticks are reserved for Douki docstrings, not ordinary string values.
 
+## Comparisons
+
+Comparisons can be chained, as in `1 < x < 10`. Arx evaluates operands from left
+to right, evaluates each middle operand once, and stops after the first false
+comparison. Use parentheses to group comparisons explicitly, as in
+`(x < 10) == flag`.
+
 ## Structural forms
 
 ### Declarations and modifiers

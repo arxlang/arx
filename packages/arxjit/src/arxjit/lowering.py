@@ -119,10 +119,8 @@ UNARY_OPS: dict[type[ast.unaryop], str] = {
     ast.Not: "!",
 }
 
-# A comparison lowers to a BinaryOp carrying the comparison's op_code, not to
-# astx.CompareOp: IRx's visitor for that node is _not_implemented, so a
-# CompareOp would pass this stage and fail codegen, while these six op codes
-# are exactly the ones irx.analysis.typing resolves to Boolean.
+# A single comparison lowers to a BinaryOp carrying the comparison's op_code.
+# These are the scalar operators irx.analysis.typing resolves to Boolean.
 # test_the_comparison_tables_agree_with_irx pins the two together.
 COMPARE_OPS: dict[type[ast.cmpop], str] = {
     ast.Eq: "==",

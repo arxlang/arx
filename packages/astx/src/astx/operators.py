@@ -2,6 +2,7 @@
 title: ASTx classes for the operators.
 attributes:
   OpCodeAugAssign: Op code aug assign.
+  OpCodeCompare: Spelling of a scalar comparison operator.
 """
 
 from __future__ import annotations
@@ -290,29 +291,36 @@ class AugAssign(DataType):
         return self._prepare_struct(key, value, simplified)
 
 
+OpCodeCompare: TypeAlias = Literal["==", "!=", "<", ">", "<=", ">="]
+
+
 @public
 @typechecked
 class CompareOp(DataType):
     """
-    title: AST class for comparison operators acting as properties.
+    title: Represent adjacent comparisons over a sequence of operands.
     attributes:
       ops: Ops.
       comparators: Comparators.
+      operator_locations: Source locations of the comparison operators.
       left: Left operand.
       kind: Kind of value or operation.
     """
 
-    ops: list[Literal["==", "!=", "<", ">", "<=", ">="]]
+    ops: list[OpCodeCompare]
     comparators: list[DataType]
+    operator_locations: list[SourceLocation]
     left: DataType
     kind: ASTKind
 
     def __init__(
         self,
         left: DataType,
-        ops: Iterable[Literal["==", "!=", "<", ">", "<=", ">="]],
+        ops: Iterable[OpCodeCompare],
         comparators: Iterable[DataType],
         loc: SourceLocation = NO_SOURCE_LOCATION,
+        *,
+        operator_locations: Iterable[SourceLocation] | None = None,
     ) -> None:
         """
         title: Initialize the CompareOp instance.
@@ -321,14 +329,22 @@ class CompareOp(DataType):
           ops: Ops.
           comparators: Comparators.
           loc: Source coordinates associated with the node.
+          operator_locations: Per-operator locations, when available.
         """
         super().__init__(loc=loc)
         self.ops = list(ops)
         self.comparators = list(comparators)
+        self.operator_locations = (
+            list(operator_locations)
+            if operator_locations is not None
+            else [loc] * len(self.ops)
+        )
         if len(self.ops) != len(self.comparators):
             raise ValueError(
                 "Number of operators must equal number of comparators."
             )
+        if len(self.ops) != len(self.operator_locations):
+            raise ValueError("Each comparison operator needs a location.")
         for op in self.ops:
             if op not in ["==", "!=", "<", ">", "<=", ">="]:
                 raise ValueError(f"Invalid comparison operator: {op}")

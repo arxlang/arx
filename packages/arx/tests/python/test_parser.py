@@ -217,10 +217,12 @@ def test_binop_precedence() -> None:
     "source,grouped",
     [
         ("not a == b", "!(a == b)"),
+        ("not 1 < x < 10", "!(1 < x < 10)"),
         ("not a < b + c", "!(a < (b + c))"),
         ("not a and b or c", "((!a) and b) or c"),
         ("a and not b == c", "a and (!(b == c))"),
         ("a or not b and c", "a or ((!b) and c)"),
+        ("x >= 0 and 1 < x < 10", "(x >= 0) and (1 < x < 10)"),
         ("not not a", "!(!a)"),
         ("!a == b", "(!a) == b"),
         ("a = not b == c", "a = (!(b == c))"),
@@ -278,6 +280,32 @@ def test_invalid_prefix_operand(source: str, message: str) -> None:
     parser.tokens.get_next_token()
     with pytest.raises(ParserException, match=message):
         parser.parse_expression()
+
+
+@pytest.mark.parametrize(
+    "expression,operators",
+    [
+        ("1 < x < 10", ["<", "<"]),
+        ("true == false == false", ["==", "=="]),
+        ("x + 1 <= 2 * x != 3 > 0", ["<=", "!=", ">"]),
+    ],
+)
+def test_chained_comparison_parses_adjacent_operands(
+    expression: str, operators: list[str]
+) -> None:
+    """
+    title: Parse one chain with each comparator represented once.
+    parameters:
+      expression: Source expression containing a chain.
+      operators: Expected comparison operators in source order.
+    """
+    ArxIO.string_to_buffer(expression)
+    parser = Parser(Lexer().lex())
+    parser.tokens.get_next_token()
+    chain = parser.parse_expression()
+    assert isinstance(chain, astx.CompareOp)
+    assert chain.ops == operators
+    assert len(chain.comparators) == len(operators)
 
 
 @pytest.mark.parametrize("operator", ["++", "--"])

@@ -131,6 +131,25 @@ fn test_boolean_short_circuit_evaluation() -> none:
   assert not false or fail_if_evaluated()
   assert not (false and not fail_if_evaluated())
 
+fn test_comparison_chain_evaluation() -> none:
+  ```
+  title: Check comparison chain ordering, reuse, and short circuiting.
+  ```
+  checks: i32 = 0
+  assert 0 < ++checks <= 1
+  assert checks == 1
+  assert not 3 < ++checks < ++checks
+  assert checks == 2
+  assert 0 < ++checks < ++checks <= 4
+  assert checks == 4
+  assert not true == false == false
+  assert (true == false) == false
+  assert false < true >= false
+
+  suffix: str = "b"
+  assert ("a" + suffix) == ("a" + suffix) != "b"
+  assert not ("x" + suffix) == ("a" + suffix) == "ab"
+
 fn test_scalar_remainder_and_negation() -> none:
   ```
   title: test_scalar_remainder_and_negation
@@ -147,6 +166,7 @@ fn test_scalar_remainder_and_negation() -> none:
   assert position == 95
   assert not move == size and true
   assert not not (move < size)
+  assert (0 < position and position < size) == (move < size)
   assert !false
   assert 3 - -2 == 5
   assert -move == 5

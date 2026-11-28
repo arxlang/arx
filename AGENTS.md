@@ -82,6 +82,9 @@ not aim to recreate Python or make Arx identical to it.
   Arx. Evaluate the user-facing experience before settling on the internal
   implementation; do not expose low-level runtime plumbing as the only way to
   perform a common task.
+- Repair a failing language feature with an established equivalent in Python or
+  another widely used language. Preserve support for its syntax and add
+  end-to-end regression coverage that proves the intended behavior.
 - Choose API placement by semantic generality, frequency of use, and natural
   ownership. Keep builtin scope small and focused on core, broadly applicable
   operations such as `cast`, `print`, and `len`; justify each new builtin. Put
