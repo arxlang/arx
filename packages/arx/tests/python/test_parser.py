@@ -280,6 +280,41 @@ def test_invalid_prefix_operand(source: str, message: str) -> None:
         parser.parse_expression()
 
 
+@pytest.mark.parametrize(
+    "expression,second_operator",
+    [
+        ("1 < x < 10", "<"),
+        ("true == false == false", "=="),
+        ("x >= 0 and x + 1 <= 2 * x != 3", "!="),
+        ("not 1 < x > 10", ">"),
+    ],
+)
+def test_chained_comparison_rejects_second_operator(
+    expression: str, second_operator: str
+) -> None:
+    """
+    title: Reject comparison chains at the second operator.
+    parameters:
+      expression: Source expression containing a chain.
+      second_operator: Operator that introduces the chain.
+    """
+    line = f"  return {expression}"
+    with pytest.raises(
+        ParserException, match="Chained comparisons are unsupported"
+    ) as error:
+        _parse_module(
+            "```\ntitle: Chained comparison\n```\n"
+            "fn check(x: i32) -> bool:\n"
+            f"{line}\n"
+        )
+    location = error.value.location
+    assert location is not None
+    assert (location.line, location.col) == (
+        5,
+        line.rindex(second_operator) + 1,
+    )
+
+
 @pytest.mark.parametrize("operator", ["++", "--"])
 @pytest.mark.parametrize(
     "source",

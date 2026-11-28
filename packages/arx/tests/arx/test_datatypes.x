@@ -147,6 +147,7 @@ fn test_scalar_remainder_and_negation() -> none:
   assert position == 95
   assert not move == size and true
   assert not not (move < size)
+  assert (0 < position and position < size) == (move < size)
   assert !false
   assert 3 - -2 == 5
   assert -move == 5

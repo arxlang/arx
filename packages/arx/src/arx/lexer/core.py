@@ -26,6 +26,9 @@ MAX_TOKEN_COUNT = 250_000
 
 _MANIFEST = load_syntax_manifest()
 WORD_OPERATORS = _MANIFEST.word_operators
+COMPARISON_OPERATORS: frozenset[str] = frozenset(
+    _MANIFEST.data["operators"]["comparison"]
+)
 
 
 class TokenKind(Enum):

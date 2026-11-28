@@ -106,6 +106,12 @@ The lexer recognizes these escapes:
 Raw strings, triple-quoted strings, and interpolation are not supported. Triple
 backticks are reserved for Douki docstrings, not ordinary string values.
 
+## Comparisons
+
+Write a compound inequality as `1 < x and x < 5`. The parser rejects chains
+such as `1 < x < 5` at the second comparison operator. Use parentheses for
+deliberate nesting, for example `(x < 5) == flag`.
+
 ## Structural forms
 
 ### Declarations and modifiers

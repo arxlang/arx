@@ -995,7 +995,7 @@ def test_elif_condition_requires_boolean() -> None:
     [
         ('"hello" < 5', "<", ("String", "Int32")),
         ('5 == "hello"', "==", ("Int32", "String")),
-        ("1 < x < 10", "<", ("Boolean", "Int32")),
+        ("(1 < x) < 10", "<", ("Boolean", "Int32")),
     ],
 )
 def test_invalid_comparison_reports_its_operator(

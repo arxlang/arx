@@ -23,6 +23,7 @@ from arx.dataframe import (
 )
 from arx.exceptions import ParserException
 from arx.lexer import TokenKind
+from arx.lexer.core import COMPARISON_OPERATORS
 from arx.parser.base import ParserMixinBase
 from arx.parser.state import BORROW_OPERATORS, TypeUseContext
 from arx.tensor import attach_binding
@@ -1122,6 +1123,20 @@ class ExpressionParserMixin(ParserMixinBase):
                     f"Binary operator '{bin_op}' requires expression "
                     "operands.",
                     bin_loc,
+                )
+            # After tighter RHS operators, a second comparison at this
+            # expression level would form a chain.
+            following = self.tokens.cur_tok
+            if (
+                bin_op in COMPARISON_OPERATORS
+                and following.kind == TokenKind.operator
+                and following.value in COMPARISON_OPERATORS
+            ):
+                raise ParserException(
+                    "Chained comparisons are unsupported. Combine "
+                    "comparisons with 'and' or use parentheses to make "
+                    "the grouping explicit.",
+                    following.location,
                 )
             lhs = astx.BinaryOp(
                 bin_op,
