@@ -2,6 +2,7 @@
 title: Module for handling the lexer analysis.
 attributes:
   MAP_KW_TOKEN_TO_NAME: Map kw token to name.
+  COMPARISON_OPERATORS: Comparison operators from the syntax manifest.
 """
 
 from __future__ import annotations
