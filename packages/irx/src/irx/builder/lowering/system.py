@@ -21,6 +21,7 @@ from irx.analysis.types import (
     is_boolean_type,
     is_numeric_type,
     is_unsigned_type,
+    nullable_class_type,
 )
 from irx.builder.core import VisitorCore
 from irx.builder.diagnostics import (
@@ -48,9 +49,9 @@ class SystemVisitorMixin(ClassVisitorMixin):
         parameters:
           node: Syntax node to process.
         """
-        if isinstance(node.target_type, astx.NullableType) and isinstance(
-            node.value, astx.LiteralNone
-        ):
+        if isinstance(
+            node.target_type, (astx.NullableType, astx.WeakClassType)
+        ) and isinstance(node.value, astx.LiteralNone):
             storage = require_semantic_metadata(
                 self._llvm_type_for_ast_type(node.target_type),
                 node=node,
@@ -79,6 +80,9 @@ class SystemVisitorMixin(ClassVisitorMixin):
             return
         source_type = self._resolved_ast_type(node.value)
         target_type = node.target_type
+        if semantic.checked_class_unwrap:
+            self.class_operation(node, "require", value)
+            source_type = nullable_class_type(source_type)
         if (
             isinstance(source_type, astx.ClassType)
             and isinstance(target_type, astx.DataFrameType)

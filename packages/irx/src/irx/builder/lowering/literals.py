@@ -111,7 +111,7 @@ class LiteralVisitorMixin(ClassVisitorMixin):
             return self._empty_string_pointer(name_hint)
         if "float" in type_name:
             return ir.Constant(self._llvm.get_data_type(type_name), 0.0)
-        if isinstance(type_, astx.ClassType):
+        if isinstance(type_, (astx.ClassType, astx.WeakClassType)):
             return ir.Constant(llvm_type, None)
         if isinstance(type_, astx.ListType):
             return cast(

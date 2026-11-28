@@ -4,6 +4,7 @@ summary: Verifies constructor keywords, aliases, returns, and final destruction.
 ```
 
 import stdlib.memory as memory
+import (weak as Observer, downgrade) from stdlib.memory
 
 class Counter:
   ```
@@ -189,3 +190,74 @@ fn test_class_copy_cleanup() -> none:
     assert destination.value == 3
     assert FallibleCopy.released == 3
   assert FallibleCopy.invoked == 2
+
+class WeakChild:
+  ```
+  title: Store a weak back-reference to the parent
+  ```
+  parent: Observer[WeakParent]
+
+class WeakParent:
+  ```
+  title: Own a child while its back-reference can expire
+  ```
+  child: WeakChild = WeakChild()
+  value: i32 = 42
+  destroyed: static var :: i32 = 0
+
+  fn __del__(self) -> none:
+    ```
+    title: Observe expiry before destroying the payload
+    ```
+    assert is_null(memory.upgrade(self.child.parent))
+    WeakParent.destroyed = WeakParent.destroyed + 1
+
+fn pass_observer(parent: Observer[WeakParent]) -> Observer[WeakParent]:
+  ```
+  title: Retain and return an ordinary weak parameter
+  ```
+  return parent
+
+fn test_weak_class_handles() -> none:
+  ```
+  title: Exercise strong promotion and expiration through a weak field
+  ```
+  WeakParent.destroyed = 0
+  empty: Observer[WeakParent]
+  assert is_null(memory.upgrade(empty))
+  parent: WeakParent = WeakParent()
+  child: WeakChild = parent.child
+  assert is_null(memory.upgrade(child.parent))
+  child.parent = downgrade(parent)
+  watcher: auto = pass_observer(child.parent)
+  watcher = watcher
+
+  strong: WeakParent | none = memory.upgrade(watcher)
+  assert not is_null(strong)
+  assert cast(strong, WeakParent).value == 42
+  parent = WeakParent()
+  assert WeakParent.destroyed == 0
+  assert not is_null(memory.upgrade(child.parent))
+  strong = none
+  assert WeakParent.destroyed == 1
+  assert is_null(memory.upgrade(child.parent))
+
+  try:
+    cast(memory.upgrade(watcher), WeakParent)
+    assert false
+  except RuntimeError:
+    assert is_null(memory.upgrade(watcher))
+  assert is_null(memory.upgrade(downgrade(WeakParent())))
+
+fn test_weak_downgrade_cleanup() -> none:
+  ```
+  title: Release an unpublished weak token when its temporary receiver raises
+  ```
+  stable: FallibleCopy = FallibleCopy(4)
+  observer: Observer[FallibleCopy] = downgrade(stable)
+  try:
+    observer = downgrade(FallibleCopy(-1))
+    assert false
+  except RuntimeError:
+    current: FallibleCopy | none = memory.upgrade(observer)
+    assert cast(current, FallibleCopy).value == 4

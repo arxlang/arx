@@ -29,7 +29,9 @@ from irx.native import (
 )
 from irx.typecheck import typechecked
 
-_IMPORTABLE_BINDING_KINDS = frozenset({"function", "struct", "class"})
+_IMPORTABLE_BINDING_KINDS = frozenset(
+    {"function", "struct", "class", "weak_class_type"}
+)
 
 
 @typechecked
@@ -407,6 +409,8 @@ class CompilationSession:
                 module_key,
                 _declared_importable_names(parsed_module.ast),
             )
+            if parsed_module.weak_class_type:
+                module_importable_names.add("weak")
             for node in parsed_module.ast.nodes:
                 if isinstance(node, astx.ImportStmt):
                     for alias in node.names:

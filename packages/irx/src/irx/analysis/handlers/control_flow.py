@@ -47,6 +47,7 @@ from irx.analysis.resolved_nodes import (
     SemanticSymbol,
 )
 from irx.analysis.types import (
+    class_resource_kind,
     display_type_name,
     is_assignable,
     is_boolean_type,
@@ -94,13 +95,15 @@ class ControlFlowVisitorMixin(SemanticVisitorMixinBase):
                 ),
             )
             return
-        if isinstance(return_type, astx.ClassType):
+        class_kind = class_resource_kind(return_type)
+        if class_kind is not None:
             self._set_resource_ownership(
                 node,
                 class_ownership(
                     OwnershipKind.OWNED,
                     transfer=OwnershipTransferKind.COPY,
                     escape=OwnershipEscapeKind.RETURN,
+                    resource=class_kind,
                 ),
             )
             return

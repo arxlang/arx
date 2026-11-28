@@ -22,7 +22,7 @@ from irx.analysis.numeric_policy import (
     is_lossless_numeric_conversion,
     lossless_common_numeric_type,
 )
-from irx.analysis.resolved_nodes import SemanticInfo
+from irx.analysis.resolved_nodes import ResourceKind, SemanticInfo
 from irx.typecheck import typechecked
 
 INT_TYPES = (astx.Int8, astx.Int16, astx.Int32, astx.Int64)
@@ -50,6 +50,44 @@ _BIT_WIDTHS: dict[type[astx.DataType], int] = {
     astx.Float32: BIT_WIDTH_32,
     astx.Float64: BIT_WIDTH_64,
 }
+
+
+CLASS_RESOURCES = frozenset({ResourceKind.CLASS, ResourceKind.WEAK_CLASS})
+
+
+@private
+@typechecked
+def nullable_class_type(type_: astx.DataType | None) -> astx.ClassType | None:
+    """
+    title: Unwrap the nominal payload type of a nullable class reference.
+    parameters:
+      type_: Resolved type to examine.
+    returns: Class payload type when the reference is nullable.
+    """
+    if isinstance(type_, astx.NullableType) and isinstance(
+        type_.value_type, astx.ClassType
+    ):
+        return type_.value_type
+    return None
+
+
+@private
+@typechecked
+def class_resource_kind(type_: astx.DataType | None) -> ResourceKind | None:
+    """
+    title: Identify the lifetime contract for one class reference.
+    parameters:
+      type_: Resolved type to examine.
+    returns: Strong or weak resource category, if applicable.
+    """
+    if isinstance(type_, astx.WeakClassType):
+        return ResourceKind.WEAK_CLASS
+    if (
+        isinstance(type_, astx.ClassType)
+        or nullable_class_type(type_) is not None
+    ):
+        return ResourceKind.CLASS
+    return None
 
 
 @public
@@ -156,6 +194,8 @@ def contains_template_variables(type_: astx.DataType | None) -> bool:
     """
     if isinstance(type_, astx.TemplateTypeVar):
         return True
+    if isinstance(type_, astx.WeakClassType):
+        return contains_template_variables(type_.target)
     if isinstance(type_, (astx.ListType, astx.TupleType)):
         return any(
             contains_template_variables(cast(astx.DataType, item))
@@ -358,6 +398,18 @@ def clone_type(type_: astx.DataType) -> astx.DataType:
 
     if isinstance(type_, astx.NullableType):
         return with_alias(astx.NullableType(clone_type(type_.value_type)))
+    if isinstance(type_, astx.WeakClassType):
+        return with_alias(
+            astx.WeakClassType(
+                clone_type(type_.target),
+                constructor=(
+                    None
+                    if isinstance(type_.target, astx.ClassType)
+                    and type_.target.qualified_name is not None
+                    else type_.constructor
+                ),
+            )
+        )
     if isinstance(type_, astx.SequenceType):
         return with_alias(astx.SequenceType(clone_type(type_.element_type)))
     if isinstance(type_, astx.ColumnType):
@@ -521,6 +573,8 @@ def display_type_name(type_: astx.DataType | None) -> str:
     alias_name = getattr(type_, "alias_name", None)
     if isinstance(alias_name, str):
         return alias_name
+    if (payload := nullable_class_type(type_)) is not None:
+        return f"{display_type_name(payload)} | none"
     if isinstance(
         type_, (astx.NullableType, astx.ColumnType, astx.SequenceType)
     ):
@@ -539,6 +593,8 @@ def display_type_name(type_: astx.DataType | None) -> str:
         return type_.qualified_name or type_.name
     if isinstance(type_, astx.ClassType):
         return type_.qualified_name or type_.name
+    if isinstance(type_, astx.WeakClassType):
+        return f"weak[{display_type_name(type_.target)}]"
     if isinstance(type_, astx.NamespaceType):
         visible_name = type_.display_name or type_.namespace_key
         return f"{type_.namespace_kind.value} namespace '{visible_name}'"
@@ -633,6 +689,10 @@ def same_type(lhs: astx.DataType | None, rhs: astx.DataType | None) -> bool:
         rhs, astx.SequenceType
     ):
         return same_type(lhs.element_type, rhs.element_type)
+    if isinstance(lhs, astx.WeakClassType) and isinstance(
+        rhs, astx.WeakClassType
+    ):
+        return same_type(lhs.target, rhs.target)
     if isinstance(lhs, astx.NullableType) and isinstance(
         rhs, astx.NullableType
     ):
@@ -1045,7 +1105,12 @@ def is_explicitly_castable(
             target.value_type,
         )
     if isinstance(source, astx.NullableType):
-        return False
+        payload = nullable_class_type(source)
+        return (
+            payload is not None
+            and isinstance(target, astx.ClassType)
+            and is_assignable(target, payload)
+        )
     if isinstance(source, astx.UnionType):
         source = union_storage_type(source)
         if source is None:
@@ -1338,6 +1403,8 @@ def substitute_type(
         )
     if isinstance(type_, astx.NullableType):
         return astx.NullableType(substitute_type(type_.value_type, bindings))
+    if isinstance(type_, astx.WeakClassType):
+        return astx.WeakClassType(substitute_type(type_.target, bindings))
     if isinstance(type_, astx.SequenceType):
         return astx.SequenceType(substitute_type(type_.element_type, bindings))
     if isinstance(type_, astx.SeriesType):

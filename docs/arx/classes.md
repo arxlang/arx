@@ -214,6 +214,38 @@ base-typed reference dispatches to the override and keeps the base static result
 type. Copying a subclass-typed value requires a hook that returns that subclass.
 A missing hook is a compile-time error.
 
+## Weak References
+
+Import `weak`, `downgrade`, and `upgrade` from `stdlib.memory`. A `weak[T]`
+handle can be stored in a class field, copied, passed, or returned. It keeps the
+lifetime record available while the last strong reference destroys the payload.
+A weak field can close a back-reference without forming a strong ownership
+cycle. Weak handles are thread-confined.
+
+```arx
+import (weak, downgrade, upgrade) from stdlib.memory
+
+class Counter:
+  value: i32 = 42
+
+fn read(observer: weak[Counter]) -> i32:
+  current: Counter | none = upgrade(observer)
+  if is_null(current):
+    return 0
+  return cast(current, Counter).value
+
+fn main() -> i32:
+  counter: Counter = Counter()
+  observer: weak[Counter] = downgrade(counter)
+  assert read(observer) == 42
+  return 0
+```
+
+An empty or expired weak handle upgrades to `none`. A successful upgrade holds a
+strong reference until replaced or released. Use `is_null` to check the optional
+result. `cast(current, Counter)` checks that the result is live and raises
+`RuntimeError` for `none`.
+
 ## Owned Fields And Boundaries
 
 Scalar fields keep their existing behavior. Instance strings own independent

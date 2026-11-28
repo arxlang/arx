@@ -44,6 +44,8 @@ class TemplateSupportVisitorMixin(SemanticVisitorMixinBase):
             return type_.qualified_name or type_.name
         if isinstance(type_, astx.ClassType):
             return type_.qualified_name or type_.name
+        if isinstance(type_, astx.WeakClassType):
+            return "Weak_" + self._type_identity_name(type_.target)
         if isinstance(type_, astx.NamespaceType):
             return type_.module_key
         if isinstance(type_, astx.OpaqueHandleType):

@@ -27,6 +27,7 @@ class ParserMixinBase:
       list_scopes: List scopes.
       known_class_names: Known class names.
       imported_type_names: Imported type names.
+      weak_type_names: Local spellings of the memory type constructor.
       namespace_roots: Namespace roots.
       builtin_type_bindings: Builtin type bindings.
       tensor_scopes: Tensor scopes.
@@ -43,6 +44,7 @@ class ParserMixinBase:
     list_scopes: list[set[str]]
     known_class_names: set[str]
     imported_type_names: set[str]
+    weak_type_names: set[str]
     namespace_roots: set[str]
     builtin_type_bindings: dict[str, astx.DataType]
     tensor_scopes: list[dict[str, TensorBinding | None]]

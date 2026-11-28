@@ -19,7 +19,7 @@ from irx.analysis.handlers.base import (
     SemanticVisitorMixinBase,
 )
 from irx.analysis.resolved_nodes import SemanticStruct, SemanticStructField
-from irx.analysis.types import clone_type
+from irx.analysis.types import class_resource_kind, clone_type
 from irx.diagnostics import DiagnosticCodes
 from irx.typecheck import typechecked
 
@@ -65,7 +65,7 @@ class DeclarationStructVisitorMixin(SemanticVisitorMixinBase):
                 node=attr,
                 unknown_message="Unknown field type '{name}'",
             )
-            if isinstance(attr.type_, astx.ClassType):
+            if class_resource_kind(attr.type_) is not None:
                 self.context.diagnostics.add(
                     "class references in struct fields are unsupported",
                     node=attr,

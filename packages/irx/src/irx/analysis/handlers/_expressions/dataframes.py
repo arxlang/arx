@@ -30,7 +30,7 @@ from irx.analysis.nullable import (
 from irx.analysis.numeric_literals import contextualize_literal
 from irx.analysis.ownership import resource_ownership
 from irx.analysis.resolved_nodes import OwnershipKind, OwnershipTransferKind
-from irx.analysis.types import same_type
+from irx.analysis.types import nullable_class_type, same_type
 from irx.analysis.validation import validate_assignment
 from irx.builtins.collections.dataframe import (
     DATAFRAME_COLUMN_INDEX_EXTRA,
@@ -61,6 +61,11 @@ class ExpressionDataFrameVisitorMixin(SemanticVisitorMixinBase):
         """
         self.visit(node.value)
         source = self._expr_type(node.value)
+        reference = nullable_class_type(source) is not None
+        self._semantic(node).class_null_check = reference
+        if reference:
+            self._set_type(node, astx.Boolean())
+            return
         if not isinstance(source, (astx.NullableType, astx.SeriesType)):
             nullable_error(
                 cast(SemanticAnalyzerCore, self),
@@ -91,6 +96,13 @@ class ExpressionDataFrameVisitorMixin(SemanticVisitorMixinBase):
         """
         self.visit(node.value)
         source = self._expr_type(node.value)
+        if nullable_class_type(source) is not None:
+            nullable_error(
+                cast(SemanticAnalyzerCore, self),
+                node,
+                "use an explicit null check for nullable class references",
+            )
+            return
         inner = scalar_type(source)
         contextualize_literal(node.replacement, inner)
         self.visit(node.replacement)

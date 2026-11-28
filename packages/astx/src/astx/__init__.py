@@ -106,6 +106,7 @@ from astx.classes_ext import (
     MethodCall,
     StaticFieldAccess,
     StaticMethodCall,
+    WeakClassType,
 )
 from astx.classes_ext import (
     ClassDefStmt as ClassDefStmt,
@@ -631,6 +632,7 @@ __all__ = [
     "VariableDeclaration",
     "VisibilityKind",
     "WalrusOp",
+    "WeakClassType",
     "WhileExpr",
     "WhileStmt",
     "WithStmt",

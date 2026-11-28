@@ -49,6 +49,7 @@ from irx.analysis.resolved_nodes import (
     ResolvedYield,
     ResourceOwnership,
     ReturnResolution,
+    SemanticBinding,
     SemanticClass,
     SemanticFlags,
     SemanticFunction,
@@ -64,6 +65,7 @@ from irx.analysis.types import (
     display_type_name,
     is_assignable,
     is_string_type,
+    nullable_class_type,
     union_storage_type,
 )
 from irx.base.visitors.base import BaseVisitor
@@ -1600,6 +1602,37 @@ class SemanticAnalyzerCore(BaseVisitor):
                 node=node,
                 code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
             )
+        if isinstance(type_, astx.WeakClassType):
+            binding = (
+                self.bindings.resolve(type_.constructor)
+                if type_.constructor is not None
+                else None
+            )
+            if type_.constructor is not None and (
+                binding is None or binding.kind != "weak_class_type"
+            ):
+                self.context.diagnostics.add(
+                    "import weak from stdlib.memory to declare weak handles",
+                    node=node,
+                    code=DiagnosticCodes.SEMANTIC_UNRESOLVED_NAME,
+                )
+            if not isinstance(
+                type_.target, (astx.ClassType, astx.TemplateTypeVar)
+            ):
+                self.context.diagnostics.add(
+                    "weak requires a class target",
+                    node=node,
+                    code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
+                )
+            else:
+                self._resolve_declared_type(type_.target, node=node)
+            self._set_type(type_, type_)
+            return type_
+        nullable_class = nullable_class_type(type_)
+        if nullable_class is not None:
+            self._resolve_declared_type(nullable_class, node=node)
+            self._set_type(type_, type_)
+            return type_
         # A template bound lists alternatives; it does not own union storage.
         if storage_required or not isinstance(type_, astx.UnionType):
             validate_column_declaration(self, type_, node)
@@ -1890,6 +1923,16 @@ class SemanticAnalyzerCore(BaseVisitor):
         parameters:
           module: Module to process.
         """
+        key = self._current_module_key()
+        source = (
+            None if self.session is None else self.session.modules.get(key)
+        )
+        if source is not None and source.weak_class_type:
+            self.bindings.bind(
+                "weak",
+                SemanticBinding("weak_class_type", key, f"{key}.weak"),
+                node=module,
+            )
         for node in module.nodes:
             if isinstance(node, astx.FunctionPrototype):
                 setattr(node, "irx_owner_module", module)

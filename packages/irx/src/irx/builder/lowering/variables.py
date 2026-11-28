@@ -18,7 +18,7 @@ from irx.analysis.resolved_nodes import (
     ResourceKind,
     SemanticInfo,
 )
-from irx.analysis.types import is_string_type
+from irx.analysis.types import class_resource_kind, is_string_type
 from irx.builder.core import (
     VisitorCore,
     semantic_assignment_key,
@@ -664,9 +664,11 @@ class VariableVisitorMixin(ClassVisitorMixin):
                     if existing_storage is not None
                     else self.create_entry_block_alloca(node.name, llvm_type)
                 )
-            elif isinstance(
+            elif class_resource_kind(
+                self._resolved_ast_type(node)
+            ) is not None or isinstance(
                 self._resolved_ast_type(node),
-                (astx.ClassType, astx.DataFrameType, astx.SeriesType),
+                astx.DataFrameType | astx.SeriesType,
             ):
                 init_val = ir.Constant(llvm_type, None)
                 alloca = (
@@ -718,9 +720,10 @@ class VariableVisitorMixin(ClassVisitorMixin):
                     "file local is missing ownership", node=node
                 )
             self.file_cleanup(node, init_val, ownership.owner_symbol_id)
-        if isinstance(
-            self._resolved_ast_type(node),
-            (astx.ClassType, astx.DataFrameType, astx.SeriesType),
+        if class_resource_kind(
+            self._resolved_ast_type(node)
+        ) is not None or isinstance(
+            self._resolved_ast_type(node), astx.DataFrameType | astx.SeriesType
         ):
             acquired = self.class_acquire(node, init_val)
             self._llvm.ir_builder.store(acquired, alloca)
@@ -777,9 +780,10 @@ class VariableVisitorMixin(ClassVisitorMixin):
                     self._resolved_ast_type(node)
                 ),
             )
-        elif isinstance(
-            self._resolved_ast_type(node),
-            (astx.ClassType, astx.DataFrameType, astx.SeriesType),
+        elif class_resource_kind(
+            self._resolved_ast_type(node)
+        ) is not None or isinstance(
+            self._resolved_ast_type(node), astx.DataFrameType | astx.SeriesType
         ):
             init_val = ir.Constant(llvm_type, None)
         elif isinstance(self._resolved_ast_type(node), astx.GeneratorType):
@@ -811,9 +815,10 @@ class VariableVisitorMixin(ClassVisitorMixin):
                     "file local is missing ownership", node=node
                 )
             self.file_cleanup(node, init_val, ownership.owner_symbol_id)
-        if isinstance(
-            self._resolved_ast_type(node),
-            (astx.ClassType, astx.DataFrameType, astx.SeriesType),
+        if class_resource_kind(
+            self._resolved_ast_type(node)
+        ) is not None or isinstance(
+            self._resolved_ast_type(node), astx.DataFrameType | astx.SeriesType
         ):
             acquired = self.class_acquire(node, init_val)
             self._llvm.ir_builder.store(acquired, alloca)

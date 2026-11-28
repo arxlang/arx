@@ -82,6 +82,43 @@ class ClassType(AnyType):
 
 
 @typechecked
+class WeakClassType(AnyType):
+    """
+    title: Non-owning reference to a reference-managed class.
+    attributes:
+      target: Static type referenced by this handle.
+      constructor: Imported type constructor spelling if supplied by a host.
+    """
+
+    target: astx.DataType
+    constructor: str | None
+
+    def __init__(
+        self, target: astx.DataType, *, constructor: str | None = None
+    ) -> None:
+        """
+        title: Represent a weak handle type application.
+        parameters:
+          target: Static type referenced by this handle.
+          constructor: Imported spelling to validate in semantic analysis.
+        """
+        super().__init__()
+        self.target = target
+        self.constructor = constructor
+
+    def get_struct(self, simplified: bool = False) -> astx.base.ReprStruct:
+        """
+        title: Describe weak storage with its target type.
+        parameters:
+          simplified: Whether to produce the simplified representation.
+        returns: Structured weak handle type.
+        """
+        return self._prepare_struct(
+            "WeakClassType", self.target.get_struct(simplified), simplified
+        )
+
+
+@typechecked
 class ClassDefStmt(StructDeclStmt):
     """
     title: Explicit class definition statement.

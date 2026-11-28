@@ -6,7 +6,7 @@ import astx
 
 from astx.types import AnyType
 from irx.analysis.module_interfaces import ParsedModule
-from irx.native import NativeBinding
+from irx.native import MemoryOperation, NativeBinding
 from irx.typecheck import typechecked
 from public import private
 
@@ -15,10 +15,10 @@ from public import private
 @typechecked
 def type_bindings() -> dict[str, astx.DataType]:
     """
-    title: Bind the copy protocol bound only in the bundled memory module.
+    title: Bind host template bounds within the bundled memory module.
     returns: Private template-bound marker interpreted by IRx copy analysis.
     """
-    return {"CopyableClass": AnyType()}
+    return {"CopyableClass": AnyType(), "WeakClass": AnyType()}
 
 
 @private
@@ -31,20 +31,27 @@ def prepare_memory_module(module: astx.Module, origin: str) -> ParsedModule:
       origin: Bundled source path for diagnostics.
     returns: Parsed module with the trusted declaration registered.
     """
-    declarations = [
-        node
+    declarations = {
+        node.name: node
         for node in module.nodes
-        if isinstance(node, astx.FunctionPrototype) and node.name == "copy"
-    ]
-    if len(declarations) != 1:
-        raise ValueError("bundled stdlib.memory requires one copy declaration")
+        if isinstance(node, astx.FunctionPrototype)
+    }
+    operations: tuple[MemoryOperation, ...] = ("copy", "downgrade", "upgrade")
+    if set(declarations) != set(operations):
+        raise ValueError("bundled stdlib.memory declarations do not match")
     return ParsedModule(
         "stdlib.memory",
         module,
         "stdlib.memory",
         origin,
-        native_bindings=(
-            NativeBinding(declarations[0], ("list",), memory="copy"),
+        native_bindings=tuple(
+            NativeBinding(
+                declarations[name],
+                ("list",) if name == "copy" else ("class",),
+                memory=name,
+            )
+            for name in operations
         ),
         lazy_declarations=True,
+        weak_class_type=True,
     )

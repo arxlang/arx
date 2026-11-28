@@ -21,6 +21,7 @@ from irx.analysis.resolved_nodes import (
     SemanticClass,
     SemanticInfo,
 )
+from irx.analysis.types import CLASS_RESOURCES
 from irx.builder.diagnostics import (
     require_lowered_value,
     require_semantic_metadata,
@@ -138,7 +139,12 @@ class ClassVisitorMixin(FileVisitorMixin):
         return value
 
     def class_operation(
-        self, node: astx.AST, operation: str, value: ir.Value
+        self,
+        node: astx.AST,
+        operation: str,
+        value: ir.Value,
+        *,
+        resource: ResourceKind | None = None,
     ) -> None:
         """
         title: Emit a checked operation on a semantically resolved reference.
@@ -146,8 +152,28 @@ class ClassVisitorMixin(FileVisitorMixin):
           node: Syntax node to process.
           operation: Operation to resolve or execute.
           value: Value to process.
+          resource: Explicit resource kind when operating on a layout field.
         """
         ownership = resource_ownership(node)
+        kind = (
+            resource
+            if resource is not None
+            else (None if ownership is None else ownership.resource_kind)
+        )
+        if kind is ResourceKind.WEAK_CLASS:
+            function = self.require_runtime_symbol(
+                "class", f"irx_class_weak_{operation}"
+            )
+            raw = self.class_raw(value)
+            if operation == "release":
+                self._llvm.ir_builder.call(function, [raw])
+            else:
+                error = self.file_error_buffer()
+                status = self._llvm.ir_builder.call(function, [raw, error])
+                self.file_check(
+                    node, status, error, code="ARX-RUNTIME-CLASS-001"
+                )
+            return
         if (
             ownership is not None
             and ownership.resource_kind in ARROW_RESOURCES
@@ -230,7 +256,8 @@ class ClassVisitorMixin(FileVisitorMixin):
             release,
             owner_symbol_id=owner,
             fallible=ownership is None
-            or ownership.resource_kind not in ARROW_RESOURCES,
+            or ownership.resource_kind
+            not in {ResourceKind.WEAK_CLASS, *ARROW_RESOURCES},
             lexical=lexical,
         )
         self.cleanup_stack.append(cleanup)
@@ -248,7 +275,7 @@ class ClassVisitorMixin(FileVisitorMixin):
         if (
             ownership is None
             or ownership.resource_kind
-            not in {ResourceKind.CLASS, *ARROW_RESOURCES}
+            not in {*CLASS_RESOURCES, *ARROW_RESOURCES}
             or (isinstance(info, SemanticInfo) and info.lifecycle_self)
         ):
             return
@@ -401,7 +428,14 @@ class ClassVisitorMixin(FileVisitorMixin):
                     )
                     stored = self._llvm.ir_builder.load(address)
                     raw = self.class_raw(stored)
-                    if kind is ResourceKind.STRING:
+                    if kind is ResourceKind.WEAK_CLASS:
+                        self._llvm.ir_builder.call(
+                            self.require_runtime_symbol(
+                                "class", "irx_class_weak_release"
+                            ),
+                            [raw],
+                        )
+                    elif kind is ResourceKind.STRING:
                         self._llvm.ir_builder.call(
                             self.require_runtime_symbol("libc", "free"), [raw]
                         )
@@ -621,13 +655,18 @@ class ClassVisitorMixin(FileVisitorMixin):
                             is not OwnershipTransferKind.MOVE
                         ):
                             value = self._copy_string_to_heap(node, value)
-                    elif field.resource_kind is ResourceKind.CLASS:
+                    elif field.resource_kind in CLASS_RESOURCES:
                         if (
                             ownership is None
                             or ownership.transfer_kind
                             is not OwnershipTransferKind.MOVE
                         ):
-                            self.class_operation(node, "retain", value)
+                            self.class_operation(
+                                node,
+                                "retain",
+                                value,
+                                resource=field.resource_kind,
+                            )
                     address = self._llvm.ir_builder.gep(
                         instance,
                         [
