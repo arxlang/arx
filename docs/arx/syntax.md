@@ -108,9 +108,10 @@ backticks are reserved for Douki docstrings, not ordinary string values.
 
 ## Comparisons
 
-Write a compound inequality as `1 < x and x < 5`. The parser rejects chains such
-as `1 < x < 5` at the second comparison operator. Use parentheses for deliberate
-nesting, for example `(x < 5) == flag`.
+Comparisons can be chained, as in `1 < x < 10`. Arx evaluates operands from left
+to right, evaluates each middle operand once, and stops after the first false
+comparison. Use parentheses to group comparisons explicitly, as in
+`(x < 10) == flag`.
 
 ## Structural forms
 

@@ -217,10 +217,12 @@ def test_binop_precedence() -> None:
     "source,grouped",
     [
         ("not a == b", "!(a == b)"),
+        ("not 1 < x < 10", "!(1 < x < 10)"),
         ("not a < b + c", "!(a < (b + c))"),
         ("not a and b or c", "((!a) and b) or c"),
         ("a and not b == c", "a and (!(b == c))"),
         ("a or not b and c", "a or ((!b) and c)"),
+        ("x >= 0 and 1 < x < 10", "(x >= 0) and (1 < x < 10)"),
         ("not not a", "!(!a)"),
         ("!a == b", "(!a) == b"),
         ("a = not b == c", "a = (!(b == c))"),
@@ -281,38 +283,29 @@ def test_invalid_prefix_operand(source: str, message: str) -> None:
 
 
 @pytest.mark.parametrize(
-    "expression,second_operator",
+    "expression,operators",
     [
-        ("1 < x < 10", "<"),
-        ("true == false == false", "=="),
-        ("x >= 0 and x + 1 <= 2 * x != 3", "!="),
-        ("not 1 < x > 10", ">"),
+        ("1 < x < 10", ["<", "<"]),
+        ("true == false == false", ["==", "=="]),
+        ("x + 1 <= 2 * x != 3 > 0", ["<=", "!=", ">"]),
     ],
 )
-def test_chained_comparison_rejects_second_operator(
-    expression: str, second_operator: str
+def test_chained_comparison_parses_adjacent_operands(
+    expression: str, operators: list[str]
 ) -> None:
     """
-    title: Reject comparison chains at the second operator.
+    title: Parse one chain with each comparator represented once.
     parameters:
       expression: Source expression containing a chain.
-      second_operator: Operator that introduces the chain.
+      operators: Expected comparison operators in source order.
     """
-    line = f"  return {expression}"
-    with pytest.raises(
-        ParserException, match="Chained comparisons are unsupported"
-    ) as error:
-        _parse_module(
-            "```\ntitle: Chained comparison\n```\n"
-            "fn check(x: i32) -> bool:\n"
-            f"{line}\n"
-        )
-    location = error.value.location
-    assert location is not None
-    assert (location.line, location.col) == (
-        5,
-        line.rindex(second_operator) + 1,
-    )
+    ArxIO.string_to_buffer(expression)
+    parser = Parser(Lexer().lex())
+    parser.tokens.get_next_token()
+    chain = parser.parse_expression()
+    assert isinstance(chain, astx.CompareOp)
+    assert chain.ops == operators
+    assert len(chain.comparators) == len(operators)
 
 
 @pytest.mark.parametrize("operator", ["++", "--"])

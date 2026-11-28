@@ -10,7 +10,7 @@ from typing import cast
 
 import astx
 
-from astx.operators import OpCodeAugAssign
+from astx.operators import OpCodeAugAssign, OpCodeCompare
 from irx.typecheck import typechecked
 from public import private
 
@@ -1124,23 +1124,69 @@ class ExpressionParserMixin(ParserMixinBase):
                     "operands.",
                     bin_loc,
                 )
-            # After tighter RHS operators, a second comparison at this
-            # expression level would form a chain.
             following = self.tokens.cur_tok
             if (
                 bin_op in COMPARISON_OPERATORS
                 and following.kind == TokenKind.operator
                 and following.value in COMPARISON_OPERATORS
             ):
-                raise ParserException(
-                    "Chained comparisons are unsupported. Combine "
-                    "comparisons with 'and' or use parentheses to make "
-                    "the grouping explicit.",
-                    following.location,
+                lhs = self.parse_comparison_chain(
+                    lhs,
+                    cast(OpCodeCompare, bin_op),
+                    rhs,
+                    bin_loc,
+                    cur_prec,
                 )
+                continue
             lhs = astx.BinaryOp(
                 bin_op,
                 lhs,
                 rhs,
                 loc=bin_loc,
             )
+
+    @private
+    @typechecked
+    def parse_comparison_chain(
+        self,
+        left: astx.DataType,
+        operator: OpCodeCompare,
+        right: astx.DataType,
+        loc: astx.SourceLocation,
+        precedence: int,
+    ) -> astx.CompareOp:
+        """
+        title: Read adjacent comparisons at the current expression level.
+        parameters:
+          left: First operand.
+          operator: First comparison operator.
+          right: Second operand, already parsed at tighter precedence.
+          loc: Source location of the first comparison operator.
+          precedence: Shared precedence of the comparison operators.
+        returns: One chain with each operand represented once.
+        """
+        operators = [operator]
+        comparators = [right]
+        locations = [loc]
+        token = self.tokens.cur_tok
+        while (
+            token.kind == TokenKind.operator
+            and token.value in COMPARISON_OPERATORS
+        ):
+            self.tokens.get_next_token()
+            operand = self.parse_unary(precedence + 1)
+            if precedence < self.get_tok_precedence():
+                operand = self.parse_bin_op_rhs(precedence + 1, operand)
+            if not isinstance(operand, astx.DataType):
+                raise ParserException(
+                    f"Binary operator '{token.value}' requires expression "
+                    "operands.",
+                    token.location,
+                )
+            operators.append(cast(OpCodeCompare, token.value))
+            comparators.append(operand)
+            locations.append(token.location)
+            token = self.tokens.cur_tok
+        return astx.CompareOp(
+            left, operators, comparators, loc=loc, operator_locations=locations
+        )

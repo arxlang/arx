@@ -673,11 +673,8 @@ def test_a_comparison_lowers_to_a_binary_op(
     operator: str, op_code: str
 ) -> None:
     """
-    title: Each comparison lowers to the binary node IRx implements.
-    summary: astx.CompareOp is what a comparison looks like it should become,
-      but IRx's visitor for it is not implemented, so it would pass this
-      stage and fail codegen. analyze proves the emitted form is one IRx
-      accepts.
+    title: A single comparison lowers to a binary node.
+    summary: Analysis verifies that IRx accepts the emitted operator.
     parameters:
       operator: Operator to apply.
       op_code: Operator spelling.

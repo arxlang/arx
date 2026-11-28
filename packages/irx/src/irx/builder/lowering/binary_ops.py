@@ -32,12 +32,14 @@ from astx.binary_op import (
     specialize_binary_op,
 )
 from llvmlite import ir
+from public import private
 
 from irx.analysis.arrow_conversion import ARROW_RESOURCES
 from irx.analysis.resolved_nodes import (
     ImplicitConversion,
     OwnershipTransferKind,
     ResourceKind,
+    ResolvedOperator,
     SemanticInfo,
 )
 from irx.analysis.types import CLASS_RESOURCES
@@ -936,6 +938,142 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
             short_circuit_value=True,
             name="ortmp",
         )
+
+    @private
+    def emit_chain_comparison(
+        self,
+        node: astx.AST,
+        comparison: ResolvedOperator,
+        left: ir.Value,
+        right: ir.Value,
+    ) -> ir.Value:
+        """
+        title: Compare two lowered operands using one analyzed chain step.
+        parameters:
+          node: Source operand for diagnostics.
+          comparison: Resolved adjacent comparison.
+          left: Lowered left operand, possibly reused from a previous step.
+          right: Lowered right operand.
+        returns: Boolean comparison result.
+        """
+        if comparison.string_comparison:
+            return self._handle_string_comparison(
+                left, right, comparison.op_code
+            )
+        if comparison.computation_type is not None:
+            lhs = require_semantic_metadata(
+                comparison.lhs_conversion,
+                node=node,
+                metadata="lhs conversion",
+                context="comparison chain",
+            )
+            rhs = require_semantic_metadata(
+                comparison.rhs_conversion,
+                node=node,
+                metadata="rhs conversion",
+                context="comparison chain",
+            )
+            left = self._cast_ast_value(
+                left, source_type=lhs.source_type, target_type=lhs.target_type
+            )
+            right = self._cast_ast_value(
+                right, source_type=rhs.source_type, target_type=rhs.target_type
+            )
+        return self._emit_numeric_compare(
+            comparison.op_code,
+            left,
+            right,
+            unsigned=comparison.flags.unsigned,
+            name="chain.cmp",
+        )
+
+    @VisitorCore.visit.dispatch
+    def visit(self, node: astx.CompareOp) -> None:
+        """
+        title: Evaluate a comparison chain left to right and short circuit.
+        parameters:
+          node: Analyzed comparison chain.
+        """
+        info = require_semantic_metadata(
+            cast(SemanticInfo | None, getattr(node, "semantic", None)),
+            node=node,
+            metadata="semantic",
+            context="comparison chain",
+        )
+        plans = info.comparison_chain
+        if not plans or len(plans) != len(node.comparators):
+            raise_lowering_internal_error(
+                "incomplete comparison chain plan", node=node
+            )
+
+        builder = self._llvm.ir_builder
+        function = builder.function
+        merge = function.append_basic_block("chain.merge")
+        incoming: list[tuple[ir.Value, ir.Block]] = []
+        false = ir.Constant(self._llvm.BOOLEAN_TYPE, 0)
+        depth = len(self.cleanup_stack)
+        self.visit(node.left)
+        left = require_lowered_value(
+            safe_pop(self.result_stack),
+            node=node.left,
+            context="first comparison operand",
+        )
+
+        for index, (plan, operand) in enumerate(zip(plans, node.comparators)):
+            rhs_depth = len(self.cleanup_stack)
+            self.visit(operand)
+            right = require_lowered_value(
+                safe_pop(self.result_stack),
+                node=operand,
+                context="comparison operand",
+            )
+            if builder.block.is_terminated:
+                raise_lowering_internal_error(
+                    "comparison operand terminated its expression block",
+                    node=operand,
+                )
+            result = self.emit_chain_comparison(operand, plan, left, right)
+            if index == len(plans) - 1:
+                self._emit_temporary_cleanups(depth)
+                if not builder.block.is_terminated:
+                    incoming.append((result, builder.block))
+                    builder.branch(merge)
+                break
+
+            next_step = function.append_basic_block("chain.next")
+            if len(self.cleanup_stack) == depth:
+                incoming.append((false, builder.block))
+                builder.cbranch(result, next_step, merge)
+            else:
+                stop = function.append_basic_block("chain.stop")
+                builder.cbranch(result, next_step, stop)
+                builder.position_at_end(stop)
+                active = self.cleanup_stack.copy()
+                self._emit_temporary_cleanups(depth)
+                if not builder.block.is_terminated:
+                    incoming.append((false, builder.block))
+                    builder.branch(merge)
+                self.cleanup_stack[:] = active
+
+            builder.position_at_end(next_step)
+            if rhs_depth > depth:
+                # Only the right operand survives into the next comparison.
+                right_actions = self.cleanup_stack[rhs_depth:]
+                self.cleanup_stack[depth:] = (
+                    right_actions + self.cleanup_stack[depth:rhs_depth]
+                )
+                self._emit_temporary_cleanups(depth + len(right_actions))
+            left = right
+
+        builder.position_at_end(merge)
+        if not incoming:
+            raise_lowering_internal_error(
+                "comparison chain has no result", node=node
+            )
+        value = builder.phi(self._llvm.BOOLEAN_TYPE, name="chain.result")
+        for result, predecessor in incoming:
+            value.add_incoming(result, predecessor)
+        self.result_stack.append(value)
 
     @VisitorCore.visit.dispatch
     def visit(self, node: LtBinOp) -> None:

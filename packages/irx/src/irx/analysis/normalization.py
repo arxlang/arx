@@ -6,6 +6,8 @@ summary: Normalize raw AST operator and flag information into the structured
 
 from __future__ import annotations
 
+from dataclasses import replace
+
 import astx
 
 from public import private
@@ -109,6 +111,9 @@ def normalize_operator(
         computation_type = None
     elif is_boolean_type(lhs_type) and is_boolean_type(rhs_type):
         computation_type = lhs_type
+        if op_code in {"<", "<=", ">", ">="}:
+            # LLVM i1 orders false before true only as an unsigned bit.
+            flags = replace(flags or SemanticFlags(), unsigned=True)
     return ResolvedOperator(
         op_code=op_code,
         mode=mode,
